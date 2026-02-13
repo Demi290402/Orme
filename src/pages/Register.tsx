@@ -116,27 +116,6 @@ export default function Register() {
                     >
                         Registrati
                     </button>
-
-                    {/* Mock Social Login */}
-                    <div className="relative my-6">
-                        <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t border-gray-200"></div>
-                        </div>
-                        <div className="relative flex justify-center text-sm">
-                            <span className="px-2 bg-white text-gray-500">Oppure registrati con</span>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                        <button type="button" className="flex items-center justify-center py-2.5 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
-                            <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="h-5 w-5 mr-2" alt="Google" />
-                            <span className="text-sm font-medium text-gray-700">Google</span>
-                        </button>
-                        <button type="button" className="flex items-center justify-center py-2.5 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
-                            <img src="https://www.svgrepo.com/show/475647/facebook-color.svg" className="h-5 w-5 mr-2" alt="Facebook" />
-                            <span className="text-sm font-medium text-gray-700">Facebook</span>
-                        </button>
-                    </div>
                 </form>
 
                 <p className="text-center mt-6 text-sm text-gray-500">

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { Shield } from 'lucide-react';
 import { loginUser } from '@/lib/data';
+import Logo from '@/components/Logo';
 
 export default function Login() {
     const navigate = useNavigate();
@@ -29,9 +29,7 @@ export default function Login() {
         <div className="flex flex-col items-center justify-center min-h-screen bg-scout-beige-light p-4">
             <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-100">
                 <div className="flex justify-center mb-6">
-                    <div className="bg-scout-green p-4 rounded-full shadow-lg">
-                        <Shield size={40} className="text-white" />
-                    </div>
+                    <Logo className="h-24 w-auto" />
                 </div>
 
                 <h1 className="text-2xl font-bold text-center text-scout-brown mb-2">Benvenuto in Orme</h1>
@@ -65,9 +63,6 @@ export default function Login() {
                         />
                     </div>
 
-                    <div className="text-right">
-                        <a href="#" className="text-sm text-scout-green font-semibold hover:underline">Password dimenticata?</a>
-                    </div>
 
                     <button
                         type="submit"
@@ -75,27 +70,6 @@ export default function Login() {
                     >
                         Accedi
                     </button>
-
-                    {/* Mock Social Login */}
-                    <div className="relative my-6">
-                        <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t border-gray-200"></div>
-                        </div>
-                        <div className="relative flex justify-center text-sm">
-                            <span className="px-2 bg-white text-gray-500">Oppure accedi con</span>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                        <button type="button" className="flex items-center justify-center py-2.5 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
-                            <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="h-5 w-5 mr-2" alt="Google" />
-                            <span className="text-sm font-medium text-gray-700">Google</span>
-                        </button>
-                        <button type="button" className="flex items-center justify-center py-2.5 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
-                            <img src="https://www.svgrepo.com/show/475647/facebook-color.svg" className="h-5 w-5 mr-2" alt="Facebook" />
-                            <span className="text-sm font-medium text-gray-700">Facebook</span>
-                        </button>
-                    </div>
                 </form>
 
                 <p className="text-center mt-6 text-sm text-gray-500">

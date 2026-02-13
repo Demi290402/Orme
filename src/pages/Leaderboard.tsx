@@ -1,13 +1,29 @@
-import { useState } from 'react';
-import { MOCK_USERS } from '@/lib/data';
+import { useState, useEffect } from 'react';
 import { getLevelInfo } from '@/lib/gamification';
-import { Trophy, X } from 'lucide-react';
+import { Trophy, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { User } from '@/types';
 
 export default function Leaderboard() {
-    const sortedUsers = [...MOCK_USERS].sort((a, b) => b.points - a.points);
+    const [allUsers, setAllUsers] = useState<User[]>([]);
+    const [currentPage, setCurrentPage] = useState(1);
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
+    const usersPerPage = 10;
+
+    useEffect(() => {
+        // Read users from localStorage
+        const stored = localStorage.getItem('orme_users');
+        const users: User[] = stored ? JSON.parse(stored) : [];
+        // Sort by points descending
+        const sorted = users.sort((a, b) => b.points - a.points);
+        setAllUsers(sorted);
+    }, []);
+
+    // Calculate pagination
+    const totalPages = Math.ceil(allUsers.length / usersPerPage);
+    const startIndex = (currentPage - 1) * usersPerPage;
+    const endIndex = startIndex + usersPerPage;
+    const currentUsers = allUsers.slice(startIndex, endIndex);
 
     return (
         <div className="space-y-6 pb-20 relative">
@@ -20,44 +36,74 @@ export default function Leaderboard() {
             </div>
 
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                {sortedUsers.map((user, index) => {
-                    const { current } = getLevelInfo(user.points);
-                    return (
-                        <div
-                            key={user.id}
-                            onClick={() => setSelectedUser(user)}
-                            className={cn(
-                                "flex items-center p-4 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-gray-50 transition-colors",
-                                index < 3 ? "bg-yellow-50/30" : ""
-                            )}
-                        >
-                            <div className={cn(
-                                "w-10 h-10 flex-shrink-0 rounded-full overflow-hidden mr-3 border-2",
-                                index === 0 ? "border-yellow-400" :
-                                    index === 1 ? "border-gray-300" :
-                                        index === 2 ? "border-orange-300" :
-                                            "border-gray-100"
-                            )}>
-                                <img
-                                    src={user.profilePicture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.firstName}`}
-                                    alt={user.nickname}
-                                    className="w-full h-full object-cover"
-                                />
-                            </div>
+                {currentUsers.length === 0 ? (
+                    <div className="p-8 text-center text-gray-400">
+                        Nessun utente registrato ancora.
+                    </div>
+                ) : (
+                    currentUsers.map((user, index) => {
+                        const globalIndex = startIndex + index; // Actual position in full list
+                        const { current } = getLevelInfo(user.points);
+                        return (
+                            <div
+                                key={user.id}
+                                onClick={() => setSelectedUser(user)}
+                                className={cn(
+                                    "flex items-center p-4 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-gray-50 transition-colors",
+                                    globalIndex < 3 ? "bg-yellow-50/30" : ""
+                                )}
+                            >
+                                <div className={cn(
+                                    "w-10 h-10 flex-shrink-0 rounded-full overflow-hidden mr-3 border-2",
+                                    globalIndex === 0 ? "border-yellow-400" :
+                                        globalIndex === 1 ? "border-gray-300" :
+                                            globalIndex === 2 ? "border-orange-300" :
+                                                "border-gray-100"
+                                )}>
+                                    <img
+                                        src={user.profilePicture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.firstName}`}
+                                        alt={user.nickname}
+                                        className="w-full h-full object-cover"
+                                    />
+                                </div>
 
-                            <div className="flex-1">
-                                <h3 className="font-bold text-gray-900">{user.nickname}</h3>
-                                <p className="text-xs text-gray-500">Livello {current.level}: {current.name}</p>
-                            </div>
+                                <div className="flex-1">
+                                    <h3 className="font-bold text-gray-900">{user.nickname}</h3>
+                                    <p className="text-xs text-gray-500">Livello {current.level}: {current.name}</p>
+                                </div>
 
-                            <div className="text-right">
-                                <span className="font-bold text-scout-green block">{user.points}</span>
-                                <span className="text-xs text-gray-400 uppercase tracking-wide">pt</span>
+                                <div className="text-right">
+                                    <span className="font-bold text-scout-green block">{user.points}</span>
+                                    <span className="text-xs text-gray-400 uppercase tracking-wide">pt</span>
+                                </div>
                             </div>
-                        </div>
-                    );
-                })}
+                        );
+                    })
+                )}
             </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-4 mt-6">
+                    <button
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                        className="p-2 rounded-lg border border-gray-200 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-50"
+                    >
+                        <ChevronLeft size={20} />
+                    </button>
+                    <span className="text-sm text-gray-600">
+                        Pagina {currentPage} di {totalPages}
+                    </span>
+                    <button
+                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                        disabled={currentPage === totalPages}
+                        className="p-2 rounded-lg border border-gray-200 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-50"
+                    >
+                        <ChevronRight size={20} />
+                    </button>
+                </div>
+            )}
 
             {/* User Detail Modal */}
             {selectedUser && (

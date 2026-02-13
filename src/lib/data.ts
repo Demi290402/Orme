@@ -61,7 +61,7 @@ export function registerUser(userData: Omit<User, 'id' | 'points' | 'level' | 'b
 
 export function loginUser(email: string): User | null {
     const stored = localStorage.getItem('orme_users');
-    const users: User[] = stored ? JSON.parse(stored) : [...MOCK_USERS];
+    const users: User[] = stored ? JSON.parse(stored) : [];
 
     const user = users.find(u => u.email === email);
 

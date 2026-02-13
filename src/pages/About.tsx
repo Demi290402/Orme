@@ -1,8 +1,16 @@
-
+import { useState, useEffect } from 'react';
 import { Footprints, ShieldCheck, Users } from 'lucide-react';
-import { MOCK_USERS } from '@/lib/data';
+import { User } from '@/types';
 
 export default function About() {
+    const [users, setUsers] = useState<User[]>([]);
+
+    useEffect(() => {
+        const stored = localStorage.getItem('orme_users');
+        const loadedUsers: User[] = stored ? JSON.parse(stored) : [];
+        setUsers(loadedUsers);
+    }, []);
+
     return (
         <div className="space-y-6 pb-20">
             <div className="text-center py-8">
@@ -42,21 +50,25 @@ export default function About() {
 
                 <h3 className="font-bold text-scout-green-dark mb-3 mt-6 border-t border-scout-green/20 pt-4">Hanno accesso all'app:</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {MOCK_USERS.map(user => (
-                        <div key={user.id} className="flex items-center gap-3 bg-white/50 p-2 rounded-xl">
-                            <div className="w-10 h-10 rounded-full bg-white overflow-hidden shadow-sm">
-                                <img
-                                    src={user.profilePicture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.firstName}`}
-                                    alt={user.firstName}
-                                    className="w-full h-full object-cover"
-                                />
+                    {users.length === 0 ? (
+                        <p className="text-gray-400 text-sm col-span-2 text-center py-4">Nessun utente registrato ancora.</p>
+                    ) : (
+                        users.map(user => (
+                            <div key={user.id} className="flex items-center gap-3 bg-white/50 p-2 rounded-xl">
+                                <div className="w-10 h-10 rounded-full bg-white overflow-hidden shadow-sm">
+                                    <img
+                                        src={user.profilePicture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.firstName}`}
+                                        alt={user.firstName}
+                                        className="w-full h-full object-cover"
+                                    />
+                                </div>
+                                <div>
+                                    <p className="font-bold text-gray-900 text-sm">{user.firstName} {user.lastName}</p>
+                                    <p className="text-xs text-scout-green font-medium">@{user.nickname}</p>
+                                </div>
                             </div>
-                            <div>
-                                <p className="font-bold text-gray-900 text-sm">{user.firstName} {user.lastName}</p>
-                                <p className="text-xs text-scout-green font-medium">@{user.nickname}</p>
-                            </div>
-                        </div>
-                    ))}
+                        ))
+                    )}
                 </div>
             </div>
 

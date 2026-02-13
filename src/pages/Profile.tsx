@@ -53,6 +53,14 @@ export default function Profile() {
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, field: 'profilePicture' | 'coverImage') => {
         const file = e.target.files?.[0];
         if (file) {
+            // Check file size (max 500KB)
+            const maxSize = 500 * 1024; // 500KB in bytes
+            if (file.size > maxSize) {
+                alert('Immagine inserita troppo grande.\n\nCONSIGLIO: fare screenshot dell\'immagine che si vuole caricare');
+                e.target.value = ''; // Reset input
+                return;
+            }
+
             const reader = new FileReader();
             reader.onloadend = () => {
                 setEditForm(prev => ({ ...prev, [field]: reader.result as string }));
