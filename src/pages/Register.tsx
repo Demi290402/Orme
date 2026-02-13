@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { UserPlus } from 'lucide-react';
 import { registerUser } from '@/lib/data';
 
 export default function Register() {
     const navigate = useNavigate();
+    const location = useLocation();
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
@@ -31,7 +32,9 @@ export default function Register() {
                 email: formData.email,
                 // In a real app, never store plain text passwords!
             });
-            navigate('/');
+            // Redirect to the page they were trying to access, or home if none
+            const from = (location.state as any)?.from?.pathname || '/';
+            navigate(from, { replace: true });
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Errore durante la registrazione');
         }

@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Shield } from 'lucide-react';
 import { loginUser } from '@/lib/data';
 
 export default function Login() {
     const navigate = useNavigate();
+    const location = useLocation();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -16,7 +17,9 @@ export default function Login() {
         const user = loginUser(email);
 
         if (user) {
-            navigate('/');
+            // Redirect to the page they were trying to access, or home if none
+            const from = (location.state as any)?.from?.pathname || '/';
+            navigate(from, { replace: true });
         } else {
             setError('Credenziali non valide. Riprova o registrati.');
         }
