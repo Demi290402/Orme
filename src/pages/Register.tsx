@@ -30,7 +30,7 @@ export default function Register() {
                 lastName: formData.lastName,
                 nickname: formData.nickname,
                 email: formData.email,
-                // In a real app, never store plain text passwords!
+                password: formData.password
             });
             // Redirect to the page they were trying to access, or home if none
             const from = (location.state as any)?.from?.pathname || '/';

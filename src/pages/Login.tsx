@@ -14,7 +14,7 @@ export default function Login() {
         e.preventDefault();
         setError('');
 
-        const user = loginUser(email);
+        const user = loginUser(email, password);
 
         if (user) {
             // Redirect to the page they were trying to access, or home if none

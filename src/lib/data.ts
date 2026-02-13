@@ -59,11 +59,11 @@ export function registerUser(userData: Omit<User, 'id' | 'points' | 'level' | 'b
     return newUser;
 }
 
-export function loginUser(email: string): User | null {
+export function loginUser(email: string, password: string): User | null {
     const stored = localStorage.getItem('orme_users');
     const users: User[] = stored ? JSON.parse(stored) : [];
 
-    const user = users.find(u => u.email === email);
+    const user = users.find(u => u.email === email && u.password === password);
 
     if (user) {
         localStorage.setItem('orme_current_user', JSON.stringify(user));

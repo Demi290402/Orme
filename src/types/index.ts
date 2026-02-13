@@ -4,6 +4,7 @@ export interface User {
     lastName: string;
     nickname: string;
     email: string;
+    password: string;
     profilePicture?: string;
     coverImage?: string;
     scoutCode?: string; // Codice Socio
