@@ -1,64 +1,10 @@
 import { Location, User } from '@/types';
 
-export const MOCK_USERS: User[] = [
-    {
-        id: 'u1',
-        firstName: 'Demi',
-        lastName: 'Cistulli',
-        nickname: 'Capo Turi',
-        email: 'demi@turi1.it',
-        profilePicture: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Demi',
-        coverImage: 'https://images.unsplash.com/photo-1517173772233-1c39023be6a1?q=80&w=2000&auto=format&fit=crop',
-        scoutCode: '123456',
-        points: 120,
-        level: 2,
-        badges: ['piede_leggero'],
-        locationsAdded: 6,
-        contributionsApproved: 4
-    }
-];
+// Start with empty arrays for production - users will register themselves
+export const MOCK_USERS: User[] = [];
 
-export const MOCK_LOCATIONS: Location[] = [
-    {
-        id: 'l1',
-        name: 'Base Scout "Il Ruscello"',
-        region: 'Calabria',
-        commune: 'Linguaglossa',
-        contacts: [{ type: 'phone', value: '3331234567', name: 'Custode' }],
-        activities: ['Campo estivo', 'Caccia primaverile'],
-        quickNote: 'Ottima per branchi, acqua potabile presente.',
-        hasTents: true,
-        hasRefectory: true,
-        hasRoverService: false,
-        hasChurch: true,
-        hasGreenSpace: true,
-        hasCookware: false,
-        hasPoles: true,
-        restrictions: ['No fuochi'],
-        lastUpdatedAt: '2025-06-15T12:00:00Z',
-        lastUpdatedBy: 'u1'
-    },
-    {
-        id: 'l2',
-        name: 'Rifugio Montano Sila',
-        region: 'Calabria',
-        commune: 'Camigliatello',
-        contacts: [{ type: 'whatsapp', value: '3339876543' }],
-        activities: ['Route invernale', 'Pernotto comunità capi'],
-        quickNote: 'Freddo d\'inverno, stufa a legna.',
-        hasTents: false,
-        hasRefectory: true,
-        hasRoverService: true,
-        roverServiceDescription: 'Possibilità di servizio in cucina.',
-        hasChurch: false,
-        hasGreenSpace: true,
-        hasCookware: true,
-        hasPoles: true,
-        restrictions: ['Acqua non potabile'],
-        lastUpdatedAt: '2024-12-10T10:30:00Z',
-        lastUpdatedBy: 'u1'
-    }
-];
+export const MOCK_LOCATIONS: Location[] = [];
+
 
 export function getLocations(): Location[] {
     const stored = localStorage.getItem('orme_locations');
@@ -146,9 +92,8 @@ export function getUser(id?: string): User {
         return JSON.parse(currentStored);
     }
 
-    // Fallback to first mock user if nothing else (for dev/demo consistency if storage cleared)
-    // In a real app this would return null and force redirect
-    return MOCK_USERS[0];
+    // No user logged in - throw error to trigger auth redirect
+    throw new Error('No user logged in');
 }
 
 export function updateUser(updatedUser: User) {
