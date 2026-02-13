@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+@theme {
+  --color-scout-green: #4CAF50;
+  /* Verde Natura */
+  --color-scout-green-light: #81C784;
+  --color-scout-green-dark: #388E3C;
+  --color-scout-white: #FFFFFF;
+  /* Bianco Purezza */
+  --color-scout-blue: #87CEEB;
+  /* Azzurro Cielo */
+  --color-scout-blue-dark: #0288D1;
+  --color-scout-brown: #8B4513;
+  /* Mantengo marrone per dettagli */
+  --color-scout-beige-light: #F5F5F5;
+  /* Background grigio chiarissimo invece del beige */
+
+  --font-sans: Inter, sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-scout-beige-light text-gray-900;
+  }
+}
