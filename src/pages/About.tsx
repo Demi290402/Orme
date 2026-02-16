@@ -1,14 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Footprints, ShieldCheck, Users } from 'lucide-react';
 import { User } from '@/types';
+import { getAllUsers } from '@/lib/data';
 
 export default function About() {
     const [users, setUsers] = useState<User[]>([]);
 
     useEffect(() => {
-        const stored = localStorage.getItem('orme_users');
-        const loadedUsers: User[] = stored ? JSON.parse(stored) : [];
-        setUsers(loadedUsers);
+        getAllUsers().then(setUsers).catch(console.error);
     }, []);
 
     return (

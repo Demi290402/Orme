@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { Camera, MapPin, Award, Trophy, Edit2, X, Save } from 'lucide-react';
-import { getUser, updateUser } from '@/lib/data';
+import { Camera, MapPin, Award, Trophy, Edit2, X, Save, Database, Download, CheckCircle } from 'lucide-react';
+import { getUser, updateUser, logoutUser } from '@/lib/data';
 import { getLevelInfo, BADGES } from '@/lib/gamification';
+import { autoCreateMonthlySnapshot, getBackups, downloadBackup, BackupSnapshot } from '@/lib/backups';
 import { User } from '@/types';
 import { Link } from 'react-router-dom';
 
 export default function Profile() {
     const [user, setUser] = useState<User | null>(null);
+    const [backups, setBackups] = useState<BackupSnapshot[]>([]);
     const [isEditing, setIsEditing] = useState(false);
     const [editForm, setEditForm] = useState({
         firstName: '',
@@ -19,28 +21,47 @@ export default function Profile() {
     });
 
     useEffect(() => {
-        const currentUser = getUser();
-        setUser(currentUser);
-        setEditForm({
-            firstName: currentUser.firstName,
-            lastName: currentUser.lastName,
-            nickname: currentUser.nickname,
-            email: currentUser.email,
-            profilePicture: currentUser.profilePicture || '',
-            coverImage: currentUser.coverImage || '',
-            scoutCode: currentUser.scoutCode || ''
-        });
+        const loadData = async () => {
+            try {
+                const currentUser = await getUser();
+                setUser(currentUser);
+                setEditForm({
+                    firstName: currentUser.firstName,
+                    lastName: currentUser.lastName,
+                    nickname: currentUser.nickname,
+                    email: currentUser.email,
+                    profilePicture: currentUser.profilePicture || '',
+                    coverImage: currentUser.coverImage || '',
+                    scoutCode: currentUser.scoutCode || ''
+                });
+
+                // Auto-create backup check
+                await autoCreateMonthlySnapshot();
+                // Load backups
+                const availableBackups = await getBackups();
+                setBackups(availableBackups);
+            } catch (error) {
+                console.error('Error loading profile data:', error);
+            }
+        };
+
+        loadData();
     }, []);
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!user) return;
         const updatedUser = {
             ...user,
             ...editForm
         };
-        updateUser(updatedUser);
-        setUser(updatedUser);
-        setIsEditing(false);
+        try {
+            await updateUser(updatedUser);
+            setUser(updatedUser);
+            setIsEditing(false);
+        } catch (error) {
+            console.error('Error updating user:', error);
+            alert('Errore durante l\'aggiornamento del profilo');
+        }
     };
 
     if (!user) return <div>Caricamento...</div>;
@@ -89,7 +110,7 @@ export default function Profile() {
                                     <input
                                         type="text"
                                         value={editForm.firstName}
-                                        onChange={e => setEditForm(prev => ({ ...prev, firstName: e.target.value }))}
+                                        onChange={e => setEditForm((prev: any) => ({ ...prev, firstName: e.target.value }))}
                                         className="w-full p-2 rounded-xl border border-gray-200"
                                     />
                                 </div>
@@ -98,7 +119,7 @@ export default function Profile() {
                                     <input
                                         type="text"
                                         value={editForm.lastName}
-                                        onChange={e => setEditForm(prev => ({ ...prev, lastName: e.target.value }))}
+                                        onChange={e => setEditForm((prev: any) => ({ ...prev, lastName: e.target.value }))}
                                         className="w-full p-2 rounded-xl border border-gray-200"
                                     />
                                 </div>
@@ -109,7 +130,7 @@ export default function Profile() {
                                 <input
                                     type="text"
                                     value={editForm.nickname}
-                                    onChange={e => setEditForm(prev => ({ ...prev, nickname: e.target.value }))}
+                                    onChange={e => setEditForm((prev: any) => ({ ...prev, nickname: e.target.value }))}
                                     className="w-full p-2 rounded-xl border border-gray-200"
                                 />
                             </div>
@@ -119,7 +140,7 @@ export default function Profile() {
                                 <input
                                     type="text"
                                     value={editForm.scoutCode}
-                                    onChange={e => setEditForm(prev => ({ ...prev, scoutCode: e.target.value }))}
+                                    onChange={e => setEditForm((prev: any) => ({ ...prev, scoutCode: e.target.value }))}
                                     className="w-full p-2 rounded-xl border border-gray-200"
                                 />
                             </div>
@@ -129,7 +150,7 @@ export default function Profile() {
                                 <input
                                     type="email"
                                     value={editForm.email}
-                                    onChange={e => setEditForm(prev => ({ ...prev, email: e.target.value }))}
+                                    onChange={e => setEditForm((prev: any) => ({ ...prev, email: e.target.value }))}
                                     className="w-full p-2 rounded-xl border border-gray-200"
                                 />
                             </div>
@@ -284,23 +305,109 @@ export default function Profile() {
             </div>
 
             {/* Badges Section */}
-            <div className="mx-6">
+            <div className="mx-6 mb-10">
                 <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
                     <Trophy className="text-yellow-500" />
-                    Badges
+                    Tutti i Badges
                 </h3>
-                <div className="grid grid-cols-3 md:grid-cols-5 gap-4">
-                    {user.badges.map(badgeKey => {
-                        const badge = BADGES[badgeKey as keyof typeof BADGES];
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                    {Object.entries(BADGES).map(([key, badge]) => {
+                        const isEarned = user.badges.includes(key);
+                        const currentStat = (user as any)[badge.statKey] || 0;
+                        const progress = Math.min(currentStat, badge.goal);
+
                         return (
-                            <div key={badgeKey} className="flex flex-col items-center text-center p-3 bg-white border border-gray-100 rounded-xl shadow-sm">
-                                <div className="text-3xl mb-2">{badge.icon}</div>
-                                <span className="text-xs font-bold leading-tight">{badge.name}</span>
+                            <div
+                                key={key}
+                                className={`flex flex-col items-center text-center p-3 rounded-2xl border transition-all ${isEarned
+                                    ? 'bg-white border-yellow-200 shadow-sm'
+                                    : 'bg-gray-50 border-gray-100 opacity-80'
+                                    }`}
+                            >
+                                <div className={`text-3xl mb-1 ${!isEarned ? 'filter grayscale' : ''}`}>
+                                    {badge.icon}
+                                </div>
+                                <span className={`text-[10px] font-bold leading-tight line-clamp-1 ${isEarned ? 'text-gray-900' : 'text-gray-400'}`}>
+                                    {badge.name}
+                                </span>
+                                <p className="text-[8px] text-gray-500 mt-0.5 leading-tight line-clamp-2 px-1">
+                                    {badge.description}
+                                </p>
+                                <div className="mt-2 w-full">
+                                    <div className="text-[9px] text-gray-400 mb-1 flex justify-between">
+                                        <span>{progress}/{badge.goal}</span>
+                                        {isEarned && <CheckCircle size={8} className="text-green-500" />}
+                                    </div>
+                                    <div className="h-1 w-full bg-gray-200 rounded-full overflow-hidden">
+                                        <div
+                                            className={`h-full rounded-full ${isEarned ? 'bg-yellow-400' : 'bg-scout-blue'}`}
+                                            style={{ width: `${(progress / badge.goal) * 100}%` }}
+                                        ></div>
+                                    </div>
+                                </div>
                             </div>
-                        )
+                        );
                     })}
-                    {user.badges.length === 0 && <p className="text-gray-400 col-span-3">Nessun badge ancora conquistato.</p>}
                 </div>
+            </div>
+
+            {/* Monthly Backups Section */}
+            <div className="mx-6 p-6 bg-white rounded-2xl shadow-sm border border-gray-100 space-y-4">
+                <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-bold flex items-center gap-2 text-gray-900">
+                        <Database className="text-scout-blue" size={20} />
+                        Archivio Dati Mensile
+                    </h3>
+                    <div className="bg-blue-50 text-scout-blue text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider border border-blue-100">
+                        Automatico
+                    </div>
+                </div>
+
+                <p className="text-sm text-gray-500 leading-relaxed">
+                    Ogni mese l'app salva automaticamente una copia di tutti i luoghi e le informazioni principali per sicurezza.
+                </p>
+
+                <div className="space-y-2">
+                    {backups.length > 0 ? (
+                        backups.map((backup: BackupSnapshot) => (
+                            <div key={backup.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100 hover:bg-gray-100 transition-colors">
+                                <div className="flex items-center gap-3">
+                                    <CheckCircle size={18} className="text-green-500" />
+                                    <div>
+                                        <p className="font-bold text-sm text-gray-900">Snapshot {backup.month_year}</p>
+                                        <p className="text-[10px] text-gray-400">{new Date(backup.created_at).toLocaleDateString('it-IT')}</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => downloadBackup(backup)}
+                                    className="p-2 bg-white text-scout-blue rounded-lg shadow-sm hover:shadow-md border border-blue-100 transition-all active:scale-95"
+                                    title="Scarica JSON"
+                                >
+                                    <Download size={18} />
+                                </button>
+                            </div>
+                        ))
+                    ) : (
+                        <div className="text-center py-4 text-sm text-gray-400 italic">
+                            Caricamento archivio in corso...
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Logout Button */}
+            <div className="mx-6 mt-12 mb-8">
+                <button
+                    onClick={async () => {
+                        if (confirm('Vuoi davvero uscire?')) {
+                            await logoutUser();
+                            window.location.href = '/login';
+                        }
+                    }}
+                    className="w-full py-3 bg-red-50 text-red-600 font-bold rounded-xl border border-red-100 hover:bg-red-100 transition-colors"
+                >
+                    Esci dal Profilo
+                </button>
             </div>
         </div>
     );

@@ -1,40 +1,44 @@
 import React, { useState } from 'react';
-import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { UserPlus } from 'lucide-react';
 import { registerUser } from '@/lib/data';
 
 export default function Register() {
     const navigate = useNavigate();
-    const location = useLocation();
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
         nickname: '',
         email: '',
-        password: ''
+        password: '',
+        confirmPassword: '' // Added confirmPassword
     });
     const [error, setError] = useState('');
 
-    const handleRegister = (e: React.FormEvent) => {
+    const handleRegister = async (e: React.FormEvent) => { // Made async
         e.preventDefault();
         setError('');
 
-        if (!formData.firstName || !formData.lastName || !formData.email || !formData.password) {
+        if (!formData.firstName || !formData.lastName || !formData.email || !formData.password || !formData.confirmPassword) {
             setError('Compila tutti i campi obbligatori.');
             return;
         }
 
+        if (formData.password !== formData.confirmPassword) { // Added password mismatch validation
+            setError('Le password non corrispondono');
+            return;
+        }
+
         try {
-            registerUser({
+            await registerUser({ // Added await
                 firstName: formData.firstName,
                 lastName: formData.lastName,
                 nickname: formData.nickname,
                 email: formData.email,
                 password: formData.password
             });
-            // Redirect to the page they were trying to access, or home if none
-            const from = (location.state as any)?.from?.pathname || '/';
-            navigate(from, { replace: true });
+            alert('Registrazione completata! Per favore controlla la tua email per confermare l\'account prima di accedere.');
+            navigate('/login');
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Errore durante la registrazione');
         }
@@ -107,6 +111,18 @@ export default function Register() {
                             value={formData.password}
                             onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
                             className="w-full p-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-scout-green"
+                            placeholder="••••••••"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Conferma Password*</label>
+                        <input
+                            type="password"
+                            value={formData.confirmPassword}
+                            onChange={(e) => setFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                            className="w-full p-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-scout-green"
+                            placeholder="••••••••"
                         />
                     </div>
 

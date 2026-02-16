@@ -1,20 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ChevronLeft, Save, MapPin } from 'lucide-react';
 import { addLocation, getLocations } from '@/lib/data';
-import { addPoints } from '@/lib/gamification';
-import { createProposal } from '@/lib/proposals';
+// import { addPoints } from '@/lib/gamification'; // Handled in addLocation now
 
-const ITALIAN_REGIONS = [
-    "Abruzzo", "Basilicata", "Calabria", "Campania", "Emilia-Romagna",
-    "Friuli-Venezia Giulia", "Lazio", "Liguria", "Lombardia", "Marche",
-    "Molise", "Piemonte", "Puglia", "Sardegna", "Sicilia", "Toscana",
-    "Trentino-Alto Adige", "Umbria", "Valle d'Aosta", "Veneto"
-];
+import { ITALIAN_PROVINCIAL_DATA, ITALIAN_REGIONS } from '@/lib/constants';
 
 const RESTRICTIONS_LIST = [
-    "Acqua non potabile", "No fuochi di bivacco", "No tende", "No animali",
-    "Accesso difficile veicoli", "Solo fornelli a gas", "Zona protetta (Ente Parco)"
+    "Acqua non potabile", "No fuochi di bivacco", "No tende", "No riscaldamento",
+    "Accesso difficile veicoli", "Gestore invadente", "Acqua ed elettricità limitate"
 ];
 
 const ACTIVITIES_LIST = [
@@ -28,15 +22,19 @@ export default function AddLocation() {
     const navigate = useNavigate();
     const { id } = useParams();
     const [isEditMode, setIsEditMode] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
 
     const [formData, setFormData] = useState({
         name: '',
         region: '',
+        province: '',
         commune: '',
+        address: '',
         phone: '',
         whatsapp: '',
         website: '',
+        googleMapsLink: '',
         latitude: '',
         longitude: '',
 
@@ -48,49 +46,88 @@ export default function AddLocation() {
         hasRefectory: false,
         hasChurch: false,
         hasGreenSpace: false,
-        hasCookware: false,
+        hasEquippedKitchen: false,
         hasPoles: false,
         otherLogistics: '',
+
+        // Attenzioni
+        hasPastures: false,
+        hasInsects: false,
+        hasDiseases: false,
+        hasLittleShade: false,
+        hasVeryBusyArea: false,
+        otherAttention: '',
 
         quickNote: '',
         description: '',
         activities: [] as string[],
         restrictions: [] as string[],
-        otherRestrictionInput: ''
+        otherRestrictionInput: '',
+
+        // Pricing
+        pricingBase: '',
+        pricingUnit: 'per_night' as 'per_night' | 'per_day',
+        pricingDescription: ''
     });
+
+    const livePoints = useMemo(() => {
+        let points = 10; // Base
+        if (formData.website && formData.website.trim() !== '') points += 2;
+
+        const hasCoordinates = (formData as any).latitude && (formData as any).longitude;
+        const hasAddress = (formData as any).address && (formData as any).address.trim() !== '';
+        const hasMapsLink = (formData as any).googleMapsLink && (formData as any).googleMapsLink.trim() !== '';
+        if (hasCoordinates || hasAddress || hasMapsLink) points += 3;
+
+        if (formData.pricingBase && parseFloat(formData.pricingBase) > 0) points += 5;
+        return points;
+    }, [formData]);
 
     useEffect(() => {
         if (id) {
             setIsEditMode(true);
-            const locations = getLocations();
-            const found = locations.find(l => l.id === id);
-            if (found) {
-                setFormData({
-                    name: found.name,
-                    region: found.region,
-                    commune: found.commune,
-                    phone: found.contacts.find(c => c.type === 'phone')?.value || '',
-                    whatsapp: found.contacts.find(c => c.type === 'whatsapp')?.value || '',
-                    website: found.website || '',
-                    beds: found.beds?.toString() || '',
-                    bathrooms: found.bathrooms?.toString() || '',
-                    hasTents: found.hasTents,
-                    hasRS: found.hasRoverService,
-                    hasRefectory: found.hasRefectory,
-                    hasChurch: found.hasChurch,
-                    hasGreenSpace: found.hasGreenSpace,
-                    hasCookware: found.hasCookware,
-                    hasPoles: found.hasPoles,
-                    otherLogistics: found.otherLogistics || '',
-                    latitude: found.coordinates?.lat.toString() || '',
-                    longitude: found.coordinates?.lng.toString() || '',
-                    quickNote: found.quickNote,
-                    description: found.description || '',
-                    activities: found.activities,
-                    restrictions: found.restrictions, // Simplification: we're not splitting "other" restrictions here perfecty but it works
-                    otherRestrictionInput: ''
-                });
-            }
+            getLocations().then(locations => {
+                const found = locations.find(l => l.id === id);
+                if (found) {
+                    setFormData({
+                        name: found.name,
+                        region: found.region,
+                        province: found.province || '',
+                        commune: found.commune,
+                        address: found.address || '',
+                        phone: found.contacts.find(c => c.type === 'phone')?.value || '',
+                        whatsapp: found.contacts.find(c => c.type === 'whatsapp')?.value || '',
+                        website: found.website || '',
+                        beds: found.beds?.toString() || '',
+                        bathrooms: found.bathrooms?.toString() || '',
+                        hasTents: found.hasTents,
+                        hasRS: found.hasRoverService,
+                        hasRefectory: found.hasRefectory,
+                        hasChurch: found.hasChurch,
+                        hasGreenSpace: found.hasGreenSpace,
+                        hasEquippedKitchen: found.hasEquippedKitchen,
+                        hasPoles: found.hasPoles,
+                        otherLogistics: found.otherLogistics || '',
+                        hasPastures: found.hasPastures || false,
+                        hasInsects: found.hasInsects || false,
+                        hasDiseases: found.hasDiseases || false,
+                        hasLittleShade: found.hasLittleShade || false,
+                        hasVeryBusyArea: found.hasVeryBusyArea || false,
+                        otherAttention: found.otherAttention || '',
+                        latitude: found.coordinates?.lat.toString() || '',
+                        longitude: found.coordinates?.lng.toString() || '',
+                        googleMapsLink: (found as any).googleMapsLink || '',
+                        quickNote: found.quickNote,
+                        description: found.description || '',
+                        activities: found.activities,
+                        restrictions: found.restrictions,
+                        otherRestrictionInput: '',
+                        pricingBase: found.pricing?.basePrice?.toString() || '',
+                        pricingUnit: found.pricing?.unit || 'per_night',
+                        pricingDescription: found.pricing?.description || ''
+                    });
+                }
+            }).catch(console.error);
         }
     }, [id]);
 
@@ -115,12 +152,16 @@ export default function AddLocation() {
         });
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (isSubmitting) return;
+
         if (!formData.name || !formData.region || !formData.phone) {
             alert("Compila i campi obbligatori (Nome, Regione, Telefono)");
             return;
         }
+
+        setIsSubmitting(true);
 
         const finalRestrictions = [...formData.restrictions];
         if (formData.otherRestrictionInput.trim()) {
@@ -130,7 +171,9 @@ export default function AddLocation() {
         const locationData = {
             name: formData.name,
             region: formData.region,
-            commune: formData.commune || 'Sconosciuto',
+            province: formData.province,
+            commune: formData.commune,
+            address: formData.address,
             contacts: [
                 { type: 'phone', value: formData.phone, name: 'Responsabile' },
                 ...(formData.whatsapp ? [{ type: 'whatsapp', value: formData.whatsapp, name: 'WhatsApp' }] as any : [])
@@ -143,9 +186,17 @@ export default function AddLocation() {
             hasRoverService: formData.hasRS,
             hasChurch: formData.hasChurch,
             hasGreenSpace: formData.hasGreenSpace,
-            hasCookware: formData.hasCookware,
+            hasEquippedKitchen: formData.hasEquippedKitchen,
             hasPoles: formData.hasPoles,
             otherLogistics: formData.otherLogistics,
+
+            // Attenzioni
+            hasPastures: formData.hasPastures,
+            hasInsects: formData.hasInsects,
+            hasDiseases: formData.hasDiseases,
+            hasLittleShade: formData.hasLittleShade,
+            hasVeryBusyArea: formData.hasVeryBusyArea,
+            otherAttention: formData.otherAttention,
 
             // Coordinates
             coordinates: (formData as any).latitude && (formData as any).longitude ? {
@@ -156,19 +207,30 @@ export default function AddLocation() {
             quickNote: formData.quickNote,
             description: formData.description,
             activities: formData.activities as any[],
-            restrictions: finalRestrictions as any[]
+            restrictions: finalRestrictions as any[],
+            pricing: formData.pricingBase ? {
+                basePrice: parseFloat(formData.pricingBase),
+                unit: formData.pricingUnit,
+                description: formData.pricingDescription
+            } : undefined
         };
 
-        if (isEditMode && id) {
-            // Create Proposal
-            createProposal('update', id, formData.name, locationData);
-            alert("Attendere approvazione di 2 capi per visualizzare le modifiche apportate");
-            navigate('/');
-        } else {
-            // Add Location directly
-            addLocation(locationData);
-            addPoints(20);
-            navigate('/');
+        try {
+            if (isEditMode && id) {
+                const { createProposal } = await import('@/lib/proposals');
+                await createProposal('update', id, formData.name, locationData as any);
+                alert("Attendere approvazione di 2 capi per visualizzare le modifiche apportate");
+                navigate('/');
+            } else {
+                // Add Location directly
+                await addLocation(locationData);
+                // Points are now handled in addLocation
+                navigate('/');
+            }
+        } catch (error) {
+            console.error('Submission error:', error);
+            alert('Errore durante il salvataggio. Riprova.');
+            setIsSubmitting(false);
         }
     };
 
@@ -198,24 +260,64 @@ export default function AddLocation() {
                         />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium mb-1">Regione *</label>
                             <select
                                 name="region" required
-                                value={formData.region} onChange={handleChange}
-                                className="w-full p-3 rounded-xl border border-gray-200 bg-white"
+                                value={formData.region}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    setFormData(prev => ({ ...prev, region: val, province: '' }));
+                                }}
+                                className="w-full p-3 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-scout-green"
                             >
-                                <option value="">Seleziona...</option>
+                                <option value="">Seleziona Regione...</option>
                                 {ITALIAN_REGIONS.map(r => <option key={r} value={r}>{r}</option>)}
                             </select>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium mb-1">Comune/Provincia</label>
+                            <label className="block text-sm font-medium mb-1">Provincia *</label>
+                            {formData.region ? (
+                                <select
+                                    name="province" required
+                                    value={formData.province} onChange={handleChange}
+                                    className="w-full p-3 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-scout-green"
+                                >
+                                    <option value="">Seleziona Provincia...</option>
+                                    {ITALIAN_PROVINCIAL_DATA[formData.region].map(p => (
+                                        <option key={p} value={p}>{p}</option>
+                                    ))}
+                                </select>
+                            ) : (
+                                <div className="p-3 bg-red-50 text-red-600 rounded-xl text-xs border border-red-100 flex items-center gap-2">
+                                    <span className="font-bold">⚠️</span>
+                                    Seleziona prima la regione
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium mb-1">Comune *</label>
                             <input
-                                type="text" name="commune"
+                                type="text" name="commune" required
                                 value={formData.commune} onChange={handleChange}
-                                className="w-full p-3 rounded-xl border border-gray-200"
+                                placeholder="es. Roma, Milano..."
+                                className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-scout-green"
+                            />
+                        </div>
+                        <div>
+                            <div className="flex justify-between items-center mb-1">
+                                <label className="block text-sm font-medium">Indirizzo</label>
+                                <span className="text-[10px] font-bold text-scout-blue bg-scout-blue/10 px-2 py-0.5 rounded-full">+3 pt</span>
+                            </div>
+                            <input
+                                type="text" name="address"
+                                value={formData.address} onChange={handleChange}
+                                placeholder="Via dei Cerchi, 1 o link Maps..."
+                                className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-scout-green"
                             />
                         </div>
                     </div>
@@ -230,7 +332,10 @@ export default function AddLocation() {
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium mb-1">Sito Web (opzionale)</label>
+                        <div className="flex justify-between items-center mb-1">
+                            <label className="block text-sm font-medium">Sito Web (opzionale)</label>
+                            <span className="text-[10px] font-bold text-scout-blue bg-scout-blue/10 px-2 py-0.5 rounded-full">+2 pt</span>
+                        </div>
                         <input
                             type="url" name="website"
                             value={formData.website} onChange={handleChange}
@@ -242,7 +347,9 @@ export default function AddLocation() {
 
                 {/* Section 2: Logistica Estesa and Coordinates */}
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
-                    <h2 className="font-semibold text-lg">Logistica e Posizione</h2>
+                    <div className="flex justify-between items-center">
+                        <h2 className="font-semibold text-lg text-scout-green">Logistica e Posizione</h2>
+                    </div>
 
                     {/* Coordinates Section */}
                     <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-4">
@@ -250,6 +357,9 @@ export default function AddLocation() {
                         <div className="flex gap-2 mb-3">
                             <input
                                 type="url"
+                                name="googleMapsLink"
+                                value={formData.googleMapsLink}
+                                onChange={handleChange}
                                 placeholder="Incolla link qui..."
                                 className="flex-1 p-3 rounded-xl border border-gray-200"
                                 onBlur={(e) => {
@@ -258,7 +368,7 @@ export default function AddLocation() {
                                         // Try regex for @lat,lng
                                         const match = val.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
                                         if (match) {
-                                            setFormData(prev => ({
+                                            setFormData((prev: any) => ({
                                                 ...prev,
                                                 latitude: match[1],
                                                 longitude: match[2]
@@ -267,7 +377,7 @@ export default function AddLocation() {
                                             // Try regex for query parameter
                                             const match2 = val.match(/[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/);
                                             if (match2) {
-                                                setFormData(prev => ({
+                                                setFormData((prev: any) => ({
                                                     ...prev,
                                                     latitude: match2[1],
                                                     longitude: match2[2]
@@ -326,7 +436,7 @@ export default function AddLocation() {
                             { key: 'hasRS', label: 'Servizio RS' },
                             { key: 'hasChurch', label: 'Chiesa' },
                             { key: 'hasGreenSpace', label: 'Ampi spazi verdi' },
-                            { key: 'hasCookware', label: 'Pentolame' },
+                            { key: 'hasEquippedKitchen', label: 'Cucina attrezzata' },
                             { key: 'hasPoles', label: 'Disponibilità paletti' },
                         ].map((item) => (
                             <label key={item.key} className="flex items-center gap-2 p-3 border rounded-xl hover:bg-gray-50 transition-colors cursor-pointer">
@@ -353,7 +463,45 @@ export default function AddLocation() {
                     </div>
                 </div>
 
-                {/* Section 3: Restrizioni */}
+                {/* Section 3: Attenzioni */}
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+                    <h2 className="font-semibold text-lg text-orange-600 flex items-center gap-2">
+                        <span className="p-1.5 bg-orange-100 rounded-lg">⚠️</span>
+                        Attenzioni del Luogo
+                    </h2>
+                    <p className="text-xs text-gray-500">Indica pericoli, fastidi o aspetti critici da tenere a mente per la sicurezza.</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {[
+                            { key: 'hasPastures', label: 'Pascoli e Greggi' },
+                            { key: 'hasInsects', label: 'Calabroni/Tafani/Vespe/Mosche' },
+                            { key: 'hasDiseases', label: 'Malattie (es: Leishmania, zecche...)' },
+                            { key: 'hasLittleShade', label: 'Poche zone ombra' },
+                            { key: 'hasVeryBusyArea', label: 'Zona molto frequentata' },
+                        ].map((item) => (
+                            <label key={item.key} className={`flex items-center gap-2 p-3 border rounded-xl cursor-pointer transition-colors ${(formData as any)[item.key] ? 'bg-orange-50 border-orange-200' : 'hover:bg-gray-50'}`}>
+                                <input
+                                    type="checkbox"
+                                    name={item.key}
+                                    checked={(formData as any)[item.key]}
+                                    onChange={handleCheckboxChange}
+                                    className="w-5 h-5 text-orange-600 rounded focus:ring-orange-500"
+                                />
+                                <span className="text-sm font-medium">{item.label}</span>
+                            </label>
+                        ))}
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium mb-1">Altro (Specificare)</label>
+                        <input
+                            type="text" name="otherAttention"
+                            value={formData.otherAttention} onChange={handleChange}
+                            className="w-full p-3 rounded-xl border border-gray-200"
+                            placeholder="Es. Presenza di cinghiali, terreno scosceso..."
+                        />
+                    </div>
+                </div>
+
+                {/* Section 4: Restrizioni */}
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
                     <h2 className="font-semibold text-lg text-red-600">Restrizioni</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -380,11 +528,59 @@ export default function AddLocation() {
                     </div>
                 </div>
 
-                {/* Section 4: Activities */}
+                {/* Section 4: Pricing */}
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+                    <div className="flex justify-between items-center">
+                        <h2 className="font-semibold text-lg text-scout-brown flex items-center gap-2">
+                            <Save size={20} className="text-scout-brown" />
+                            Prezzo e Tariffe
+                        </h2>
+                        <span className="text-[10px] font-bold text-scout-blue bg-scout-blue/10 px-2 py-0.5 rounded-full">+5 pt</span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium mb-1">Prezzo Base (€)</label>
+                            <input
+                                type="number" name="pricingBase"
+                                value={formData.pricingBase} onChange={handleChange}
+                                placeholder="Es. 10"
+                                className="w-full p-3 rounded-xl border border-gray-200"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium mb-1">Unità</label>
+                            <select
+                                name="pricingUnit"
+                                value={formData.pricingUnit} onChange={handleChange}
+                                className="w-full p-3 rounded-xl border border-gray-200 bg-white"
+                            >
+                                <option value="per_night">A Notte</option>
+                                <option value="per_day">Al Giorno</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium mb-1">Dettagli e Flessibilità Prezzi</label>
+                        <textarea
+                            name="pricingDescription"
+                            value={formData.pricingDescription} onChange={handleChange}
+                            rows={3}
+                            className="w-full p-3 rounded-xl border border-gray-200"
+                            placeholder="Es. 15€ con cucina, 13€ senza. Se si va via prima delle 12 la seconda giornata è a metà prezzo."
+                        />
+                        <p className="text-[10px] text-gray-400 mt-1">
+                            Sii specifico: indica costi extra per cucina, acqua/luce o sconti per partenze anticipate.
+                        </p>
+                    </div>
+                </div>
+
+                {/* Section 5: Activities */}
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
                     <h2 className="font-semibold text-lg text-scout-blue">Attività Ideali</h2>
                     <div className="flex flex-wrap gap-2">
-                        {ACTIVITIES_LIST.map(item => (
+                        {(formData.activities as any[]).map(item => (
                             <button
                                 key={item}
                                 type="button"
@@ -397,10 +593,21 @@ export default function AddLocation() {
                                 {item}
                             </button>
                         ))}
+                        {/* If ACTIVITIES_LIST is needed for rendering the full list to PICK from */}
+                        {ACTIVITIES_LIST.filter(a => !formData.activities.includes(a)).map(item => (
+                            <button
+                                key={item}
+                                type="button"
+                                onClick={() => toggleArrayItem('activities', item)}
+                                className="px-3 py-1.5 rounded-full text-sm font-medium border bg-white text-gray-600 border-gray-300 hover:border-scout-blue"
+                            >
+                                {item}
+                            </button>
+                        ))}
                     </div>
                 </div>
 
-                {/* Section 5: Note */}
+                {/* Section 6: Note */}
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
                     <h2 className="font-semibold text-lg">Note</h2>
                     <div>
@@ -416,12 +623,29 @@ export default function AddLocation() {
 
                 <button
                     type="submit"
-                    className="w-full bg-scout-green text-white font-bold text-lg py-4 rounded-xl shadow-lg hover:bg-scout-green-dark transition-colors flex items-center justify-center gap-2"
+                    disabled={isSubmitting}
+                    className={`w-full bg-scout-green text-white font-bold text-lg py-4 rounded-xl shadow-lg hover:bg-scout-green-dark transition-colors flex items-center justify-center gap-2 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
-                    <Save size={24} />
-                    {isEditMode ? 'Conferma Modifica' : 'Salva Luogo (+20 pt)'}
+                    {isSubmitting ? (
+                        <>Salvataggio in corso...</>
+                    ) : (
+                        <>
+                            <Save size={24} />
+                            {isEditMode ? 'Conferma Modifica' : 'Salva Luogo'}
+                        </>
+                    )}
                 </button>
-            </form>
-        </div>
+
+                {/* Floating Points Counter */}
+                <div className="fixed bottom-24 right-6 z-50 animate-bounce-subtle">
+                    <div className="bg-scout-green text-white px-4 py-2 rounded-2xl shadow-xl flex items-center gap-2 border-2 border-white">
+                        <div className="bg-white text-scout-green w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs">
+                            {livePoints}
+                        </div>
+                        <span className="text-sm font-bold">Punti totali</span>
+                    </div>
+                </div>
+            </form >
+        </div >
     );
 }

@@ -33,7 +33,7 @@ export default function Home() {
     const [hasBeds, setHasBeds] = useState(false);
 
     useEffect(() => {
-        setLocations(getLocations());
+        getLocations().then(setLocations).catch(console.error);
     }, []);
 
     const toggleSelection = (list: string[], item: string, setList: (l: string[]) => void) => {

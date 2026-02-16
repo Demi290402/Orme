@@ -10,18 +10,22 @@ export default function Login() {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
 
-    const handleLogin = (e: React.FormEvent) => {
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
 
-        const user = loginUser(email, password);
+        try {
+            const user = await loginUser(email, password);
 
-        if (user) {
-            // Redirect to the page they were trying to access, or home if none
-            const from = (location.state as any)?.from?.pathname || '/';
-            navigate(from, { replace: true });
-        } else {
-            setError('Credenziali non valide. Riprova o registrati.');
+            if (user) {
+                // Redirect to the page they were trying to access, or home if none
+                const from = (location.state as any)?.from?.pathname || '/';
+                navigate(from, { replace: true });
+            } else {
+                setError('Credenziali non valide. Riprova o registrati.');
+            }
+        } catch (err) {
+            setError('Errore durante il login. Riprova.');
         }
     };
 

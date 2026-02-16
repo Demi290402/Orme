@@ -22,23 +22,29 @@ export function getLevelInfo(points: number) {
 }
 
 export const BADGES = {
-    'piede_leggero': { name: 'Piede Leggero', description: '5 contributi approvati', icon: '🦶' },
-    'tracciatore': { name: 'Tracciatore', description: '15 contributi', icon: '🗺️' },
-    'cartografo': { name: 'Cartografo', description: '30 contributi', icon: '📍' },
-    'sentinella': { name: 'Sentinella', description: '10 conferme validità', icon: '👁️' },
-    'rover_servizio': { name: 'Rover di Servizio', description: '10 luoghi con servizio RS', icon: '🤝' }
+    'piede_leggero': { name: 'Piede Leggero', description: 'Fai approvare 5 modifiche o nuovi luoghi', icon: '🦶', goal: 5, statKey: 'contributionsApproved' },
+    'tracciatore': { name: 'Tracciatore', description: 'Aggiungi 15 nuovi luoghi alla mappa', icon: '🗺️', goal: 15, statKey: 'locationsAdded' },
+    'sentinella': { name: 'Sentinella', description: 'Dai 10 conferme di validità ai luoghi', icon: '👁️', goal: 10, statKey: 'validationsGiven' },
+    'rover_servizio': { name: 'Rover di Servizio', description: 'Aggiungi 10 luoghi che offrono servizio RS', icon: '🤝', goal: 10, statKey: 'rsLocationsAdded' },
+    'economo': { name: 'Economo', description: 'Inserisci info sui prezzi in 5 luoghi', icon: '💰', goal: 5, statKey: 'pricingInfoAdded' },
+    'cartografo': { name: 'Cartografo', description: 'Inserisci via o posizione GPS in 10 luoghi', icon: '📍', goal: 10, statKey: 'coordinateInfoAdded' },
+    'informatore': { name: 'Informatore', description: 'Inserisci il link al sito web in 10 luoghi', icon: '🌐', goal: 10, statKey: 'websiteInfoAdded' }
 };
 
-export function addPoints(amount: number) {
-    const user = getUser();
-    user.points += amount;
+export async function addPoints(amount: number) {
+    try {
+        const user = await getUser();
+        user.points += amount;
 
-    // Check for level up
-    const newLevelInfo = getLevelInfo(user.points);
-    if (newLevelInfo.current.level > user.level) {
-        user.level = newLevelInfo.current.level;
-        alert(`Complimenti! Sei salito al livello ${newLevelInfo.current.name}! 🎉`);
+        // Check for level up
+        const newLevelInfo = getLevelInfo(user.points);
+        if (newLevelInfo.current.level > user.level) {
+            user.level = newLevelInfo.current.level;
+            alert(`Complimenti! Sei salito al livello ${newLevelInfo.current.name}! 🎉`);
+        }
+
+        await updateUser(user);
+    } catch (error) {
+        console.error('Error adding points:', error);
     }
-
-    updateUser(user);
 }

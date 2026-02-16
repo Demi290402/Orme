@@ -3,6 +3,7 @@ import { getLevelInfo } from '@/lib/gamification';
 import { Trophy, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { User } from '@/types';
+import { getAllUsers } from '@/lib/data';
 
 export default function Leaderboard() {
     const [allUsers, setAllUsers] = useState<User[]>([]);
@@ -11,12 +12,11 @@ export default function Leaderboard() {
     const usersPerPage = 10;
 
     useEffect(() => {
-        // Read users from localStorage
-        const stored = localStorage.getItem('orme_users');
-        const users: User[] = stored ? JSON.parse(stored) : [];
-        // Sort by points descending
-        const sorted = users.sort((a, b) => b.points - a.points);
-        setAllUsers(sorted);
+        // Read users from Supabase
+        getAllUsers().then(users => {
+            // Already sorted by points in getAllUsers
+            setAllUsers(users);
+        }).catch(console.error);
     }, []);
 
     // Calculate pagination
