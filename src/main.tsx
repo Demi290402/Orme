@@ -11,7 +11,10 @@ createRoot(document.getElementById('root')!).render(
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(err => {
+    navigator.serviceWorker.register('/sw.js').then(registration => {
+      // Forza il controllo di un aggiornamento del SW ad ogni caricamento
+      registration.update();
+    }).catch(err => {
       console.log('SW registration failed: ', err);
     });
   });
