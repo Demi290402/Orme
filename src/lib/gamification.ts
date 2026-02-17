@@ -48,3 +48,21 @@ export async function addPoints(amount: number) {
         console.error('Error adding points:', error);
     }
 }
+
+export async function addPointsToUser(userId: string, amount: number) {
+    try {
+        const user = await getUser(userId);
+        user.points += amount;
+
+        // Check for level up
+        const newLevelInfo = getLevelInfo(user.points);
+        if (newLevelInfo.current.level > user.level) {
+            user.level = newLevelInfo.current.level;
+            // No alert for other users' level up to avoid UI confusion
+        }
+
+        await updateUser(user);
+    } catch (error) {
+        console.error('Error adding points to user:', error);
+    }
+}

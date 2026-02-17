@@ -1,8 +1,9 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, User, Trophy, Menu } from 'lucide-react';
+import { Home, User, Trophy, Menu, HelpCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Logo from '@/components/Logo';
+import PWAInstallPrompt from './PWAInstallPrompt';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
     const location = useLocation();
@@ -17,12 +18,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     const navItems: NavItem[] = [
         { icon: Home, label: 'Bacheca', path: '/' },
         { icon: Trophy, label: 'Classifica', path: '/leaderboard' },
+        { icon: HelpCircle, label: 'Guida', path: '/guide' },
         { icon: Menu, label: 'Chi Siamo', path: '/about' },
         { icon: User, label: 'Profilo', path: '/profile' },
     ];
 
     return (
         <div className="min-h-screen bg-scout-beige-light font-sans text-gray-900 pb-20 md:pb-0">
+            <PWAInstallPrompt />
             {/* Desktop Header */}
             <header className="bg-scout-white border-b border-gray-200 p-4 shadow-sm sticky top-0 z-50">
                 <div className="max-w-4xl mx-auto flex justify-between items-center">

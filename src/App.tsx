@@ -9,6 +9,7 @@ import Leaderboard from '@/pages/Leaderboard';
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
 import About from '@/pages/About';
+import Guide from '@/pages/Guide';
 import Proposals from '@/pages/Proposals';
 
 function App() {
@@ -25,6 +26,7 @@ function App() {
         <Route path="/leaderboard" element={<ProtectedRoute><Layout><Leaderboard /></Layout></ProtectedRoute>} />
         <Route path="/add" element={<ProtectedRoute><Layout><AddLocation /></Layout></ProtectedRoute>} />
         <Route path="/edit/:id" element={<ProtectedRoute><Layout><AddLocation /></Layout></ProtectedRoute>} />
+        <Route path="/guide" element={<ProtectedRoute><Layout><Guide /></Layout></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><Layout><Profile /></Layout></ProtectedRoute>} />
         <Route path="/about" element={<ProtectedRoute><Layout><About /></Layout></ProtectedRoute>} />
         <Route path="/proposals" element={<ProtectedRoute><Layout><Proposals /></Layout></ProtectedRoute>} />

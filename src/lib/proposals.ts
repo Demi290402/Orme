@@ -1,7 +1,7 @@
 import { supabase } from './supabase';
 import { Proposal, Location } from '@/types';
 import { getUser } from './data';
-import { addPoints } from './gamification';
+import { addPoints, addPointsToUser } from './gamification';
 
 // =====================================================
 // PROPOSALS MANAGEMENT (Supabase)
@@ -170,7 +170,7 @@ async function applyProposal(proposal: Proposal) {
             if (error) throw error;
 
             // Reward proposer
-            await addPoints(5);
+            await addPointsToUser(proposal.proposerId, 5);
             alert(`Il luogo "${proposal.locationName}" è stato eliminato definitivamente.`);
         } else if (proposal.type === 'update' && proposal.changes) {
             // Update the location
@@ -192,7 +192,7 @@ async function applyProposal(proposal: Proposal) {
             }
 
             // Reward proposer
-            await addPoints(10);
+            await addPointsToUser(proposal.proposerId, 5);
             alert(`Le modifiche a "${proposal.locationName}" sono state applicate correttamente sul luogo esistente!`);
         }
     } catch (error) {

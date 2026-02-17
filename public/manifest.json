@@ -1,0 +1,21 @@
+{
+    "name": "Orme",
+    "short_name": "Orme",
+    "description": "Database centralizzato della Comunità Capi Turi 1",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#2D5A27",
+    "icons": [
+        {
+            "src": "/scarpa.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/scarpa.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}
