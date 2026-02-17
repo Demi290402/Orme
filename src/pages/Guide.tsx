@@ -8,8 +8,10 @@ import {
     Zap,
     Info,
     ChevronRight,
-    Download
+    Clock
 } from 'lucide-react';
+import { LEVELS } from '@/lib/gamification';
+import { cn } from '@/lib/utils';
 
 export default function Guide() {
     const pointRules = [
@@ -17,8 +19,15 @@ export default function Guide() {
         { action: 'Aggiunta sito web', points: 2, icon: <Zap size={18} className="text-scout-blue" /> },
         { action: 'Aggiunta Indirizzo/Maps/GPS', points: 3, icon: <Zap size={18} className="text-scout-blue" /> },
         { action: 'Inserimento prezzi e tariffe', points: 5, icon: <Zap size={18} className="text-scout-blue" /> },
-        { action: 'Approvazione modifica (Capi)', points: 10, icon: <CheckCircle2 size={18} className="text-scout-green" /> },
-        { action: 'Proposta modifica approvata (Autore)', points: 5, icon: <Edit3 size={18} className="text-scout-brown" /> },
+        { action: 'Approvazione modifica (Capi)', points: 5, icon: <CheckCircle2 size={18} className="text-scout-green" /> },
+        { action: 'Proposta modifica o eliminazione approvata (Autore)', points: 10, icon: <Edit3 size={18} className="text-scout-brown" /> },
+    ];
+
+    const stalenessRules = [
+        { label: 'Aggiornato di recente', desc: 'Meno di 1 anno fa', color: 'bg-green-500' },
+        { label: 'Da verificare', desc: 'Più di 1 anno fa', color: 'bg-yellow-500' },
+        { label: 'Potrebbe essere cambiato', desc: 'Più di 2 anni fa', color: 'bg-orange-500' },
+        { label: 'Molto datato', desc: 'Più di 3 anni fa', color: 'bg-red-500' },
     ];
 
     return (
@@ -42,7 +51,7 @@ export default function Guide() {
                             <div className="bg-scout-green/10 p-1.5 h-fit rounded-lg">
                                 <ChevronRight size={14} className="text-scout-green" />
                             </div>
-                            <span><strong>Cerca:</strong> Usa la barra di ricerca in home per trovare luoghi per nome, comune o attività (es. "Campo Estivo").</span>
+                            <span><strong>Cerca:</strong> Usa la barra di ricerca in home per trovare luoghi per nome, comune o attività. Puoi anche filtrare per specifiche attività scout.</span>
                         </li>
                         <li className="flex gap-3">
                             <div className="bg-scout-green/10 p-1.5 h-fit rounded-lg">
@@ -60,12 +69,36 @@ export default function Guide() {
                 </div>
             </section>
 
-            {/* 2. Regolamento Punti */}
+            {/* 2. Guida ai Livelli */}
+            <section className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <h2 className="text-xl font-bold text-scout-blue mb-4 flex items-center gap-2">
+                    <Trophy className="text-scout-blue" /> Guida ai Livelli
+                </h2>
+                <p className="text-sm text-gray-500 mb-6 font-medium">Scala la vetta e personalizza il tuo profilo con i colori dei livelli.</p>
+
+                <div className="space-y-3">
+                    {LEVELS.map((lvl) => (
+                        <div key={lvl.level} className="flex items-center gap-4 p-3 rounded-xl border border-gray-100 bg-gray-50/50">
+                            <div
+                                className="w-12 h-12 rounded-full border-4 shrink-0 bg-white flex items-center justify-center font-bold text-gray-400"
+                                style={{ borderColor: lvl.color }}
+                            >
+                                {lvl.level}
+                            </div>
+                            <div className="flex-1">
+                                <h3 className="font-bold text-gray-900 text-sm">{lvl.name}</h3>
+                                <p className="text-xs text-gray-500">{lvl.min} - {lvl.max === Infinity ? '∞' : lvl.max} punti</p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </section>
+
+            {/* 3. Regolamento Punti */}
             <section className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                 <h2 className="text-xl font-bold text-scout-green mb-4 flex items-center gap-2">
-                    <Trophy /> Regolamento Punteggi
+                    <Zap className="text-yellow-500" /> Regolamento Punteggi
                 </h2>
-                <p className="text-sm text-gray-500 mb-6">Contribuire alla mappa ti permette di scalare la classifica e ottenere nuovi badge.</p>
 
                 <div className="grid grid-cols-1 gap-3">
                     {pointRules.map((rule, idx) => (
@@ -87,13 +120,33 @@ export default function Guide() {
                 </div>
             </section>
 
-            {/* 3. Installazione App */}
+            {/* 4. Stato dei Dati */}
+            <section className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <h2 className="text-xl font-bold text-scout-brown mb-4 flex items-center gap-2">
+                    <Clock className="text-scout-brown" /> Legenda Stato Dati
+                </h2>
+                <p className="text-sm text-gray-500 mb-6">Un pallino colorato sulla scheda indica quanto sono recenti le informazioni.</p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {stalenessRules.map((rule, idx) => (
+                        <div key={idx} className="flex items-center gap-3 p-2 bg-gray-50 rounded-xl border border-gray-100">
+                            <div className={cn("w-3 h-3 rounded-full shrink-0 animate-pulse", rule.color)} />
+                            <div>
+                                <h4 className="text-xs font-bold text-gray-900">{rule.label}</h4>
+                                <p className="text-[10px] text-gray-500">{rule.desc}</p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </section>
+
+            {/* 5. Installazione App */}
             <section className="bg-scout-brown/5 p-6 rounded-2xl border border-scout-brown/10">
                 <h2 className="text-xl font-bold text-scout-brown mb-4 flex items-center gap-2">
                     <Smartphone /> Scaricare l'app (PWA)
                 </h2>
                 <p className="text-sm text-gray-700 mb-6 leading-relaxed">
-                    Puoi installare Orme sul tuo smartphone per aprirla come una vera app, senza usare il browser. È più veloce e l'icona apparirà tra le tue app!
+                    Puoi installare Orme sul tuo smartphone per aprirla come una vera app, senza usare il browser. L'icona apparirà tra le tue app!
                 </p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -122,13 +175,7 @@ export default function Guide() {
                     </div>
                 </div>
 
-                <div className="mt-6 flex justify-center">
-                    <div className="flex items-center gap-2 px-6 py-3 bg-scout-green text-white rounded-full font-bold shadow-lg shadow-scout-green/20">
-                        <Download size={20} />
-                        <span>Aggiornamento automatico</span>
-                    </div>
-                </div>
-                <p className="text-[10px] text-center text-gray-400 mt-4 italic">
+                <p className="text-[10px] text-center text-gray-400 mt-6 italic">
                     L'app si aggiornerà da sola ogni volta che aggiungeremo nuove funzionalità!
                 </p>
             </section>

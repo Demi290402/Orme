@@ -1,12 +1,12 @@
 import { getUser, updateUser } from './data';
 
 export const LEVELS = [
-    { level: 1, name: 'Piede Tenero', min: 0, max: 49 },
-    { level: 2, name: 'Capo Sestiglia', min: 50, max: 149 },
-    { level: 3, name: 'Esploratore/Guida', min: 150, max: 274 },
-    { level: 4, name: 'Giovane Capo', min: 275, max: 399 },
-    { level: 5, name: 'Sentinella', min: 400, max: 599 },
-    { level: 6, name: 'Capo Brevettato', min: 600, max: Infinity },
+    { level: 1, name: 'Piede Tenero', min: 0, max: 49, color: '#9CA3AF' }, // Gray
+    { level: 2, name: 'Capo Sestiglia', min: 50, max: 149, color: '#0EA5E9' }, // Celeste
+    { level: 3, name: 'Esploratore/Guida', min: 150, max: 274, color: '#78350F' }, // Brown
+    { level: 4, name: 'Giovane Capo', min: 275, max: 399, color: '#F97316' }, // Orange
+    { level: 5, name: 'Sentinella', min: 400, max: 599, color: '#EAB308' }, // Yellow
+    { level: 6, name: 'Capo Brevettato', min: 600, max: Infinity, color: '#A855F7' }, // Purple
 ];
 
 export function getLevelInfo(points: number) {

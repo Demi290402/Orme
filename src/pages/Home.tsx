@@ -31,6 +31,7 @@ export default function Home() {
     const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
     const [hasTents, setHasTents] = useState(false);
     const [hasBeds, setHasBeds] = useState(false);
+    const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
 
     useEffect(() => {
         getLocations().then(setLocations).catch(console.error);
@@ -54,25 +55,28 @@ export default function Home() {
         const matchesTents = hasTents ? loc.hasTents : true;
         const matchesBeds = hasBeds ? (loc.beds || 0) > 0 : true;
 
-        // 3. Regions (Multi-select)
+        // 3. Regions
         const matchesRegion = selectedRegions.length > 0 ? selectedRegions.includes(loc.region) : true;
 
-        // 4. Branches (The complex one)
+        // 4. Branches & Activities
         let matchesBranch = true;
         if (selectedBranches.length > 0) {
-            // Collect all valid activities based on selected branches
-            const validActivities = selectedBranches.flatMap(branch => BRANCH_ACTIVITIES[branch]);
-
-            // Check if the location has at least one of the valid activities
-            matchesBranch = loc.activities.some(act => validActivities.includes(act));
+            const validActivitiesForBranches = selectedBranches.flatMap(branch => BRANCH_ACTIVITIES[branch]);
+            matchesBranch = loc.activities.some(act => validActivitiesForBranches.includes(act));
         }
 
-        return matchesSearch && matchesTents && matchesBeds && matchesRegion && matchesBranch;
+        let matchesActivity = true;
+        if (selectedActivities.length > 0) {
+            matchesActivity = loc.activities.some(act => selectedActivities.includes(act));
+        }
+
+        return matchesSearch && matchesTents && matchesBeds && matchesRegion && matchesBranch && matchesActivity;
     });
 
     const activeFiltersCount =
         selectedBranches.length +
         selectedRegions.length +
+        selectedActivities.length +
         (hasTents ? 1 : 0) +
         (hasBeds ? 1 : 0);
 
@@ -130,24 +134,44 @@ export default function Home() {
 
                         {/* 1. Branche */}
                         <div>
-                            <h3 className="font-bold text-gray-900 mb-3">Branca / Attività</h3>
+                            <h3 className="font-bold text-gray-900 mb-3 text-sm">Filtra per Branca</h3>
                             <div className="flex flex-wrap gap-2">
                                 {Object.keys(BRANCH_ACTIVITIES).map(branch => (
                                     <button
                                         key={branch}
                                         onClick={() => toggleSelection(selectedBranches, branch, setSelectedBranches)}
                                         className={cn(
-                                            "px-4 py-2 rounded-full text-sm font-bold border transition-all",
+                                            "px-4 py-2 rounded-full text-xs font-bold border transition-all",
                                             selectedBranches.includes(branch)
-                                                ? "bg-scout-blue text-white border-scout-blue shadow-md transform scale-105"
-                                                : "bg-white text-gray-600 border-gray-200 hover:border-scout-blue/50"
+                                                ? "bg-scout-green text-white border-scout-green shadow-sm"
+                                                : "bg-white text-gray-600 border-gray-200"
                                         )}
                                     >
                                         {branch}
                                     </button>
                                 ))}
                             </div>
-                            <p className="text-xs text-gray-400 mt-2 italic">Seleziona più branche per vedere attività combinate o di gruppo.</p>
+                        </div>
+
+                        {/* 1b. Attività specifiche */}
+                        <div>
+                            <h3 className="font-bold text-gray-900 mb-3 text-sm">Attività Specifica</h3>
+                            <div className="flex flex-wrap gap-2">
+                                {Array.from(new Set(Object.values(BRANCH_ACTIVITIES).flat())).sort().map(activity => (
+                                    <button
+                                        key={activity}
+                                        onClick={() => toggleSelection(selectedActivities, activity, setSelectedActivities)}
+                                        className={cn(
+                                            "px-3 py-1.5 rounded-lg text-[10px] font-bold border transition-all",
+                                            selectedActivities.includes(activity)
+                                                ? "bg-scout-blue text-white border-scout-blue"
+                                                : "bg-white text-gray-500 border-gray-100 hover:border-scout-blue/30"
+                                        )}
+                                    >
+                                        {activity}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
 
                         {/* 2. Logistica */}
@@ -216,6 +240,7 @@ export default function Home() {
                                     onClick={() => {
                                         setSelectedBranches([]);
                                         setSelectedRegions([]);
+                                        setSelectedActivities([]);
                                         setHasTents(false);
                                         setHasBeds(false);
                                     }}
@@ -247,6 +272,7 @@ export default function Home() {
                                     setSearchTerm('');
                                     setSelectedBranches([]);
                                     setSelectedRegions([]);
+                                    setSelectedActivities([]);
                                     setHasTents(false);
                                     setHasBeds(false);
                                 }}

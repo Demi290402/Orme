@@ -7,12 +7,28 @@ interface LocationCardProps {
     location: Location;
 }
 
+const getStalenessColor = (updatedAt: string) => {
+    const lastUpdate = new Date(updatedAt);
+    const now = new Date();
+    const diffYears = (now.getTime() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24 * 365);
+
+    if (diffYears < 1) return 'bg-green-500';
+    if (diffYears < 2) return 'bg-yellow-500';
+    if (diffYears < 3) return 'bg-orange-500';
+    return 'bg-red-500';
+};
+
 export default function LocationCard({ location }: LocationCardProps) {
+    const stalenessColor = getStalenessColor(location.lastUpdatedAt);
+
     return (
         <Link to={`/location/${location.id}`} className="block">
             <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow active:scale-[0.98] transition-transform">
                 <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-bold text-lg text-scout-green-dark line-clamp-1">{location.name}</h3>
+                    <div className="flex items-center gap-2 overflow-hidden">
+                        <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${stalenessColor}`} title="Stato aggiornamento dati" />
+                        <h3 className="font-bold text-lg text-scout-green-dark line-clamp-1">{location.name}</h3>
+                    </div>
                     <span className="bg-scout-beige-light text-scout-brown text-xs px-2 py-1 rounded-full font-medium whitespace-nowrap">
                         {location.region}
                     </span>

@@ -140,7 +140,7 @@ export async function approveProposal(proposalId: string, approverId: string) {
         if (updateError) throw updateError;
 
         // Reward for approving
-        await addPoints(10);
+        await addPoints(5);
 
         // If 2+ approvals, apply the proposal
         if (newApprovals.length >= 2) {
@@ -170,7 +170,7 @@ async function applyProposal(proposal: Proposal) {
             if (error) throw error;
 
             // Reward proposer
-            await addPointsToUser(proposal.proposerId, 5);
+            await addPointsToUser(proposal.proposerId, 10);
             alert(`Il luogo "${proposal.locationName}" è stato eliminato definitivamente.`);
         } else if (proposal.type === 'update' && proposal.changes) {
             // Update the location
@@ -192,7 +192,7 @@ async function applyProposal(proposal: Proposal) {
             }
 
             // Reward proposer
-            await addPointsToUser(proposal.proposerId, 5);
+            await addPointsToUser(proposal.proposerId, 10);
             alert(`Le modifiche a "${proposal.locationName}" sono state applicate correttamente sul luogo esistente!`);
         }
     } catch (error) {

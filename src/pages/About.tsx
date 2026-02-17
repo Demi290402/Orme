@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Footprints, ShieldCheck, Users } from 'lucide-react';
 import { User } from '@/types';
 import { getAllUsers } from '@/lib/data';
+import UserAvatar from '@/components/UserAvatar';
 
 export default function About() {
     const [users, setUsers] = useState<User[]>([]);
@@ -54,13 +55,7 @@ export default function About() {
                     ) : (
                         users.map(user => (
                             <div key={user.id} className="flex items-center gap-3 bg-white/50 p-2 rounded-xl">
-                                <div className="w-10 h-10 rounded-full bg-white overflow-hidden shadow-sm">
-                                    <img
-                                        src={user.profilePicture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.firstName}`}
-                                        alt={user.firstName}
-                                        className="w-full h-full object-cover"
-                                    />
-                                </div>
+                                <UserAvatar user={user} size="sm" />
                                 <div>
                                     <p className="font-bold text-gray-900 text-sm">{user.firstName} {user.lastName}</p>
                                     <p className="text-xs text-scout-green font-medium">@{user.nickname}</p>

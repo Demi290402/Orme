@@ -4,6 +4,7 @@ import { Trophy, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { User } from '@/types';
 import { getAllUsers } from '@/lib/data';
+import UserAvatar from '@/components/UserAvatar';
 
 export default function Leaderboard() {
     const [allUsers, setAllUsers] = useState<User[]>([]);
@@ -126,13 +127,7 @@ export default function Leaderboard() {
 
                         <div className="px-6 pb-6 -mt-12 relative">
                             <div className="flex flex-col items-center mb-6">
-                                <div className="w-24 h-24 rounded-full border-4 border-white bg-white shadow-md overflow-hidden mb-3">
-                                    <img
-                                        src={selectedUser.profilePicture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedUser.firstName}`}
-                                        alt="Profile"
-                                        className="w-full h-full object-cover"
-                                    />
-                                </div>
+                                <UserAvatar user={selectedUser} size="lg" className="mb-3" />
                                 <h2 className="text-2xl font-bold text-gray-900 text-center leading-tight">
                                     {selectedUser.firstName} {selectedUser.lastName}
                                 </h2>
