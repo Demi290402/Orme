@@ -15,7 +15,7 @@
   --color-scout-beige-light: #F5F5F5;
   /* Background grigio chiarissimo invece del beige */
 
-  --font-sans: Inter, sans-serif;
+  --font-sans: 'Roboto', Inter, sans-serif;
 }
 
 @layer base {

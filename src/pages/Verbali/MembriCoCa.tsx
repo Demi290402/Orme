@@ -33,9 +33,12 @@ export default function MembriCoCaPage() {
 
     const handleSave = async (membro: Partial<MembroCoCa>) => {
         try {
-            await saveMembroCoCa(membro);
+            const saved = await saveMembroCoCa(membro);
             setIsAdding(false);
             setNewMembro({ nome: '', branca: 'COCA', ruoli: [] });
+            // Immediately add to local state to avoid delay
+            setMembri(prev => [...prev, saved]);
+            // Still run loadData to ensure sync
             loadData();
         } catch (err) {
             alert('Errore durante il salvataggio');

@@ -112,30 +112,30 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                                         new TableCell({
                                             width: { size: 70, type: WidthType.PERCENTAGE },
                                             children: [
-                                                new Paragraph({
-                                                    alignment: AlignmentType.RIGHT,
-                                                    children: [new TextRun({ text: `Gruppo ${currentUser.groupName || 'Turi 1'}`, bold: true, size: 28, font: "Georgia", color: "45387E" })],
-                                                }),
-                                                new Paragraph({
-                                                    alignment: AlignmentType.RIGHT,
-                                                    children: [new TextRun({ text: "Associazione Guide e Scouts Cattolici Italiani", bold: true, size: 22, font: "Georgia", color: "45387E" })],
-                                                }),
-                                                new Paragraph({
-                                                    alignment: AlignmentType.RIGHT,
-                                                    children: [new TextRun({ text: "Strada Mola 4 – 70010 Turi BA", size: 18, font: "Georgia", color: "45387E" })],
-                                                }),
-                                                new Paragraph({
-                                                    alignment: AlignmentType.RIGHT,
-                                                    children: [new TextRun({ text: "turi1@puglia.agesci.it", size: 18, font: "Georgia", color: "45387E", underline: { type: BorderStyle.SINGLE } })],
-                                                }),
-                                                new Paragraph({
-                                                    alignment: AlignmentType.RIGHT,
-                                                    children: [new TextRun({ text: "Codice fiscale: 91120250724", size: 18, font: "Georgia", color: "45387E" })],
-                                                }),
-                                                new Paragraph({
-                                                    alignment: AlignmentType.RIGHT,
-                                                    children: [new TextRun({ text: "N. Iscr. R.U.N.T.S.: 64984", size: 18, font: "Georgia", color: "45387E" })],
-                                                }),
+                                        new Paragraph({
+                                            alignment: AlignmentType.RIGHT,
+                                            children: [new TextRun({ text: `Gruppo ${currentUser.groupName || 'Turi 1'}`, bold: true, size: 16, font: "Tahoma", color: "45387E" })],
+                                        }),
+                                        new Paragraph({
+                                            alignment: AlignmentType.RIGHT,
+                                            children: [new TextRun({ text: "Associazione Guide e Scouts Cattolici Italiani", bold: true, size: 16, font: "Tahoma", color: "45387E" })],
+                                        }),
+                                        new Paragraph({
+                                            alignment: AlignmentType.RIGHT,
+                                            children: [new TextRun({ text: "Strada Mola 4 – 70010 Turi BA", size: 16, font: "Tahoma", color: "45387E" })],
+                                        }),
+                                        new Paragraph({
+                                            alignment: AlignmentType.RIGHT,
+                                            children: [new TextRun({ text: "turi1@puglia.agesci.it", size: 16, font: "Tahoma", color: "45387E", underline: { type: BorderStyle.SINGLE } })],
+                                        }),
+                                        new Paragraph({
+                                            alignment: AlignmentType.RIGHT,
+                                            children: [new TextRun({ text: "Codice fiscale: 91120250724", size: 16, font: "Tahoma", color: "45387E" })],
+                                        }),
+                                        new Paragraph({
+                                            alignment: AlignmentType.RIGHT,
+                                            children: [new TextRun({ text: "N. Iscr. R.U.N.T.S.: 64984", size: 16, font: "Tahoma", color: "45387E" })],
+                                        }),
                                             ],
                                         }),
                                     ],
@@ -144,7 +144,7 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                         }),
                         new Paragraph({
                             children: [
-                                new TextRun({ text: "WOSM / WAGGGS Member - Iscritta al Registro Nazionale APS n.72", size: 14, color: "999999", italics: true, font: "Georgia" }),
+                                new TextRun({ text: "WOSM / WAGGGS Member - Iscritta al Registro Nazionale APS n.72", size: 12, color: "999999", italics: true, font: "Tahoma" }),
                             ],
                             spacing: { before: 100 },
                         }),
@@ -156,19 +156,19 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                 
                 // LINEAR METADATA (MATCHING SCREEN 2)
                 new Paragraph({
-                    children: [new TextRun({ text: verbale.data || '', bold: true, font: "Georgia", size: 24 })],
+                    children: [new TextRun({ text: verbale.data || '', bold: true, font: "Roboto", size: 20 })],
                     spacing: { after: 100 },
                 }),
                 new Paragraph({
                     children: [
-                        new TextRun({ text: "Oggetto: ", bold: true, font: "Georgia", size: 24 }),
-                        new TextRun({ text: verbale.titolo, font: "Georgia", size: 24 }),
+                        new TextRun({ text: "Oggetto: ", bold: true, font: "Roboto", size: 20 }),
+                        new TextRun({ text: verbale.titolo, font: "Roboto", size: 20 }),
                     ],
                     spacing: { after: 100 },
                 }),
                 new Paragraph({
                     children: [
-                        new TextRun({ text: "Presenti: ", bold: true, font: "Georgia", size: 24 }),
+                        new TextRun({ text: "Presenti: ", bold: true, font: "Roboto", size: 20 }),
                         new TextRun({ 
                             text: presentMembri.map(m => {
                                 const isLate = verbale.ritardi?.includes(m.id);
@@ -179,31 +179,31 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                                 else if (exit) suffix = ` (esc. ore ${exit.ora})`;
                                 return m.nome + suffix;
                             }).join(', '), 
-                            font: "Georgia", 
-                            size: 24,
+                            font: "Roboto", 
+                            size: 20,
                             italics: true 
                         }),
                         ...(verbale.ospiti && verbale.ospiti.length > 0 ? [
-                            new TextRun({ text: ", " + verbale.ospiti.map(o => `${o.nome} (${o.ruolo})`).join(', '), font: "Georgia", size: 24, italics: true })
+                            new TextRun({ text: ", " + verbale.ospiti.map(o => `${o.nome} (${o.ruolo})`).join(', '), font: "Roboto", size: 20, italics: true })
                         ] : []),
                     ],
                     spacing: { after: 100 },
                 }),
                 new Paragraph({
                     children: [
-                        new TextRun({ text: "Assenti: ", bold: true, font: "Georgia", size: 24 }),
-                        new TextRun({ text: absentMembri.map(m => m.nome).join(', ') || 'Nessuno', font: "Georgia", size: 24, italics: true }),
+                        new TextRun({ text: "Assenti: ", bold: true, font: "Roboto", size: 20 }),
+                        new TextRun({ text: absentMembri.map(m => m.nome).join(', ') || 'Nessuno', font: "Roboto", size: 20, italics: true }),
                     ],
                     spacing: { after: 100 },
                 }),
                 new Paragraph({
                     children: [
-                        new TextRun({ text: "ODG:", bold: true, font: "Georgia", size: 24 }),
+                        new TextRun({ text: "ODG:", bold: true, font: "Roboto", size: 20 }),
                     ],
                     spacing: { after: 100, before: 200 },
                 }),
                 ...verbale.odg.map(p => new Paragraph({
-                    children: [new TextRun({ text: `• ${p.titolo}`, bold: true, font: "Georgia", size: 24 })],
+                    children: [new TextRun({ text: `• ${p.titolo}`, bold: true, font: "Roboto", size: 20 })],
                     indent: { left: 720 },
                     spacing: { after: 50 },
                 })),
@@ -214,12 +214,12 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                 ...verbale.odg.map((punto) => [
                     new Paragraph({
                         children: [
-                            new TextRun({ text: `• ${punto.titolo}`, bold: true, size: 24, font: "Georgia" })
+                            new TextRun({ text: `• ${punto.titolo}`, bold: true, size: 20, font: "Roboto" })
                         ],
                         spacing: { before: 400 },
                     }),
                     new Paragraph({
-                        children: [new TextRun({ text: punto.contenuto, size: 22, font: "Georgia" })],
+                        children: [new TextRun({ text: punto.contenuto, size: 20, font: "Roboto" })],
                         spacing: { before: 150 },
                         alignment: AlignmentType.BOTH,
                         indent: { left: 720 },
@@ -329,37 +329,46 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                         new TableRow({
                             children: [
                                 new TableCell({
-                                    width: { size: 70, type: WidthType.PERCENTAGE },
+                                    width: { size: 12, type: WidthType.PERCENTAGE },
+                                    children: [
+                                        ...(footerLogosBuffer ? [
+                                            new Paragraph({
+                                                alignment: AlignmentType.LEFT,
+                                                spacing: { before: 200 },
+                                                children: [
+                                                    new ImageRun({
+                                                        data: footerLogosBuffer,
+                                                        transformation: { width: 45, height: 23 },
+                                                    } as any),
+                                                ],
+                                            })
+                                        ] : [])
+                                    ],
+                                }),
+                                new TableCell({
+                                    width: { size: 88, type: WidthType.PERCENTAGE },
                                     children: [
                                         new Paragraph({
                                             spacing: { before: 200 },
                                             children: [
                                                 new TextRun({ 
-                                                    text: "WAGGGS / WOSM Member • Iscritta al Registro Nazionale delle Associazioni di Promozione Sociale n.72 - Legge 383/2000", 
-                                                    size: 14, 
-                                                    color: "999999", 
-                                                    font: "Georgia",
-                                                    italics: true
+                                                    text: "Iscritta al Registro Nazionale delle Associazioni di Promozione Sociale n.72 - Legge 383/2000", 
+                                                    size: 12, 
+                                                    color: "000000", 
+                                                    font: "Tahoma",
+                                                })
+                                            ],
+                                        }),
+                                        new Paragraph({
+                                            children: [
+                                                new TextRun({ 
+                                                    text: "WAGGGS / WOSM Member", 
+                                                    size: 12, 
+                                                    color: "000000", 
+                                                    font: "Tahoma",
                                                 })
                                             ],
                                         })
-                                    ],
-                                }),
-                                new TableCell({
-                                    width: { size: 30, type: WidthType.PERCENTAGE },
-                                    children: [
-                                        ...(footerLogosBuffer ? [
-                                            new Paragraph({
-                                                alignment: AlignmentType.RIGHT,
-                                                spacing: { before: 200 },
-                                                children: [
-                                                    new ImageRun({
-                                                        data: footerLogosBuffer,
-                                                        transformation: { width: 120, height: 40 },
-                                                    } as any),
-                                                ],
-                                            })
-                                        ] : [])
                                     ],
                                 }),
                             ],
@@ -371,10 +380,10 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                     children: [
                         new TextRun({ 
                             text: `Verbale ufficiale di Comunità Capi - Certificato il ${new Date().toLocaleDateString('it-IT')}`, 
-                            size: 14, 
+                            size: 12, 
                             italics: true, 
                             color: "999999",
-                            font: "Georgia"
+                            font: "Tahoma"
                         })
                     ],
                     spacing: { before: 400 },

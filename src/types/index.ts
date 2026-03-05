@@ -56,7 +56,9 @@ export interface CassaMovimento {
 }
 
 export interface RitornoCoCa {
+    id?: string;
     branca: string;
+    tipo?: 'Branca' | 'Membro';
     contenuto: string;
 }
 

@@ -518,31 +518,89 @@ export default function VerbaleEditor() {
                         </section>
 
                         <div className="space-y-10 divide-y divide-gray-100">
-                            {/* Ritorni Branche */}
+                            {/* Ritorni dalle Branche / Membri */}
                             {verbale.sezioniAttive?.includes('ritorni') && (
                                 <div className="pt-10 space-y-4">
-                                    <h3 className="font-serif font-black text-scout-green uppercase text-sm tracking-widest flex items-center gap-2">
-                                        🗣️ Ritorni
-                                    </h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        {['L/C', 'E/G', 'R/S'].map(branca => (
-                                            <div key={branca} className="space-y-2">
-                                                <label className="text-[10px] font-black text-gray-400 uppercase ml-1">{branca}</label>
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="font-serif font-black text-scout-green uppercase text-sm tracking-widest flex items-center gap-2">
+                                            🗣️ Ritorni
+                                        </h3>
+                                        <button 
+                                            onClick={() => setVerbale(v => ({ 
+                                                ...v, 
+                                                ritorni: [...(v.ritorni || []), { id: Date.now().toString(), branca: 'L/C', contenuto: '', tipo: 'Branca' }] 
+                                            }))}
+                                            className="bg-scout-green/10 text-scout-green p-1.5 rounded-xl hover:bg-scout-green/20 transition-all border border-scout-green/10"
+                                        >
+                                            <Plus size={16} />
+                                        </button>
+                                    </div>
+                                    <div className="space-y-4">
+                                        {(verbale.ritorni || []).map((rit, idx) => (
+                                            <div key={idx} className="bg-gray-50/30 p-4 rounded-3xl border border-gray-100 group space-y-3">
+                                                <div className="flex gap-3 items-center">
+                                                    <select 
+                                                        value={rit.tipo || 'Branca'}
+                                                        onChange={e => {
+                                                            const next = [...(verbale.ritorni || [])];
+                                                            next[idx].tipo = e.target.value as any;
+                                                            // Reset based on type
+                                                            if (e.target.value === 'Branca') next[idx].branca = 'L/C';
+                                                            else if (membri.length > 0) next[idx].branca = membri[0].nome;
+                                                            setVerbale(v => ({ ...v, ritorni: next }));
+                                                        }}
+                                                        className="p-2 border border-gray-200 rounded-xl text-[10px] font-bold uppercase tracking-wider outline-none focus:ring-1 focus:ring-scout-green"
+                                                    >
+                                                        <option value="Branca">Branca</option>
+                                                        <option value="Membro">Membro</option>
+                                                    </select>
+
+                                                    {rit.tipo === 'Membro' ? (
+                                                        <select 
+                                                            value={rit.branca}
+                                                            onChange={e => {
+                                                                const next = [...(verbale.ritorni || [])];
+                                                                next[idx].branca = e.target.value;
+                                                                setVerbale(v => ({ ...v, ritorni: next }));
+                                                            }}
+                                                            className="flex-1 p-2 border border-gray-200 rounded-xl text-xs outline-none focus:ring-1 focus:ring-scout-green font-bold"
+                                                        >
+                                                            {membri.length === 0 && <option>Nessun membro</option>}
+                                                            {membri.map(m => (
+                                                                <option key={m.id} value={m.nome}>{m.nome}</option>
+                                                            ))}
+                                                        </select>
+                                                    ) : (
+                                                        <select 
+                                                            value={rit.branca}
+                                                            onChange={e => {
+                                                                const next = [...(verbale.ritorni || [])];
+                                                                next[idx].branca = e.target.value;
+                                                                setVerbale(v => ({ ...v, ritorni: next }));
+                                                            }}
+                                                            className="flex-1 p-2 border border-gray-200 rounded-xl text-xs outline-none focus:ring-1 focus:ring-scout-green font-bold"
+                                                        >
+                                                            <option value="L/C">L/C</option>
+                                                            <option value="E/G">E/G</option>
+                                                            <option value="R/S">R/S</option>
+                                                            <option value="Gruppo">Gruppo</option>
+                                                        </select>
+                                                    )}
+
+                                                    <button 
+                                                        onClick={() => setVerbale(v => ({ ...v, ritorni: v.ritorni?.filter((_, i) => i !== idx) }))}
+                                                        className="p-1.5 text-red-300 hover:text-red-500 transition-all font-bold"
+                                                    >✕</button>
+                                                </div>
                                                 <textarea 
-                                                    value={verbale.ritorni?.find(r => r.branca === branca)?.contenuto || ''}
+                                                    value={rit.contenuto}
                                                     onChange={e => {
-                                                        const current = verbale.ritorni || [];
-                                                        const exists = current.find(r => r.branca === branca);
-                                                        let next;
-                                                        if (exists) {
-                                                            next = current.map(r => r.branca === branca ? { ...r, contenuto: e.target.value } : r);
-                                                        } else {
-                                                            next = [...current, { branca, contenuto: e.target.value }];
-                                                        }
+                                                        const next = [...(verbale.ritorni || [])];
+                                                        next[idx].contenuto = e.target.value;
                                                         setVerbale(v => ({ ...v, ritorni: next }));
                                                     }}
-                                                    className="w-full p-4 bg-gray-50/50 border border-gray-100 rounded-2xl text-xs focus:ring-1 focus:ring-scout-green outline-none h-32 italic font-serif"
-                                                    placeholder={`Riassunto di branca per ${branca}...`}
+                                                    className="w-full p-4 bg-white border border-gray-100 rounded-2xl text-xs focus:ring-1 focus:ring-scout-green outline-none h-24 italic font-serif"
+                                                    placeholder="Cosa è emerso..."
                                                 />
                                             </div>
                                         ))}
