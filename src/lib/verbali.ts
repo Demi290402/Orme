@@ -115,13 +115,16 @@ function mapSupabaseVerbaleToVerbale(data: any): Verbale {
 
 export async function saveMembroCoCa(membro: Partial<MembroCoCa>): Promise<MembroCoCa> {
     const currentUser = await getUser();
-    const dataToSave = {
+    const dataToSave: any = {
         group_id: currentUser.groupId,
         nome: membro.nome,
         branca: membro.branca,
         ruoli: membro.ruoli || [],
-        user_id: membro.userId,
     };
+
+    if (membro.userId) {
+        dataToSave.user_id = membro.userId;
+    }
 
     let result;
     if (membro.id) {

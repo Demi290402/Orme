@@ -16,7 +16,6 @@ export default function VerbaleHeader() {
                         alt="AGESCI" 
                         className="w-[70px] h-auto"
                     />
-                    <span className="font-bold text-[#45387E] mt-1 text-[11px] tracking-widest uppercase">Turi 1</span>
                 </div>
 
                 <div className="text-right text-[#45387E] mt-1">

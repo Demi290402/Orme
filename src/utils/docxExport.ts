@@ -17,11 +17,16 @@ async function fetchImageAsBuffer(url: string): Promise<ArrayBuffer> {
 
 export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[], currentUser: User) => {
     let logoBuffer: ArrayBuffer | null = null;
+    let footerLogosBuffer: ArrayBuffer | null = null;
     try {
-        // Use the same logo as the web preview
         logoBuffer = await fetchImageAsBuffer(window.location.origin + '/turi_1_no_bg.png');
     } catch (e) {
         console.error("Could not load logo for DOCX", e);
+    }
+    try {
+        footerLogosBuffer = await fetchImageAsBuffer(window.location.origin + '/footer_logos.png');
+    } catch (e) {
+        console.error("Could not load footer logos for DOCX", e);
     }
 
     const presentMembri = membri.filter(m => verbale.presenti?.includes(m.id)).sort((a,b) => a.nome.localeCompare(b.nome));
@@ -94,13 +99,6 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                                                                 data: logoBuffer,
                                                                 transformation: { width: 60, height: 60 },
                                                             } as any),
-                                                            new TextRun({ 
-                                                                text: "\rTURI 1", 
-                                                                bold: true, 
-                                                                color: "45387E", 
-                                                                size: 20,
-                                                                font: "Georgia"
-                                                            }),
                                                         ],
                                                     })
                                                 ] : [
@@ -295,19 +293,91 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                     })),
                 ] : []),
 
-                // Footer
+                ...(verbale.sezioniAttive?.includes('prossimi_impegni') && verbale.prossimiImpegni && verbale.prossimiImpegni.length > 0 ? [
+                    new Paragraph({
+                        children: [new TextRun({ text: "PROSSIMI IMPEGNI", bold: true, size: 20, color: "45387E", font: "Georgia" })],
+                        spacing: { before: 800 },
+                        border: { bottom: { style: BorderStyle.SINGLE, size: 1, color: "EEEEEE" } },
+                    }),
+                    ...verbale.prossimiImpegni.map(imp => new Paragraph({
+                        children: [
+                            new TextRun({ text: `• ${imp.evento}`, bold: true, font: "Georgia", size: 22 }),
+                            new TextRun({ 
+                                text: ` — ${imp.dataInizio ? new Date(imp.dataInizio).toLocaleDateString('it-IT') : ''}${imp.note ? ' ore ' + imp.note : ''}`, 
+                                font: "Georgia", 
+                                color: "666666", 
+                                size: 20 
+                            }),
+                        ],
+                        indent: { left: 720 },
+                        spacing: { before: 200 },
+                    })),
+                ] : []),
+
+                // Footer Official Logos and APS Text
+                new Table({
+                    width: { size: 100, type: WidthType.PERCENTAGE },
+                    borders: {
+                        top: { style: BorderStyle.SINGLE, color: "EEEEEE", size: 1 },
+                        bottom: { style: BorderStyle.NONE },
+                        left: { style: BorderStyle.NONE },
+                        right: { style: BorderStyle.NONE },
+                        insideHorizontal: { style: BorderStyle.NONE },
+                        insideVertical: { style: BorderStyle.NONE },
+                    },
+                    rows: [
+                        new TableRow({
+                            children: [
+                                new TableCell({
+                                    width: { size: 70, type: WidthType.PERCENTAGE },
+                                    children: [
+                                        new Paragraph({
+                                            spacing: { before: 200 },
+                                            children: [
+                                                new TextRun({ 
+                                                    text: "WAGGGS / WOSM Member • Iscritta al Registro Nazionale delle Associazioni di Promozione Sociale n.72 - Legge 383/2000", 
+                                                    size: 14, 
+                                                    color: "999999", 
+                                                    font: "Georgia",
+                                                    italics: true
+                                                })
+                                            ],
+                                        })
+                                    ],
+                                }),
+                                new TableCell({
+                                    width: { size: 30, type: WidthType.PERCENTAGE },
+                                    children: [
+                                        ...(footerLogosBuffer ? [
+                                            new Paragraph({
+                                                alignment: AlignmentType.RIGHT,
+                                                spacing: { before: 200 },
+                                                children: [
+                                                    new ImageRun({
+                                                        data: footerLogosBuffer,
+                                                        transformation: { width: 120, height: 40 },
+                                                    } as any),
+                                                ],
+                                            })
+                                        ] : [])
+                                    ],
+                                }),
+                            ],
+                        }),
+                    ],
+                }),
+
                 new Paragraph({
                     children: [
                         new TextRun({ 
-                            text: `Verbale ufficiale redatto il ${new Date().toLocaleDateString('it-IT')} via ORME`, 
+                            text: `Verbale ufficiale di Comunità Capi - Certificato il ${new Date().toLocaleDateString('it-IT')}`, 
                             size: 14, 
                             italics: true, 
                             color: "999999",
                             font: "Georgia"
                         })
                     ],
-                    spacing: { before: 1200 },
-                    border: { top: { style: BorderStyle.SINGLE, color: "45387E" } },
+                    spacing: { before: 400 },
                 }),
             ],
         }],

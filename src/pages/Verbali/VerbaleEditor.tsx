@@ -15,7 +15,7 @@ import VerbaleHeader from '@/components/VerbaleHeader';
 
 type TabType = 'presenze' | 'odg' | 'sezioni' | 'anteprima';
 
-const BRANCHE = ['L/C', 'E/G', 'R/S', 'Altro'];
+const BRANCHE = ['COCA', 'L/C', 'E/G', 'R/S', 'Altro'];
 
 const SEZIONI_DISPONIBILI = [
     { id: 'ritorni', label: 'Ritorni', icon: '🗣️', color: 'text-scout-green' },
@@ -410,15 +410,41 @@ export default function VerbaleEditor() {
                             <div className="space-y-4 pt-4">
                                 {(verbale.odg || []).map((punto, idx) => (
                                     <div key={punto.id} className="p-6 bg-white rounded-3xl border border-gray-100 shadow-sm space-y-4 relative group hover:border-scout-blue/20 transition-all">
-                                        <button 
-                                            onClick={() => setVerbale(v => ({ 
-                                                ...v, 
-                                                odg: (v.odg || []).filter(p => p.id !== punto.id) 
-                                            }))}
-                                            className="absolute md:top-6 md:right-6 top-3 right-3 bg-red-50 text-red-400 p-2 rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500 hover:text-white"
-                                        >
-                                            <Trash2 size={18} />
-                                        </button>
+                                        <div className="absolute md:top-6 md:right-6 top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                                            <button 
+                                                onClick={() => {
+                                                    if (idx === 0) return;
+                                                    const newOdg = [...(verbale.odg || [])];
+                                                    [newOdg[idx-1], newOdg[idx]] = [newOdg[idx], newOdg[idx-1]];
+                                                    setVerbale(v => ({ ...v, odg: newOdg }));
+                                                }}
+                                                disabled={idx === 0}
+                                                className="bg-gray-50 text-gray-400 p-2 rounded-xl hover:bg-scout-blue hover:text-white disabled:opacity-30"
+                                            >
+                                                <Plus size={18} className="rotate-180" /> {/* Using Plus as a chevron for simplicity or I could import ChevronUp */}
+                                            </button>
+                                            <button 
+                                                onClick={() => {
+                                                    if (idx === (verbale.odg?.length || 0) - 1) return;
+                                                    const newOdg = [...(verbale.odg || [])];
+                                                    [newOdg[idx+1], newOdg[idx]] = [newOdg[idx], newOdg[idx+1]];
+                                                    setVerbale(v => ({ ...v, odg: newOdg }));
+                                                }}
+                                                disabled={idx === (verbale.odg?.length || 0) - 1}
+                                                className="bg-gray-50 text-gray-400 p-2 rounded-xl hover:bg-scout-blue hover:text-white disabled:opacity-30"
+                                            >
+                                                <Plus size={18} />
+                                            </button>
+                                            <button 
+                                                onClick={() => setVerbale(v => ({ 
+                                                    ...v, 
+                                                    odg: (v.odg || []).filter(p => p.id !== punto.id) 
+                                                }))}
+                                                className="bg-red-50 text-red-400 p-2 rounded-xl hover:bg-red-500 hover:text-white"
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
+                                        </div>
                                         <div className="flex items-center gap-4">
                                             <span className="w-10 h-10 rounded-2xl bg-gray-50 flex items-center justify-center font-serif font-black text-gray-300 text-lg">
                                                 {idxToAlpha(idx)}
@@ -771,6 +797,83 @@ export default function VerbaleEditor() {
                                     </div>
                                 </div>
                             )}
+
+                            {/* Prossimi Impegni */}
+                            {verbale.sezioniAttive?.includes('prossimi_impegni') && (
+                                <div className="pt-10 space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="font-serif font-black text-scout-purple uppercase text-sm tracking-widest flex items-center gap-2">
+                                            🗓️ Prossimi impegni
+                                        </h3>
+                                        <button 
+                                            onClick={() => setVerbale(v => ({ 
+                                                ...v, 
+                                                prossimiImpegni: [...(v.prossimiImpegni || []), { id: Date.now().toString(), dataInizio: '', evento: '', branca: 'CoCa', note: '' }] 
+                                            }))}
+                                            className="bg-scout-purple/10 text-scout-purple p-1.5 rounded-xl hover:bg-scout-purple/20 transition-all border border-scout-purple/10"
+                                        >
+                                            <Plus size={16} />
+                                        </button>
+                                    </div>
+                                    <div className="space-y-3">
+                                        {(verbale.prossimiImpegni || []).map((imp, idx) => (
+                                            <div key={imp.id} className="grid grid-cols-12 gap-3 bg-gray-50/50 p-4 rounded-3xl border border-gray-100 group">
+                                                <div className="col-span-12 md:col-span-5 space-y-1">
+                                                    <label className="text-[9px] font-black text-gray-300 uppercase ml-2">Nome impegno</label>
+                                                    <input 
+                                                        type="text" 
+                                                        placeholder="Cosa fare..." 
+                                                        value={imp.evento}
+                                                        onChange={e => {
+                                                            const next = [...(verbale.prossimiImpegni || [])];
+                                                            next[idx].evento = e.target.value;
+                                                            setVerbale(v => ({ ...v, prossimiImpegni: next }));
+                                                        }}
+                                                        className="w-full bg-white p-2.5 border border-gray-100 rounded-xl text-xs outline-none focus:ring-1 focus:ring-scout-purple font-bold"
+                                                    />
+                                                </div>
+                                                <div className="col-span-6 md:col-span-3 space-y-1">
+                                                    <label className="text-[9px] font-black text-gray-300 uppercase ml-2">Data</label>
+                                                    <input 
+                                                        type="date" 
+                                                        value={imp.dataInizio}
+                                                        onChange={e => {
+                                                            const next = [...(verbale.prossimiImpegni || [])];
+                                                            next[idx].dataInizio = e.target.value;
+                                                            setVerbale(v => ({ ...v, prossimiImpegni: next }));
+                                                        }}
+                                                        className="w-full bg-white p-2.5 border border-gray-100 rounded-xl text-xs outline-none focus:ring-1 focus:ring-scout-purple"
+                                                    />
+                                                </div>
+                                                <div className="col-span-6 md:col-span-4 space-y-1 relative">
+                                                    <label className="text-[9px] font-black text-gray-300 uppercase ml-2">Ora</label>
+                                                    <div className="flex gap-2 items-center">
+                                                        <input 
+                                                            type="time" 
+                                                            value={imp.note || ''}
+                                                            onChange={e => {
+                                                                const next = [...(verbale.prossimiImpegni || [])];
+                                                                next[idx].note = e.target.value;
+                                                                setVerbale(v => ({ ...v, prossimiImpegni: next }));
+                                                            }}
+                                                            className="flex-1 bg-white p-2.5 border border-gray-100 rounded-xl text-xs outline-none focus:ring-1 focus:ring-scout-purple"
+                                                        />
+                                                        <button 
+                                                            onClick={() => setVerbale(v => ({ ...v, prossimiImpegni: v.prossimiImpegni?.filter((_, i) => i !== idx) }))}
+                                                            className="p-1.5 text-red-300 hover:text-red-500 transition-all font-bold"
+                                                        >✕</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {(!verbale.prossimiImpegni || verbale.prossimiImpegni.length === 0) && (
+                                            <div className="text-center p-6 text-gray-400 font-serif italic bg-white border border-gray-100 rounded-2xl">
+                                                Nessun prossimo impegno registrato
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                     </div>
@@ -876,6 +979,23 @@ export default function VerbaleEditor() {
                                         </div>
                                     )}
 
+                                    {verbale.sezioniAttive?.includes('prossimi_impegni') && verbale.prossimiImpegni && verbale.prossimiImpegni.length > 0 && (
+                                        <div className="space-y-4">
+                                            <div className="font-black border-b border-gray-100 pb-1 uppercase text-[10px] tracking-widest text-scout-purple">Prossimi impegni</div>
+                                            <div className="pl-6 space-y-2">
+                                                {verbale.prossimiImpegni.map((imp, i) => (
+                                                    <div key={i} className="text-[12px] flex justify-between border-b border-gray-50 py-1">
+                                                        <span><span className="font-bold">{imp.evento}</span></span>
+                                                        <span className="opacity-60 italic">
+                                                            {imp.dataInizio && new Date(imp.dataInizio).toLocaleDateString('it-IT')} 
+                                                            {imp.note && ` ore ${imp.note}`}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {verbale.sezioniAttive?.includes('varie') && verbale.varie && (
                                         <div className="space-y-2">
                                             <div className="font-black border-b border-gray-100 pb-1 uppercase text-[10px] tracking-widest text-gray-400">Varie ed Eventuali</div>
@@ -885,21 +1005,30 @@ export default function VerbaleEditor() {
                                 </div>
 
                                 {/* OFFICIAL FOOTER */}
-                                <div className="mt-24 pt-8 border-t-[1.5px] border-[#45387E] flex justify-between items-end no-print">
-                                    <div className="text-[10px] text-gray-400 italic">
-                                        Verbale ufficiale di Comunità Capi <br />
-                                        Certificato il {new Date().toLocaleDateString('it-IT')}
+                                <div className="mt-16 flex flex-col gap-6 pt-10 border-t-[1.5px] border-gray-100">
+                                    <div className="flex justify-between items-center px-4">
+                                        <div className="text-[9px] text-gray-400 max-w-[70%] leading-relaxed">
+                                            WAGGGS / WOSM Member • Iscritta al Registro Nazionale delle Associazioni di Promozione Sociale n.72 - Legge 383/2000
+                                        </div>
+                                        <img src="/footer_logos.png" alt="Loghi" className="h-10 w-auto opacity-80" />
                                     </div>
-                                    <button 
-                                        onClick={async () => {
-                                            const saved = await handleSave(true);
-                                            if (saved) exportVerbaleToDocx(saved, membri, currentUser);
-                                        }}
-                                        className="bg-[#45387E] text-white px-8 py-3 rounded-full text-xs font-black hover:bg-[#352b61] transition-all flex items-center gap-3 shadow-lg hover:-translate-y-0.5 active:scale-95 group"
-                                    >
-                                        <Download size={16} />
-                                        Esporta come Documento Ufficiale (.docx)
-                                    </button>
+
+                                    <div className="bg-gray-50/50 p-6 rounded-3xl flex justify-between items-center no-print">
+                                        <div className="text-[10px] text-gray-400 italic">
+                                            Verbale ufficiale di Comunità Capi <br />
+                                            Certificato il {new Date().toLocaleDateString('it-IT')}
+                                        </div>
+                                        <button 
+                                            onClick={async () => {
+                                                const saved = await handleSave(true);
+                                                if (saved) exportVerbaleToDocx(saved, membri, currentUser);
+                                            }}
+                                            className="bg-[#45387E] text-white px-8 py-3 rounded-full text-xs font-black hover:bg-[#352b61] transition-all flex items-center gap-3 shadow-lg hover:-translate-y-0.5 active:scale-95 group"
+                                        >
+                                            <Download size={16} />
+                                            Esporta come Documento Ufficiale (.docx)
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
