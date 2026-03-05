@@ -34,7 +34,6 @@ export default function VerbaleEditor() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [currentUser, setCurrentUser] = useState<any>(null);
-    const [statusMsg, setStatusMsg] = useState('');
     const [showSaveModal, setShowSaveModal] = useState(false);
     const [lastSavedVerbale, setLastSavedVerbale] = useState<Verbale | null>(null);
 
@@ -141,7 +140,6 @@ export default function VerbaleEditor() {
                     </h1>
                 </div>
                 <div className="flex items-center gap-3">
-                    {statusMsg && <span className="text-sm font-bold text-scout-green animate-pulse">{statusMsg}</span>}
                     <button
                         onClick={() => handleSave()}
                         disabled={saving}
@@ -536,7 +534,7 @@ export default function VerbaleEditor() {
                                         <button 
                                             onClick={() => setVerbale(v => ({ 
                                                 ...v, 
-                                                cassa: [...(v.cassa || []), { id: Date.now().toString(), branca: 'L/C', importo: 0, note: '' }] 
+                                                cassa: [...(v.cassa || []), { id: Date.now().toString(), branca: 'L/C', tipo: 'Versamento', importo: 0, note: '' }] 
                                             }))}
                                             className="bg-scout-brown/10 text-scout-brown p-1.5 rounded-xl hover:bg-scout-brown/20 transition-all"
                                         >

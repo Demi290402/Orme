@@ -3,9 +3,12 @@ import { Link } from 'react-router-dom';
 import { Plus, FileText, Search, Calendar, MapPin, User as UserIcon, Filter, X } from 'lucide-react';
 import { getVerbali } from '@/lib/verbali';
 import { Verbale } from '@/types';
+import { cn } from '@/lib/utils';
 
 export default function VerbaliList() {
     const [verbali, setVerbali] = useState<Verbale[]>([]);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [loading, setLoading] = useState(true);
     const [selectedYear, setSelectedYear] = useState<string>('all');
     const [showFilters, setShowFilters] = useState(false);
 

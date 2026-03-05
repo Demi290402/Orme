@@ -19,7 +19,7 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
     let logoBuffer: ArrayBuffer | null = null;
     try {
         // Use the same logo as the web preview
-        logoBuffer = await fetchImageAsBuffer(window.location.origin + '/Turi 1 no bg.png');
+        logoBuffer = await fetchImageAsBuffer(window.location.origin + '/turi_1_no_bg.png');
     } catch (e) {
         console.error("Could not load logo for DOCX", e);
     }

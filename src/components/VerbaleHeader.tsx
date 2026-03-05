@@ -12,7 +12,7 @@ export default function VerbaleHeader() {
                 <div className="flex flex-col items-center">
                     {/* Official AGESCI Logo (Giglio) */}
                     <img 
-                        src="/Turi 1 no bg.png" 
+                        src="/turi_1_no_bg.png" 
                         alt="AGESCI" 
                         className="w-[70px] h-auto"
                     />
