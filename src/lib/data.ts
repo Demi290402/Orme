@@ -14,6 +14,10 @@ export async function registerUser(userData: {
     profilePicture?: string;
     coverImage?: string;
     scoutCode?: string;
+    region: string;
+    scoutZone: string;
+    groupName: string;
+    groupId: string;
 }): Promise<User | null> {
     try {
         // 1. Create auth user in Supabase Auth
@@ -37,6 +41,10 @@ export async function registerUser(userData: {
                 profile_picture: userData.profilePicture,
                 cover_image: userData.coverImage,
                 scout_code: userData.scoutCode,
+                region: userData.region,
+                scout_zone: userData.scoutZone,
+                group_name: userData.groupName,
+                group_id: userData.groupId,
             })
             .select()
             .single();
@@ -115,40 +123,60 @@ export async function getUser(id?: string): Promise<User> {
     }
 }
 
-export async function updateUser(updatedUser: User) {
-    const { error } = await supabase
-        .from('users')
-        .update({
-            first_name: updatedUser.firstName,
-            last_name: updatedUser.lastName,
-            nickname: updatedUser.nickname,
-            profile_picture: updatedUser.profilePicture,
-            cover_image: updatedUser.coverImage,
-            scout_code: updatedUser.scoutCode,
-            points: updatedUser.points,
-            level: updatedUser.level,
-            badges: updatedUser.badges,
-            locations_added: updatedUser.locationsAdded,
-            contributions_approved: updatedUser.contributionsApproved,
-            validations_given: updatedUser.validationsGiven,
-            rs_locations_added: updatedUser.rsLocationsAdded,
-            pricing_info_added: updatedUser.pricingInfoAdded,
-            coordinate_info_added: updatedUser.coordinateInfoAdded,
-            website_info_added: updatedUser.websiteInfoAdded,
-        })
-        .eq('id', updatedUser.id);
+export async function getAllUsers(): Promise<User[]> {
+    try {
+        const currentUser = await getUser();
+        const { data, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('group_id', currentUser.groupId)
+            .order('points', { ascending: false });
 
-    if (error) throw error;
+        if (error) throw error;
+        return data.map(mapSupabaseUserToUser);
+    } catch (error) {
+        console.error('Error fetching users:', error);
+        return [];
+    }
 }
 
-export async function getAllUsers(): Promise<User[]> {
-    const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .order('points', { ascending: false });
+export async function updateUser(user: User): Promise<User> {
+    try {
+        const { data, error } = await supabase
+            .from('users')
+            .update({
+                first_name: user.firstName,
+                last_name: user.lastName,
+                nickname: user.nickname,
+                profile_picture: user.profilePicture,
+                cover_image: user.coverImage,
+                scout_code: user.scoutCode,
+                email: user.email,
+                region: user.region,
+                scout_zone: user.scoutZone,
+                group_name: user.groupName,
+                group_id: user.groupId,
+                points: user.points,
+                level: user.level,
+                badges: user.badges,
+                locations_added: user.locationsAdded,
+                contributions_approved: user.contributionsApproved,
+                validations_given: user.validationsGiven,
+                rs_locations_added: user.rsLocationsAdded,
+                pricing_info_added: user.pricingInfoAdded,
+                coordinate_info_added: user.coordinateInfoAdded,
+                website_info_added: user.websiteInfoAdded,
+            })
+            .eq('id', user.id)
+            .select()
+            .single();
 
-    if (error) throw error;
-    return data.map(mapSupabaseUserToUser);
+        if (error) throw error;
+        return mapSupabaseUserToUser(data);
+    } catch (error) {
+        console.error('Error updating user:', error);
+        throw error;
+    }
 }
 
 // =====================================================
@@ -156,17 +184,20 @@ export async function getAllUsers(): Promise<User[]> {
 // =====================================================
 
 export async function getLocations(): Promise<Location[]> {
-    const { data, error } = await supabase
-        .from('locations')
-        .select('*')
-        .order('created_at', { ascending: false });
+    try {
+        const currentUser = await getUser();
+        const { data, error } = await supabase
+            .from('locations')
+            .select('*')
+            .eq('group_id', currentUser.groupId)
+            .order('created_at', { ascending: false });
 
-    if (error) {
+        if (error) throw error;
+        return data.map(mapSupabaseLocationToLocation);
+    } catch (error) {
         console.error('Error fetching locations:', error);
         return [];
     }
-
-    return data.map(mapSupabaseLocationToLocation);
 }
 
 export async function addLocation(location: Omit<Location, 'id' | 'lastUpdatedAt' | 'lastUpdatedBy'>) {
@@ -210,6 +241,7 @@ export async function addLocation(location: Omit<Location, 'id' | 'lastUpdatedAt
                 description: location.description,
                 pricing: location.pricing,
                 last_updated_by: currentUser.id,
+                group_id: currentUser.groupId,
             })
             .select()
             .single();
@@ -249,6 +281,35 @@ export async function addLocation(location: Omit<Location, 'id' | 'lastUpdatedAt
 }
 
 // =====================================================
+// METADATA HELPERS
+// =====================================================
+
+export async function getRegions(): Promise<string[]> {
+    const { data, error } = await supabase
+        .from('users')
+        .select('region')
+        .not('region', 'is', null);
+    if (error) return [];
+    return [...new Set(data.map(d => d.region))].sort();
+}
+
+export async function getZones(region?: string): Promise<string[]> {
+    let query = supabase.from('users').select('scout_zone').not('scout_zone', 'is', null);
+    if (region) query = query.eq('region', region);
+    const { data, error } = await query;
+    if (error) return [];
+    return [...new Set(data.map(d => d.scout_zone))].sort();
+}
+
+export async function getGroups(zone?: string): Promise<string[]> {
+    let query = supabase.from('users').select('group_name').not('group_name', 'is', null);
+    if (zone) query = query.eq('scout_zone', zone);
+    const { data, error } = await query;
+    if (error) return [];
+    return [...new Set(data.map(d => d.group_name))].sort();
+}
+
+// =====================================================
 // HELPER FUNCTIONS
 // =====================================================
 
@@ -273,6 +334,10 @@ function mapSupabaseUserToUser(data: any): User {
         pricingInfoAdded: data.pricing_info_added || 0,
         coordinateInfoAdded: data.coordinate_info_added || 0,
         websiteInfoAdded: data.website_info_added || 0,
+        region: data.region,
+        scoutZone: data.scout_zone,
+        groupName: data.group_name,
+        groupId: data.group_id,
     };
 }
 

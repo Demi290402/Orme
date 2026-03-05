@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Phone, MessageCircle, Map, ArrowLeft, BedDouble, Tent, Coffee, ShieldAlert, Edit, Euro, AlertTriangle } from 'lucide-react';
 import { getLocations, getUser } from '@/lib/data';
 import { Location } from '@/types';
+import { getStalenessInfo, cn } from '@/lib/utils';
 
 export default function LocationDetail() {
     const { id } = useParams();
@@ -28,6 +29,7 @@ export default function LocationDetail() {
 
     if (!location) return <div className="p-8 text-center">Caricamento...</div>;
 
+    const staleness = getStalenessInfo(location.lastUpdatedAt);
     const phone = location.contacts.find(c => c.type === 'phone')?.value;
     const whatsapp = location.contacts.find(c => c.type === 'whatsapp')?.value || phone;
 
@@ -45,7 +47,12 @@ export default function LocationDetail() {
                     <p className="text-gray-500 text-sm">{location.commune}, {location.region}</p>
                 </div>
             </div>
-            <div className="inline-flex items-center px-3 py-1 bg-green-50 text-green-700 rounded-full text-xs font-medium border border-green-100">
+            <div className={cn(
+                "inline-flex items-center px-4 py-1.5 rounded-full text-xs font-bold border transition-all shadow-sm",
+                staleness.bgLight,
+                staleness.text,
+                staleness.border
+            )}>
                 Aggiornato a: {new Date(location.lastUpdatedAt).toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })} {updatedByText}
             </div>
 

@@ -13,11 +13,95 @@ export interface User {
     badges: string[]; // Badge IDs
     locationsAdded: number;
     contributionsApproved: number;
-    validationsGiven: number; // New: for "sentinella" badge
-    rsLocationsAdded: number; // New: for "rover_servizio" badge
-    pricingInfoAdded: number; // New: for "economo" badge
-    coordinateInfoAdded: number; // New: for "cartografo" badge
-    websiteInfoAdded: number; // New: for "informatore" badge
+    validationsGiven: number;
+    rsLocationsAdded: number;
+    pricingInfoAdded: number;
+    coordinateInfoAdded: number;
+    websiteInfoAdded: number;
+    
+    // Multi-tenancy
+    region?: string;
+    scoutZone?: string;
+    groupName?: string;
+    groupId?: string;
+}
+
+export interface MembroCoCa {
+    id: string;
+    groupId: string;
+    nome: string;
+    branca?: string;
+    ruoli: string[];
+    userId?: string;
+}
+
+export interface Ospite {
+    nome: string;
+    ruolo?: string;
+}
+
+export interface PuntoODG {
+    id: string;
+    titolo: string;
+    contenuto: string;
+    note?: string;
+}
+
+export interface CassaMovimento {
+    id: string;
+    branca: string;
+    tipo: 'Versamento' | 'Ricevuta';
+    importo: number;
+    note: string;
+}
+
+export interface RitornoCoCa {
+    branca: string;
+    contenuto: string;
+}
+
+export interface PostoAzione {
+    id: string;
+    chi: string;
+    cosa: string;
+    quando: string;
+}
+
+export interface DataImportante {
+    id: string;
+    dataInizio: string;
+    dataFine?: string;
+    evento: string;
+    branca: string;
+    luogo?: string;
+    note?: string;
+}
+
+export interface Verbale {
+    id: string;
+    groupId: string;
+    numero: number;
+    titolo: string;
+    data: string;
+    luogo: string;
+    oraInizio: string;
+    oraFine: string;
+    presenti: string[]; // IDs di MembroCoCa
+    assenti: string[];
+    ritardi: string[]; // IDs di MembroCoCa
+    usciteAnticipate: { membroId: string; ora: string }[];
+    ospiti: Ospite[];
+    odg: PuntoODG[];
+    cassa: CassaMovimento[];
+    ritorni: RitornoCoCa[];
+    dateImportanti: DataImportante[];
+    postiAzione: PostoAzione[];
+    prossimiImpegni: DataImportante[];
+    varie: string;
+    sezioniAttive: string[];
+    createdAt: string;
+    createdBy: string; // User ID
+    createdByName?: string; // User Nickname or Name
 }
 
 export type Restriction =

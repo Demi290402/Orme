@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getLevelInfo } from '@/lib/gamification';
 import { Trophy, X, ChevronLeft, ChevronRight } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, getDefaultCover } from '@/lib/utils';
 import { User } from '@/types';
 import { getAllUsers } from '@/lib/data';
 import UserAvatar from '@/components/UserAvatar';
@@ -54,18 +54,13 @@ export default function Leaderboard() {
                                     globalIndex < 3 ? "bg-yellow-50/30" : ""
                                 )}
                             >
-                                <div className={cn(
-                                    "w-10 h-10 flex-shrink-0 rounded-full overflow-hidden mr-3 border-2",
-                                    globalIndex === 0 ? "border-yellow-400" :
-                                        globalIndex === 1 ? "border-gray-300" :
-                                            globalIndex === 2 ? "border-orange-300" :
-                                                "border-gray-100"
-                                )}>
-                                    <img
-                                        src={user.profilePicture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.firstName}`}
-                                        alt={user.nickname}
-                                        className="w-full h-full object-cover"
-                                    />
+                                <div className="mr-3 relative">
+                                    <UserAvatar user={user} size="sm" disablePreview />
+                                    {globalIndex < 3 && (
+                                        <div className="absolute -top-1 -right-1 bg-white rounded-full w-5 h-5 flex items-center justify-center shadow-sm border border-gray-100 text-[10px]">
+                                            {globalIndex === 0 ? "🥇" : globalIndex === 1 ? "🥈" : "🥉"}
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="flex-1">
@@ -112,11 +107,11 @@ export default function Leaderboard() {
                     <div className="bg-white w-full max-w-sm rounded-2xl overflow-hidden relative" onClick={e => e.stopPropagation()}>
                         {/* Cover Image */}
                         <div className="h-32 w-full bg-scout-green relative">
-                            {selectedUser.coverImage ? (
-                                <img src={selectedUser.coverImage} alt="Cover" className="w-full h-full object-cover" />
-                            ) : (
-                                <div className="w-full h-full opacity-20 bg-[url('https://www.turi1.it/wp-content/uploads/2021/10/DJI_0016.jpg')] bg-cover bg-center" />
-                            )}
+                            <img
+                                src={selectedUser.coverImage || getDefaultCover(selectedUser.id)}
+                                alt="Cover"
+                                className="w-full h-full object-cover"
+                            />
                             <button
                                 onClick={() => setSelectedUser(null)}
                                 className="absolute top-4 right-4 p-1 bg-black/20 hover:bg-black/40 text-white rounded-full transition-colors"

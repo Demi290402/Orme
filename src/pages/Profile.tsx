@@ -6,7 +6,7 @@ import { autoCreateMonthlySnapshot, getBackups, downloadBackup, BackupSnapshot }
 import { User } from '@/types';
 import { Link } from 'react-router-dom';
 import UserAvatar from '@/components/UserAvatar';
-import { cn } from '@/lib/utils';
+import { cn, getDefaultCover } from '@/lib/utils';
 
 export default function Profile() {
     const [user, setUser] = useState<User | null>(null);
@@ -20,7 +20,10 @@ export default function Profile() {
         email: '',
         profilePicture: '',
         coverImage: '',
-        scoutCode: ''
+        scoutCode: '',
+        region: '',
+        scoutZone: '',
+        groupName: ''
     });
 
     useEffect(() => {
@@ -35,7 +38,10 @@ export default function Profile() {
                     email: currentUser.email,
                     profilePicture: currentUser.profilePicture || '',
                     coverImage: currentUser.coverImage || '',
-                    scoutCode: currentUser.scoutCode || ''
+                    scoutCode: currentUser.scoutCode || '',
+                    region: currentUser.region || '',
+                    scoutZone: currentUser.scoutZone || '',
+                    groupName: currentUser.groupName || ''
                 });
 
                 // Auto-create backup check
@@ -147,16 +153,6 @@ export default function Profile() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Codice Socio</label>
-                                <input
-                                    type="text"
-                                    value={editForm.scoutCode}
-                                    onChange={e => setEditForm((prev: any) => ({ ...prev, scoutCode: e.target.value }))}
-                                    className="w-full p-2 rounded-xl border border-gray-200"
-                                />
-                            </div>
-
-                            <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                                 <input
                                     type="email"
@@ -164,6 +160,40 @@ export default function Profile() {
                                     onChange={e => setEditForm((prev: any) => ({ ...prev, email: e.target.value }))}
                                     className="w-full p-2 rounded-xl border border-gray-200"
                                 />
+                            </div>
+
+                            <div className="p-3 bg-gray-50 rounded-xl space-y-3">
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Dati Gruppo</p>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 mb-1">Regione</label>
+                                        <input
+                                            type="text"
+                                            value={editForm.region}
+                                            onChange={e => setEditForm((prev: any) => ({ ...prev, region: e.target.value }))}
+                                            className="w-full p-2 rounded-lg border border-gray-200 text-sm"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 mb-1">Zona</label>
+                                        <input
+                                            type="text"
+                                            value={editForm.scoutZone}
+                                            onChange={e => setEditForm((prev: any) => ({ ...prev, scoutZone: e.target.value }))}
+                                            className="w-full p-2 rounded-lg border border-gray-200 text-sm"
+                                        />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 mb-1">Nome Gruppo</label>
+                                    <input
+                                        type="text"
+                                        value={editForm.groupName}
+                                        onChange={e => setEditForm((prev: any) => ({ ...prev, groupName: e.target.value }))}
+                                        className="w-full p-2 rounded-lg border border-gray-200 text-sm"
+                                    />
+                                </div>
+                                <p className="text-[9px] text-gray-400">Il cambio gruppo non sposta i dati già inseriti.</p>
                             </div>
                         </div>
 
@@ -201,15 +231,11 @@ export default function Profile() {
 
             {/* Cover Image Section */}
             <div className="relative h-48 md:h-64 rounded-b-3xl md:rounded-3xl overflow-hidden bg-gray-200 group">
-                {user.coverImage ? (
-                    <img
-                        src={user.coverImage}
-                        alt="Cover"
-                        className="w-full h-full object-cover"
-                    />
-                ) : (
-                    <div className="w-full h-full bg-[url('https://www.turi1.it/wp-content/uploads/2021/10/DJI_0016.jpg')] bg-cover bg-center opacity-80" />
-                )}
+                <img
+                    src={user.coverImage || getDefaultCover(user.id)}
+                    alt="Cover"
+                    className="w-full h-full object-cover"
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
 
                 <label className="absolute bottom-4 right-4 bg-white/20 backdrop-blur-md p-2 rounded-full hover:bg-white/40 text-white cursor-pointer transition-all active:scale-95 group-hover:bg-white/30">
@@ -224,25 +250,34 @@ export default function Profile() {
             </div>
 
             {/* Profile Header */}
-            <div className="relative px-6 -mt-16 mb-6 flex flex-col items-center md:items-end md:flex-row md:gap-6">
-                <UserAvatar
-                    user={user}
-                    size="xl"
-                    isOwnProfile
-                    onImageChange={(e) => handleImageUpload(e, 'profilePicture')}
-                />
+            <div className="relative px-6 mb-6 flex flex-col items-center md:items-end md:flex-row md:gap-6">
+                <div className="-mt-16 shrink-0">
+                    <UserAvatar
+                        user={user}
+                        size="xl"
+                        isOwnProfile
+                        onImageChange={(e) => handleImageUpload(e, 'profilePicture')}
+                    />
+                </div>
 
-                <div className="mt-4 text-center md:text-left md:mt-0 md:pt-4 flex-1 w-full">
+                <div className="mt-4 text-center md:text-left md:mt-0 flex-1 w-full">
                     <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-                        <div>
-                            <h1 className="text-2xl font-bold text-gray-900">{user.firstName} {user.lastName}</h1>
-                            <p className="text-gray-500 font-medium">@{user.nickname || 'Nessun nickname'}</p>
-                            {user.scoutCode && (
-                                <p className="text-xs text-scout-green font-semibold mt-1 bg-green-50 inline-block px-2 py-1 rounded-full border border-green-100">
-                                    Socio: {user.scoutCode}
-                                </p>
-                            )}
-                        </div>
+                            <div>
+                                <h1 className="text-2xl font-bold text-gray-900">{user.firstName} {user.lastName}</h1>
+                                <p className="text-gray-500 font-medium">@{user.nickname || 'Nessun nickname'}</p>
+                                <div className="flex flex-wrap gap-2 mt-1">
+                                    {user.scoutCode && (
+                                        <p className="text-[10px] text-scout-green font-bold bg-green-50 px-2 py-0.5 rounded-full border border-green-100">
+                                            Socio: {user.scoutCode}
+                                        </p>
+                                    )}
+                                    {user.groupName && (
+                                        <p className="text-[10px] text-scout-brown font-bold bg-orange-50 px-2 py-0.5 rounded-full border border-orange-100 uppercase">
+                                            {user.groupName} ({user.scoutZone})
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
 
                         <div className="flex flex-col sm:flex-row gap-3">
                             <Link

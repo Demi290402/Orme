@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Search, Filter, Plus, X, Check } from 'lucide-react';
+import { Search, Filter, Plus, X, Check, Clock } from 'lucide-react';
 import { getLocations } from '@/lib/data';
 import { Location } from '@/types';
 import LocationCard from '@/components/LocationCard';
 import { Link } from 'react-router-dom';
-import { cn } from '@/lib/utils';
+import { cn, getStalenessInfo } from '@/lib/utils';
 
 const ITALIAN_REGIONS = [
     "Abruzzo", "Basilicata", "Calabria", "Campania", "Emilia-Romagna",
@@ -21,6 +21,13 @@ const BRANCH_ACTIVITIES: Record<string, string[]> = {
     'Gruppo': ['Uscita di apertura', 'Campo di gruppo']
 };
 
+const STALENESS_LEVELS = [
+    { level: 0, color: 'bg-green-500', label: 'Recente (<1a)' },
+    { level: 1, color: 'bg-yellow-500', label: 'Da verif. (1-2a)' },
+    { level: 2, color: 'bg-orange-500', label: 'Incerto (2-3a)' },
+    { level: 3, color: 'bg-red-500', label: 'Datato (>3a)' }
+];
+
 export default function Home() {
     const [locations, setLocations] = useState<Location[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
@@ -32,12 +39,13 @@ export default function Home() {
     const [hasTents, setHasTents] = useState(false);
     const [hasBeds, setHasBeds] = useState(false);
     const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
+    const [selectedStaleness, setSelectedStaleness] = useState<number[]>([]);
 
     useEffect(() => {
         getLocations().then(setLocations).catch(console.error);
     }, []);
 
-    const toggleSelection = (list: string[], item: string, setList: (l: string[]) => void) => {
+    const toggleSelection = (list: any[], item: any, setList: (l: any[]) => void) => {
         if (list.includes(item)) {
             setList(list.filter(i => i !== item));
         } else {
@@ -70,13 +78,21 @@ export default function Home() {
             matchesActivity = loc.activities.some(act => selectedActivities.includes(act));
         }
 
-        return matchesSearch && matchesTents && matchesBeds && matchesRegion && matchesBranch && matchesActivity;
+        // 5. Staleness
+        let matchesStaleness = true;
+        if (selectedStaleness.length > 0) {
+            const info = getStalenessInfo(loc.lastUpdatedAt);
+            matchesStaleness = selectedStaleness.includes(info.level);
+        }
+
+        return matchesSearch && matchesTents && matchesBeds && matchesRegion && matchesBranch && matchesActivity && matchesStaleness;
     });
 
     const activeFiltersCount =
         selectedBranches.length +
         selectedRegions.length +
         selectedActivities.length +
+        selectedStaleness.length +
         (hasTents ? 1 : 0) +
         (hasBeds ? 1 : 0);
 
@@ -130,6 +146,30 @@ export default function Home() {
                         <div className="flex justify-between items-center border-b border-gray-100 pb-4">
                             <h2 className="text-2xl font-bold text-scout-green">Filtri</h2>
                             <button onClick={() => setShowFilters(false)} className="p-2 hover:bg-gray-100 rounded-full text-gray-500"><X size={24} /></button>
+                        </div>
+
+                        {/* 0. Stato Dati */}
+                        <div>
+                            <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                                <Clock size={16} className="text-scout-brown" /> Stato Aggiornamento Dati
+                            </h3>
+                            <div className="grid grid-cols-2 gap-2">
+                                {STALENESS_LEVELS.map(s => (
+                                    <button
+                                        key={s.level}
+                                        onClick={() => toggleSelection(selectedStaleness, s.level, setSelectedStaleness)}
+                                        className={cn(
+                                            "flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-bold border transition-all",
+                                            selectedStaleness.includes(s.level)
+                                                ? "bg-gray-900 text-white border-gray-900 shadow-md"
+                                                : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
+                                        )}
+                                    >
+                                        <div className={cn("w-3 h-3 rounded-full shrink-0", s.color)} />
+                                        {s.label}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
 
                         {/* 1. Branche */}
@@ -241,6 +281,7 @@ export default function Home() {
                                         setSelectedBranches([]);
                                         setSelectedRegions([]);
                                         setSelectedActivities([]);
+                                        setSelectedStaleness([]);
                                         setHasTents(false);
                                         setHasBeds(false);
                                     }}

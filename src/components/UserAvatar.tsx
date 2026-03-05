@@ -9,10 +9,11 @@ interface UserAvatarProps {
     size?: 'sm' | 'md' | 'lg' | 'xl';
     className?: string;
     isOwnProfile?: boolean;
+    disablePreview?: boolean;
     onImageChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
-export default function UserAvatar({ user, size = 'md', className, isOwnProfile, onImageChange }: UserAvatarProps) {
+export default function UserAvatar({ user, size = 'md', className, isOwnProfile, disablePreview, onImageChange }: UserAvatarProps) {
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
     const { current } = getLevelInfo(user.points);
 
@@ -25,14 +26,17 @@ export default function UserAvatar({ user, size = 'md', className, isOwnProfile,
 
     const handleAvatarClick = (e: React.MouseEvent) => {
         e.stopPropagation();
-        setIsPreviewOpen(true);
+        if (!disablePreview) {
+            setIsPreviewOpen(true);
+        }
     };
 
     return (
         <>
             <div
                 className={cn(
-                    "relative shrink-0 cursor-pointer transition-transform active:scale-95",
+                    "relative shrink-0 transition-transform active:scale-95",
+                    !disablePreview && "cursor-pointer",
                     sizeClasses[size],
                     "rounded-full overflow-hidden bg-white shadow-sm",
                     className
@@ -41,7 +45,7 @@ export default function UserAvatar({ user, size = 'md', className, isOwnProfile,
                 onClick={handleAvatarClick}
             >
                 <img
-                    src={user.profilePicture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.firstName}`}
+                    src={user.profilePicture || `/profilo.jpg`}
                     alt={user.firstName}
                     className="w-full h-full object-cover"
                 />
@@ -71,7 +75,7 @@ export default function UserAvatar({ user, size = 'md', className, isOwnProfile,
                         onClick={e => e.stopPropagation()}
                     >
                         <img
-                            src={user.profilePicture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.firstName}`}
+                            src={user.profilePicture || `/profilo.jpg`}
                             alt={user.firstName}
                             className="w-full h-full object-contain bg-white"
                         />

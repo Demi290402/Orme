@@ -11,6 +11,9 @@ import Register from '@/pages/Register';
 import About from '@/pages/About';
 import Guide from '@/pages/Guide';
 import Proposals from '@/pages/Proposals';
+import VerbaliList from '@/pages/Verbali/VerbaliList';
+import VerbaleEditor from '@/pages/Verbali/VerbaleEditor';
+import MembriCoCa from '@/pages/Verbali/MembriCoCa';
 
 function App() {
   return (
@@ -30,6 +33,10 @@ function App() {
         <Route path="/profile" element={<ProtectedRoute><Layout><Profile /></Layout></ProtectedRoute>} />
         <Route path="/about" element={<ProtectedRoute><Layout><About /></Layout></ProtectedRoute>} />
         <Route path="/proposals" element={<ProtectedRoute><Layout><Proposals /></Layout></ProtectedRoute>} />
+        <Route path="/verbali" element={<ProtectedRoute><Layout><VerbaliList /></Layout></ProtectedRoute>} />
+        <Route path="/verbali/nuovo" element={<ProtectedRoute><Layout><VerbaleEditor /></Layout></ProtectedRoute>} />
+        <Route path="/verbali/modifica/:id" element={<ProtectedRoute><Layout><VerbaleEditor /></Layout></ProtectedRoute>} />
+        <Route path="/verbali/membri" element={<ProtectedRoute><Layout><MembriCoCa /></Layout></ProtectedRoute>} />
       </Routes>
     </Router>
   );

@@ -9,33 +9,44 @@ export default function Register() {
         firstName: '',
         lastName: '',
         nickname: '',
+        region: '',
+        scoutZone: '',
+        groupName: '',
         email: '',
         password: '',
-        confirmPassword: '' // Added confirmPassword
+        confirmPassword: ''
     });
     const [error, setError] = useState('');
 
-    const handleRegister = async (e: React.FormEvent) => { // Made async
+    const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
 
-        if (!formData.firstName || !formData.lastName || !formData.email || !formData.password || !formData.confirmPassword) {
+        if (!formData.firstName || !formData.lastName || !formData.email || !formData.password || !formData.confirmPassword || !formData.region || !formData.scoutZone || !formData.groupName) {
             setError('Compila tutti i campi obbligatori.');
             return;
         }
 
-        if (formData.password !== formData.confirmPassword) { // Added password mismatch validation
+        if (formData.password !== formData.confirmPassword) {
             setError('Le password non corrispondono');
             return;
         }
 
         try {
-            await registerUser({ // Added await
+            // Generate a normalized groupId: REGION_ZONE_GROUP (e.g., PUGLIA_BARISUD_TURI1)
+            const normalize = (s: string) => s.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            const groupId = `${normalize(formData.region)}_${normalize(formData.scoutZone)}_${normalize(formData.groupName)}`;
+
+            await registerUser({
                 firstName: formData.firstName,
                 lastName: formData.lastName,
                 nickname: formData.nickname,
                 email: formData.email,
-                password: formData.password
+                password: formData.password,
+                region: formData.region,
+                scoutZone: formData.scoutZone,
+                groupName: formData.groupName,
+                groupId: groupId
             });
             alert('Registrazione completata! Per favore controlla la tua email per confermare l\'account prima di accedere.');
             navigate('/login');
@@ -45,8 +56,8 @@ export default function Register() {
     };
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-scout-beige-light p-4">
-            <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-100">
+        <div className="flex flex-col items-center justify-center min-h-screen bg-scout-beige-light p-4 pt-12">
+            <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-100 mb-12">
                 <div className="flex justify-center mb-6">
                     <div className="bg-scout-brown p-4 rounded-full shadow-lg">
                         <UserPlus size={40} className="text-white" />
@@ -92,6 +103,43 @@ export default function Register() {
                             onChange={(e) => setFormData(prev => ({ ...prev, nickname: e.target.value }))}
                             className="w-full p-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-scout-green"
                         />
+                    </div>
+
+                    <div className="p-4 bg-gray-50 border border-gray-100 rounded-2xl space-y-4">
+                        <h3 className="text-xs font-bold text-scout-brown uppercase tracking-wider">Dati Gruppo Scout</h3>
+                        
+                        <div>
+                            <label className="block text-xs font-bold text-gray-600 mb-1">Regione*</label>
+                            <input
+                                type="text"
+                                placeholder="es: Puglia"
+                                value={formData.region}
+                                onChange={(e) => setFormData(prev => ({ ...prev, region: e.target.value }))}
+                                className="w-full p-2.5 rounded-lg border border-gray-200 outline-none focus:ring-2 focus:ring-scout-brown"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-bold text-gray-600 mb-1">Zona*</label>
+                            <input
+                                type="text"
+                                placeholder="es: Bari Sud"
+                                value={formData.scoutZone}
+                                onChange={(e) => setFormData(prev => ({ ...prev, scoutZone: e.target.value }))}
+                                className="w-full p-2.5 rounded-lg border border-gray-200 outline-none focus:ring-2 focus:ring-scout-brown"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-bold text-gray-600 mb-1">Gruppo*</label>
+                            <input
+                                type="text"
+                                placeholder="es: Turi 1"
+                                value={formData.groupName}
+                                onChange={(e) => setFormData(prev => ({ ...prev, groupName: e.target.value }))}
+                                className="w-full p-2.5 rounded-lg border border-gray-200 outline-none focus:ring-2 focus:ring-scout-brown"
+                            />
+                        </div>
                     </div>
 
                     <div>
