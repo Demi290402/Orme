@@ -976,8 +976,8 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                         </div>
 
                     </div>
-                </div>
-            )}
+                )}
+            </div>
 
             {(viewMode || activeTab === 'anteprima') && (
                     <style dangerouslySetInnerHTML={{__html: `
