@@ -93,6 +93,24 @@ export default function RichTextEditor({ value, onChange }: { value: string, onC
                 contentEditable
                 onInput={handleInput}
                 onBlur={handleInput}
+                onPaste={(e) => {
+                    e.preventDefault();
+                    const html = e.clipboardData.getData('text/html');
+                    const text = e.clipboardData.getData('text/plain');
+                    if (html) {
+                        const div = document.createElement('div');
+                        div.innerHTML = html;
+                        const allElems = Array.from(div.getElementsByTagName('*'));
+                        allElems.forEach(el => {
+                            el.removeAttribute('style');
+                            el.removeAttribute('id');
+                            el.removeAttribute('class');
+                        });
+                        document.execCommand('insertHTML', false, div.innerHTML);
+                    } else {
+                        document.execCommand('insertText', false, text);
+                    }
+                }}
             />
         </div>
     );

@@ -15,6 +15,15 @@ async function fetchImageAsBuffer(url: string): Promise<ArrayBuffer> {
     return await response.arrayBuffer();
 }
 
+/**
+ * Strips HTML tags from a string
+ */
+function stripHtml(html: string): string {
+    const tmp = document.createElement("DIV");
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || "";
+}
+
 export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[], currentUser: User) => {
     let logoBuffer: ArrayBuffer | null = null;
     let footerLogosBuffer: ArrayBuffer | null = null;
@@ -210,6 +219,7 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                 ...(verbale.sezioniAttive || []).map(sez => {
                     let title = "";
                     if (sez === 'ritorni' && verbale.ritorni && verbale.ritorni.length > 0) title = "Ritorni dalle branche";
+                    if (sez === 'date_importanti' && verbale.dateImportanti && verbale.dateImportanti.length > 0) title = "Date importanti";
                     if (sez === 'cassa' && verbale.cassa && verbale.cassa.length > 0) title = "Movimenti di cassa di gruppo";
                     if (sez === 'posti_azione' && verbale.postiAzione && verbale.postiAzione.length > 0) title = "Posti d'Azione";
                     if (sez === 'prossimi_impegni' && verbale.prossimiImpegni && verbale.prossimiImpegni.length > 0) title = "Prossimi impegni";
@@ -234,7 +244,7 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                         spacing: { before: 400 },
                     }),
                     new Paragraph({
-                        children: [new TextRun({ text: punto.contenuto, size: 20, font: "Roboto" })],
+                        children: [new TextRun({ text: stripHtml(punto.contenuto), size: 20, font: "Roboto" })],
                         spacing: { before: 150 },
                         alignment: AlignmentType.BOTH,
                         indent: { left: 720 },
@@ -255,11 +265,45 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                             indent: { left: 400 },
                         }),
                         new Paragraph({
-                            children: [new TextRun({ text: r.contenuto, italics: true, font: "Georgia", size: 22 })],
+                            children: [new TextRun({ text: stripHtml(r.contenuto), italics: true, font: "Georgia", size: 22 })],
                             spacing: { before: 100 },
                             indent: { left: 800 },
                             alignment: AlignmentType.BOTH,
                         }),
+                    ]).flat(),
+                ] : []),
+
+                ...(verbale.sezioniAttive?.includes('date_importanti') && verbale.dateImportanti && verbale.dateImportanti.length > 0 ? [
+                    new Paragraph({
+                        children: [new TextRun({ text: "DATE IMPORTANTI", bold: true, size: 20, color: "45387E", font: "Georgia" })],
+                        spacing: { before: 800 },
+                        border: { bottom: { style: BorderStyle.SINGLE, size: 1, color: "EEEEEE" } },
+                    }),
+                    ...verbale.dateImportanti.map(d => [
+                        new Paragraph({
+                            children: [new TextRun({ text: `${d.evento}`, bold: true, font: "Georgia", size: 22 })],
+                            spacing: { before: 200 },
+                            indent: { left: 400 },
+                        }),
+                        new Paragraph({
+                            children: [
+                                new TextRun({ 
+                                    text: `${new Date(d.dataInizio).toLocaleDateString('it-IT')}${d.dataFine ? ' - ' + new Date(d.dataFine).toLocaleDateString('it-IT') : ''}${d.luogo ? ' • ' + d.luogo : ''}`, 
+                                    font: "Georgia", 
+                                    color: "666666",
+                                    size: 18 
+                                })
+                            ],
+                            spacing: { before: 50 },
+                            indent: { left: 800 },
+                        }),
+                        ...(d.note ? [
+                           new Paragraph({
+                               children: [new TextRun({ text: d.note, italics: true, font: "Georgia", size: 20 })],
+                               spacing: { before: 50 },
+                               indent: { left: 800 },
+                           })
+                        ] : []),
                     ]).flat(),
                 ] : []),
 

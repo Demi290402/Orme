@@ -4,7 +4,7 @@ import {
     Save, ChevronLeft, Users, FileText, 
     Eye, Download, ArrowUp, ArrowDown,
     Plus, Trash2, Clock, Pencil, Bell, Mail, BellOff,
-    CheckCircle2, AlertCircle, Puzzle, FileDown, MoreVertical, X
+    CheckCircle2, AlertCircle, Puzzle, FileDown, MoreVertical, X, Calendar
 } from 'lucide-react';
 import { getMembriCoCa, saveVerbale, getVerbali, getImpostazioniVerbali } from '@/lib/verbali';
 import { Verbale, MembroCoCa } from '@/types';
@@ -1049,11 +1049,13 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                                         prossimi_impegni: 'Prossimi impegni',
                                                                         cassa: 'Aggiornamento cassa',
                                                                         varie: 'Varie ed eventuali',
+                                                                        date_importanti: 'Date importanti',
                                                                     };
                                                                     const hasContent =
                                                                         (sezId === 'ritorni' && (verbale.ritorni?.length || 0) > 0) ||
                                                                         (sezId === 'posti_azione' && (verbale.postiAzione?.length || 0) > 0) ||
                                                                         (sezId === 'prossimi_impegni' && (verbale.prossimiImpegni?.length || 0) > 0) ||
+                                                                        (sezId === 'date_importanti' && (verbale.dateImportanti?.length || 0) > 0) ||
                                                                         (sezId === 'cassa' && (verbale.cassa?.length || 0) > 0) ||
                                                                         (sezId === 'varie' && !!verbale.varie);
                                                                     if (!hasContent || !SEZIONI_LABELS[sezId]) return null;
@@ -1072,9 +1074,10 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                             <div className="flex gap-2">
                                                                 <span className="font-black whitespace-nowrap">• {punto.titolo}</span>
                                                             </div>
-                                                            <div className="text-[12px] leading-relaxed text-justify pl-6 whitespace-pre-wrap">
-                                                                {punto.contenuto}
-                                                            </div>
+                                                            <div 
+                                                                className="text-[12px] leading-relaxed text-justify pl-6 prose prose-sm max-w-none prose-p:m-0"
+                                                                dangerouslySetInnerHTML={{ __html: punto.contenuto }}
+                                                            />
                                                         </div>
                                                     ))}
 
@@ -1085,9 +1088,32 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                             {verbale.ritorni.map((r, i) => (
                                                                 <div key={i} className="pl-6 space-y-1">
                                                                     <div className="font-bold text-[11px]">- {r.branca}</div>
-                                                                    <div className="text-[12px] leading-relaxed text-justify pl-4 italic opacity-80">{r.contenuto}</div>
+                                                                    <div 
+                                                                        className="text-[12px] leading-relaxed text-justify pl-4 italic opacity-80 prose prose-sm max-w-none prose-p:m-0"
+                                                                        dangerouslySetInnerHTML={{ __html: r.contenuto }}
+                                                                    />
                                                                 </div>
                                                             ))}
+                                                        </div>
+                                                    )}
+
+                                                    {verbale.sezioniAttive?.includes('date_importanti') && verbale.dateImportanti && verbale.dateImportanti.length > 0 && (
+                                                        <div className="space-y-4">
+                                                            <div className="font-black border-b border-gray-100 pb-1 uppercase text-[10px] tracking-widest text-scout-blue">Date Importanti</div>
+                                                            <div className="pl-6 space-y-3">
+                                                                {verbale.dateImportanti.map((d, i) => (
+                                                                    <div key={i} className="text-[12px] flex flex-col border-l-2 border-scout-blue/20 pl-3 py-0.5">
+                                                                        <div className="font-bold uppercase tracking-tight">{d.evento}</div>
+                                                                        <div className="flex items-center gap-2 text-[10px] text-gray-400">
+                                                                            <Calendar size={10} />
+                                                                            <span>{new Date(d.dataInizio).toLocaleDateString('it-IT')}</span>
+                                                                            {d.dataFine && <span> - {new Date(d.dataFine).toLocaleDateString('it-IT')}</span>}
+                                                                            {d.luogo && <span className="italic">• {d.luogo}</span>}
+                                                                        </div>
+                                                                        {d.note && <div className="text-[11px] italic mt-1 opacity-70">{d.note}</div>}
+                                                                    </div>
+                                                                ))}
+                                                            </div>
                                                         </div>
                                                     )}
 
