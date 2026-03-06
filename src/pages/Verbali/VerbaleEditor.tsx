@@ -4,7 +4,7 @@ import {
     Save, ChevronLeft, Users, FileText, 
     Eye, Download, ArrowUp, ArrowDown,
     Plus, Trash2, Clock, Pencil, Bell, Mail, BellOff,
-    CheckCircle2, AlertCircle, Puzzle, FileDown
+    CheckCircle2, AlertCircle, Puzzle, FileDown, MoreVertical, X
 } from 'lucide-react';
 import { getMembriCoCa, saveVerbale, getVerbali, getImpostazioniVerbali } from '@/lib/verbali';
 import { Verbale, MembroCoCa } from '@/types';
@@ -38,6 +38,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
     const [currentUser, setCurrentUser] = useState<any>(null);
     const [showNotifyModal, setShowNotifyModal] = useState(false);
     const [lastSavedVerbale, setLastSavedVerbale] = useState<Verbale | null>(null);
+    const [isFabOpen, setIsFabOpen] = useState(false);
 
     const [verbale, setVerbale] = useState<Partial<Verbale>>({
         numero: 1,
@@ -164,7 +165,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                     {viewMode && (
                     <button
                         onClick={() => navigate(`/verbali/modifica/${id}`)}
-                        className="bg-scout-brown text-white px-4 py-2.5 rounded-xl font-bold shadow-md transition-all flex items-center gap-2 hover:bg-amber-900 active:scale-95 text-sm"
+                        className="hidden md:flex bg-scout-brown text-white px-4 py-2.5 rounded-xl font-bold shadow-md transition-all items-center gap-2 hover:bg-amber-900 active:scale-95 text-sm"
                     >
                         <Pencil size={16} />
                         Modifica
@@ -184,7 +185,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                     {viewMode && (
                     <button
                         onClick={() => exportVerbaleToDocx(verbale as Verbale, membri, currentUser)}
-                        className="bg-[#45387E] text-white px-4 py-2.5 rounded-xl font-bold shadow-md transition-all flex items-center gap-2 hover:bg-[#352b61] active:scale-95 text-sm"
+                        className="hidden md:flex bg-[#45387E] text-white px-4 py-2.5 rounded-xl font-bold shadow-md transition-all items-center gap-2 hover:bg-[#352b61] active:scale-95 text-sm"
                     >
                         <Download size={16} />
                         Scarica .docx
@@ -192,7 +193,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                     {viewMode && (
                     <button
                         onClick={() => window.print()}
-                        className="bg-red-600 text-white px-4 py-2.5 rounded-xl font-bold shadow-md transition-all flex items-center gap-2 hover:bg-red-700 active:scale-95 text-sm"
+                        className="hidden md:flex bg-red-600 text-white px-4 py-2.5 rounded-xl font-bold shadow-md transition-all items-center gap-2 hover:bg-red-700 active:scale-95 text-sm"
                     >
                         <FileDown size={16} />
                         Scarica PDF
@@ -1236,6 +1237,70 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* FLOATING ACTION BUTTON (MOBILE/TABLET) */}
+            {viewMode && (
+                <>
+                    {/* Backdrop */}
+                    <div 
+                        className={cn(
+                            "fixed inset-0 bg-black/20 backdrop-blur-[2px] z-30 transition-opacity duration-300 md:hidden",
+                            isFabOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+                        )}
+                        onClick={() => setIsFabOpen(false)}
+                    />
+                    
+                    <div className="fixed bottom-6 right-6 z-40 md:hidden no-print">
+                    {/* FAB Menu */}
+                    <div className={cn(
+                        "flex flex-col gap-3 mb-4 transition-all duration-300 origin-bottom",
+                        isFabOpen ? "scale-100 opacity-100" : "scale-0 opacity-0 pointer-events-none"
+                    )}>
+                        <button
+                            onClick={() => {
+                                setIsFabOpen(false);
+                                navigate(`/verbali/modifica/${id}`);
+                            }}
+                            className="bg-scout-brown text-white w-14 h-14 rounded-full fab-item-shadow flex items-center justify-center hover:scale-105 active:scale-95 transition-all"
+                            title="Modifica"
+                        >
+                            <Pencil size={24} />
+                        </button>
+                        <button
+                            onClick={() => {
+                                setIsFabOpen(false);
+                                exportVerbaleToDocx(verbale as Verbale, membri, currentUser);
+                            }}
+                            className="bg-[#45387E] text-white w-14 h-14 rounded-full fab-item-shadow flex items-center justify-center hover:scale-105 active:scale-95 transition-all"
+                            title="Scarica .docx"
+                        >
+                            <Download size={24} />
+                        </button>
+                        <button
+                            onClick={() => {
+                                setIsFabOpen(false);
+                                window.print();
+                            }}
+                            className="bg-red-600 text-white w-14 h-14 rounded-full fab-item-shadow flex items-center justify-center hover:scale-105 active:scale-95 transition-all"
+                            title="Scarica PDF"
+                        >
+                            <FileDown size={24} />
+                        </button>
+                    </div>
+
+                    {/* Main FAB Toggle */}
+                    <button
+                        onClick={() => setIsFabOpen(!isFabOpen)}
+                        className={cn(
+                            "w-16 h-16 rounded-full fab-shadow flex items-center justify-center transition-all duration-300 active:scale-90",
+                            isFabOpen ? "bg-gray-800 text-white rotate-90" : "bg-scout-green text-white"
+                        )}
+                    >
+                        {isFabOpen ? <X size={32} /> : <MoreVertical size={32} />}
+                    </button>
+                </div>
+            </>
             )}
         </div>
     );
