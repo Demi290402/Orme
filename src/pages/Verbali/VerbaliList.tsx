@@ -110,6 +110,13 @@ export default function VerbaliList() {
                             <Settings size={20} />
                         </Link>
                         <Link
+                            to="/verbali/statistiche"
+                            className="bg-white p-3 rounded-xl border border-scout-brown/10 shadow-sm hover:border-scout-brown/30 text-amber-600 hover:bg-amber-50 transition-all outline-none"
+                            title="Reportistica Presenze"
+                        >
+                            <FileText size={20} />
+                        </Link>
+                        <Link
                             to="/verbali/membri"
                             className="bg-white text-scout-brown px-4 py-3 rounded-xl font-bold border-2 border-scout-brown/10 shadow-sm hover:border-scout-brown/30 transition-all flex items-center justify-center gap-2"
                         >
