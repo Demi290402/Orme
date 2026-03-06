@@ -59,6 +59,15 @@ ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE membri ENABLE ROW LEVEL SECURITY;
 ALTER TABLE verbali ENABLE ROW LEVEL SECURITY;
 
+-- 6. Creazione Tabella Impostazioni Verbali
+CREATE TABLE IF NOT EXISTS impostazioni_verbali (
+    group_id TEXT PRIMARY KEY,
+    intestazione TEXT,
+    pie_pagina TEXT,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+ALTER TABLE impostazioni_verbali ENABLE ROW LEVEL SECURITY;
+
 -- Esempio di policy per isolamento (da adattare se necessario)
 -- DROP POLICY IF EXISTS "Group isolation" ON locations;
 -- CREATE POLICY "Group isolation" ON locations

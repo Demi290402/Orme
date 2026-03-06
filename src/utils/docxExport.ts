@@ -64,12 +64,12 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                                         new TableCell({
                                             width: { size: 60, type: WidthType.PERCENTAGE },
                                             shading: { fill: "45387E" },
-                                            children: [],
+                                            children: [new Paragraph({ text: "" })],
                                         }),
                                         new TableCell({
                                             width: { size: 40, type: WidthType.PERCENTAGE },
                                             shading: { fill: "F4B400" },
-                                            children: [],
+                                            children: [new Paragraph({ text: "" })],
                                         }),
                                     ],
                                 }),
@@ -207,6 +207,21 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                     indent: { left: 720 },
                     spacing: { after: 50 },
                 })),
+                ...(verbale.sezioniAttive || []).map(sez => {
+                    let title = "";
+                    if (sez === 'ritorni' && verbale.ritorni && verbale.ritorni.length > 0) title = "Ritorni dalle branche";
+                    if (sez === 'cassa' && verbale.cassa && verbale.cassa.length > 0) title = "Movimenti di cassa di gruppo";
+                    if (sez === 'posti_azione' && verbale.postiAzione && verbale.postiAzione.length > 0) title = "Posti d'Azione";
+                    if (sez === 'prossimi_impegni' && verbale.prossimiImpegni && verbale.prossimiImpegni.length > 0) title = "Prossimi impegni";
+                    if (sez === 'varie' && verbale.varie && verbale.varie.trim().length > 0) title = "Varie ed Eventuali";
+                    
+                    if (!title) return null;
+                    return new Paragraph({
+                        children: [new TextRun({ text: `• ${title}`, bold: true, font: "Roboto", size: 20 })],
+                        indent: { left: 720 },
+                        spacing: { after: 50 },
+                    });
+                }).filter(Boolean) as Paragraph[],
 
                 new Paragraph({ text: "", spacing: { before: 600 } }),
 

@@ -14,6 +14,7 @@ import Proposals from '@/pages/Proposals';
 import VerbaliList from '@/pages/Verbali/VerbaliList';
 import VerbaleEditor from '@/pages/Verbali/VerbaleEditor';
 import MembriCoCa from '@/pages/Verbali/MembriCoCa';
+import ImpostazioniVerbale from '@/pages/Verbali/ImpostazioniVerbale';
 
 function App() {
   return (
@@ -36,7 +37,9 @@ function App() {
         <Route path="/verbali" element={<ProtectedRoute><Layout><VerbaliList /></Layout></ProtectedRoute>} />
         <Route path="/verbali/nuovo" element={<ProtectedRoute><Layout><VerbaleEditor /></Layout></ProtectedRoute>} />
         <Route path="/verbali/modifica/:id" element={<ProtectedRoute><Layout><VerbaleEditor /></Layout></ProtectedRoute>} />
+        <Route path="/verbali/visualizza/:id" element={<ProtectedRoute><Layout><VerbaleEditor viewMode={true} /></Layout></ProtectedRoute>} />
         <Route path="/verbali/membri" element={<ProtectedRoute><Layout><MembriCoCa /></Layout></ProtectedRoute>} />
+        <Route path="/verbali/impostazioni" element={<ProtectedRoute><Layout><ImpostazioniVerbale /></Layout></ProtectedRoute>} />
       </Routes>
     </Router>
   );

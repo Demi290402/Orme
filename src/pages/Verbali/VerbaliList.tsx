@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, FileText, Search, Calendar, MapPin, User as UserIcon, Filter, X } from 'lucide-react';
+import { Plus, FileText, Search, Calendar, MapPin, User as UserIcon, Filter, X, Settings } from 'lucide-react';
 import { getVerbali } from '@/lib/verbali';
 import { Verbale } from '@/types';
 import { cn } from '@/lib/utils';
@@ -10,6 +10,8 @@ export default function VerbaliList() {
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
     const [selectedYear, setSelectedYear] = useState<string>('all');
+    const [selectedMonth, setSelectedMonth] = useState<string>('all');
+    const [hasOspite, setHasOspite] = useState<string>('all');
     const [showFilters, setShowFilters] = useState(false);
 
     useEffect(() => {
@@ -43,10 +45,21 @@ export default function VerbaliList() {
             v.cassa?.some(c => c.note.toLowerCase().includes(searchTerm.toLowerCase()) || c.branca.toLowerCase().includes(searchTerm.toLowerCase())) ||
             v.varie?.toLowerCase().includes(searchTerm.toLowerCase());
         
+        const date = new Date(v.data);
         const matchesYear = selectedYear === 'all' || getScoutYear(v.data) === selectedYear;
+        const matchesMonth = selectedMonth === 'all' || (date.getMonth() + 1).toString().padStart(2, '0') === selectedMonth;
+        const vHasOspite = v.ospiti && v.ospiti.length > 0;
+        const matchesOspite = hasOspite === 'all' || (hasOspite === 'yes' ? vHasOspite : !vHasOspite);
         
-        return matchesSearch && matchesYear;
+        return matchesSearch && matchesYear && matchesMonth && matchesOspite;
     });
+
+    const months = [
+        { value: '01', label: 'Gennaio' }, { value: '02', label: 'Febbraio' }, { value: '03', label: 'Marzo' },
+        { value: '04', label: 'Aprile' }, { value: '05', label: 'Maggio' }, { value: '06', label: 'Giugno' },
+        { value: '07', label: 'Luglio' }, { value: '08', label: 'Agosto' }, { value: '09', label: 'Settembre' },
+        { value: '10', label: 'Ottobre' }, { value: '11', label: 'Novembre' }, { value: '12', label: 'Dicembre' }
+    ];
 
     return (
         <div className="space-y-6 pb-20">
@@ -77,16 +90,25 @@ export default function VerbaliList() {
                             onClick={() => setShowFilters(!showFilters)}
                             className={cn(
                                 "px-4 py-3 rounded-xl font-bold border-2 transition-all flex items-center justify-center gap-2 relative",
-                                showFilters || selectedYear !== 'all'
+                                showFilters || selectedYear !== 'all' || selectedMonth !== 'all' || hasOspite !== 'all'
                                     ? "bg-scout-green/10 border-scout-green text-scout-green"
                                     : "bg-white border-scout-brown/10 text-scout-brown hover:border-scout-brown/30"
                             )}
                         >
                             <Filter size={20} />
-                            {selectedYear !== 'all' && (
-                                <span className="absolute -top-2 -right-2 w-5 h-5 bg-scout-green text-white text-[10px] rounded-full flex items-center justify-center border-2 border-white shadow-sm">1</span>
+                            {(selectedYear !== 'all' || selectedMonth !== 'all' || hasOspite !== 'all') && (
+                                <span className="absolute -top-2 -right-2 w-5 h-5 bg-scout-green text-white text-[10px] rounded-full flex items-center justify-center border-2 border-white shadow-sm">
+                                    { [selectedYear, selectedMonth, hasOspite].filter(f => f !== 'all').length }
+                                </span>
                             )}
                         </button>
+                        <Link
+                            to="/verbali/impostazioni"
+                            className="bg-white p-3 rounded-xl border border-scout-brown/10 shadow-sm hover:border-scout-brown/30 text-scout-brown hover:bg-scout-brown/5 transition-all outline-none"
+                            title="Personalizza Intestazione"
+                        >
+                            <Settings size={20} />
+                        </Link>
                         <Link
                             to="/verbali/membri"
                             className="bg-white text-scout-brown px-4 py-3 rounded-xl font-bold border-2 border-scout-brown/10 shadow-sm hover:border-scout-brown/30 transition-all flex items-center justify-center gap-2"
@@ -112,9 +134,9 @@ export default function VerbaliList() {
                                 <Filter size={12} />
                                 Filtri Avanzati
                             </h3>
-                            {(selectedYear !== 'all' || searchTerm !== '') && (
+                            {(selectedYear !== 'all' || selectedMonth !== 'all' || hasOspite !== 'all' || searchTerm !== '') && (
                                 <button 
-                                    onClick={() => { setSelectedYear('all'); setSearchTerm(''); }}
+                                    onClick={() => { setSelectedYear('all'); setSelectedMonth('all'); setHasOspite('all'); setSearchTerm(''); }}
                                     className="text-[10px] font-bold text-red-400 hover:text-red-500 flex items-center gap-1"
                                 >
                                     <X size={12} />
@@ -136,6 +158,29 @@ export default function VerbaliList() {
                                     ))}
                                 </select>
                             </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-bold text-gray-500 ml-1">Mese</label>
+                                <select
+                                    value={selectedMonth}
+                                    onChange={(e) => setSelectedMonth(e.target.value)}
+                                    className="w-full p-2.5 bg-gray-50 border border-gray-100 rounded-xl text-sm outline-none focus:ring-2 focus:ring-scout-green"
+                                >
+                                    <option value="all">Tutti i mesi</option>
+                                    {months.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                                </select>
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-bold text-gray-500 ml-1">Ospite</label>
+                                <select
+                                    value={hasOspite}
+                                    onChange={(e) => setHasOspite(e.target.value)}
+                                    className="w-full p-2.5 bg-gray-50 border border-gray-100 rounded-xl text-sm outline-none focus:ring-2 focus:ring-scout-green"
+                                >
+                                    <option value="all">Sia con che senza</option>
+                                    <option value="yes">Con Ospite</option>
+                                    <option value="no">Senza Ospite</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -155,7 +200,7 @@ export default function VerbaliList() {
                     filteredVerbali.map((v) => (
                         <Link
                             key={v.id}
-                            to={`/verbali/modifica/${v.id}`}
+                            to={`/verbali/visualizza/${v.id}`}
                             className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-scout-green/30 transition-all group"
                         >
                             <div className="flex items-start justify-between mb-3">

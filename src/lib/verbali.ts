@@ -5,14 +5,28 @@ import { getUser } from './data';
 export async function getVerbali(): Promise<Verbale[]> {
     try {
         const currentUser = await getUser();
-        const { data, error } = await supabase
+        // Fetch verbali
+        const { data: verbaliData, error } = await supabase
             .from('verbali')
             .select('*')
             .eq('group_id', currentUser.groupId)
             .order('data', { ascending: false });
 
         if (error) throw error;
-        return data.map(mapSupabaseVerbaleToVerbale);
+
+        // Fetch user info to resolve createdByName
+        const { data: usersData } = await supabase
+            .from('users')
+            .select('id, nickname, "firstName", "lastName"')
+            .eq('groupId', currentUser.groupId);
+
+        const usersMap = new Map((usersData || []).map(u => [u.id, u.nickname || u.firstName || '']));
+
+        return verbaliData.map(v => {
+            const verbale = mapSupabaseVerbaleToVerbale(v);
+            verbale.createdByName = usersMap.get(v.created_by) || '';
+            return verbale;
+        });
     } catch (error) {
         console.error('Error fetching verbali:', error);
         return [];
@@ -166,4 +180,53 @@ function mapSupabaseMembroToMembro(data: any): MembroCoCa {
         ruoli: data.ruoli || [],
         userId: data.user_id,
     };
+}
+
+export interface ImpostazioniVerbali {
+    groupId: string;
+    intestazioneHtml?: string;
+    piePaginaHtml?: string;
+}
+
+export async function getImpostazioniVerbali(): Promise<ImpostazioniVerbali | null> {
+    try {
+        const currentUser = await getUser();
+        const { data, error } = await supabase
+            .from('impostazioni_verbali')
+            .select('*')
+            .eq('group_id', currentUser.groupId)
+            .maybeSingle();
+
+        if (error || !data) return null;
+        return {
+            groupId: data.group_id,
+            intestazioneHtml: data.intestazione,
+            piePaginaHtml: data.pie_pagina
+        };
+    } catch (error) {
+        console.error('Error fetching impostazioni verbali:', error);
+        return null;
+    }
+}
+
+export async function saveImpostazioniVerbali(impostazioni: Partial<ImpostazioniVerbali>): Promise<void> {
+    const currentUser = await getUser();
+    const dataToSave = {
+        group_id: currentUser.groupId,
+        intestazione: impostazioni.intestazioneHtml,
+        pie_pagina: impostazioni.piePaginaHtml,
+        updated_at: new Date().toISOString()
+    };
+
+    const { data: existing } = await supabase
+        .from('impostazioni_verbali')
+        .select('*')
+        .eq('group_id', currentUser.groupId)
+        .maybeSingle();
+
+    if (existing) {
+        await supabase.from('impostazioni_verbali').update(dataToSave).eq('group_id', currentUser.groupId);
+    } else {
+        await supabase.from('impostazioni_verbali').insert(dataToSave);
+    }
 }

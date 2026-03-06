@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
     Save, ChevronLeft, Users, FileText, 
-    Eye, Download, 
+    Eye, Download, ArrowUp, ArrowDown,
     Plus, Trash2, Clock, 
     CheckCircle2, AlertCircle, Puzzle
 } from 'lucide-react';
-import { getMembriCoCa, saveVerbale, getVerbali } from '@/lib/verbali';
+import { getMembriCoCa, saveVerbale, getVerbali, getImpostazioniVerbali } from '@/lib/verbali';
 import { Verbale, MembroCoCa } from '@/types';
 import { cn } from '@/lib/utils';
 import { getUser } from '@/lib/data';
@@ -26,10 +26,11 @@ const SEZIONI_DISPONIBILI = [
     { id: 'varie', label: 'Varie', icon: '💬', color: 'text-gray-500' },
 ];
 
-export default function VerbaleEditor() {
+export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean }) {
     const { id } = useParams();
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<TabType>('presenze');
+    const [_impostazioni, setImpostazioni] = useState<{ intestazioneHtml?: string; piePaginaHtml?: string } | null>(null);
     const [membri, setMembri] = useState<MembroCoCa[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -69,6 +70,12 @@ export default function VerbaleEditor() {
                 setMembri(membriData);
                 setCurrentUser(userData);
 
+                // Load page settings
+                try {
+                    const imp = await getImpostazioniVerbali();
+                    if (imp) setImpostazioni(imp);
+                } catch (_ignored) { /* ok */ }
+
                 if (id) {
                     const allVerbali = await getVerbali();
                     const found = allVerbali.find(v => v.id === id);
@@ -86,6 +93,20 @@ export default function VerbaleEditor() {
         };
         fetchData();
     }, [id]);
+
+    const handleReorder = (idx: number, dir: number, type: 'odg' | 'sezioni') => {
+        if (type === 'odg') {
+            const nextList = [...(verbale.odg || [])];
+            if (idx + dir < 0 || idx + dir >= nextList.length) return;
+            const temp = nextList[idx]; nextList[idx] = nextList[idx + dir]; nextList[idx + dir] = temp;
+            setVerbale(v => ({...v, odg: nextList}));
+        } else {
+            const nextList = [...(verbale.sezioniAttive || [])];
+            if (idx + dir < 0 || idx + dir >= nextList.length) return;
+            const temp = nextList[idx]; nextList[idx] = nextList[idx + dir]; nextList[idx + dir] = temp;
+            setVerbale(v => ({...v, sezioniAttive: nextList}));
+        }
+    };
 
     const handleSave = async (silent = false) => {
         setSaving(true);
@@ -140,6 +161,7 @@ export default function VerbaleEditor() {
                     </h1>
                 </div>
                 <div className="flex items-center gap-3">
+                    {!viewMode && (
                     <button
                         onClick={() => handleSave()}
                         disabled={saving}
@@ -150,11 +172,20 @@ export default function VerbaleEditor() {
                     >
                         <Save size={18} />
                         {saving ? 'Salvataggio...' : 'Salva'}
-                    </button>
+                    </button>)}
+                    {viewMode && (
+                    <button
+                        onClick={async () => { const saved = await handleSave(true); if (saved) exportVerbaleToDocx(saved, membri, currentUser); }}
+                        className="bg-[#45387E] text-white px-5 py-2 rounded-xl font-bold shadow-md transition-all flex items-center gap-2 hover:bg-[#352b61] active:scale-95"
+                    >
+                        <Download size={18} />
+                        Scarica .docx
+                    </button>)}
                 </div>
             </div>
 
             {/* Metadata Bar */}
+            {!viewMode && (
             <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-wrap gap-4 items-end">
                 <div className="space-y-1">
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Titolo</label>
@@ -204,8 +235,10 @@ export default function VerbaleEditor() {
                     </div>
                 </div>
             </div>
+            )}
 
             {/* Navigation Tabs */}
+            {!viewMode && (
             <div className="flex bg-white p-1 rounded-2xl border border-gray-100 shadow-sm overflow-x-auto scrollbar-hide">
                 {(['presenze', 'odg', 'sezioni', 'anteprima'] as TabType[]).map((tab) => (
                     <button
@@ -226,10 +259,11 @@ export default function VerbaleEditor() {
                     </button>
                 ))}
             </div>
+            )}
 
             {/* Tab content */}
             <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden min-h-[500px]">
-                {activeTab === 'presenze' && (
+                {(!viewMode && activeTab === 'presenze') && (
                     <div className="p-6 space-y-8">
                         {BRANCHE.map(branca => {
                             const membriBranca = membri.filter(m => m.branca === branca);
@@ -387,7 +421,7 @@ export default function VerbaleEditor() {
                     </div>
                 )}
 
-                {activeTab === 'odg' && (
+                {(!viewMode && activeTab === 'odg') && (
                     <div className="p-6 space-y-6">
                         <section className="space-y-4">
                             <div className="flex items-center justify-between">
@@ -411,29 +445,19 @@ export default function VerbaleEditor() {
                                 {(verbale.odg || []).map((punto, idx) => (
                                     <div key={punto.id} className="p-6 bg-white rounded-3xl border border-gray-100 shadow-sm space-y-4 relative group hover:border-scout-blue/20 transition-all">
                                         <div className="absolute md:top-6 md:right-6 top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                                            <button 
-                                                onClick={() => {
-                                                    if (idx === 0) return;
-                                                    const newOdg = [...(verbale.odg || [])];
-                                                    [newOdg[idx-1], newOdg[idx]] = [newOdg[idx], newOdg[idx-1]];
-                                                    setVerbale(v => ({ ...v, odg: newOdg }));
-                                                }}
+                                                <button 
+                                                onClick={() => handleReorder(idx, -1, 'odg')}
                                                 disabled={idx === 0}
                                                 className="bg-gray-50 text-gray-400 p-2 rounded-xl hover:bg-scout-blue hover:text-white disabled:opacity-30"
                                             >
-                                                <Plus size={18} className="rotate-180" /> {/* Using Plus as a chevron for simplicity or I could import ChevronUp */}
+                                                <ArrowUp size={18} />
                                             </button>
                                             <button 
-                                                onClick={() => {
-                                                    if (idx === (verbale.odg?.length || 0) - 1) return;
-                                                    const newOdg = [...(verbale.odg || [])];
-                                                    [newOdg[idx+1], newOdg[idx]] = [newOdg[idx], newOdg[idx+1]];
-                                                    setVerbale(v => ({ ...v, odg: newOdg }));
-                                                }}
+                                                onClick={() => handleReorder(idx, 1, 'odg')}
                                                 disabled={idx === (verbale.odg?.length || 0) - 1}
                                                 className="bg-gray-50 text-gray-400 p-2 rounded-xl hover:bg-scout-blue hover:text-white disabled:opacity-30"
                                             >
-                                                <Plus size={18} />
+                                                <ArrowDown size={18} />
                                             </button>
                                             <button 
                                                 onClick={() => setVerbale(v => ({ 
@@ -489,7 +513,7 @@ export default function VerbaleEditor() {
                     </div>
                 )}
 
-                {activeTab === 'sezioni' && (
+                {(!viewMode && activeTab === 'sezioni') && (
                     <div className="p-6 space-y-12">
                         {/* Selector Grid */}
                         <section className="space-y-4">
@@ -525,15 +549,19 @@ export default function VerbaleEditor() {
                                         <h3 className="font-serif font-black text-scout-green uppercase text-sm tracking-widest flex items-center gap-2">
                                             🗣️ Ritorni
                                         </h3>
-                                        <button 
-                                            onClick={() => setVerbale(v => ({ 
-                                                ...v, 
-                                                ritorni: [...(v.ritorni || []), { id: Date.now().toString(), branca: 'L/C', contenuto: '', tipo: 'Branca' }] 
-                                            }))}
-                                            className="bg-scout-green/10 text-scout-green p-1.5 rounded-xl hover:bg-scout-green/20 transition-all border border-scout-green/10"
-                                        >
-                                            <Plus size={16} />
-                                        </button>
+                                        <div className="flex items-center gap-2">
+                                            <button onClick={() => handleReorder((verbale.sezioniAttive || []).indexOf('ritorni'), -1, 'sezioni')} disabled={(verbale.sezioniAttive || []).indexOf('ritorni') === 0} className="p-1 text-gray-300 hover:text-scout-blue disabled:opacity-30"><ArrowUp size={14}/></button>
+                                            <button onClick={() => handleReorder((verbale.sezioniAttive || []).indexOf('ritorni'), 1, 'sezioni')} disabled={(verbale.sezioniAttive || []).indexOf('ritorni') === (verbale.sezioniAttive?.length || 0) - 1} className="p-1 text-gray-300 hover:text-scout-blue disabled:opacity-30"><ArrowDown size={14}/></button>
+                                            <button 
+                                                onClick={() => setVerbale(v => ({ 
+                                                    ...v, 
+                                                    ritorni: [...(v.ritorni || []), { id: Date.now().toString(), branca: 'L/C', contenuto: '', tipo: 'Branca' }] 
+                                                }))}
+                                                className="bg-scout-green/10 text-scout-green p-1.5 rounded-xl hover:bg-scout-green/20 transition-all border border-scout-green/10"
+                                            >
+                                                <Plus size={16} />
+                                            </button>
+                                        </div>
                                     </div>
                                     <div className="space-y-4">
                                         {(verbale.ritorni || []).map((rit, idx) => (
@@ -543,7 +571,7 @@ export default function VerbaleEditor() {
                                                         value={rit.tipo || 'Branca'}
                                                         onChange={e => {
                                                             const next = [...(verbale.ritorni || [])];
-                                                            next[idx].tipo = e.target.value as any;
+                                                            next[idx].tipo = e.target.value as 'Branca' | 'Membro';
                                                             // Reset based on type
                                                             if (e.target.value === 'Branca') next[idx].branca = 'L/C';
                                                             else if (membri.length > 0) next[idx].branca = membri[0].nome;
@@ -632,7 +660,7 @@ export default function VerbaleEditor() {
                                                     value={mov.branca}
                                                     onChange={e => {
                                                         const next = [...(verbale.cassa || [])];
-                                                        next[idx].branca = e.target.value as any;
+                                                        next[idx].branca = e.target.value;
                                                         setVerbale(v => ({ ...v, cassa: next }));
                                                     }}
                                                     className="p-2.5 bg-white border border-gray-100 rounded-xl text-xs outline-none focus:ring-1 focus:ring-scout-brown"
@@ -937,7 +965,7 @@ export default function VerbaleEditor() {
                     </div>
                 )}
 
-                {activeTab === 'anteprima' && (
+                {(viewMode || activeTab === 'anteprima') && (
                     <div className="p-4 md:p-12 bg-gray-100/30 overflow-y-auto max-h-[80vh] no-scrollbar flex justify-center">
                         <div className="bg-white px-8 md:px-20 py-16 w-full max-w-[850px] min-h-[1100px] text-gray-900 shadow-xl border border-gray-100">
                             {/* PREVIEW HEADER */}
@@ -977,6 +1005,23 @@ export default function VerbaleEditor() {
                                             <span className="font-black">ODG:</span>
                                             <ul className="list-disc pl-10 mt-1 space-y-0.5">
                                                 {verbale.odg.map((p, i) => <li key={i} className="font-bold">{p.titolo}</li>)}
+                                                {(verbale.sezioniAttive || []).map((sezId) => {
+                                                    const SEZIONI_LABELS: Record<string, string> = {
+                                                        ritorni: 'Ritorni dalle branche',
+                                                        posti_azione: "Posti d'Azione",
+                                                        prossimi_impegni: 'Prossimi impegni',
+                                                        cassa: 'Aggiornamento cassa',
+                                                        varie: 'Varie ed eventuali',
+                                                    };
+                                                    const hasContent =
+                                                        (sezId === 'ritorni' && (verbale.ritorni?.length || 0) > 0) ||
+                                                        (sezId === 'posti_azione' && (verbale.postiAzione?.length || 0) > 0) ||
+                                                        (sezId === 'prossimi_impegni' && (verbale.prossimiImpegni?.length || 0) > 0) ||
+                                                        (sezId === 'cassa' && (verbale.cassa?.length || 0) > 0) ||
+                                                        (sezId === 'varie' && !!verbale.varie);
+                                                    if (!hasContent || !SEZIONI_LABELS[sezId]) return null;
+                                                    return <li key={sezId} className="font-bold italic text-gray-500">{SEZIONI_LABELS[sezId]}</li>;
+                                                })}
                                             </ul>
                                         </div>
                                     )}
