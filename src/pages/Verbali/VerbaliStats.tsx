@@ -6,7 +6,6 @@ import {
     Clock, Award, AlertCircle, Search
 } from 'lucide-react';
 import { getMembriCoCa, getVerbali } from '@/lib/verbali';
-import { Verbale, MembroCoCa } from '@/types';
 import { cn } from '@/lib/utils';
 
 interface MemberStats {
