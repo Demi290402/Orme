@@ -148,7 +148,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
     return (
         <div className="space-y-6 pb-20">
             {/* Context Header */}
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center justify-between gap-4 no-print">
                 <button 
                     onClick={() => navigate('/verbali')}
                     className="p-2 hover:bg-gray-100 rounded-full transition-colors"
@@ -183,7 +183,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                     </button>)}
                     {viewMode && (
                     <button
-                        onClick={async () => { const saved = await handleSave(true); if (saved) exportVerbaleToDocx(saved, membri, currentUser); }}
+                        onClick={() => exportVerbaleToDocx(verbale, membri, currentUser)}
                         className="bg-[#45387E] text-white px-4 py-2.5 rounded-xl font-bold shadow-md transition-all flex items-center gap-2 hover:bg-[#352b61] active:scale-95 text-sm"
                     >
                         <Download size={16} />
@@ -255,7 +255,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
 
             {/* Navigation Tabs */}
             {!viewMode && (
-            <div className="flex bg-white p-1 rounded-2xl border border-gray-100 shadow-sm overflow-x-auto scrollbar-hide">
+            <div className="flex bg-white p-1 rounded-2xl border border-gray-100 shadow-sm overflow-x-auto scrollbar-hide no-print">
                 {(['presenze', 'odg', 'sezioni', 'anteprima'] as TabType[]).map((tab) => (
                     <button
                         key={tab}
@@ -975,22 +975,13 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                 </div>
                             )}
                         </div>
-
-                        </div>
-                    )}
-                </div>
+                    </div>
+                )}
+            </div>
             )}
 
             {(viewMode || activeTab === 'anteprima') && (
-                    <style dangerouslySetInnerHTML={{__html: `
-                        @media print {
-                            body > * { display: none !important; }
-                            .print-verbale { display: block !important; }
-                        }
-                    `}} />
-                )}
-                {(viewMode || activeTab === 'anteprima') && (
-                    <div className="p-2 md:p-8 bg-gray-100 overflow-y-auto flex flex-col items-center gap-6 print-verbale">
+                <div className="p-2 md:p-8 bg-gray-100 overflow-y-auto flex flex-col items-center gap-6 print-verbale">
                         {/* Last modifier badge */}
                         {viewMode && verbale.lastModifiedByUsername && (
                             <div className="w-full max-w-[850px] flex items-center gap-2 text-xs text-gray-500 bg-white/80 px-4 py-2 rounded-xl border border-gray-100 shadow-sm">
