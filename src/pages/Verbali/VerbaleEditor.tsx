@@ -278,7 +278,8 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
             )}
 
             {/* Tab content */}
-            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden min-h-[500px]">
+            {!viewMode && activeTab !== 'anteprima' && (
+                <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden min-h-[500px]">
                 {(!viewMode && activeTab === 'presenze') && (
                     <div className="p-6 space-y-8">
                         {BRANCHE.map(branca => {
@@ -975,9 +976,10 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                             )}
                         </div>
 
-                    </div>
-                )}
-            </div>
+                        </div>
+                    )}
+                </div>
+            )}
 
             {(viewMode || activeTab === 'anteprima') && (
                     <style dangerouslySetInnerHTML={{__html: `
