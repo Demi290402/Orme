@@ -183,7 +183,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                     </button>)}
                     {viewMode && (
                     <button
-                        onClick={() => exportVerbaleToDocx(verbale, membri, currentUser)}
+                        onClick={() => exportVerbaleToDocx(verbale as Verbale, membri, currentUser)}
                         className="bg-[#45387E] text-white px-4 py-2.5 rounded-xl font-bold shadow-md transition-all flex items-center gap-2 hover:bg-[#352b61] active:scale-95 text-sm"
                     >
                         <Download size={16} />
