@@ -104,6 +104,9 @@ export interface Verbale {
     createdAt: string;
     createdBy: string; // User ID
     createdByName?: string; // User Nickname or Name
+    updatedAt?: string;
+    lastModifiedBy?: string; // User ID
+    lastModifiedByUsername?: string; // Username for display
 }
 
 export type Restriction =

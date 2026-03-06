@@ -74,6 +74,8 @@ export async function saveVerbale(verbale: Partial<Verbale>): Promise<Verbale> {
         varie: verbale.varie,
         sezioni_attive: verbale.sezioniAttive,
         created_by: currentUser.id,
+        last_modified_by: currentUser.id,
+        last_modified_by_username: currentUser.nickname || currentUser.firstName || currentUser.email || '',
     };
 
     let result;
@@ -124,6 +126,9 @@ function mapSupabaseVerbaleToVerbale(data: any): Verbale {
         sezioniAttive: data.sezioni_attive || [],
         createdAt: data.created_at,
         createdBy: data.created_by,
+        updatedAt: data.updated_at,
+        lastModifiedBy: data.last_modified_by,
+        lastModifiedByUsername: data.last_modified_by_username,
     };
 }
 
@@ -186,6 +191,7 @@ export interface ImpostazioniVerbali {
     groupId: string;
     intestazioneHtml?: string;
     piePaginaHtml?: string;
+    fontFamily?: string;
 }
 
 export async function getImpostazioniVerbali(): Promise<ImpostazioniVerbali | null> {
@@ -201,7 +207,8 @@ export async function getImpostazioniVerbali(): Promise<ImpostazioniVerbali | nu
         return {
             groupId: data.group_id,
             intestazioneHtml: data.intestazione,
-            piePaginaHtml: data.pie_pagina
+            piePaginaHtml: data.pie_pagina,
+            fontFamily: data.font_family || 'serif',
         };
     } catch (error) {
         console.error('Error fetching impostazioni verbali:', error);
@@ -215,6 +222,7 @@ export async function saveImpostazioniVerbali(impostazioni: Partial<Impostazioni
         group_id: currentUser.groupId,
         intestazione: impostazioni.intestazioneHtml,
         pie_pagina: impostazioni.piePaginaHtml,
+        font_family: impostazioni.fontFamily || 'serif',
         updated_at: new Date().toISOString()
     };
 

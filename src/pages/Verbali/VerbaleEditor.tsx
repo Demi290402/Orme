@@ -3,8 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { 
     Save, ChevronLeft, Users, FileText, 
     Eye, Download, ArrowUp, ArrowDown,
-    Plus, Trash2, Clock, 
-    CheckCircle2, AlertCircle, Puzzle
+    Plus, Trash2, Clock, Pencil, Bell, Mail, BellOff,
+    CheckCircle2, AlertCircle, Puzzle, FileDown
 } from 'lucide-react';
 import { getMembriCoCa, saveVerbale, getVerbali, getImpostazioniVerbali } from '@/lib/verbali';
 import { Verbale, MembroCoCa } from '@/types';
@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import { getUser } from '@/lib/data';
 import { exportVerbaleToDocx } from '@/utils/docxExport';
 import VerbaleHeader from '@/components/VerbaleHeader';
+import RichTextEditor from '@/components/RichTextEditor';
 
 type TabType = 'presenze' | 'odg' | 'sezioni' | 'anteprima';
 
@@ -35,7 +36,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [currentUser, setCurrentUser] = useState<any>(null);
-    const [showSaveModal, setShowSaveModal] = useState(false);
+    const [showNotifyModal, setShowNotifyModal] = useState(false);
     const [lastSavedVerbale, setLastSavedVerbale] = useState<Verbale | null>(null);
 
     const [verbale, setVerbale] = useState<Partial<Verbale>>({
@@ -116,12 +117,11 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
             setLastSavedVerbale(saved);
             
             if (!id) {
-                // Update URL without full reload if possible, but navigate is safer for state
                 navigate(`/verbali/modifica/${saved.id}`, { replace: true });
             }
 
             if (!silent) {
-                setShowSaveModal(true);
+                setShowNotifyModal(true);
             }
             return saved;
         } catch (err) {
@@ -160,26 +160,42 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                         {id ? `Verbale N. ${verbale.numero}` : 'Apertura Nuovo Verbale'}
                     </h1>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 flex-wrap justify-end">
+                    {viewMode && (
+                    <button
+                        onClick={() => navigate(`/verbali/modifica/${id}`)}
+                        className="bg-scout-brown text-white px-4 py-2.5 rounded-xl font-bold shadow-md transition-all flex items-center gap-2 hover:bg-amber-900 active:scale-95 text-sm"
+                    >
+                        <Pencil size={16} />
+                        Modifica
+                    </button>)}
                     {!viewMode && (
                     <button
                         onClick={() => handleSave()}
                         disabled={saving}
                         className={cn(
-                            "bg-scout-green text-white px-4 py-2 rounded-xl font-bold shadow-md transition-all flex items-center gap-2",
+                            "bg-scout-green text-white px-4 py-2.5 rounded-xl font-bold shadow-md transition-all flex items-center gap-2 text-sm",
                             saving ? "opacity-50 cursor-not-allowed" : "hover:bg-scout-green-dark active:scale-95"
                         )}
                     >
-                        <Save size={18} />
+                        <Save size={16} />
                         {saving ? 'Salvataggio...' : 'Salva'}
                     </button>)}
                     {viewMode && (
                     <button
                         onClick={async () => { const saved = await handleSave(true); if (saved) exportVerbaleToDocx(saved, membri, currentUser); }}
-                        className="bg-[#45387E] text-white px-5 py-2 rounded-xl font-bold shadow-md transition-all flex items-center gap-2 hover:bg-[#352b61] active:scale-95"
+                        className="bg-[#45387E] text-white px-4 py-2.5 rounded-xl font-bold shadow-md transition-all flex items-center gap-2 hover:bg-[#352b61] active:scale-95 text-sm"
                     >
-                        <Download size={18} />
+                        <Download size={16} />
                         Scarica .docx
+                    </button>)}
+                    {viewMode && (
+                    <button
+                        onClick={() => window.print()}
+                        className="bg-red-600 text-white px-4 py-2.5 rounded-xl font-bold shadow-md transition-all flex items-center gap-2 hover:bg-red-700 active:scale-95 text-sm"
+                    >
+                        <FileDown size={16} />
+                        Scarica PDF
                     </button>)}
                 </div>
             </div>
@@ -487,16 +503,13 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                 />
                                             </div>
                                         </div>
-                                        <textarea 
-                                            placeholder="Sviluppo del punto e decisioni prese..."
-                                            rows={6}
+                                        <RichTextEditor
                                             value={punto.contenuto}
-                                            onChange={e => {
+                                            onChange={(val) => {
                                                 const newOdg = [...(verbale.odg || [])];
-                                                newOdg[idx].contenuto = e.target.value;
+                                                newOdg[idx].contenuto = val;
                                                 setVerbale(v => ({ ...v, odg: newOdg }));
                                             }}
-                                            className="w-full bg-gray-50/50 p-4 rounded-2xl border border-gray-100 text-sm outline-none focus:ring-1 focus:ring-scout-blue transition-all italic font-serif leading-relaxed"
                                         />
                                     </div>
                                 ))}
@@ -963,11 +976,29 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                         </div>
 
                     </div>
-                )}
+                </div>
+            )}
 
+            {(viewMode || activeTab === 'anteprima') && (
+                    <style dangerouslySetInnerHTML={{__html: `
+                        @media print {
+                            body > * { display: none !important; }
+                            .print-verbale { display: block !important; }
+                        }
+                    `}} />
+                )}
                 {(viewMode || activeTab === 'anteprima') && (
-                    <div className="p-4 md:p-12 bg-gray-100/30 overflow-y-auto max-h-[80vh] no-scrollbar flex justify-center">
-                        <div className="bg-white px-8 md:px-20 py-16 w-full max-w-[850px] min-h-[1100px] text-gray-900 shadow-xl border border-gray-100">
+                    <div className="p-2 md:p-8 bg-gray-100 overflow-y-auto flex flex-col items-center gap-6 print-verbale">
+                        {/* Last modifier badge */}
+                        {viewMode && verbale.lastModifiedByUsername && (
+                            <div className="w-full max-w-[850px] flex items-center gap-2 text-xs text-gray-500 bg-white/80 px-4 py-2 rounded-xl border border-gray-100 shadow-sm">
+                                <Pencil size={12} className="text-gray-400" />
+                                <span>Ultima modifica di <strong className="text-gray-700">{verbale.lastModifiedByUsername}</strong></span>
+                                {verbale.updatedAt && <span className="ml-auto text-gray-400">{new Date(verbale.updatedAt).toLocaleDateString('it-IT', {day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'})}</span>}
+                            </div>
+                        )}
+                        {/* A4 page - natural scroll, no fixed height */}
+                        <div className="bg-white w-full max-w-[850px] shadow-xl border border-gray-200 print:shadow-none print:border-none" style={{padding:'60px 80px 80px'}}>
                             {/* PREVIEW HEADER */}
                             <VerbaleHeader />
 
@@ -1107,70 +1138,78 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                     )}
                                 </div>
 
-                                {/* OFFICIAL FOOTER */}
-                                <div className="mt-16 flex flex-col gap-6 pt-10 border-t-[1.5px] border-gray-100">
-                                    <div className="flex justify-between items-center px-4">
+                                {/* LAST MODIFIER FOOTER */}
+                                <div className="mt-16 pt-10 border-t border-gray-100">
+                                    <div className="flex justify-between items-center">
                                         <div className="text-[9px] text-gray-400 max-w-[70%] leading-relaxed">
                                             WAGGGS / WOSM Member • Iscritta al Registro Nazionale delle Associazioni di Promozione Sociale n.72 - Legge 383/2000
                                         </div>
                                         <img src="/footer_logos.png" alt="Loghi" className="h-10 w-auto opacity-80" />
                                     </div>
-
-                                    <div className="bg-gray-50/50 p-6 rounded-3xl flex justify-between items-center no-print">
-                                        <div className="text-[10px] text-gray-400 italic">
-                                            Verbale ufficiale di Comunità Capi <br />
-                                            Certificato il {new Date().toLocaleDateString('it-IT')}
-                                        </div>
-                                        <button 
-                                            onClick={async () => {
-                                                const saved = await handleSave(true);
-                                                if (saved) exportVerbaleToDocx(saved, membri, currentUser);
-                                            }}
-                                            className="bg-[#45387E] text-white px-8 py-3 rounded-full text-xs font-black hover:bg-[#352b61] transition-all flex items-center gap-3 shadow-lg hover:-translate-y-0.5 active:scale-95 group"
-                                        >
-                                            <Download size={16} />
-                                            Esporta come Documento Ufficiale (.docx)
-                                        </button>
-                                    </div>
                                 </div>
-                            </div>
+                                </div>
                         </div>
                     </div>
                 )}
-            </div>
 
-            {/* SAVE MODAL */}
-            {showSaveModal && (
+            {/* NOTIFICATION MODAL */}
+            {showNotifyModal && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
                     <div className="bg-white rounded-[32px] w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-                        <div className="p-8 text-center space-y-6">
-                            <div className="w-20 h-20 bg-green-100 text-scout-green rounded-full flex items-center justify-center mx-auto mb-2">
+                        <div className="p-8 text-center space-y-5">
+                            <div className="w-20 h-20 bg-green-100 text-scout-green rounded-full flex items-center justify-center mx-auto">
                                 <CheckCircle2 size={40} />
                             </div>
                             <div>
                                 <h2 className="text-2xl font-serif font-black text-gray-900 mb-2">Verbale Salvato!</h2>
                                 <p className="text-gray-500 text-sm italic">
-                                    Il verbale n. {verbale.numero} è stato archiviato con successo nello storico dell'app.
+                                    Il verbale n. {verbale.numero} è stato archiviato con successo.
                                 </p>
                             </div>
 
-                            <div className="space-y-3 pt-4 border-t border-gray-100">
+                            <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100 text-left">
+                                <p className="text-sm font-bold text-amber-800 mb-3">📣 Vuoi notificare gli altri capi?</p>
+                                <div className="grid grid-cols-1 gap-2">
+                                    <button
+                                        onClick={() => { alert('Notifica push inviata!'); setShowNotifyModal(false); }}
+                                        className="w-full bg-amber-500 text-white py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-amber-600 transition-all active:scale-95"
+                                    >
+                                        <Bell size={18} />
+                                        Invia notifica push
+                                    </button>
+                                    <button
+                                        onClick={() => { alert('Email inviata!'); setShowNotifyModal(false); }}
+                                        className="w-full bg-blue-500 text-white py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-blue-600 transition-all active:scale-95"
+                                    >
+                                        <Mail size={18} />
+                                        Invia email
+                                    </button>
+                                    <button
+                                        onClick={() => { alert('Notifica + Email inviati!'); setShowNotifyModal(false); }}
+                                        className="w-full bg-scout-green text-white py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-scout-green-dark transition-all active:scale-95"
+                                    >
+                                        <Bell size={16} /><Mail size={16} />
+                                        Invia entrambi
+                                    </button>
+                                    <button
+                                        onClick={() => setShowNotifyModal(false)}
+                                        className="w-full bg-gray-100 text-gray-500 py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-gray-200 transition-all"
+                                    >
+                                        <BellOff size={18} />
+                                        Non notificare
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2 pt-2 border-t border-gray-100">
                                 <button
                                     onClick={() => {
-                                        if (lastSavedVerbale) {
-                                            exportVerbaleToDocx(lastSavedVerbale, membri, currentUser);
-                                        }
+                                        if (lastSavedVerbale) exportVerbaleToDocx(lastSavedVerbale, membri, currentUser);
                                     }}
-                                    className="w-full bg-[#45387E] text-white py-4 px-6 rounded-2xl font-black text-sm flex items-center justify-center gap-3 hover:bg-[#352b61] transition-all shadow-lg active:scale-95"
+                                    className="w-full bg-[#45387E] text-white py-3 px-6 rounded-2xl font-black text-sm flex items-center justify-center gap-3 hover:bg-[#352b61] transition-all shadow-md active:scale-95"
                                 >
-                                    <Download size={20} />
-                                    Scarica File Ufficiale (.docx)
-                                </button>
-                                <button
-                                    onClick={() => setShowSaveModal(false)}
-                                    className="w-full bg-gray-50 text-gray-400 py-3 px-6 rounded-2xl font-bold text-sm hover:bg-gray-100 transition-all"
-                                >
-                                    Continua a modificare
+                                    <Download size={18} />
+                                    Scarica .docx
                                 </button>
                                 <button
                                     onClick={() => navigate('/verbali')}

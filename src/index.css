@@ -23,3 +23,38 @@
     @apply bg-scout-beige-light text-gray-900;
   }
 }
+
+@media print {
+  /* Hide everything except the verbale document */
+  body > #root > * {
+    display: none !important;
+  }
+  
+  /* Show only the print-verbale container */
+  .print-verbale {
+    display: flex !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: white !important;
+  }
+  
+  /* Make the A4 page fill the print area */
+  .print-verbale > * {
+    box-shadow: none !important;
+    border: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Hide navigation, buttons, and app chrome during print */
+  nav, header, footer, .no-print,
+  button, [role="navigation"],
+  .fixed, .sticky {
+    display: none !important;
+  }
+
+  @page {
+    size: A4;
+    margin: 20mm 25mm;
+  }
+}
