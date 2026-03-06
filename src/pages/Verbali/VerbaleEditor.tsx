@@ -982,7 +982,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
             )}
 
             {(viewMode || activeTab === 'anteprima') && (
-                <div className="p-2 md:p-8 bg-gray-100 overflow-y-auto flex flex-col items-center gap-6 print-verbale">
+                <div className="w-full bg-gray-100 flex flex-col items-center gap-6 print-verbale overflow-x-hidden p-0 md:p-8">
                         {/* Last modifier badge - only on screen */}
                         {viewMode && verbale.lastModifiedByUsername && (
                             <div className="w-full max-w-[850px] flex items-center gap-2 text-xs text-gray-500 bg-white/80 px-4 py-2 rounded-xl border border-gray-100 shadow-sm no-print">
@@ -993,12 +993,12 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                         )}
                         
                         {/* A4 page - natural scroll, no fixed height */}
-                        <div className="bg-white w-full max-w-[850px] shadow-xl border border-gray-200 print:shadow-none print:border-none page-container">
+                        <div className="bg-white w-full md:max-w-[850px] shadow-xl md:border md:border-gray-200 print:shadow-none print:border-none page-container mx-auto overflow-hidden">
                             <table className="print-table w-full">
                                 <thead>
                                     <tr>
                                         <td>
-                                            <div style={{padding:'60px 80px 20px'}}>
+                                            <div className="px-5 md:px-[80px] pt-10 md:pt-[60px] pb-5 md:pb-[20px]">
                                                 <VerbaleHeader />
                                             </div>
                                         </td>
@@ -1007,7 +1007,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                 <tbody>
                                     <tr>
                                         <td>
-                                            <div className="space-y-8 font-serif" style={{padding:'20px 80px 40px'}}>
+                                            <div className="space-y-8 font-serif px-4 md:px-[80px] py-5 md:py-10 break-words">
                                                 {/* LINEAR METADATA (MATCHING SCREEN 2) */}
                                                 <div className="space-y-1.5 text-[12px]">
                                                     <div className="font-bold">{new Date(verbale.data || '').toLocaleDateString('it-IT')}</div>
@@ -1149,7 +1149,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                 <tfoot>
                                     <tr>
                                         <td>
-                                            <div style={{padding:'20px 80px 60px'}}>
+                                            <div className="px-5 md:px-[80px] pt-5 md:pt-[20px] pb-10 md:pb-[60px]">
                                                 {/* LAST MODIFIER FOOTER */}
                                                 <div className="pt-10 border-t border-gray-100">
                                                     <div className="flex justify-between items-center">
@@ -1251,7 +1251,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                         onClick={() => setIsFabOpen(false)}
                     />
                     
-                    <div className="fixed bottom-6 right-6 z-40 md:hidden no-print">
+                    <div className="fixed bottom-24 right-6 z-40 md:hidden no-print">
                     {/* FAB Menu */}
                     <div className={cn(
                         "flex flex-col gap-3 mb-4 transition-all duration-300 origin-bottom",

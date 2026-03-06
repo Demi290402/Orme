@@ -8,23 +8,23 @@ export default function VerbaleHeader() {
             </div>
 
             {/* Official AGESCI Header */}
-            <div className="flex justify-between items-start py-2 border-b-[1.5px] border-[#45387E] min-h-[90px]">
-                <div className="flex flex-col items-center">
+            <div className="flex justify-between items-start py-2 border-b-[1.5px] border-[#45387E] min-h-[90px] gap-2">
+                <div className="flex-shrink-0">
                     {/* Official AGESCI Logo (Giglio) */}
                     <img 
                         src="/turi_1_no_bg.png" 
                         alt="AGESCI" 
-                        className="w-[70px] h-auto"
+                        className="w-[50px] md:w-[70px] h-auto"
                     />
                 </div>
 
-                <div className="text-right text-[#45387E] mt-1">
-                    <div className="font-bold text-[14px] font-serif">Gruppo Turi 1</div>
-                    <div className="font-bold text-[11px]">Associazione Guide e Scouts Cattolici Italiani</div>
-                    <div className="text-[10px] mt-1 italic">
-                        Strada Mola 4 – 70010 Turi BA <br />
+                <div className="text-right text-[#45387E] mt-1 overflow-hidden">
+                    <div className="font-bold text-[12px] md:text-[14px] font-serif truncate">Gruppo Turi 1</div>
+                    <div className="font-bold text-[9px] md:text-[11px] leading-tight">Associazione Guide e Scouts Cattolici Italiani</div>
+                    <div className="text-[8px] md:text-[10px] mt-1 italic leading-tight">
+                        Strada Mola 4 – 70010 Turi BA <br className="md:hidden" />
                         <span className="underline decoration-1">turi1@puglia.agesci.it</span> <br />
-                        Codice fiscale: 91120250724 <br />
+                        Codice fiscale: 91120250724 <br className="md:hidden" />
                         N. Iscr. R.U.N.T.S.: 64984
                     </div>
                 </div>
