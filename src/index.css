@@ -42,14 +42,32 @@
     z-index: 9999 !important;
   }
   
+  /* Table structure for repeating headers/footers */
+  table.print-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    table-layout: fixed !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+  }
+
+  tfoot {
+    display: table-footer-group !important;
+  }
+
   /* Make the A4 page fill the print area */
-  .print-verbale > * {
+  .print-verbale .page-container {
     box-shadow: none !important;
     border: none !important;
     width: 100% !important;
     max-width: 100% !important;
     margin: 0 !important;
     padding: 20mm 25mm !important;
+    display: block !important;
   }
 
   /* Hide navigation, buttons, and app chrome during print */

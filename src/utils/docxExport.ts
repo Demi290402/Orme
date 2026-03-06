@@ -1,7 +1,7 @@
 import { 
     Document, Packer, Paragraph, TextRun, AlignmentType, 
     Table, TableRow, TableCell, WidthType, BorderStyle,
-    ImageRun, Header, HeightRule
+    ImageRun, Header, Footer, HeightRule, VerticalAlign
 } from 'docx';
 import { saveAs } from 'file-saver';
 import { Verbale, MembroCoCa, User } from '@/types';
@@ -96,7 +96,7 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                                                         alignment: AlignmentType.CENTER,
                                                         children: [
                                                             new ImageRun({
-                                                                data: logoBuffer,
+                                                                data: new Uint8Array(logoBuffer),
                                                                 transformation: { width: 60, height: 60 },
                                                             } as any),
                                                         ],
@@ -328,82 +328,76 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                         spacing: { before: 200 },
                     })),
                 ] : []),
-
-                // Footer Official Logos and APS Text
-                new Table({
-                    width: { size: 100, type: WidthType.PERCENTAGE },
-                    borders: {
-                        top: { style: BorderStyle.SINGLE, color: "EEEEEE", size: 1 },
-                        bottom: { style: BorderStyle.NONE },
-                        left: { style: BorderStyle.NONE },
-                        right: { style: BorderStyle.NONE },
-                        insideHorizontal: { style: BorderStyle.NONE },
-                        insideVertical: { style: BorderStyle.NONE },
-                    },
-                    rows: [
-                        new TableRow({
-                            children: [
-                                new TableCell({
-                                    width: { size: 12, type: WidthType.PERCENTAGE },
+            ],
+            footers: {
+                default: new Footer({
+                    children: [
+                        new Table({
+                            width: { size: 100, type: WidthType.PERCENTAGE },
+                            borders: {
+                                top: { style: BorderStyle.SINGLE, size: 6, color: "E5E7EB", space: 4 },
+                                bottom: { style: BorderStyle.NONE },
+                                left: { style: BorderStyle.NONE },
+                                right: { style: BorderStyle.NONE },
+                                insideHorizontal: { style: BorderStyle.NONE },
+                                insideVertical: { style: BorderStyle.NONE },
+                            },
+                            rows: [
+                                new TableRow({
                                     children: [
-                                        ...(footerLogosBuffer ? [
-                                            new Paragraph({
-                                                alignment: AlignmentType.LEFT,
-                                                spacing: { before: 200 },
-                                                children: [
-                                                    new ImageRun({
-                                                        data: footerLogosBuffer,
-                                                        transformation: { width: 45, height: 23 },
-                                                    } as any),
-                                                ],
-                                            })
-                                        ] : [])
-                                    ],
-                                }),
-                                new TableCell({
-                                    width: { size: 88, type: WidthType.PERCENTAGE },
-                                    children: [
-                                        new Paragraph({
-                                            spacing: { before: 200 },
+                                        new TableCell({
+                                            width: { size: 70, type: WidthType.PERCENTAGE },
+                                            verticalAlign: VerticalAlign.CENTER,
                                             children: [
-                                                new TextRun({ 
-                                                    text: "Iscritta al Registro Nazionale delle Associazioni di Promozione Sociale n.72 - Legge 383/2000", 
-                                                    size: 12, 
-                                                    color: "000000", 
-                                                    font: "Tahoma",
-                                                })
+                                                new Paragraph({
+                                                    children: [
+                                                        new TextRun({ 
+                                                            text: "WAGGGS / WOSM Member • Iscritta al Registro Nazionale delle Associazioni di Promozione Sociale n.72 - Legge 383/2000", 
+                                                            size: 14, 
+                                                            color: "999999",
+                                                            font: "Tahoma"
+                                                        })
+                                                    ],
+                                                }),
                                             ],
                                         }),
-                                        new Paragraph({
+                                        new TableCell({
+                                            width: { size: 30, type: WidthType.PERCENTAGE },
+                                            verticalAlign: VerticalAlign.CENTER,
                                             children: [
-                                                new TextRun({ 
-                                                    text: "WAGGGS / WOSM Member", 
-                                                    size: 12, 
-                                                    color: "000000", 
-                                                    font: "Tahoma",
-                                                })
+                                                ...(footerLogosBuffer ? [
+                                                    new Paragraph({
+                                                        alignment: AlignmentType.RIGHT,
+                                                        children: [
+                                                            new ImageRun({
+                                                                data: new Uint8Array(footerLogosBuffer),
+                                                                transformation: { width: 120, height: 40 },
+                                                            } as any)
+                                                        ],
+                                                    })
+                                                ] : []),
                                             ],
-                                        })
+                                        }),
                                     ],
                                 }),
                             ],
                         }),
+                        new Paragraph({
+                            alignment: AlignmentType.CENTER,
+                            children: [
+                                new TextRun({ 
+                                    text: `Verbale ufficiale di Comunità Capi - Certificato il ${new Date().toLocaleDateString('it-IT')}`, 
+                                    size: 12, 
+                                    italics: true, 
+                                    color: "CCCCCC",
+                                    font: "Tahoma"
+                                })
+                            ],
+                            spacing: { before: 200 },
+                        }),
                     ],
                 }),
-
-                new Paragraph({
-                    children: [
-                        new TextRun({ 
-                            text: `Verbale ufficiale di Comunità Capi - Certificato il ${new Date().toLocaleDateString('it-IT')}`, 
-                            size: 12, 
-                            italics: true, 
-                            color: "999999",
-                            font: "Tahoma"
-                        })
-                    ],
-                    spacing: { before: 400 },
-                }),
-            ],
+            },
         }],
     });
 

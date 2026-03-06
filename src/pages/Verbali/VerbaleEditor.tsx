@@ -982,165 +982,187 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
 
             {(viewMode || activeTab === 'anteprima') && (
                 <div className="p-2 md:p-8 bg-gray-100 overflow-y-auto flex flex-col items-center gap-6 print-verbale">
-                        {/* Last modifier badge */}
+                        {/* Last modifier badge - only on screen */}
                         {viewMode && verbale.lastModifiedByUsername && (
-                            <div className="w-full max-w-[850px] flex items-center gap-2 text-xs text-gray-500 bg-white/80 px-4 py-2 rounded-xl border border-gray-100 shadow-sm">
+                            <div className="w-full max-w-[850px] flex items-center gap-2 text-xs text-gray-500 bg-white/80 px-4 py-2 rounded-xl border border-gray-100 shadow-sm no-print">
                                 <Pencil size={12} className="text-gray-400" />
                                 <span>Ultima modifica di <strong className="text-gray-700">{verbale.lastModifiedByUsername}</strong></span>
                                 {verbale.updatedAt && <span className="ml-auto text-gray-400">{new Date(verbale.updatedAt).toLocaleDateString('it-IT', {day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'})}</span>}
                             </div>
                         )}
+                        
                         {/* A4 page - natural scroll, no fixed height */}
-                        <div className="bg-white w-full max-w-[850px] shadow-xl border border-gray-200 print:shadow-none print:border-none" style={{padding:'60px 80px 80px'}}>
-                            {/* PREVIEW HEADER */}
-                            <VerbaleHeader />
-
-                            <div className="space-y-8 mt-10 font-serif">
-                                {/* LINEAR METADATA (MATCHING SCREEN 2) */}
-                                <div className="space-y-1.5 text-[12px]">
-                                    <div className="font-bold">{new Date(verbale.data || '').toLocaleDateString('it-IT')}</div>
-                                    <div>
-                                        <span className="font-black">Oggetto: </span>
-                                        <span className="capitalize">{verbale.titolo}</span>
-                                    </div>
-                                    <div>
-                                        <span className="font-black">Presenti: </span>
-                                        <span className="italic">
-                                            {membri.filter(m => verbale.presenti?.includes(m.id))
-                                                .map(m => {
-                                                    const isLate = verbale.ritardi?.includes(m.id);
-                                                    const exit = verbale.usciteAnticipate?.find(u => u.membroId === m.id);
-                                                    let suffix = "";
-                                                    if (isLate && exit) suffix = ` (R e esc. ore ${exit.ora})`;
-                                                    else if (isLate) suffix = " (R)";
-                                                    else if (exit) suffix = ` (esc. ore ${exit.ora})`;
-                                                    return m.nome + suffix;
-                                                }).join(', ')}
-                                            {verbale.ospiti && verbale.ospiti.length > 0 && 
-                                                ", " + verbale.ospiti.map(o => `${o.nome} (${o.ruolo})`).join(', ')}
-                                        </span>
-                                    </div>
-                                    <div>
-                                        <span className="font-black">Assenti: </span>
-                                        <span className="italic">{membri.filter(m => verbale.assenti?.includes(m.id)).map(m => m.nome).join(', ') || 'Nessuno'}</span>
-                                    </div>
-                                    {verbale.odg && verbale.odg.length > 0 && (
-                                        <div className="pt-2">
-                                            <span className="font-black">ODG:</span>
-                                            <ul className="list-disc pl-10 mt-1 space-y-0.5">
-                                                {verbale.odg.map((p, i) => <li key={i} className="font-bold">{p.titolo}</li>)}
-                                                {(verbale.sezioniAttive || []).map((sezId) => {
-                                                    const SEZIONI_LABELS: Record<string, string> = {
-                                                        ritorni: 'Ritorni dalle branche',
-                                                        posti_azione: "Posti d'Azione",
-                                                        prossimi_impegni: 'Prossimi impegni',
-                                                        cassa: 'Aggiornamento cassa',
-                                                        varie: 'Varie ed eventuali',
-                                                    };
-                                                    const hasContent =
-                                                        (sezId === 'ritorni' && (verbale.ritorni?.length || 0) > 0) ||
-                                                        (sezId === 'posti_azione' && (verbale.postiAzione?.length || 0) > 0) ||
-                                                        (sezId === 'prossimi_impegni' && (verbale.prossimiImpegni?.length || 0) > 0) ||
-                                                        (sezId === 'cassa' && (verbale.cassa?.length || 0) > 0) ||
-                                                        (sezId === 'varie' && !!verbale.varie);
-                                                    if (!hasContent || !SEZIONI_LABELS[sezId]) return null;
-                                                    return <li key={sezId} className="font-bold italic text-gray-500">{SEZIONI_LABELS[sezId]}</li>;
-                                                })}
-                                            </ul>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* CONTENT SECTIONS (LINEAR) */}
-                                <div className="space-y-10 pt-6">
-                                    {/* ODG Details */}
-                                    {verbale.odg?.map((punto, i) => (
-                                        <div key={i} className="space-y-3">
-                                            <div className="flex gap-2">
-                                                <span className="font-black whitespace-nowrap">• {punto.titolo}</span>
+                        <div className="bg-white w-full max-w-[850px] shadow-xl border border-gray-200 print:shadow-none print:border-none page-container">
+                            <table className="print-table w-full">
+                                <thead>
+                                    <tr>
+                                        <td>
+                                            <div style={{padding:'60px 80px 20px'}}>
+                                                <VerbaleHeader />
                                             </div>
-                                            <div className="text-[12px] leading-relaxed text-justify pl-6 whitespace-pre-wrap">
-                                                {punto.contenuto}
-                                            </div>
-                                        </div>
-                                    ))}
-
-                                    {/* Additional Sections */}
-                                    {verbale.sezioniAttive?.includes('ritorni') && verbale.ritorni && verbale.ritorni.length > 0 && (
-                                        <div className="space-y-4">
-                                            <div className="font-black border-b border-gray-100 pb-1 uppercase text-[10px] tracking-widest text-[#45387E]">Ritorni</div>
-                                            {verbale.ritorni.map((r, i) => (
-                                                <div key={i} className="pl-6 space-y-1">
-                                                    <div className="font-bold text-[11px]">- {r.branca}</div>
-                                                    <div className="text-[12px] leading-relaxed text-justify pl-4 italic opacity-80">{r.contenuto}</div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    {verbale.sezioniAttive?.includes('posti_azione') && verbale.postiAzione && verbale.postiAzione.length > 0 && (
-                                        <div className="space-y-4">
-                                            <div className="font-black border-b border-gray-100 pb-1 uppercase text-[10px] tracking-widest text-orange-600">Posti d'Azione</div>
-                                            <ul className="space-y-2 pl-6">
-                                                {verbale.postiAzione.map((pa, i) => (
-                                                    <li key={i} className="text-[12px]">
-                                                        <span className="font-bold">🎯 {pa.cosa}</span>
-                                                        <span className="opacity-60"> — Resp: {pa.chi} ({pa.quando})</span>
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </div>
-                                    )}
-
-                                    {verbale.sezioniAttive?.includes('cassa') && verbale.cassa && verbale.cassa.length > 0 && (
-                                        <div className="space-y-4">
-                                            <div className="font-black border-b border-gray-100 pb-1 uppercase text-[10px] tracking-widest text-emerald-700">Movimenti di cassa di gruppo</div>
-                                            <div className="pl-6 text-[12px]">
-                                                {verbale.cassa.map((m, i) => (
-                                                    <div key={i} className="flex justify-between border-b border-gray-50 py-1 italic">
-                                                        <span>{m.branca}: {m.note}</span>
-                                                        <span className="font-bold">€ {m.importo.toFixed(2)}</span>
+                                        </td>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>
+                                            <div className="space-y-8 font-serif" style={{padding:'20px 80px 40px'}}>
+                                                {/* LINEAR METADATA (MATCHING SCREEN 2) */}
+                                                <div className="space-y-1.5 text-[12px]">
+                                                    <div className="font-bold">{new Date(verbale.data || '').toLocaleDateString('it-IT')}</div>
+                                                    <div>
+                                                        <span className="font-black">Oggetto: </span>
+                                                        <span className="capitalize">{verbale.titolo}</span>
                                                     </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {verbale.sezioniAttive?.includes('prossimi_impegni') && verbale.prossimiImpegni && verbale.prossimiImpegni.length > 0 && (
-                                        <div className="space-y-4">
-                                            <div className="font-black border-b border-gray-100 pb-1 uppercase text-[10px] tracking-widest text-scout-purple">Prossimi impegni</div>
-                                            <div className="pl-6 space-y-2">
-                                                {verbale.prossimiImpegni.map((imp, i) => (
-                                                    <div key={i} className="text-[12px] flex justify-between border-b border-gray-50 py-1">
-                                                        <span><span className="font-bold">{imp.evento}</span></span>
-                                                        <span className="opacity-60 italic">
-                                                            {imp.dataInizio && new Date(imp.dataInizio).toLocaleDateString('it-IT')} 
-                                                            {imp.note && ` ore ${imp.note}`}
+                                                    <div>
+                                                        <span className="font-black">Presenti: </span>
+                                                        <span className="italic">
+                                                            {membri.filter(m => verbale.presenti?.includes(m.id))
+                                                                .map(m => {
+                                                                    const isLate = verbale.ritardi?.includes(m.id);
+                                                                    const exit = verbale.usciteAnticipate?.find(u => u.membroId === m.id);
+                                                                    let suffix = "";
+                                                                    if (isLate && exit) suffix = ` (R e esc. ore ${exit.ora})`;
+                                                                    else if (isLate) suffix = " (R)";
+                                                                    else if (exit) suffix = ` (esc. ore ${exit.ora})`;
+                                                                    return m.nome + suffix;
+                                                                }).join(', ')}
+                                                            {verbale.ospiti && verbale.ospiti.length > 0 && 
+                                                                ", " + verbale.ospiti.map(o => `${o.nome} (${o.ruolo})`).join(', ')}
                                                         </span>
                                                     </div>
-                                                ))}
+                                                    <div>
+                                                        <span className="font-black">Assenti: </span>
+                                                        <span className="italic">{membri.filter(m => verbale.assenti?.includes(m.id)).map(m => m.nome).join(', ') || 'Nessuno'}</span>
+                                                    </div>
+                                                    {verbale.odg && verbale.odg.length > 0 && (
+                                                        <div className="pt-2">
+                                                            <span className="font-black">ODG:</span>
+                                                            <ul className="list-disc pl-10 mt-1 space-y-0.5">
+                                                                {verbale.odg.map((p, i) => <li key={i} className="font-bold">{p.titolo}</li>)}
+                                                                {(verbale.sezioniAttive || []).map((sezId) => {
+                                                                    const SEZIONI_LABELS: Record<string, string> = {
+                                                                        ritorni: 'Ritorni dalle branche',
+                                                                        posti_azione: "Posti d'Azione",
+                                                                        prossimi_impegni: 'Prossimi impegni',
+                                                                        cassa: 'Aggiornamento cassa',
+                                                                        varie: 'Varie ed eventuali',
+                                                                    };
+                                                                    const hasContent =
+                                                                        (sezId === 'ritorni' && (verbale.ritorni?.length || 0) > 0) ||
+                                                                        (sezId === 'posti_azione' && (verbale.postiAzione?.length || 0) > 0) ||
+                                                                        (sezId === 'prossimi_impegni' && (verbale.prossimiImpegni?.length || 0) > 0) ||
+                                                                        (sezId === 'cassa' && (verbale.cassa?.length || 0) > 0) ||
+                                                                        (sezId === 'varie' && !!verbale.varie);
+                                                                    if (!hasContent || !SEZIONI_LABELS[sezId]) return null;
+                                                                    return <li key={sezId} className="font-bold italic text-gray-500">{SEZIONI_LABELS[sezId]}</li>;
+                                                                })}
+                                                            </ul>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* CONTENT SECTIONS (LINEAR) */}
+                                                <div className="space-y-10 pt-6">
+                                                    {/* ODG Details */}
+                                                    {verbale.odg?.map((punto, i) => (
+                                                        <div key={i} className="space-y-3">
+                                                            <div className="flex gap-2">
+                                                                <span className="font-black whitespace-nowrap">• {punto.titolo}</span>
+                                                            </div>
+                                                            <div className="text-[12px] leading-relaxed text-justify pl-6 whitespace-pre-wrap">
+                                                                {punto.contenuto}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+
+                                                    {/* Additional Sections */}
+                                                    {verbale.sezioniAttive?.includes('ritorni') && verbale.ritorni && verbale.ritorni.length > 0 && (
+                                                        <div className="space-y-4">
+                                                            <div className="font-black border-b border-gray-100 pb-1 uppercase text-[10px] tracking-widest text-[#45387E]">Ritorni</div>
+                                                            {verbale.ritorni.map((r, i) => (
+                                                                <div key={i} className="pl-6 space-y-1">
+                                                                    <div className="font-bold text-[11px]">- {r.branca}</div>
+                                                                    <div className="text-[12px] leading-relaxed text-justify pl-4 italic opacity-80">{r.contenuto}</div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+
+                                                    {verbale.sezioniAttive?.includes('posti_azione') && verbale.postiAzione && verbale.postiAzione.length > 0 && (
+                                                        <div className="space-y-4">
+                                                            <div className="font-black border-b border-gray-100 pb-1 uppercase text-[10px] tracking-widest text-orange-600">Posti d'Azione</div>
+                                                            <ul className="space-y-2 pl-6">
+                                                                {verbale.postiAzione.map((pa, i) => (
+                                                                    <li key={i} className="text-[12px]">
+                                                                        <span className="font-bold">🎯 {pa.cosa}</span>
+                                                                        <span className="opacity-60"> — Resp: {pa.chi} ({pa.quando})</span>
+                                                                    </li>
+                                                                ))}
+                                                            </ul>
+                                                        </div>
+                                                    )}
+
+                                                    {verbale.sezioniAttive?.includes('cassa') && verbale.cassa && verbale.cassa.length > 0 && (
+                                                        <div className="space-y-4">
+                                                            <div className="font-black border-b border-gray-100 pb-1 uppercase text-[10px] tracking-widest text-emerald-700">Movimenti di cassa di gruppo</div>
+                                                            <div className="pl-6 text-[12px]">
+                                                                {verbale.cassa.map((m, i) => (
+                                                                    <div key={i} className="flex justify-between border-b border-gray-50 py-1 italic">
+                                                                        <span>{m.branca}: {m.note}</span>
+                                                                        <span className="font-bold">€ {m.importo.toFixed(2)}</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {verbale.sezioniAttive?.includes('prossimi_impegni') && verbale.prossimiImpegni && verbale.prossimiImpegni.length > 0 && (
+                                                        <div className="space-y-4">
+                                                            <div className="font-black border-b border-gray-100 pb-1 uppercase text-[10px] tracking-widest text-scout-purple">Prossimi impegni</div>
+                                                            <div className="pl-6 space-y-2">
+                                                                {verbale.prossimiImpegni.map((imp, i) => (
+                                                                    <div key={i} className="text-[12px] flex justify-between border-b border-gray-50 py-1">
+                                                                        <span><span className="font-bold">{imp.evento}</span></span>
+                                                                        <span className="opacity-60 italic">
+                                                                            {imp.dataInizio && new Date(imp.dataInizio).toLocaleDateString('it-IT')} 
+                                                                            {imp.note && ` ore ${imp.note}`}
+                                                                        </span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {verbale.sezioniAttive?.includes('varie') && verbale.varie && (
+                                                        <div className="space-y-2">
+                                                            <div className="font-black border-b border-gray-100 pb-1 uppercase text-[10px] tracking-widest text-gray-400">Varie ed Eventuali</div>
+                                                            <div className="pl-6 text-[12px] italic leading-relaxed">{verbale.varie}</div>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
-                                        </div>
-                                    )}
-
-                                    {verbale.sezioniAttive?.includes('varie') && verbale.varie && (
-                                        <div className="space-y-2">
-                                            <div className="font-black border-b border-gray-100 pb-1 uppercase text-[10px] tracking-widest text-gray-400">Varie ed Eventuali</div>
-                                            <div className="pl-6 text-[12px] italic leading-relaxed">{verbale.varie}</div>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* LAST MODIFIER FOOTER */}
-                                <div className="mt-16 pt-10 border-t border-gray-100">
-                                    <div className="flex justify-between items-center">
-                                        <div className="text-[9px] text-gray-400 max-w-[70%] leading-relaxed">
-                                            WAGGGS / WOSM Member • Iscritta al Registro Nazionale delle Associazioni di Promozione Sociale n.72 - Legge 383/2000
-                                        </div>
-                                        <img src="/footer_logos.png" alt="Loghi" className="h-10 w-auto opacity-80" />
-                                    </div>
-                                </div>
-                                </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td>
+                                            <div style={{padding:'20px 80px 60px'}}>
+                                                {/* LAST MODIFIER FOOTER */}
+                                                <div className="pt-10 border-t border-gray-100">
+                                                    <div className="flex justify-between items-center">
+                                                        <div className="text-[9px] text-gray-400 max-w-[70%] leading-relaxed">
+                                                            WAGGGS / WOSM Member • Iscritta al Registro Nazionale delle Associazioni di Promozione Sociale n.72 - Legge 383/2000
+                                                        </div>
+                                                        <img src="/footer_logos.png" alt="Loghi" className="h-10 w-auto opacity-80" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tfoot>
+                            </table>
                         </div>
                     </div>
                 )}
