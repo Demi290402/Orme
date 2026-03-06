@@ -84,7 +84,8 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                     if (found) setVerbale(found);
                 } else {
                     const allVerbali = await getVerbali();
-                    const lastNum = allVerbali.length > 0 ? Math.max(...allVerbali.map(v => v.numero)) : 0;
+                    const validNums = allVerbali.map(v => Number(v.numero)).filter(n => !isNaN(n));
+                    const lastNum = validNums.length > 0 ? Math.max(...validNums) : 0;
                     setVerbale(prev => ({ ...prev, numero: lastNum + 1 }));
                 }
             } catch (err) {
@@ -125,9 +126,9 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                 setShowNotifyModal(true);
             }
             return saved;
-        } catch (err) {
-            console.error(err);
-            if (!silent) alert('Errore durante il salvataggio');
+        } catch (err: any) {
+            console.error("Save error:", err);
+            if (!silent) alert('Errore durante il salvataggio: ' + (err.message || 'Controlla la console'));
         } finally {
             setSaving(false);
         }

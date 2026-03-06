@@ -17,10 +17,10 @@ export async function getVerbali(): Promise<Verbale[]> {
         // Fetch user info to resolve createdByName
         const { data: usersData } = await supabase
             .from('users')
-            .select('id, nickname, "firstName", "lastName"')
-            .eq('groupId', currentUser.groupId);
+            .select('id, nickname, first_name, last_name')
+            .eq('group_id', currentUser.groupId);
 
-        const usersMap = new Map((usersData || []).map(u => [u.id, u.nickname || u.firstName || '']));
+        const usersMap = new Map((usersData || []).map(u => [u.id, u.nickname || u.first_name || '']));
 
         return verbaliData.map(v => {
             const verbale = mapSupabaseVerbaleToVerbale(v);
@@ -54,26 +54,25 @@ export async function saveVerbale(verbale: Partial<Verbale>): Promise<Verbale> {
     const currentUser = await getUser();
     const dataToSave = {
         group_id: currentUser.groupId,
-        numero: verbale.numero,
-        titolo: verbale.titolo,
-        data: verbale.data,
-        luogo: verbale.luogo,
-        ora_inizio: verbale.oraInizio,
-        ora_fine: verbale.oraFine,
-        presenti: verbale.presenti,
-        assenti: verbale.assenti,
-        ritardi: verbale.ritardi,
-        ospiti: verbale.ospiti,
-        odg: verbale.odg,
-        cassa: verbale.cassa,
-        ritorni: verbale.ritorni,
-        date_importanti: verbale.dateImportanti,
-        posti_azione: verbale.postiAzione,
-        prossimi_impegni: verbale.prossimiImpegni,
-        uscite_anticipate: verbale.usciteAnticipate,
-        varie: verbale.varie,
-        sezioni_attive: verbale.sezioniAttive,
-        created_by: currentUser.id,
+        numero: verbale.numero || 0,
+        titolo: verbale.titolo || 'Senza Titolo',
+        data: verbale.data || new Date().toISOString().split('T')[0],
+        luogo: verbale.luogo || '',
+        ora_inizio: verbale.oraInizio || '',
+        ora_fine: verbale.oraFine || '',
+        presenti: verbale.presenti || [],
+        assenti: verbale.assenti || [],
+        ritardi: verbale.ritardi || [],
+        ospiti: verbale.ospiti || [],
+        odg: verbale.odg || [],
+        cassa: verbale.cassa || [],
+        ritorni: verbale.ritorni || [],
+        date_importanti: verbale.dateImportanti || [],
+        posti_azione: verbale.postiAzione || [],
+        prossimi_impegni: verbale.prossimiImpegni || [],
+        uscite_anticipate: verbale.usciteAnticipate || [],
+        varie: verbale.varie || '',
+        sezioni_attive: verbale.sezioniAttive || [],
         last_modified_by: currentUser.id,
         last_modified_by_username: currentUser.nickname || currentUser.firstName || currentUser.email || '',
     };
@@ -86,15 +85,24 @@ export async function saveVerbale(verbale: Partial<Verbale>): Promise<Verbale> {
             .eq('id', verbale.id)
             .select()
             .single();
-        if (error) throw error;
+        if (error) {
+            console.error("Supabase update error:", error);
+            throw error;
+        }
         result = data;
     } else {
         const { data, error } = await supabase
             .from('verbali')
-            .insert(dataToSave)
+            .insert({
+                ...dataToSave,
+                created_by: currentUser.id
+            })
             .select()
             .single();
-        if (error) throw error;
+        if (error) {
+            console.error("Supabase insert error:", error);
+            throw error;
+        }
         result = data;
     }
 
