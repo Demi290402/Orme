@@ -73,8 +73,6 @@ export async function saveVerbale(verbale: Partial<Verbale>): Promise<Verbale> {
         uscite_anticipate: verbale.usciteAnticipate || [],
         varie: verbale.varie || '',
         sezioni_attive: verbale.sezioniAttive || [],
-        last_modified_by: currentUser.id,
-        last_modified_by_username: currentUser.nickname || currentUser.firstName || currentUser.email || '',
     };
 
     let result;
@@ -135,8 +133,6 @@ function mapSupabaseVerbaleToVerbale(data: any): Verbale {
         createdAt: data.created_at,
         createdBy: data.created_by,
         updatedAt: data.updated_at,
-        lastModifiedBy: data.last_modified_by,
-        lastModifiedByUsername: data.last_modified_by_username,
     };
 }
 
