@@ -768,22 +768,39 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
 
                                                 {/* Chi — multi-select */}
                                                 <div className="space-y-2">
-                                                    <div className="flex items-center justify-between">
+                                                    <div className="flex flex-wrap items-center justify-between gap-2">
                                                         <label className="text-[9px] font-black text-gray-300 uppercase ml-2">Chi (responsabili)</label>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => {
-                                                                const next = [...(verbale.postiAzione || [])];
-                                                                const allIds = membri.map(m => m.id);
-                                                                const allSelected = allIds.every(id => next[idx].chiIds?.includes(id));
-                                                                next[idx] = { ...next[idx], chiIds: allSelected ? [] : allIds };
-                                                                setVerbale(v => ({ ...v, postiAzione: next }));
-                                                            }}
-                                                            className="text-[10px] text-orange-500 font-bold flex items-center gap-1 hover:text-orange-700 transition-colors"
-                                                        >
-                                                            <Users size={11} />
-                                                            {membri.length > 0 && membri.every(m => pa.chiIds?.includes(m.id)) ? 'Deseleziona tutti' : 'Tutto lo staff'}
-                                                        </button>
+                                                        <div className="flex gap-1.5">
+                                                            {(['L/C', 'E/G', 'R/S'] as const).map(branca => {
+                                                                const brancaIds = membri.filter(m => m.branca === branca).map(m => m.id);
+                                                                const allSelected = brancaIds.length > 0 && brancaIds.every(id => pa.chiIds?.includes(id));
+                                                                return (
+                                                                    <button
+                                                                        key={branca}
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            const next = [...(verbale.postiAzione || [])];
+                                                                            const currentIds = next[idx].chiIds || [];
+                                                                            next[idx] = {
+                                                                                ...next[idx],
+                                                                                chiIds: allSelected
+                                                                                    ? currentIds.filter(id => !brancaIds.includes(id))
+                                                                                    : [...new Set([...currentIds, ...brancaIds])]
+                                                                            };
+                                                                            setVerbale(v => ({ ...v, postiAzione: next }));
+                                                                        }}
+                                                                        className={cn(
+                                                                            "text-[10px] font-bold px-2 py-0.5 rounded-full border transition-all",
+                                                                            allSelected
+                                                                                ? "bg-orange-500 text-white border-orange-500"
+                                                                                : "text-orange-500 border-orange-300 hover:bg-orange-50"
+                                                                        )}
+                                                                    >
+                                                                        Staff {branca}
+                                                                    </button>
+                                                                );
+                                                            })}
+                                                        </div>
                                                     </div>
                                                     <div className="flex flex-wrap gap-2">
                                                         {membri.map(m => {
