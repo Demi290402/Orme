@@ -64,7 +64,7 @@ export interface RitornoCoCa {
 
 export interface PostoAzione {
     id: string;
-    chi: string;
+    chiIds: string[];  // IDs of MembroCoCa assigned to this task
     cosa: string;
     quando: string;
 }

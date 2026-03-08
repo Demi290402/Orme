@@ -740,17 +740,18 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                         <button 
                                             onClick={() => setVerbale(v => ({ 
                                                 ...v, 
-                                                postiAzione: [...(v.postiAzione || []), { id: Date.now().toString(), cosa: '', chi: '', quando: '' }] 
+                                                postiAzione: [...(v.postiAzione || []), { id: Date.now().toString(), cosa: '', chiIds: [], quando: '' }] 
                                             }))}
                                             className="bg-orange-50 text-orange-600 p-1.5 rounded-xl hover:bg-orange-100 transition-all border border-orange-100"
                                         >
                                             <Plus size={16} />
                                         </button>
                                     </div>
-                                    <div className="space-y-3">
+                                    <div className="space-y-4">
                                         {(verbale.postiAzione || []).map((pa, idx) => (
-                                            <div key={pa.id} className="grid grid-cols-12 gap-3 bg-gray-50/50 p-4 rounded-3xl border border-gray-100 group">
-                                                <div className="col-span-12 md:col-span-6 space-y-1">
+                                            <div key={pa.id} className="bg-gray-50/50 p-4 rounded-3xl border border-gray-100 space-y-3">
+                                                {/* Cosa */}
+                                                <div className="space-y-1">
                                                     <label className="text-[9px] font-black text-gray-300 uppercase ml-2">Cosa fare</label>
                                                     <input 
                                                         type="text" 
@@ -758,48 +759,86 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                         value={pa.cosa}
                                                         onChange={e => {
                                                             const next = [...(verbale.postiAzione || [])];
-                                                            next[idx].cosa = e.target.value;
+                                                            next[idx] = { ...next[idx], cosa: e.target.value };
                                                             setVerbale(v => ({ ...v, postiAzione: next }));
                                                         }}
                                                         className="w-full bg-white p-2.5 border border-gray-100 rounded-xl text-xs outline-none focus:ring-1 focus:ring-orange-200 font-bold"
                                                     />
                                                 </div>
-                                                <div className="col-span-6 md:col-span-3 space-y-1">
-                                                    <label className="text-[9px] font-black text-gray-300 uppercase ml-2">Chi</label>
-                                                    <input 
-                                                        type="text" 
-                                                        list="membri-list"
-                                                        placeholder="Responsabile..." 
-                                                        value={pa.chi}
-                                                        onChange={e => {
-                                                            const next = [...(verbale.postiAzione || [])];
-                                                            next[idx].chi = e.target.value;
-                                                            setVerbale(v => ({ ...v, postiAzione: next }));
-                                                        }}
-                                                        className="w-full bg-white p-2.5 border border-gray-100 rounded-xl text-xs outline-none focus:ring-1 focus:ring-orange-200"
-                                                    />
-                                                    <datalist id="membri-list">
-                                                        {membri.map(m => <option key={m.id} value={m.nome} />)}
-                                                    </datalist>
+
+                                                {/* Chi — multi-select */}
+                                                <div className="space-y-2">
+                                                    <div className="flex items-center justify-between">
+                                                        <label className="text-[9px] font-black text-gray-300 uppercase ml-2">Chi (responsabili)</label>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                const next = [...(verbale.postiAzione || [])];
+                                                                const allIds = membri.map(m => m.id);
+                                                                const allSelected = allIds.every(id => next[idx].chiIds?.includes(id));
+                                                                next[idx] = { ...next[idx], chiIds: allSelected ? [] : allIds };
+                                                                setVerbale(v => ({ ...v, postiAzione: next }));
+                                                            }}
+                                                            className="text-[10px] text-orange-500 font-bold flex items-center gap-1 hover:text-orange-700 transition-colors"
+                                                        >
+                                                            <Users size={11} />
+                                                            {membri.length > 0 && membri.every(m => pa.chiIds?.includes(m.id)) ? 'Deseleziona tutti' : 'Tutto lo staff'}
+                                                        </button>
+                                                    </div>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {membri.map(m => {
+                                                            const selected = pa.chiIds?.includes(m.id);
+                                                            return (
+                                                                <button
+                                                                    key={m.id}
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        const next = [...(verbale.postiAzione || [])];
+                                                                        const currentIds = next[idx].chiIds || [];
+                                                                        next[idx] = {
+                                                                            ...next[idx],
+                                                                            chiIds: selected
+                                                                                ? currentIds.filter(id => id !== m.id)
+                                                                                : [...currentIds, m.id]
+                                                                        };
+                                                                        setVerbale(v => ({ ...v, postiAzione: next }));
+                                                                    }}
+                                                                    className={cn(
+                                                                        "px-2.5 py-1 rounded-full text-[11px] font-bold transition-all border",
+                                                                        selected
+                                                                            ? "bg-orange-500 text-white border-orange-500 shadow-sm"
+                                                                            : "bg-white text-gray-500 border-gray-200 hover:border-orange-300 hover:text-orange-600"
+                                                                    )}
+                                                                >
+                                                                    {m.nome}
+                                                                </button>
+                                                            );
+                                                        })}
+                                                        {membri.length === 0 && (
+                                                            <span className="text-[11px] text-gray-300 italic">Nessun membro CoCa registrato</span>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                                <div className="col-span-6 md:col-span-3 space-y-1 relative">
-                                                    <label className="text-[9px] font-black text-gray-300 uppercase ml-2">Quando</label>
-                                                    <div className="flex gap-2 items-center">
+
+                                                {/* Quando + delete */}
+                                                <div className="flex gap-2 items-center">
+                                                    <div className="flex-1 space-y-1">
+                                                        <label className="text-[9px] font-black text-gray-300 uppercase ml-2">Quando</label>
                                                         <input 
                                                             type="date" 
                                                             value={pa.quando}
                                                             onChange={e => {
                                                                 const next = [...(verbale.postiAzione || [])];
-                                                                next[idx].quando = e.target.value;
+                                                                next[idx] = { ...next[idx], quando: e.target.value };
                                                                 setVerbale(v => ({ ...v, postiAzione: next }));
                                                             }}
-                                                            className="flex-1 bg-white p-2.5 border border-gray-100 rounded-xl text-xs outline-none focus:ring-1 focus:ring-orange-200"
+                                                            className="w-full bg-white p-2.5 border border-gray-100 rounded-xl text-xs outline-none focus:ring-1 focus:ring-orange-200"
                                                         />
-                                                        <button 
-                                                            onClick={() => setVerbale(v => ({ ...v, postiAzione: v.postiAzione?.filter((_, i) => i !== idx) }))}
-                                                            className="p-1.5 text-red-300 hover:text-red-500 transition-all font-bold"
-                                                        >✕</button>
                                                     </div>
+                                                    <button 
+                                                        onClick={() => setVerbale(v => ({ ...v, postiAzione: v.postiAzione?.filter((_, i) => i !== idx) }))}
+                                                        className="mt-5 p-2 text-red-300 hover:text-red-500 transition-all font-bold flex-shrink-0"
+                                                    >✕</button>
                                                 </div>
                                             </div>
                                         ))}
@@ -1122,9 +1161,12 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                             <div className="font-black border-b border-gray-100 pb-1 uppercase text-[10px] tracking-widest text-orange-600">Posti d'Azione</div>
                                                             <ul className="space-y-2 pl-6">
                                                                 {verbale.postiAzione.map((pa, i) => (
-                                                                    <li key={i} className="text-[12px]">
-                                                                        <span className="font-bold">🎯 {pa.cosa}</span>
-                                                                        <span className="opacity-60"> — Resp: {pa.chi} ({pa.quando})</span>
+                                                                    <li key={i} className="text-[12px] space-y-0.5">
+                                                                        <div><span className="font-bold">🎯 {pa.cosa}</span></div>
+                                                                        <div className="opacity-60 text-[11px]">
+                                                                            Resp: {(pa.chiIds || []).map(id => membri.find(m => m.id === id)?.nome || id).join(', ') || '—'}
+                                                                            {pa.quando && ` (${pa.quando})`}
+                                                                        </div>
                                                                     </li>
                                                                 ))}
                                                             </ul>

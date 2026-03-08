@@ -345,7 +345,10 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                     ...verbale.postiAzione.map(pa => new Paragraph({
                         children: [
                             new TextRun({ text: `• ${pa.cosa}`, bold: true, font: "Georgia", size: 22 }),
-                            new TextRun({ text: ` — Resp: ${pa.chi} (${pa.quando})`, font: "Georgia", color: "666666", size: 20 }),
+                            new TextRun({ 
+                                text: ` — Resp: ${(pa.chiIds || []).map(id => membri.find(m => m.id === id)?.nome || id).join(', ') || '—'}${pa.quando ? ` (${pa.quando})` : ''}`, 
+                                font: "Georgia", color: "666666", size: 20 
+                            }),
                         ],
                         indent: { left: 720 },
                         spacing: { before: 200 },
