@@ -144,6 +144,21 @@ export async function logoutUser() {
     await supabase.auth.signOut();
 }
 
+export async function deleteUserProfile(): Promise<void> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Nessun utente autenticato');
+
+    // Delete from users table first (auth record stays, no admin API)
+    const { error } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', user.id);
+    if (error) throw error;
+
+    // Sign out
+    await supabase.auth.signOut();
+}
+
 export async function getUser(id?: string): Promise<User> {
     try {
         if (id) {

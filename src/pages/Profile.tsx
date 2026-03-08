@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Camera, MapPin, Award, Trophy, Edit2, X, Save, Database, Download, CheckCircle, Info, Mail, AlertCircle } from 'lucide-react';
-import { getUser, updateUser, logoutUser } from '@/lib/data';
+import { Camera, MapPin, Award, Trophy, Edit2, X, Save, Database, Download, CheckCircle, Info, Mail, AlertCircle, Trash2 } from 'lucide-react';
+import { getUser, updateUser, logoutUser, deleteUserProfile } from '@/lib/data';
 import { getLevelInfo, BADGES } from '@/lib/gamification';
 import { autoCreateMonthlySnapshot, getBackups, downloadBackup, BackupSnapshot } from '@/lib/backups';
 import { User } from '@/types';
@@ -42,6 +42,9 @@ export default function Profile() {
     const [isEditing, setIsEditing] = useState(false);
     const [selectedBadge, setSelectedBadge] = useState<any>(null);
     const [editErrors, setEditErrors] = useState<Record<string, string>>({});
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [deleteConfirmText, setDeleteConfirmText] = useState('');
+    const [deleting, setDeleting] = useState(false);
     const [editForm, setEditForm] = useState({
         firstName: '',
         lastName: '',
@@ -488,7 +491,7 @@ export default function Profile() {
             </div>
 
             {/* Logout Button */}
-            <div className="mx-6 mt-12 mb-8">
+            <div className="mx-6 mt-12 mb-4">
                 <button
                     onClick={async () => {
                         if (confirm('Vuoi davvero uscire?')) {
@@ -501,6 +504,71 @@ export default function Profile() {
                     Esci dal Profilo
                 </button>
             </div>
+
+            {/* Delete Account Button */}
+            <div className="mx-6 mb-10">
+                <button
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="w-full py-2.5 text-gray-400 text-sm font-medium rounded-xl border border-dashed border-gray-200 hover:border-red-300 hover:text-red-500 hover:bg-red-50 transition-all flex items-center justify-center gap-2"
+                >
+                    <Trash2 size={15} />
+                    Elimina il mio account
+                </button>
+            </div>
+
+            {/* Delete Confirmation Modal */}
+            {showDeleteConfirm && (
+                <div className="fixed inset-0 bg-black/60 z-[80] flex items-center justify-center p-4" onClick={() => setShowDeleteConfirm(false)}>
+                    <div className="bg-white rounded-2xl w-full max-w-sm p-6 space-y-4" onClick={e => e.stopPropagation()}>
+                        <div className="text-center">
+                            <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                <Trash2 size={24} className="text-red-500" />
+                            </div>
+                            <h2 className="text-xl font-bold text-gray-900">Elimina Account</h2>
+                            <p className="text-sm text-gray-500 mt-2 leading-relaxed">
+                                Questa azione è <strong>irreversibile</strong>. I tuoi dati del profilo verranno eliminati definitivamente.
+                            </p>
+                        </div>
+
+                        <div className="bg-red-50 border border-red-100 rounded-xl p-4">
+                            <p className="text-xs font-bold text-red-600 mb-2">Per confermare, scrivi <span className="bg-red-100 px-1.5 py-0.5 rounded font-mono">ELIMINA</span></p>
+                            <input
+                                type="text"
+                                value={deleteConfirmText}
+                                onChange={e => setDeleteConfirmText(e.target.value)}
+                                placeholder="ELIMINA"
+                                className="w-full p-2.5 border border-red-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-red-300 font-mono text-center tracking-widest"
+                            />
+                        </div>
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => { setShowDeleteConfirm(false); setDeleteConfirmText(''); }}
+                                className="flex-1 py-2.5 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-colors"
+                            >
+                                Annulla
+                            </button>
+                            <button
+                                disabled={deleteConfirmText !== 'ELIMINA' || deleting}
+                                onClick={async () => {
+                                    if (deleteConfirmText !== 'ELIMINA') return;
+                                    setDeleting(true);
+                                    try {
+                                        await deleteUserProfile();
+                                        window.location.href = '/login';
+                                    } catch (err: any) {
+                                        alert('Errore durante l\'eliminazione: ' + (err.message || err));
+                                        setDeleting(false);
+                                    }
+                                }}
+                                className="flex-1 py-2.5 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                                {deleting ? 'Eliminazione...' : 'Elimina'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
