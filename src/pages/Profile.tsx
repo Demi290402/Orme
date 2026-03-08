@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Camera, MapPin, Award, Trophy, Edit2, X, Save, Database, Download, CheckCircle, Info, Mail } from 'lucide-react';
+import { Camera, MapPin, Award, Trophy, Edit2, X, Save, Database, Download, CheckCircle, Info, Mail, AlertCircle } from 'lucide-react';
 import { getUser, updateUser, logoutUser } from '@/lib/data';
 import { getLevelInfo, BADGES } from '@/lib/gamification';
 import { autoCreateMonthlySnapshot, getBackups, downloadBackup, BackupSnapshot } from '@/lib/backups';
@@ -8,11 +8,40 @@ import { Link } from 'react-router-dom';
 import UserAvatar from '@/components/UserAvatar';
 import { cn, getDefaultCover } from '@/lib/utils';
 
+// =====================================================
+// VALIDATION HELPERS
+// =====================================================
+function validateEmail(email: string): string {
+    const re = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
+    if (!email) return 'Email obbligatoria';
+    if (!re.test(email)) return 'Formato email non valido (es: nome@dominio.it)';
+    return '';
+}
+function validateName(val: string, label: string): string {
+    if (!val.trim()) return `${label} obbligatorio`;
+    if (val.trim().length < 2) return `${label} deve avere almeno 2 caratteri`;
+    if (!/^[a-zA-ZÀ-ÿ\s'\-]+$/.test(val.trim())) return `${label} può contenere solo lettere, spazi e trattini`;
+    return '';
+}
+function validateNickname(val: string): string {
+    if (!val.trim()) return '';
+    if (val.trim().length < 2) return 'Totem deve avere almeno 2 caratteri';
+    if (!/^[a-zA-ZÀ-ÿ0-9\s'\-]+$/.test(val.trim())) return 'Totem può contenere solo lettere e numeri';
+    return '';
+}
+function validateGroupField(val: string, label: string): string {
+    if (!val.trim()) return '';
+    if (val.trim().length > 80) return `${label} troppo lungo (max 80 caratteri)`;
+    if (/[<>"'%;()&+]/.test(val)) return `${label} contiene caratteri non ammessi`;
+    return '';
+}
+
 export default function Profile() {
     const [user, setUser] = useState<User | null>(null);
     const [backups, setBackups] = useState<BackupSnapshot[]>([]);
     const [isEditing, setIsEditing] = useState(false);
     const [selectedBadge, setSelectedBadge] = useState<any>(null);
+    const [editErrors, setEditErrors] = useState<Record<string, string>>({});
     const [editForm, setEditForm] = useState({
         firstName: '',
         lastName: '',
@@ -57,8 +86,23 @@ export default function Profile() {
         loadData();
     }, []);
 
+    const validateEdit = (): boolean => {
+        const errors: Record<string, string> = {
+            firstName: validateName(editForm.firstName, 'Nome'),
+            lastName: validateName(editForm.lastName, 'Cognome'),
+            nickname: validateNickname(editForm.nickname),
+            email: validateEmail(editForm.email),
+            region: validateGroupField(editForm.region, 'Regione'),
+            scoutZone: validateGroupField(editForm.scoutZone, 'Zona'),
+            groupName: validateGroupField(editForm.groupName, 'Nome Gruppo'),
+        };
+        setEditErrors(errors);
+        return Object.values(errors).every(e => !e);
+    };
+
     const handleSave = async (customForm?: any) => {
         if (!user) return;
+        if (!customForm && !validateEdit()) return;
         const updatedUser = {
             ...user,
             ...(customForm || editForm)
@@ -67,6 +111,7 @@ export default function Profile() {
             await updateUser(updatedUser);
             setUser(updatedUser);
             setIsEditing(false);
+            setEditErrors({});
             if (customForm) {
                 setEditForm(prev => ({ ...prev, ...customForm }));
             }
@@ -115,53 +160,61 @@ export default function Profile() {
                     <div className="bg-white rounded-2xl w-full max-w-md p-6 space-y-4 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
                         <div className="flex justify-between items-center">
                             <h2 className="text-xl font-bold">Modifica Profilo</h2>
-                            <button onClick={() => setIsEditing(false)} className="p-2 hover:bg-gray-100 rounded-full">
+                            <button onClick={() => { setIsEditing(false); setEditErrors({}); }} className="p-2 hover:bg-gray-100 rounded-full">
                                 <X size={24} />
                             </button>
                         </div>
 
                         <div className="space-y-3">
+                            {/* Nome e Cognome */}
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Nome*</label>
                                     <input
                                         type="text"
                                         value={editForm.firstName}
                                         onChange={e => setEditForm((prev: any) => ({ ...prev, firstName: e.target.value }))}
-                                        className="w-full p-2 rounded-xl border border-gray-200"
+                                        className={cn("w-full p-2 rounded-xl border", editErrors.firstName ? "border-red-300 bg-red-50" : "border-gray-200")}
                                     />
+                                    {editErrors.firstName && <p className="text-red-500 text-[11px] mt-1 flex items-center gap-1"><AlertCircle size={11}/>{editErrors.firstName}</p>}
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Cognome</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Cognome*</label>
                                     <input
                                         type="text"
                                         value={editForm.lastName}
                                         onChange={e => setEditForm((prev: any) => ({ ...prev, lastName: e.target.value }))}
-                                        className="w-full p-2 rounded-xl border border-gray-200"
+                                        className={cn("w-full p-2 rounded-xl border", editErrors.lastName ? "border-red-300 bg-red-50" : "border-gray-200")}
                                     />
+                                    {editErrors.lastName && <p className="text-red-500 text-[11px] mt-1 flex items-center gap-1"><AlertCircle size={11}/>{editErrors.lastName}</p>}
                                 </div>
                             </div>
 
+                            {/* Nickname */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Nickname (Totem)</label>
                                 <input
                                     type="text"
                                     value={editForm.nickname}
                                     onChange={e => setEditForm((prev: any) => ({ ...prev, nickname: e.target.value }))}
-                                    className="w-full p-2 rounded-xl border border-gray-200"
+                                    className={cn("w-full p-2 rounded-xl border", editErrors.nickname ? "border-red-300 bg-red-50" : "border-gray-200")}
                                 />
+                                {editErrors.nickname && <p className="text-red-500 text-[11px] mt-1 flex items-center gap-1"><AlertCircle size={11}/>{editErrors.nickname}</p>}
                             </div>
 
+                            {/* Email */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Email*</label>
                                 <input
                                     type="email"
                                     value={editForm.email}
                                     onChange={e => setEditForm((prev: any) => ({ ...prev, email: e.target.value }))}
-                                    className="w-full p-2 rounded-xl border border-gray-200"
+                                    className={cn("w-full p-2 rounded-xl border", editErrors.email ? "border-red-300 bg-red-50" : "border-gray-200")}
                                 />
+                                {editErrors.email && <p className="text-red-500 text-[11px] mt-1 flex items-center gap-1"><AlertCircle size={11}/>{editErrors.email}</p>}
                             </div>
 
+                            {/* Dati Gruppo */}
                             <div className="p-3 bg-gray-50 rounded-xl space-y-3">
                                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Dati Gruppo</p>
                                 <div className="grid grid-cols-2 gap-3">
@@ -171,8 +224,9 @@ export default function Profile() {
                                             type="text"
                                             value={editForm.region}
                                             onChange={e => setEditForm((prev: any) => ({ ...prev, region: e.target.value }))}
-                                            className="w-full p-2 rounded-lg border border-gray-200 text-sm"
+                                            className={cn("w-full p-2 rounded-lg border text-sm", editErrors.region ? "border-red-300 bg-red-50" : "border-gray-200")}
                                         />
+                                        {editErrors.region && <p className="text-red-500 text-[11px] mt-1 flex items-center gap-1"><AlertCircle size={11}/>{editErrors.region}</p>}
                                     </div>
                                     <div>
                                         <label className="block text-xs font-bold text-gray-500 mb-1">Zona</label>
@@ -180,8 +234,9 @@ export default function Profile() {
                                             type="text"
                                             value={editForm.scoutZone}
                                             onChange={e => setEditForm((prev: any) => ({ ...prev, scoutZone: e.target.value }))}
-                                            className="w-full p-2 rounded-lg border border-gray-200 text-sm"
+                                            className={cn("w-full p-2 rounded-lg border text-sm", editErrors.scoutZone ? "border-red-300 bg-red-50" : "border-gray-200")}
                                         />
+                                        {editErrors.scoutZone && <p className="text-red-500 text-[11px] mt-1 flex items-center gap-1"><AlertCircle size={11}/>{editErrors.scoutZone}</p>}
                                     </div>
                                 </div>
                                 <div>
@@ -190,8 +245,9 @@ export default function Profile() {
                                         type="text"
                                         value={editForm.groupName}
                                         onChange={e => setEditForm((prev: any) => ({ ...prev, groupName: e.target.value }))}
-                                        className="w-full p-2 rounded-lg border border-gray-200 text-sm"
+                                        className={cn("w-full p-2 rounded-lg border text-sm", editErrors.groupName ? "border-red-300 bg-red-50" : "border-gray-200")}
                                     />
+                                    {editErrors.groupName && <p className="text-red-500 text-[11px] mt-1 flex items-center gap-1"><AlertCircle size={11}/>{editErrors.groupName}</p>}
                                 </div>
                                 <p className="text-[9px] text-gray-400">Il cambio gruppo non sposta i dati già inseriti.</p>
                             </div>
