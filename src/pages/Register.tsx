@@ -335,8 +335,6 @@ export default function Register() {
         }
     };
 
-    const inputClass = "w-full p-3 rounded-xl border outline-none focus:ring-2";
-
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-scout-beige-light p-4 pt-12">
             <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-100 mb-12">
