@@ -2,6 +2,59 @@ import { supabase } from './supabase';
 import { Location, User } from '@/types';
 
 // =====================================================
+// GRUPPI SCOUT (per registrazione con cascading dropdown)
+// =====================================================
+
+export interface GruppoScout {
+    id: number;
+    region: string;
+    scoutZone: string;
+    groupName: string;
+}
+
+export async function getGruppiScout(): Promise<GruppoScout[]> {
+    const { data, error } = await supabase
+        .from('gruppi_scout')
+        .select('*')
+        .order('region', { ascending: true })
+        .order('scout_zone', { ascending: true })
+        .order('group_name', { ascending: true });
+    if (error) {
+        console.error('Error fetching gruppi_scout:', error);
+        return [];
+    }
+    return (data || []).map(g => ({
+        id: g.id,
+        region: g.region,
+        scoutZone: g.scout_zone,
+        groupName: g.group_name,
+    }));
+}
+
+export async function aggiungiGruppoScout(region: string, scoutZone: string, groupName: string): Promise<GruppoScout> {
+    const { data, error } = await supabase
+        .from('gruppi_scout')
+        .insert({ region, scout_zone: scoutZone, group_name: groupName })
+        .select()
+        .single();
+    if (error) {
+        // If already exists (UNIQUE constraint), fetch it instead
+        const existing = await supabase
+            .from('gruppi_scout')
+            .select('*')
+            .eq('region', region)
+            .eq('scout_zone', scoutZone)
+            .eq('group_name', groupName)
+            .single();
+        if (existing.data) {
+            return { id: existing.data.id, region: existing.data.region, scoutZone: existing.data.scout_zone, groupName: existing.data.group_name };
+        }
+        throw error;
+    }
+    return { id: data.id, region: data.region, scoutZone: data.scout_zone, groupName: data.group_name };
+}
+
+// =====================================================
 // USER MANAGEMENT
 // =====================================================
 
@@ -17,7 +70,7 @@ export async function registerUser(userData: {
     region: string;
     scoutZone: string;
     groupName: string;
-    groupId: string;
+    groupId: string; // numeric group id as string (e.g. "1", "2")
 }): Promise<User | null> {
     try {
         // 1. Create auth user in Supabase Auth
