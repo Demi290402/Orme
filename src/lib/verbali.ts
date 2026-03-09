@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { Verbale, MembroCoCa, TipoPostoAzione, TitoloSezioneVerbale, ImpostazioniVerbali } from '@/types';
+import { Verbale, MembroCoCa } from '@/types';
 import { getUser } from './data';
 import { syncVerbaleEventi } from './calendario';
 

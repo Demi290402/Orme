@@ -4,8 +4,7 @@ import {
     Save, ChevronLeft, Users, FileText,
     Eye, Download, ArrowUp, ArrowDown,
     Plus, Trash2, Clock, Pencil, Bell, Mail, BellOff,
-    CheckCircle2, AlertCircle, Puzzle, MoreVertical, X, Calendar, FileDown,
-    MapPin, GripVertical, ChevronDown, ChevronUp, Image as ImageIcon, Send, DownloadIcon, Moon, Sun, ArrowLeft
+    CheckCircle2, AlertCircle, Puzzle, MoreVertical, X, Calendar, FileDown
 } from 'lucide-react';
 import { getMembriCoCa, saveVerbale, getVerbali, getImpostazioniVerbali } from '@/lib/verbali';
 import { exportVerbaleToPdf } from '@/utils/pdfExport';
@@ -212,21 +211,30 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                     </button>)}
                     {viewMode && (
                     <button
-                        onClick={() => exportVerbaleToDocx(verbale as Verbale, membri, currentUser)}
-                        className="hidden md:flex bg-[#45387E] text-white px-4 py-2.5 rounded-xl font-bold shadow-md transition-all items-center gap-2 hover:bg-[#352b61] active:scale-95 text-sm"
+                        onClick={handleExportWord}
+                        disabled={isExporting}
+                        className={cn(
+                            "hidden md:flex bg-[#45387E] text-white px-4 py-2.5 rounded-xl font-bold shadow-md transition-all items-center gap-2 text-sm",
+                            isExporting ? "opacity-50 cursor-not-allowed" : "hover:bg-[#352b61] active:scale-95"
+                        )}
                     >
                         <Download size={16} />
                         Scarica .docx
                     </button>)}
                     {viewMode && (
                     <button
-                        onClick={() => window.print()}
-                        className="hidden md:flex bg-red-600 text-white px-4 py-2.5 rounded-xl font-bold shadow-md transition-all items-center gap-2 hover:bg-red-700 active:scale-95 text-sm"
+                        onClick={handleExportPdf}
+                        disabled={isExporting}
+                        className={cn(
+                            "hidden md:flex bg-red-600 text-white px-4 py-2.5 rounded-xl font-bold shadow-md transition-all items-center gap-2 text-sm",
+                            isExporting ? "opacity-50 cursor-not-allowed" : "hover:bg-red-700 active:scale-95"
+                        )}
                     >
                         <FileDown size={16} />
                         Scarica PDF
                     </button>)}
                 </div>
+
             </div>
 
             {/* Metadata Bar */}
