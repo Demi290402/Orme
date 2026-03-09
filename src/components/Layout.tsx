@@ -1,21 +1,27 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, User, Trophy, HelpCircle, Mail, FileText, CalendarDays, Sun, Moon } from 'lucide-react';
+import { Home, Trophy, HelpCircle, Mail, FileText, CalendarDays, Sun, Moon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Logo from '@/components/Logo';
 import PWAInstallPrompt from './PWAInstallPrompt';
 import { getProposals } from '@/lib/proposals';
 import { useTheme } from '@/context/ThemeContext';
+import { User as UserType } from '@/types';
+import { getUser } from '@/lib/data';
+import UserAvatar from '@/components/UserAvatar';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
     const location = useLocation();
     const [pendingCount, setPendingCount] = useState(0);
+    const [currentUser, setCurrentUser] = useState<UserType | null>(null);
     const { theme, toggleTheme } = useTheme();
 
     useEffect(() => {
         getProposals().then(ps => {
             setPendingCount(ps.filter(p => p.status === 'pending').length);
         }).catch(console.error);
+        
+        getUser().then(setCurrentUser).catch(console.error);
     }, [location.pathname]);
 
     interface NavItem {
@@ -31,7 +37,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         { icon: CalendarDays, label: 'Calendario', path: '/calendario' },
         { icon: FileText, label: 'Verbali', path: '/verbali' },
         { icon: HelpCircle, label: 'Guida', path: '/guide' },
-        { icon: User, label: 'Profilo', path: '/profile' },
     ];
 
     return (
@@ -84,6 +89,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                                 </Link>
                             ))}
                         </nav>
+                        
+                        {/* Avatar Profile Link */}
+                        {currentUser && (
+                            <Link to="/profile" className="ml-2 ring-2 ring-transparent hover:ring-scout-green dark:hover:ring-scout-green rounded-full transition-all">
+                                <UserAvatar user={currentUser} size="sm" disablePreview={true} />
+                            </Link>
+                        )}
                     </div>
                 </div>
             </header>
@@ -109,6 +121,23 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                             <span className="text-[10px] mt-0.5">{item.label}</span>
                         </Link>
                     ))}
+                    
+                    {/* Mobile Avatar Profile Link */}
+                    {currentUser && (
+                        <Link
+                            to="/profile"
+                            className={cn(
+                                "flex flex-col items-center justify-center w-full h-full transition-all",
+                                location.pathname === '/profile' ? "opacity-100" : "opacity-60 grayscale-[50%]"
+                            )}
+                        >
+                            <UserAvatar user={currentUser} size="sm" disablePreview={true} className="w-7 h-7 border-[1.5px]" />
+                            <span className={cn(
+                                "text-[10px] mt-0.5",
+                                location.pathname === '/profile' ? "text-scout-green" : "text-gray-400 dark:text-gray-500"
+                            )}>Profilo</span>
+                        </Link>
+                    )}
                 </div>
             </nav>
         </div>
