@@ -11,19 +11,6 @@ export async function exportVerbaleToPdf(
     intestazioneHtml: string = '',
     piePaginaHtml: string = ''
 ): Promise<void> {
-    const container = document.createElement('div');
-    container.style.cssText = [
-        'position:absolute',
-        'top:-9999px', 'left:-9999px',
-        'width:210mm',
-        'background:white',
-        'color:#111',
-        'font-family:Georgia,serif',
-        'font-size:12pt',
-        'padding:20mm 25mm',
-        'z-index:-9999',
-    ].join(';');
-
     const formatDate = (d?: string) => d ? new Date(d).toLocaleDateString('it-IT') : '-';
     const membroNome = (id: string) => membri.find(m => m.id === id)?.nome || id;
 
@@ -68,38 +55,38 @@ export async function exportVerbaleToPdf(
           </div>`
         : '';
 
-    container.innerHTML = `
-        ${intestazioneHtml ? `<div style="margin-bottom:16pt;padding-bottom:12pt;border-bottom:2px solid #eee">${intestazioneHtml}</div>` : ''}
+    const htmlContent = `
+        <div style="width:210mm; padding:20mm 25mm; font-family:Georgia,serif; font-size:12pt; background:white; color:#111;">
+            ${intestazioneHtml ? `<div style="margin-bottom:16pt;padding-bottom:12pt;border-bottom:2px solid #eee">${intestazioneHtml}</div>` : ''}
 
-        <div style="border-bottom:2px solid #333;padding-bottom:8pt;margin-bottom:16pt">
-            <h1 style="margin:0;font-size:18pt;color:#222">${verbale.titolo || 'Verbale di Riunione'}</h1>
-            <div style="color:#666;font-size:10pt;margin-top:4pt">
-                N° ${verbale.numero || '-'} &nbsp;|&nbsp;
-                ${formatDate(verbale.data)} &nbsp;|&nbsp;
-                ${verbale.luogo || '-'} &nbsp;|&nbsp;
-                ${verbale.oraInizio || '-'} – ${verbale.oraFine || '-'}
+            <div style="border-bottom:2px solid #333;padding-bottom:8pt;margin-bottom:16pt">
+                <h1 style="margin:0;font-size:18pt;color:#222">${verbale.titolo || 'Verbale di Riunione'}</h1>
+                <div style="color:#666;font-size:10pt;margin-top:4pt">
+                    N° ${verbale.numero || '-'} &nbsp;|&nbsp;
+                    ${formatDate(verbale.data)} &nbsp;|&nbsp;
+                    ${verbale.luogo || '-'} &nbsp;|&nbsp;
+                    ${verbale.oraInizio || '-'} – ${verbale.oraFine || '-'}
+                </div>
             </div>
+
+            <div style="margin-bottom:12pt">
+                <b>✓ Presenti:</b> ${presenti}<br>
+                ${assenti !== '-' ? `<b>✗ Assenti:</b> ${assenti}<br>` : ''}
+                ${ritardi ? `<b>⏱ Ritardi:</b> ${ritardi}` : ''}
+            </div>
+
+            <div style="margin-bottom:16pt">
+                <b style="text-transform:uppercase;letter-spacing:1px;font-size:9pt;color:#4CAF50">📋 Ordine del Giorno</b>
+                <div style="margin-top:8pt">${odgHtml}</div>
+            </div>
+
+            ${ritornoHtml}
+            ${postiAzioneHtml}
+            ${varieHtml}
+
+            ${piePaginaHtml ? `<div style="margin-top:32pt;padding-top:12pt;border-top:1px solid #eee">${piePaginaHtml}</div>` : ''}
         </div>
-
-        <div style="margin-bottom:12pt">
-            <b>✓ Presenti:</b> ${presenti}<br>
-            ${assenti !== '-' ? `<b>✗ Assenti:</b> ${assenti}<br>` : ''}
-            ${ritardi ? `<b>⏱ Ritardi:</b> ${ritardi}` : ''}
-        </div>
-
-        <div style="margin-bottom:16pt">
-            <b style="text-transform:uppercase;letter-spacing:1px;font-size:9pt;color:#4CAF50">📋 Ordine del Giorno</b>
-            <div style="margin-top:8pt">${odgHtml}</div>
-        </div>
-
-        ${ritornoHtml}
-        ${postiAzioneHtml}
-        ${varieHtml}
-
-        ${piePaginaHtml ? `<div style="margin-top:32pt;padding-top:12pt;border-top:1px solid #eee">${piePaginaHtml}</div>` : ''}
     `;
-
-    document.body.appendChild(container);
 
     const filename = `Verbale_${(verbale.numero || '').toString().padStart(3, '0')}_${verbale.data || 'data'}.pdf`;
 
@@ -111,8 +98,6 @@ export async function exportVerbaleToPdf(
             html2canvas: { scale: 2, useCORS: true },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
         })
-        .from(container)
+        .from(htmlContent)
         .save();
-
-    document.body.removeChild(container);
 }
