@@ -1,16 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-    Save, ChevronLeft, Users, FileText, 
+import {
+    Save, ChevronLeft, Users, FileText,
     Eye, Download, ArrowUp, ArrowDown,
     Plus, Trash2, Clock, Pencil, Bell, Mail, BellOff,
-    CheckCircle2, AlertCircle, Puzzle, FileDown, MoreVertical, X, Calendar
+    CheckCircle2, AlertCircle, Puzzle, MoreVertical, X, Calendar, FileDown,
+    MapPin, GripVertical, ChevronDown, ChevronUp, Image as ImageIcon, Send, DownloadIcon, Moon, Sun, ArrowLeft
 } from 'lucide-react';
 import { getMembriCoCa, saveVerbale, getVerbali, getImpostazioniVerbali } from '@/lib/verbali';
+import { exportVerbaleToPdf } from '@/utils/pdfExport';
+import { exportVerbaleToDocx } from '@/utils/docxExport';
 import { Verbale, MembroCoCa } from '@/types';
 import { cn } from '@/lib/utils';
 import { getUser } from '@/lib/data';
-import { exportVerbaleToDocx } from '@/utils/docxExport';
 import VerbaleHeader from '@/components/VerbaleHeader';
 import RichTextEditor from '@/components/RichTextEditor';
 
@@ -39,6 +41,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
     const [showNotifyModal, setShowNotifyModal] = useState(false);
     const [lastSavedVerbale, setLastSavedVerbale] = useState<Verbale | null>(null);
     const [isFabOpen, setIsFabOpen] = useState(false);
+    const [isExporting, setIsExporting] = useState(false);
 
     const [verbale, setVerbale] = useState<Partial<Verbale>>({
         numero: 1,
@@ -97,6 +100,30 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
         fetchData();
     }, [id]);
 
+    const handleExportPdf = async () => {
+        setIsExporting(true);
+        try {
+            await exportVerbaleToPdf(verbale as Verbale, membri, _impostazioni?.intestazioneHtml, _impostazioni?.piePaginaHtml);
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            alert("Errore durante l'esportazione in PDF");
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
+    const handleExportWord = async () => {
+        setIsExporting(true);
+        try {
+            await exportVerbaleToDocx(verbale as Verbale, membri, currentUser);
+        } catch (error) {
+            console.error('Error generating DOCX:', error);
+            alert("Errore durante l'esportazione in Word");
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
     const handleReorder = (idx: number, dir: number, type: 'odg' | 'sezioni') => {
         if (type === 'odg') {
             const nextList = [...(verbale.odg || [])];
@@ -148,17 +175,17 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
     if (loading) return <div className="p-8 text-center text-gray-500 font-serif italic text-xl">Preparazione diario...</div>;
 
     return (
-        <div className="space-y-6 pb-20">
+        <div className="space-y-6 pb-20 dark:bg-gray-900 dark:text-gray-100">
             {/* Context Header */}
             <div className="flex items-center justify-between gap-4 no-print">
-                <button 
+                <button
                     onClick={() => navigate('/verbali')}
-                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
                 >
                     <ChevronLeft size={24} />
                 </button>
                 <div className="flex-1">
-                    <h1 className="text-xl font-serif font-black text-scout-brown">
+                    <h1 className="text-xl font-serif font-black text-scout-brown dark:text-scout-yellow">
                         {id ? `Verbale N. ${verbale.numero}` : 'Apertura Nuovo Verbale'}
                     </h1>
                 </div>
@@ -772,7 +799,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                         <label className="text-[9px] font-black text-gray-300 uppercase ml-2">Chi (responsabili)</label>
                                                         <div className="flex gap-1.5">
                                                             {(['L/C', 'E/G', 'R/S'] as const).map(branca => {
-                                                                const brancaIds = membri.filter(m => m.branca === branca).map(m => m.id);
+                                                                const brancaIds = membri.filter(m => m.branca === branca || (m.brancheSecondarie || []).includes(branca)).map(m => m.id);
                                                                 const allSelected = brancaIds.length > 0 && brancaIds.every(id => pa.chiIds?.includes(id));
                                                                 return (
                                                                     <button
@@ -792,8 +819,8 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                                         className={cn(
                                                                             "text-[10px] font-bold px-2 py-0.5 rounded-full border transition-all",
                                                                             allSelected
-                                                                                ? "bg-orange-500 text-white border-orange-500"
-                                                                                : "text-orange-500 border-orange-300 hover:bg-orange-50"
+                                                                                ? "bg-orange-500 text-white border-orange-500 dark:bg-orange-600 dark:border-orange-600"
+                                                                                : "text-orange-500 border-orange-300 hover:bg-orange-50 dark:text-orange-400 dark:border-orange-700 dark:hover:bg-orange-900/30"
                                                                         )}
                                                                     >
                                                                         Staff {branca}
@@ -823,8 +850,8 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                                     className={cn(
                                                                         "px-2.5 py-1 rounded-full text-[11px] font-bold transition-all border",
                                                                         selected
-                                                                            ? "bg-orange-500 text-white border-orange-500 shadow-sm"
-                                                                            : "bg-white text-gray-500 border-gray-200 hover:border-orange-300 hover:text-orange-600"
+                                                                            ? "bg-orange-500 text-white border-orange-500 shadow-sm dark:bg-orange-600 dark:border-orange-600"
+                                                                            : "bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-orange-300 hover:text-orange-600 dark:hover:text-orange-400"
                                                                     )}
                                                                 >
                                                                     {m.nome}

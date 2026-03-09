@@ -64,12 +64,12 @@ export default function VerbaliList() {
     return (
         <div className="space-y-6 pb-20">
             {/* Header */}
-            <div className="bg-scout-brown text-white p-6 rounded-2xl shadow-lg -mx-4 md:mx-0 rounded-t-none md:rounded-2xl flex items-center justify-between">
+            <div className="bg-scout-brown dark:bg-scout-brown/80 text-white p-6 rounded-2xl shadow-lg -mx-4 md:mx-0 rounded-t-none md:rounded-2xl flex items-center justify-between">
                 <div>
                     <h1 className="text-3xl font-bold mb-1">Archivio Verbali</h1>
                     <p className="opacity-90 text-sm">Diario di Bordo della Comunità Capi</p>
                 </div>
-                <FileText size={48} className="opacity-20" />
+                <FileText size={48} className="opacity-20 hidden md:block" />
             </div>
 
             {/* Actions & Search */}
@@ -82,7 +82,7 @@ export default function VerbaliList() {
                             placeholder="Cerca in titoli, ODG, cassa..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-scout-green shadow-sm"
+                            className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-scout-green shadow-sm"
                         />
                     </div>
                     <div className="flex gap-2">
@@ -135,9 +135,9 @@ export default function VerbaliList() {
 
                 {/* Expanded Filters */}
                 {showFilters && (
-                    <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm animate-in slide-in-from-top-2 duration-200">
+                    <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm animate-in slide-in-from-top-2 duration-200">
                         <div className="flex items-center justify-between mb-3">
-                            <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                            <h3 className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest flex items-center gap-2">
                                 <Filter size={12} />
                                 Filtri Avanzati
                             </h3>
@@ -157,7 +157,7 @@ export default function VerbaliList() {
                                 <select
                                     value={selectedYear}
                                     onChange={(e) => setSelectedYear(e.target.value)}
-                                    className="w-full p-2.5 bg-gray-50 border border-gray-100 rounded-xl text-sm outline-none focus:ring-2 focus:ring-scout-green"
+                                    className="w-full p-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-scout-green text-gray-900 dark:text-gray-100"
                                 >
                                     <option value="all">Tutti gli anni</option>
                                     {scoutYears.map(y => (
@@ -170,7 +170,7 @@ export default function VerbaliList() {
                                 <select
                                     value={selectedMonth}
                                     onChange={(e) => setSelectedMonth(e.target.value)}
-                                    className="w-full p-2.5 bg-gray-50 border border-gray-100 rounded-xl text-sm outline-none focus:ring-2 focus:ring-scout-green"
+                                    className="w-full p-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-scout-green text-gray-900 dark:text-gray-100"
                                 >
                                     <option value="all">Tutti i mesi</option>
                                     {months.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
@@ -181,7 +181,7 @@ export default function VerbaliList() {
                                 <select
                                     value={hasOspite}
                                     onChange={(e) => setHasOspite(e.target.value)}
-                                    className="w-full p-2.5 bg-gray-50 border border-gray-100 rounded-xl text-sm outline-none focus:ring-2 focus:ring-scout-green"
+                                    className="w-full p-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-scout-green text-gray-900 dark:text-gray-100"
                                 >
                                     <option value="all">Sia con che senza</option>
                                     <option value="yes">Con Ospite</option>
@@ -196,11 +196,11 @@ export default function VerbaliList() {
             {/* List */}
             <div className="grid gap-4">
                 {loading ? (
-                    <div className="p-12 text-center text-gray-500 bg-white rounded-2xl border border-dashed border-gray-200">
+                    <div className="p-12 text-center text-gray-500 bg-white dark:bg-gray-800 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
                         Caricamento verbali...
                     </div>
                 ) : filteredVerbali.length === 0 ? (
-                    <div className="p-12 text-center text-gray-400 bg-white rounded-2xl border border-dashed border-gray-200">
+                    <div className="p-12 text-center text-gray-400 bg-white dark:bg-gray-800 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
                         {searchTerm ? 'Nessuna corrispondenza trovata.' : 'Nessun verbale presente in archivio.'}
                     </div>
                 ) : (
@@ -208,21 +208,21 @@ export default function VerbaliList() {
                         <Link
                             key={v.id}
                             to={`/verbali/visualizza/${v.id}`}
-                            className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-scout-green/30 transition-all group"
+                            className="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md hover:border-scout-green/30 dark:hover:border-scout-green/50 transition-all group"
                         >
                             <div className="flex items-start justify-between mb-3">
                                 <div>
-                                    <span className="text-[10px] font-bold text-scout-green bg-green-50 px-2 py-0.5 rounded-full border border-green-100 uppercase mb-2 inline-block">
+                                    <span className="text-[10px] font-bold text-scout-green dark:text-scout-green-light bg-green-50 dark:bg-green-900/30 px-2 py-0.5 rounded-full border border-green-100 dark:border-green-800 uppercase mb-2 inline-block">
                                         Verbale N. {v.numero}
                                     </span>
-                                    <h3 className="text-lg font-bold text-gray-900 group-hover:text-scout-green transition-colors">
+                                    <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 group-hover:text-scout-green transition-colors">
                                         {v.titolo}
                                     </h3>
                                 </div>
                                 <Calendar size={18} className="text-gray-300" />
                             </div>
 
-                            <div className="flex flex-wrap gap-4 text-sm text-gray-500 mt-auto">
+                            <div className="flex flex-wrap gap-4 text-sm text-gray-500 dark:text-gray-400 mt-auto">
                                 <div className="flex items-center gap-1.5">
                                     <Calendar size={14} />
                                     <span>{new Date(v.data).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
@@ -231,7 +231,7 @@ export default function VerbaliList() {
                                     <MapPin size={14} />
                                     <span>{v.luogo}</span>
                                 </div>
-                                <div className="flex items-center gap-1.5 ml-auto text-[10px] font-medium text-gray-400 bg-gray-50 px-2 py-1 rounded-md border border-gray-100">
+                                <div className="flex items-center gap-1.5 ml-auto text-[10px] font-medium text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-900 px-2 py-1 rounded-md border border-gray-100 dark:border-gray-700">
                                     <UserIcon size={12} />
                                     <span>Caricato da {v.createdByName || 'Admin'}</span>
                                 </div>

@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
-import { Verbale, MembroCoCa } from '@/types';
+import { Verbale, MembroCoCa, TipoPostoAzione, TitoloSezioneVerbale, ImpostazioniVerbali } from '@/types';
 import { getUser } from './data';
+import { syncVerbaleEventi } from './calendario';
 
 export async function getVerbali(): Promise<Verbale[]> {
     try {
@@ -104,7 +105,11 @@ export async function saveVerbale(verbale: Partial<Verbale>): Promise<Verbale> {
         result = data;
     }
 
-    return mapSupabaseVerbaleToVerbale(result);
+    const savedVerbale = mapSupabaseVerbaleToVerbale(result);
+    // Sincronizza dateImportanti e prossimiImpegni col nuovo Calendario
+    await syncVerbaleEventi(savedVerbale).catch(err => console.error("Sync calendario fallito:", err));
+
+    return savedVerbale;
 }
 
 function mapSupabaseVerbaleToVerbale(data: any): Verbale {
@@ -142,6 +147,7 @@ export async function saveMembroCoCa(membro: Partial<MembroCoCa>): Promise<Membr
         group_id: currentUser.groupId,
         nome: membro.nome,
         branca: membro.branca,
+        branche_secondarie: membro.brancheSecondarie || [],
         ruoli: membro.ruoli || [],
     };
 
@@ -186,6 +192,7 @@ function mapSupabaseMembroToMembro(data: any): MembroCoCa {
         groupId: data.group_id,
         nome: data.nome,
         branca: data.branca,
+        brancheSecondarie: data.branche_secondarie || [],
         ruoli: data.ruoli || [],
         userId: data.user_id,
     };

@@ -9,13 +9,15 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>,
 )
 
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').then(registration => {
-      // Forza il controllo di un aggiornamento del SW ad ogni caricamento
-      registration.update();
-    }).catch(err => {
-      console.log('SW registration failed: ', err);
-    });
-  });
-}
+import { registerSW } from 'virtual:pwa-register'
+
+const updateSW = registerSW({
+  onNeedRefresh() {
+    if (confirm('Nuova versione disponibile! Vuoi ricaricare per aggiornare?')) {
+      updateSW(true)
+    }
+  },
+  onOfflineReady() {
+    console.log('App pronta per l\'uso offline.')
+  },
+})

@@ -30,7 +30,8 @@ export interface MembroCoCa {
     id: string;
     groupId: string;
     nome: string;
-    branca?: string;
+    branca: string;
+    brancheSecondarie?: string[]; // additional branche (e.g. ['CoCa'] for CG serving in branca)
     ruoli: string[];
     userId?: string;
 }

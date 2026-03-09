@@ -13,6 +13,7 @@ export default function MembriCoCaPage() {
     const [newMembro, setNewMembro] = useState<Partial<MembroCoCa>>({
         nome: '',
         branca: 'COCA',
+        brancheSecondarie: [],
         ruoli: []
     });
 
@@ -35,7 +36,8 @@ export default function MembriCoCaPage() {
         try {
             const saved = await saveMembroCoCa(membro);
             setIsAdding(false);
-            setNewMembro({ nome: '', branca: 'COCA', ruoli: [] });
+            setEditingId(null);
+            setNewMembro({ nome: '', branca: 'COCA', brancheSecondarie: [], ruoli: [] });
             // Immediately add to local state to avoid delay
             setMembri(prev => [...prev, saved]);
             // Still run loadData to ensure sync
@@ -55,7 +57,24 @@ export default function MembriCoCaPage() {
         }
     };
 
-    // Removed autoLink logic as requested to decouple from app users
+    const [editingId, setEditingId] = useState<string | null>(null);
+
+    const openEdit = (m: MembroCoCa) => {
+        setNewMembro({ ...m });
+        setEditingId(m.id);
+        setIsAdding(true);
+    };
+
+    const toggleSecondaryBranca = (b: string) => {
+        setNewMembro(prev => {
+            const current = (prev.brancheSecondarie || []);
+            if (current.includes(b)) {
+                return { ...prev, brancheSecondarie: current.filter(x => x !== b) };
+            } else {
+                return { ...prev, brancheSecondarie: [...current, b] };
+            }
+        });
+    };
 
     return (
         <div className="space-y-6 pb-20">
@@ -77,7 +96,11 @@ export default function MembriCoCaPage() {
                     </h2>
                     {!isAdding && (
                         <button 
-                            onClick={() => setIsAdding(true)}
+                            onClick={() => {
+                                setNewMembro({ nome: '', branca: 'COCA', brancheSecondarie: [], ruoli: [] });
+                                setEditingId(null);
+                                setIsAdding(true);
+                            }}
                             className="bg-scout-green text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shadow-sm"
                         >
                             <Plus size={16} />
@@ -87,37 +110,63 @@ export default function MembriCoCaPage() {
                 </div>
 
                 {isAdding && (
-                    <div className="bg-white p-4 rounded-2xl border-2 border-scout-green shadow-md space-y-4 max-w-2xl">
-                        <h3 className="font-bold text-sm">Aggiungi Nuovo Membro</h3>
+                    <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border-2 border-scout-green shadow-md space-y-4 max-w-2xl">
+                        <h3 className="font-bold text-sm text-gray-900 dark:text-white">
+                            {editingId ? 'Modifica Membro' : 'Aggiungi Nuovo Membro'}
+                        </h3>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="col-span-2 sm:col-span-1">
                                 <label className="text-[10px] font-bold text-gray-400 uppercase">Nome e Cognome</label>
                                 <input 
                                     type="text" 
-                                    value={newMembro.nome}
+                                    value={newMembro.nome || ''}
                                     onChange={e => setNewMembro({ ...newMembro, nome: e.target.value })}
-                                    className="w-full p-2 border border-gray-200 rounded-lg text-sm"
+                                    className="w-full p-2 border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white rounded-lg text-sm"
                                     placeholder="Es. Mario Rossi"
                                 />
                             </div>
                             <div className="col-span-2 sm:col-span-1">
-                                <label className="text-[10px] font-bold text-gray-400 uppercase">Ruolo (Branca/Gruppo)</label>
+                                <label className="text-[10px] font-bold text-gray-400 uppercase">Branca / Ruolo Principale</label>
                                 <select 
-                                    value={newMembro.branca}
-                                    onChange={e => setNewMembro({ ...newMembro, branca: e.target.value })}
-                                    className="w-full p-2 border border-gray-200 rounded-lg text-sm"
+                                    value={newMembro.branca || 'COCA'}
+                                    onChange={e => setNewMembro({ ...newMembro, branca: e.target.value, brancheSecondarie: [] })}
+                                    className="w-full p-2 border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white rounded-lg text-sm"
                                 >
-                                    <option value="COCA">CoCa (Gruppo)</option>
+                                    <option value="COCA">CoCa (Nessuna branca)</option>
                                     <option value="L/C">L/C</option>
                                     <option value="E/G">E/G</option>
                                     <option value="R/S">R/S</option>
                                 </select>
                             </div>
+                            {newMembro.branca === 'COCA' && (
+                                <div className="col-span-2">
+                                    <label className="text-[10px] font-bold text-gray-400 uppercase">Servizio extra in Branca (Opzionale)</label>
+                                    <div className="flex gap-2 mt-2">
+                                        {['L/C', 'E/G', 'R/S'].map(b => (
+                                            <button
+                                                key={b}
+                                                onClick={() => toggleSecondaryBranca(b)}
+                                                className={cn(
+                                                    "px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors",
+                                                    (newMembro.brancheSecondarie || []).includes(b)
+                                                        ? "bg-scout-green text-white border-scout-green"
+                                                        : "bg-gray-50 dark:bg-gray-900 text-gray-500 border-gray-200 dark:border-gray-700 hover:bg-gray-100"
+                                                )}
+                                            >
+                                                {b}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <p className="text-[10px] text-gray-400 italic mt-1">
+                                        Esempio: un Capo Gruppo (CoCa) che fa anche servizio in L/C.
+                                    </p>
+                                </div>
+                            )}
                         </div>
                         <div className="flex gap-2 justify-end">
                             <button 
-                                onClick={() => setIsAdding(false)}
-                                className="text-gray-400 px-4 py-2 text-sm"
+                                onClick={() => { setIsAdding(false); setEditingId(null); }}
+                                className="text-gray-400 dark:hover:bg-gray-700 rounded-xl px-4 py-2 text-sm"
                             >Annulla</button>
                             <button 
                                 onClick={() => handleSave(newMembro)}
@@ -137,25 +186,34 @@ export default function MembriCoCaPage() {
                         </div>
                     ) : (
                         membri.map(m => (
-                            <div key={m.id} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between group hover:border-scout-green/30 transition-all">
+                            <div key={m.id} onClick={() => openEdit(m)} className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm flex items-center justify-between group hover:border-scout-green/30 cursor-pointer transition-all">
                                 <div className="flex items-center gap-4">
                                     <div className={cn(
                                         "w-10 h-10 rounded-full flex items-center justify-center font-bold text-white",
                                         m.branca === 'COCA' ? 'bg-scout-brown' : 
-                                        m.branca === 'L/C' ? 'bg-yellow-400' : 
+                                        m.branca === 'L/C' ? 'bg-yellow-400 text-gray-900' : 
                                         m.branca === 'E/G' ? 'bg-scout-green' : 'bg-scout-red'
                                     )}>
                                         {m.nome.charAt(0)}
                                     </div>
                                     <div>
-                                        <p className="font-bold text-gray-900">{m.nome}</p>
-                                        <span className="text-[10px] font-bold uppercase text-gray-400">{m.branca}</span>
+                                        <p className="font-bold text-gray-900 dark:text-white text-sm">{m.nome}</p>
+                                        <div className="flex items-center gap-1.5 mt-0.5 mt-1">
+                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                                                {m.branca}
+                                            </span>
+                                            {(m.brancheSecondarie || []).map(bs => (
+                                                <span key={bs} className="text-[10px] font-bold px-2 py-0.5 rounded-md border border-gray-200 dark:border-gray-600 text-gray-500">
+                                                    +{bs}
+                                                </span>
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <button 
-                                        onClick={() => handleDelete(m.id)}
-                                        className="p-2 text-red-400 hover:bg-red-50 rounded-lg transition-colors"
+                                        onClick={(e) => { e.stopPropagation(); handleDelete(m.id); }}
+                                        className="p-2 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                                     >
                                         <Trash2 size={18} />
                                     </button>
