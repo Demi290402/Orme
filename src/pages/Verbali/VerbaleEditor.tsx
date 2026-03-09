@@ -320,7 +320,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                 {(!viewMode && activeTab === 'presenze') && (
                     <div className="p-6 space-y-8">
                         {BRANCHE.map(branca => {
-                            const membriBranca = membri.filter(m => m.branca === branca);
+                            const membriBranca = membri.filter(m => m.branca === branca || (m.brancheSecondarie || []).includes(branca));
                             if (membriBranca.length === 0) return null;
                             
                             return (

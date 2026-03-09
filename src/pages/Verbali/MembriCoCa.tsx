@@ -129,39 +129,44 @@ export default function MembriCoCaPage() {
                                 <label className="text-[10px] font-bold text-gray-400 uppercase">Branca / Ruolo Principale</label>
                                 <select 
                                     value={newMembro.branca || 'COCA'}
-                                    onChange={e => setNewMembro({ ...newMembro, branca: e.target.value, brancheSecondarie: [] })}
+                                    onChange={e => {
+                                        const newBranca = e.target.value;
+                                        setNewMembro(prev => ({ 
+                                            ...prev, 
+                                            branca: newBranca, 
+                                            brancheSecondarie: (prev.brancheSecondarie || []).filter(b => b !== newBranca) 
+                                        }));
+                                    }}
                                     className="w-full p-2 border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white rounded-lg text-sm"
                                 >
-                                    <option value="COCA">CoCa (Nessuna branca)</option>
+                                    <option value="COCA">CoCa</option>
                                     <option value="L/C">L/C</option>
                                     <option value="E/G">E/G</option>
                                     <option value="R/S">R/S</option>
                                 </select>
                             </div>
-                            {newMembro.branca === 'COCA' && (
-                                <div className="col-span-2">
-                                    <label className="text-[10px] font-bold text-gray-400 uppercase">Servizio extra in Branca (Opzionale)</label>
-                                    <div className="flex gap-2 mt-2">
-                                        {['L/C', 'E/G', 'R/S'].map(b => (
-                                            <button
-                                                key={b}
-                                                onClick={() => toggleSecondaryBranca(b)}
-                                                className={cn(
-                                                    "px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors",
-                                                    (newMembro.brancheSecondarie || []).includes(b)
-                                                        ? "bg-scout-green text-white border-scout-green"
-                                                        : "bg-gray-50 dark:bg-gray-900 text-gray-500 border-gray-200 dark:border-gray-700 hover:bg-gray-100"
-                                                )}
-                                            >
-                                                {b}
-                                            </button>
-                                        ))}
-                                    </div>
-                                    <p className="text-[10px] text-gray-400 italic mt-1">
-                                        Esempio: un Capo Gruppo (CoCa) che fa anche servizio in L/C.
-                                    </p>
+                            <div className="col-span-2">
+                                <label className="text-[10px] font-bold text-gray-400 uppercase">Servizio extra in altre Branche (Opzionale)</label>
+                                <div className="flex gap-2 mt-2">
+                                    {['COCA', 'L/C', 'E/G', 'R/S'].filter(b => b !== newMembro.branca).map(b => (
+                                        <button
+                                            key={b}
+                                            onClick={() => toggleSecondaryBranca(b)}
+                                            className={cn(
+                                                "px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors",
+                                                (newMembro.brancheSecondarie || []).includes(b)
+                                                    ? "bg-scout-green text-white border-scout-green"
+                                                    : "bg-gray-50 dark:bg-gray-900 text-gray-500 border-gray-200 dark:border-gray-700 hover:bg-gray-100"
+                                            )}
+                                        >
+                                            {b}
+                                        </button>
+                                    ))}
                                 </div>
-                            )}
+                                <p className="text-[10px] text-gray-400 italic mt-1">
+                                    Puoi indicare altre branche in cui il capo presta servizio (es. Capo Gruppo che serve anche in L/C).
+                                </p>
+                            </div>
                         </div>
                         <div className="flex gap-2 justify-end">
                             <button 
