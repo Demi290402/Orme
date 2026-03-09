@@ -13,8 +13,8 @@ export async function exportVerbaleToPdf(
 ): Promise<void> {
     const container = document.createElement('div');
     container.style.cssText = [
-        'position:fixed',
-        'top:0', 'left:0',
+        'position:absolute',
+        'top:-9999px', 'left:-9999px',
         'width:210mm',
         'background:white',
         'color:#111',
@@ -22,7 +22,6 @@ export async function exportVerbaleToPdf(
         'font-size:12pt',
         'padding:20mm 25mm',
         'z-index:-9999',
-        'pointer-events:none',
     ].join(';');
 
     const formatDate = (d?: string) => d ? new Date(d).toLocaleDateString('it-IT') : '-';

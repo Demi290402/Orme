@@ -12,6 +12,10 @@ import { Verbale, MembroCoCa, User } from '@/types';
 async function fetchImageAsBuffer(url: string): Promise<ArrayBuffer> {
     const response = await fetch(url);
     if (!response.ok) throw new Error("Image fetch failed");
+    const contentType = response.headers.get("content-type");
+    if (!contentType || !contentType.includes("image")) {
+        throw new Error(`Target URL returned non-image content type: ${contentType}`);
+    }
     return await response.arrayBuffer();
 }
 
