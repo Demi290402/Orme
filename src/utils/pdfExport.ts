@@ -88,16 +88,35 @@ export async function exportVerbaleToPdf(
         </div>
     `;
 
-    const filename = `Verbale_${(verbale.numero || '').toString().padStart(3, '0')}_${verbale.data || 'data'}.pdf`;
+    const container = document.createElement('div');
+    container.style.position = 'fixed';
+    container.style.left = '-9999px';
+    container.style.top = '0';
+    container.innerHTML = htmlContent;
+    document.body.appendChild(container);
 
-    await html2pdf()
-        .set({
-            margin: 0,
+    try {
+        const filename = `Verbale_${(verbale.numero || '').toString().padStart(3, '0')}_${verbale.data || 'data'}.pdf`;
+        
+        const opt = {
+            margin: [10, 10, 10, 10] as [number, number, number, number], // fixed tuple type for TS
             filename,
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2, useCORS: true },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        })
-        .from(htmlContent)
-        .save();
+            image: { type: 'jpeg' as const, quality: 0.95 },
+            html2canvas: { 
+                scale: 1.5, // reduced scale to prevent memory issues on tablet
+                useCORS: true,
+                logging: false,
+                letterRendering: true
+            },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const },
+            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] as any }
+        };
+
+        await html2pdf().set(opt).from(container).save();
+    } catch (error) {
+        console.error("PDF Export Error:", error);
+        throw error; // Rethrow to let the UI catch it
+    } finally {
+        document.body.removeChild(container);
+    }
 }

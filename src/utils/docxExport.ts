@@ -20,12 +20,15 @@ async function fetchImageAsBuffer(url: string): Promise<ArrayBuffer> {
 }
 
 /**
- * Strips HTML tags from a string
+ * Strips HTML tags and sanitizes text for XML (DOCX)
  */
-function stripHtml(html: string): string {
+function cleanText(html: string): string {
+    if (!html) return "";
     const tmp = document.createElement("DIV");
     tmp.innerHTML = html;
-    return tmp.textContent || tmp.innerText || "";
+    const text = tmp.textContent || tmp.innerText || "";
+    // Remove control characters that might corrupt DOCX XML
+    return text.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
 }
 
 export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[], currentUser: User) => {
@@ -248,7 +251,7 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                         spacing: { before: 400 },
                     }),
                     new Paragraph({
-                        children: [new TextRun({ text: stripHtml(punto.contenuto), size: 20, font: "Roboto" })],
+                        children: [new TextRun({ text: cleanText(punto.contenuto), size: 20, font: "Roboto" })],
                         spacing: { before: 150 },
                         alignment: AlignmentType.BOTH,
                         indent: { left: 720 },
@@ -269,7 +272,7 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                             indent: { left: 400 },
                         }),
                         new Paragraph({
-                            children: [new TextRun({ text: stripHtml(r.contenuto), italics: true, font: "Georgia", size: 22 })],
+                            children: [new TextRun({ text: cleanText(r.contenuto), italics: true, font: "Georgia", size: 22 })],
                             spacing: { before: 100 },
                             indent: { left: 800 },
                             alignment: AlignmentType.BOTH,

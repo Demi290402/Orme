@@ -100,26 +100,29 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
     }, [id]);
 
     const handleExportPdf = async () => {
+        if (isExporting) return;
         setIsExporting(true);
         try {
             await exportVerbaleToPdf(verbale as Verbale, membri, _impostazioni?.intestazioneHtml, _impostazioni?.piePaginaHtml);
         } catch (error) {
             console.error('Error generating PDF:', error);
-            alert("Errore durante l'esportazione in PDF");
+            alert("Errore durante l'esportazione in PDF. Se il problema persiste, riprova tra qualche istante.");
         } finally {
-            setIsExporting(false);
+            // Un piccolo ritardo per permettere al browser di riprendersi
+            setTimeout(() => setIsExporting(false), 800);
         }
     };
 
     const handleExportWord = async () => {
+        if (isExporting) return;
         setIsExporting(true);
         try {
             await exportVerbaleToDocx(verbale as Verbale, membri, currentUser);
         } catch (error) {
             console.error('Error generating DOCX:', error);
-            alert("Errore durante l'esportazione in Word");
+            alert("Errore durante l'esportazione in Word.");
         } finally {
-            setIsExporting(false);
+            setTimeout(() => setIsExporting(false), 800);
         }
     };
 
