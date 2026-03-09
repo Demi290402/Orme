@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
     ChevronLeft, FileText, 
-    TrendingUp,
+    TrendingUp, FileSpreadsheet,
     Clock, Award, AlertCircle, Search
 } from 'lucide-react';
 import { getMembriCoCa, getVerbali } from '@/lib/verbali';
@@ -71,6 +71,34 @@ export default function VerbaliStats() {
         fetchData();
     }, []);
 
+    const handleExportExcel = () => {
+        const headers = ["Membro", "Branca", "Verbali Totali", "Presenze", "Assenze", "Ritardi", "Tasso Frequenza %"];
+        const rows = stats.map(s => [
+            s.nome,
+            s.branca || 'CoCa',
+            s.totalVerbali,
+            s.presences,
+            s.absences,
+            s.delays,
+            `${s.attendanceRate}%`
+        ]);
+
+        const csvContent = [
+            headers.join(";"),
+            ...rows.map(r => r.join(";"))
+        ].join("\n");
+
+        // Use \ufeff for Excel BOM (Byte Order Mark) to handle special characters correctly
+        const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `report_presenze_${new Date().getFullYear()}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     const filteredStats = stats.filter(s => 
         s.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
         s.branca?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -95,6 +123,14 @@ export default function VerbaliStats() {
                         Reportistica Presenze
                     </h1>
                 </div>
+                <button 
+                    onClick={handleExportExcel}
+                    className="bg-green-50 text-scout-green p-2.5 rounded-xl border border-green-100 flex items-center gap-2 text-xs font-bold hover:bg-green-100 transition-colors"
+                    title="Esporta in Excel (CSV)"
+                >
+                    <FileSpreadsheet size={18} />
+                    <span className="hidden sm:inline">Esporta Excel</span>
+                </button>
             </div>
 
             {/* Overview Cards */}

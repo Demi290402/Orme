@@ -38,7 +38,6 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
     const [saving, setSaving] = useState(false);
     const [currentUser, setCurrentUser] = useState<any>(null);
     const [showNotifyModal, setShowNotifyModal] = useState(false);
-    const [lastSavedVerbale, setLastSavedVerbale] = useState<Verbale | null>(null);
     const [isFabOpen, setIsFabOpen] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
 
@@ -145,7 +144,6 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
         try {
             const saved = await saveVerbale(verbale);
             setVerbale(saved);
-            setLastSavedVerbale(saved);
             
             if (!id) {
                 navigate(`/verbali/modifica/${saved.id}`, { replace: true });
@@ -1343,10 +1341,9 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
 
                             <div className="space-y-2 pt-2 border-t border-gray-100">
                                 <button
-                                    onClick={() => {
-                                        if (lastSavedVerbale) exportVerbaleToDocx(lastSavedVerbale, membri, currentUser);
-                                    }}
-                                    className="w-full bg-[#45387E] text-white py-3 px-6 rounded-2xl font-black text-sm flex items-center justify-center gap-3 hover:bg-[#352b61] transition-all shadow-md active:scale-95"
+                                    onClick={() => handleExportWord()}
+                                    className="w-full bg-[#45387E] text-white py-3 px-6 rounded-2xl font-black text-sm flex items-center justify-center gap-3 hover:bg-[#352b61] transition-all shadow-md active:scale-95 disabled:opacity-50"
+                                    disabled={isExporting}
                                 >
                                     <Download size={18} />
                                     Scarica .docx
@@ -1391,26 +1388,28 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                         >
                             <Pencil size={24} />
                         </button>
-                        <button
-                            onClick={() => {
-                                setIsFabOpen(false);
-                                exportVerbaleToDocx(verbale as Verbale, membri, currentUser);
-                            }}
-                            className="bg-[#45387E] text-white w-14 h-14 rounded-full fab-item-shadow flex items-center justify-center hover:scale-105 active:scale-95 transition-all"
-                            title="Scarica .docx"
-                        >
-                            <Download size={24} />
-                        </button>
-                        <button
-                            onClick={() => {
-                                setIsFabOpen(false);
-                                window.print();
-                            }}
-                            className="bg-red-600 text-white w-14 h-14 rounded-full fab-item-shadow flex items-center justify-center hover:scale-105 active:scale-95 transition-all"
-                            title="Scarica PDF"
-                        >
-                            <FileDown size={24} />
-                        </button>
+                                <button
+                                    onClick={() => {
+                                        setIsFabOpen(false);
+                                        handleExportWord();
+                                    }}
+                                    className="bg-[#45387E] text-white w-14 h-14 rounded-full fab-item-shadow flex items-center justify-center hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
+                                    disabled={isExporting}
+                                    title="Scarica .docx"
+                                >
+                                    <Download size={24} />
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setIsFabOpen(false);
+                                        handleExportPdf();
+                                    }}
+                                    className="bg-red-600 text-white w-14 h-14 rounded-full fab-item-shadow flex items-center justify-center hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
+                                    disabled={isExporting}
+                                    title="Scarica PDF"
+                                >
+                                    <FileDown size={24} />
+                                </button>
                     </div>
 
                     {/* Main FAB Toggle */}

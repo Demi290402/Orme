@@ -178,7 +178,7 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                 new Paragraph({
                     children: [
                         new TextRun({ text: "Oggetto: ", bold: true, font: "Roboto", size: 20 }),
-                        new TextRun({ text: verbale.titolo, font: "Roboto", size: 20 }),
+                        new TextRun({ text: cleanText(verbale.titolo), font: "Roboto", size: 20 }),
                     ],
                     spacing: { after: 100 },
                 }),
@@ -193,14 +193,14 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                                 if (isLate && exit) suffix = ` (R e esc. ore ${exit.ora})`;
                                 else if (isLate) suffix = " (R)";
                                 else if (exit) suffix = ` (esc. ore ${exit.ora})`;
-                                return m.nome + suffix;
+                                return cleanText(m.nome) + suffix;
                             }).join(', '), 
                             font: "Roboto", 
                             size: 20,
                             italics: true 
                         }),
                         ...(verbale.ospiti && verbale.ospiti.length > 0 ? [
-                            new TextRun({ text: ", " + verbale.ospiti.map(o => `${o.nome} (${o.ruolo})`).join(', '), font: "Roboto", size: 20, italics: true })
+                            new TextRun({ text: ", " + verbale.ospiti.map(o => `${cleanText(o.nome)} (${cleanText(o.ruolo || '')})`).join(', '), font: "Roboto", size: 20, italics: true })
                         ] : []),
                     ],
                     spacing: { after: 100 },
@@ -208,7 +208,7 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                 new Paragraph({
                     children: [
                         new TextRun({ text: "Assenti: ", bold: true, font: "Roboto", size: 20 }),
-                        new TextRun({ text: absentMembri.map(m => m.nome).join(', ') || 'Nessuno', font: "Roboto", size: 20, italics: true }),
+                        new TextRun({ text: absentMembri.map(m => cleanText(m.nome)).join(', ') || 'Nessuno', font: "Roboto", size: 20, italics: true }),
                     ],
                     spacing: { after: 100 },
                 }),
@@ -219,7 +219,7 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                     spacing: { after: 100, before: 200 },
                 }),
                 ...verbale.odg.map(p => new Paragraph({
-                    children: [new TextRun({ text: `• ${p.titolo}`, bold: true, font: "Roboto", size: 20 })],
+                    children: [new TextRun({ text: `• ${cleanText(p.titolo)}`, bold: true, font: "Roboto", size: 20 })],
                     indent: { left: 720 },
                     spacing: { after: 50 },
                 })),
@@ -246,7 +246,7 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                 ...verbale.odg.map((punto) => [
                     new Paragraph({
                         children: [
-                            new TextRun({ text: `• ${punto.titolo}`, bold: true, size: 20, font: "Roboto" })
+                            new TextRun({ text: `• ${cleanText(punto.titolo)}`, bold: true, size: 20, font: "Roboto" })
                         ],
                         spacing: { before: 400 },
                     }),
@@ -295,7 +295,7 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                         new Paragraph({
                             children: [
                                 new TextRun({ 
-                                    text: `${new Date(d.dataInizio).toLocaleDateString('it-IT')}${d.dataFine ? ' - ' + new Date(d.dataFine).toLocaleDateString('it-IT') : ''}${d.luogo ? ' • ' + d.luogo : ''}`, 
+                                    text: `${new Date(d.dataInizio).toLocaleDateString('it-IT')}${d.dataFine ? ' - ' + new Date(d.dataFine).toLocaleDateString('it-IT') : ''}${d.luogo ? ' • ' + cleanText(d.luogo) : ''}`, 
                                     font: "Georgia", 
                                     color: "666666",
                                     size: 18 
@@ -306,7 +306,7 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                         }),
                         ...(d.note ? [
                            new Paragraph({
-                               children: [new TextRun({ text: d.note, italics: true, font: "Georgia", size: 20 })],
+                               children: [new TextRun({ text: cleanText(d.note), italics: true, font: "Georgia", size: 20 })],
                                spacing: { before: 50 },
                                indent: { left: 800 },
                            })
@@ -333,9 +333,9 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                             }),
                             ...verbale.cassa.map(m => new TableRow({
                                 children: [
-                                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: m.branca, font: "Georgia" })] })] }),
-                                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: m.tipo || 'Versamento', font: "Georgia" })] })] }),
-                                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: m.note, italics: true, font: "Georgia" })] })] }),
+                                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: cleanText(m.branca), font: "Georgia" })] })] }),
+                                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: cleanText(m.tipo || 'Versamento'), font: "Georgia" })] })] }),
+                                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: cleanText(m.note), italics: true, font: "Georgia" })] })] }),
                                     new TableCell({ children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: `€ ${m.importo.toFixed(2)}`, bold: true, font: "Georgia" })] })] }),
                                 ],
                             })),
@@ -351,9 +351,9 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                     }),
                     ...verbale.postiAzione.map(pa => new Paragraph({
                         children: [
-                            new TextRun({ text: `• ${pa.cosa}`, bold: true, font: "Georgia", size: 22 }),
+                            new TextRun({ text: `• ${cleanText(pa.cosa)}`, bold: true, font: "Georgia", size: 22 }),
                             new TextRun({ 
-                                text: ` — Resp: ${(pa.chiIds || []).map(id => membri.find(m => m.id === id)?.nome || id).join(', ') || '—'}${pa.quando ? ` (${pa.quando})` : ''}`, 
+                                text: ` — Resp: ${(pa.chiIds || []).map(id => cleanText(membri.find(m => m.id === id)?.nome || id)).join(', ') || '—'}${pa.quando ? ` (${cleanText(pa.quando)})` : ''}`, 
                                 font: "Georgia", color: "666666", size: 20 
                             }),
                         ],
@@ -370,9 +370,9 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                     }),
                     ...verbale.prossimiImpegni.map(imp => new Paragraph({
                         children: [
-                            new TextRun({ text: `• ${imp.evento}`, bold: true, font: "Georgia", size: 22 }),
+                            new TextRun({ text: `• ${cleanText(imp.evento)}`, bold: true, font: "Georgia", size: 22 }),
                             new TextRun({ 
-                                text: ` — ${imp.dataInizio ? new Date(imp.dataInizio).toLocaleDateString('it-IT') : ''}${imp.note ? ' ore ' + imp.note : ''}`, 
+                                text: ` — ${imp.dataInizio ? new Date(imp.dataInizio).toLocaleDateString('it-IT') : ''}${imp.note ? ' ore ' + cleanText(imp.note) : ''}`, 
                                 font: "Georgia", 
                                 color: "666666", 
                                 size: 20 
