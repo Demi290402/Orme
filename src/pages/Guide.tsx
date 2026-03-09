@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import {
     BookOpen,
     Trophy,
@@ -8,12 +9,24 @@ import {
     Zap,
     Info,
     ChevronRight,
-    Clock
+    Clock,
+    Footprints,
+    ShieldCheck,
+    Users
 } from 'lucide-react';
+import { User } from '@/types';
+import { getAllUsers } from '@/lib/data';
+import UserAvatar from '@/components/UserAvatar';
 import { LEVELS } from '@/lib/gamification';
 import { cn } from '@/lib/utils';
 
 export default function Guide() {
+    const [users, setUsers] = useState<User[]>([]);
+
+    useEffect(() => {
+        getAllUsers().then(setUsers).catch(console.error);
+    }, []);
+
     const pointRules = [
         { action: 'Aggiunta nuovo luogo', points: 10, icon: <PlusCircle size={18} className="text-scout-green" /> },
         { action: 'Aggiunta sito web', points: 2, icon: <Zap size={18} className="text-scout-blue" /> },
@@ -180,8 +193,68 @@ export default function Guide() {
                 </p>
             </section>
 
-            <div className="text-center text-xs text-gray-400 py-4">
-                <p>© 2026 Orme - Comunità Capi Turi 1</p>
+            {/* 6. Chi Siamo */}
+            <section className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mt-12">
+                <div className="text-center mb-8">
+                    <h2 className="text-2xl font-bold text-scout-green mb-2">Chi Siamo</h2>
+                    <p className="text-gray-500 italic">"Lasciare tracce utili, aggiornate e facili da seguire."</p>
+                </div>
+
+                <div className="space-y-6">
+                    <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100">
+                        <h3 className="font-bold text-lg mb-3 text-scout-brown flex items-center gap-2">
+                            <Footprints size={20} /> Il Problema
+                        </h3>
+                        <p className="text-gray-600 text-sm leading-relaxed">
+                            Le informazioni sui luoghi per i campi sono sparse ovunque: file Drive dimenticati,
+                            vecchie chat WhatsApp, appunti personali o "sentito dire". Spesso arriviamo in un posto
+                            e scopriamo che l'acqua non è più potabile o il numero del custode è cambiato.
+                        </p>
+                    </div>
+
+                    <div className="bg-scout-green/5 p-5 rounded-2xl border border-scout-green/10">
+                        <h3 className="font-bold text-lg mb-3 text-scout-green flex items-center gap-2">
+                            <Users size={20} /> La Soluzione: Orme
+                        </h3>
+                        <p className="text-gray-600 text-sm leading-relaxed">
+                            Un database centralizzato, condiviso e aggiornato da noi, la comunità capi del Turi 1.
+                            Ogni volta che qualcuno visita un luogo, aggiorna le informazioni per chi verrà dopo.
+                        </p>
+                    </div>
+
+                    <div className="bg-white p-5 rounded-2xl border border-gray-200">
+                        <h3 className="font-bold text-lg mb-3 text-scout-green-dark flex items-center gap-2">
+                            <ShieldCheck size={20} /> Validazione
+                        </h3>
+                        <p className="text-gray-600 text-sm leading-relaxed mb-4">
+                            Per garantire l'affidabilità, ogni modifica importante richiede l'approvazione di altri
+                            2 capi. Le informazioni verificate diventano "Orme" affidabili.
+                        </p>
+                        
+                        <h4 className="font-bold text-scout-green-dark mb-3 mt-6 border-t border-gray-100 pt-4 text-sm">Hanno accesso all'app:</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {users.length === 0 ? (
+                                <p className="text-gray-400 text-xs col-span-full">Nessun utente registrato.</p>
+                            ) : (
+                                users.map(user => (
+                                    <div key={user.id} className="flex items-center gap-3 bg-gray-50 p-2 rounded-xl border border-gray-100">
+                                        <UserAvatar user={user} size="sm" />
+                                        <div>
+                                            <p className="font-bold text-gray-900 text-xs">{user.firstName} {user.lastName}</p>
+                                            <p className="text-[10px] text-scout-green font-medium">@{user.nickname}</p>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <div className="text-center text-xs text-gray-400 py-4 mt-8">
+                <p>Fondatore: Demi Cistulli</p>
+                <p>Gruppo Scout Turi 1</p>
+                <p className="mt-2">© 2026 Orme</p>
             </div>
         </div>
     );

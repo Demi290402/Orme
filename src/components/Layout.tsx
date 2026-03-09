@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, User, Trophy, HelpCircle, Mail, FileText, Menu, CalendarDays, Sun, Moon } from 'lucide-react';
+import { Home, User, Trophy, HelpCircle, Mail, FileText, CalendarDays, Sun, Moon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Logo from '@/components/Logo';
 import PWAInstallPrompt from './PWAInstallPrompt';
@@ -31,7 +31,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         { icon: CalendarDays, label: 'Calendario', path: '/calendario' },
         { icon: FileText, label: 'Verbali', path: '/verbali' },
         { icon: HelpCircle, label: 'Guida', path: '/guide' },
-        { icon: Menu, label: 'Chi Siamo', path: '/about' },
         { icon: User, label: 'Profilo', path: '/profile' },
     ];
 

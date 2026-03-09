@@ -9,7 +9,6 @@ import Profile from '@/pages/Profile';
 import Leaderboard from '@/pages/Leaderboard';
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
-import About from '@/pages/About';
 import Guide from '@/pages/Guide';
 import Proposals from '@/pages/Proposals';
 import VerbaliList from '@/pages/Verbali/VerbaliList';
@@ -36,7 +35,6 @@ function App() {
           <Route path="/edit/:id" element={<ProtectedRoute><Layout><AddLocation /></Layout></ProtectedRoute>} />
           <Route path="/guide" element={<ProtectedRoute><Layout><Guide /></Layout></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Layout><Profile /></Layout></ProtectedRoute>} />
-          <Route path="/about" element={<ProtectedRoute><Layout><About /></Layout></ProtectedRoute>} />
           <Route path="/proposals" element={<ProtectedRoute><Layout><Proposals /></Layout></ProtectedRoute>} />
           <Route path="/calendario" element={<ProtectedRoute><Layout><Calendario /></Layout></ProtectedRoute>} />
           <Route path="/verbali" element={<ProtectedRoute><Layout><VerbaliList /></Layout></ProtectedRoute>} />
