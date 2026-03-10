@@ -19,12 +19,12 @@ export default function LocationDetail() {
         getUser().then(setCurrentUser).catch(console.error);
     }, [id]);
 
-    const [updaterNickname, setUpdaterNickname] = useState<string | null>(null);
+    const [updaterInfo, setUpdaterInfo] = useState<{ nickname: string, groupName: string } | null>(null);
 
     useEffect(() => {
         if (location?.lastUpdatedBy) {
             getUser(location.lastUpdatedBy).then(u => {
-                setUpdaterNickname(u.nickname);
+                setUpdaterInfo({ nickname: u.nickname, groupName: u.groupName || '' });
             }).catch(console.error);
         }
     }, [location]);
@@ -35,7 +35,7 @@ export default function LocationDetail() {
     const phone = location.contacts.find(c => c.type === 'phone')?.value;
     const whatsapp = location.contacts.find(c => c.type === 'whatsapp')?.value || phone;
 
-    const updatedByText = updaterNickname ? `da ${updaterNickname}` : '';
+    const updatedByText = updaterInfo ? `da ${updaterInfo.nickname}${updaterInfo.groupName ? ` - ${updaterInfo.groupName}` : ''}` : '';
 
     return (
         <div className="space-y-6 pb-20">

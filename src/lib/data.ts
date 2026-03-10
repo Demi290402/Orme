@@ -253,11 +253,9 @@ export async function updateUser(user: User): Promise<User> {
 
 export async function getLocations(): Promise<Location[]> {
     try {
-        const currentUser = await getUser();
         const { data, error } = await supabase
             .from('locations')
             .select('*')
-            .eq('group_id', currentUser.groupId)
             .order('created_at', { ascending: false });
 
         if (error) throw error;
