@@ -92,6 +92,8 @@ export async function exportVerbaleToPdf(
     container.style.position = 'fixed';
     container.style.left = '-9999px';
     container.style.top = '0';
+    container.style.width = '800px'; // Forza una larghezza fissa per evitare variazioni responsive
+    container.style.background = 'white';
     container.innerHTML = htmlContent;
     document.body.appendChild(container);
 
@@ -99,14 +101,15 @@ export async function exportVerbaleToPdf(
         const filename = `Verbale_${(verbale.numero || '').toString().padStart(3, '0')}_${verbale.data || 'data'}.pdf`;
         
         const opt = {
-            margin: [10, 10, 10, 10] as [number, number, number, number], // fixed tuple type for TS
+            margin: [10, 10, 10, 10] as [number, number, number, number],
             filename,
-            image: { type: 'jpeg' as const, quality: 0.95 },
+            image: { type: 'jpeg' as const, quality: 0.98 },
             html2canvas: { 
-                scale: 1.5, // reduced scale to prevent memory issues on tablet
+                scale: 2, // Aumentato a 2 per migliore nitidezza su PC
                 useCORS: true,
                 logging: false,
-                letterRendering: true
+                letterRendering: true,
+                windowWidth: 800 // Forza html2canvas a simulare questa larghezza
             },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const },
             pagebreak: { mode: ['avoid-all', 'css', 'legacy'] as any }
