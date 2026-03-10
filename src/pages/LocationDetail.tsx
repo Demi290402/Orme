@@ -9,12 +9,14 @@ export default function LocationDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
     const [location, setLocation] = useState<Location | null>(null);
+    const [currentUser, setCurrentUser] = useState<any>(null);
 
     useEffect(() => {
         getLocations().then(locs => {
             const found = locs.find(l => l.id === id);
             if (found) setLocation(found);
         }).catch(console.error);
+        getUser().then(setCurrentUser).catch(console.error);
     }, [id]);
 
     const [updaterNickname, setUpdaterNickname] = useState<string | null>(null);
@@ -59,16 +61,22 @@ export default function LocationDetail() {
             {/* Action Buttons */}
             <div className="grid grid-cols-3 gap-3">
                 {phone && (
-                    <a href={`tel:${phone}`} className="flex flex-col items-center justify-center bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:bg-gray-50 active:scale-95 transition-all">
-                        <Phone className="text-scout-green mb-1" size={24} />
-                        <span className="text-xs font-medium">Chiama</span>
-                    </a>
+                    <button 
+                        onClick={() => currentUser ? window.open(`tel:${phone}`) : navigate('/login')}
+                        className="flex flex-col items-center justify-center bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:bg-gray-50 active:scale-95 transition-all text-center"
+                    >
+                        <Phone className={cn("text-scout-green mb-1", !currentUser && "blur-[2px]")} size={24} />
+                        <span className="text-xs font-medium">{currentUser ? 'Chiama' : 'Accedi'}</span>
+                    </button>
                 )}
                 {whatsapp && (
-                    <a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noreferrer" className="flex flex-col items-center justify-center bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:bg-gray-50 active:scale-95 transition-all">
-                        <MessageCircle className="text-green-500 mb-1" size={24} />
-                        <span className="text-xs font-medium">WhatsApp</span>
-                    </a>
+                    <button 
+                        onClick={() => currentUser ? window.open(`https://wa.me/${whatsapp}`) : navigate('/login')}
+                        className="flex flex-col items-center justify-center bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:bg-gray-50 active:scale-95 transition-all text-center"
+                    >
+                        <MessageCircle className={cn("text-green-500 mb-1", !currentUser && "blur-[2px]")} size={24} />
+                        <span className="text-xs font-medium">{currentUser ? 'WhatsApp' : 'Accedi'}</span>
+                    </button>
                 )}
                 <a
                     href={location.coordinates
@@ -76,7 +84,7 @@ export default function LocationDetail() {
                         : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location.name + ' ' + location.commune)}`
                     }
                     target="_blank" rel="noreferrer"
-                    className="flex flex-col items-center justify-center bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:bg-gray-50 active:scale-95 transition-all"
+                    className="flex flex-col items-center justify-center bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:bg-gray-50 active:scale-95 transition-all text-center"
                 >
                     <Map className="text-blue-500 mb-1" size={24} />
                     <span className="text-xs font-medium">Mappa</span>
@@ -199,27 +207,48 @@ export default function LocationDetail() {
             </div>
 
             {/* Actions */}
-            <div className="space-y-3 mt-8">
-                <button
-                    onClick={() => navigate(`/edit/${location.id}`)}
-                    className="w-full bg-white border-2 border-scout-green text-scout-green font-bold py-3 rounded-xl flex items-center justify-center gap-2 active:bg-green-50 hover:bg-green-50 transition-colors"
-                >
-                    <Edit size={20} />
-                    Modifica Luogo
-                </button>
+            {currentUser ? (
+                <div className="space-y-3 mt-8">
+                    <button
+                        onClick={() => navigate(`/edit/${location.id}`)}
+                        className="w-full bg-white border-2 border-scout-green text-scout-green font-bold py-3 rounded-xl flex items-center justify-center gap-2 active:bg-green-50 hover:bg-green-50 transition-colors"
+                    >
+                        <Edit size={20} />
+                        Modifica Luogo
+                    </button>
 
-                <button
-                    onClick={async () => {
-                        if (confirm("Conferma di ELIMINARE questo evento?")) {
-                            const { createProposal } = await import('@/lib/proposals');
-                            await createProposal('delete', location.id, location.name);
-                            alert("Attendere approvazione di altri due capi...");
-                        }
-                    }}
-                    className="w-full text-red-500 font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-red-50 transition-colors"
+                    <button
+                        onClick={async () => {
+                            if (confirm("Conferma di ELIMINARE questo evento?")) {
+                                const { createProposal } = await import('@/lib/proposals');
+                                await createProposal('delete', location.id, location.name);
+                                alert("Attendere approvazione di altri due capi...");
+                            }
+                        }}
+                        className="w-full text-red-500 font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-red-50 transition-colors"
+                    >
+                        <ShieldAlert size={20} />
+                        Elimina Luogo
+                    </button>
+                </div>
+            ) : (
+                <div className="mt-8 p-6 bg-scout-beige/20 dark:bg-gray-800/50 rounded-2xl border border-scout-green/20 text-center">
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                        Vuoi contribuire o contattare il gestore di questo luogo?
+                    </p>
+                    <Link to="/register" className="inline-block bg-scout-green text-white px-8 py-3 rounded-xl font-bold shadow-md">
+                        Registrati Gratuitamente
+                    </Link>
+                </div>
+            )}
+
+            {/* Platform Compliance: Report Button */}
+            <div className="pt-4 border-t border-gray-100 dark:border-gray-700">
+                <button 
+                    onClick={() => alert("Segnalazione inviata. Il team di Orme revisionerà il contenuto entro 24 ore.")}
+                    className="w-full text-[10px] text-gray-400 dark:text-gray-500 hover:text-red-400 transition-colors uppercase font-bold tracking-widest py-2"
                 >
-                    <ShieldAlert size={20} />
-                    Elimina Luogo
+                    Segnala Contenuto Inappropriato o Errato
                 </button>
             </div>
         </div >

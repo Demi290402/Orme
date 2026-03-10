@@ -26,10 +26,10 @@ function App() {
           {/* Public routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/" element={<Layout><Home /></Layout>} />
+          <Route path="/location/:id" element={<Layout><LocationDetail /></Layout>} />
 
           {/* Protected routes */}
-          <Route path="/" element={<ProtectedRoute><Layout><Home /></Layout></ProtectedRoute>} />
-          <Route path="/location/:id" element={<ProtectedRoute><Layout><LocationDetail /></Layout></ProtectedRoute>} />
           <Route path="/leaderboard" element={<ProtectedRoute><Layout><Leaderboard /></Layout></ProtectedRoute>} />
           <Route path="/add" element={<ProtectedRoute><Layout><AddLocation /></Layout></ProtectedRoute>} />
           <Route path="/edit/:id" element={<ProtectedRoute><Layout><AddLocation /></Layout></ProtectedRoute>} />

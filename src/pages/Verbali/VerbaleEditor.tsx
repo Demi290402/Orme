@@ -465,7 +465,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                         />
                                         <button 
                                             onClick={() => setVerbale(v => ({ ...v, ospiti: v.ospiti?.filter((_, i) => i !== idx) }))}
-                                            className="p-1.5 text-red-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                            className="p-1.5 text-red-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all lg:opacity-0 lg:group-hover:opacity-100"
                                         >
                                             <Trash2 size={16} />
                                         </button>
@@ -499,7 +499,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                             <div className="space-y-4 pt-4">
                                 {(verbale.odg || []).map((punto, idx) => (
                                     <div key={punto.id} className="p-6 bg-white rounded-3xl border border-gray-100 shadow-sm space-y-4 relative group hover:border-scout-blue/20 transition-all">
-                                        <div className="absolute md:top-6 md:right-6 top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                                        <div className="absolute md:top-6 md:right-6 top-4 right-4 flex gap-2 lg:opacity-0 lg:group-hover:opacity-100 transition-all">
                                                 <button 
                                                 onClick={() => handleReorder(idx, -1, 'odg')}
                                                 disabled={idx === 0}
@@ -758,7 +758,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                 </div>
                                                 <button 
                                                     onClick={() => setVerbale(v => ({ ...v, cassa: v.cassa?.filter((_, i) => i !== idx) }))}
-                                                    className="p-2 text-red-300 hover:text-red-500 hover:bg-red-50 rounded-xl opacity-0 group-hover:opacity-100 transition-all font-bold"
+                                                    className="p-2 text-red-300 hover:text-red-500 hover:bg-red-50 rounded-xl lg:opacity-0 lg:group-hover:opacity-100 transition-all font-bold"
                                                 >✕</button>
                                             </div>
                                         ))}
@@ -934,7 +934,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                     <div className="space-y-3">
                                         {(verbale.dateImportanti || []).map((dt, idx) => (
                                             <div key={dt.id} className="grid grid-cols-12 gap-3 bg-gray-50/50 p-4 rounded-3xl border border-gray-100 group">
-                                                <div className="col-span-12 md:col-span-4 space-y-1">
+                                                <div className="col-span-8 md:col-span-3 space-y-1">
                                                     <label className="text-[9px] font-black text-gray-300 uppercase ml-2">Evento</label>
                                                     <input 
                                                         type="text" 
@@ -948,7 +948,26 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                         className="w-full bg-white p-2.5 border border-gray-100 rounded-xl text-xs outline-none focus:ring-1 focus:ring-scout-blue font-bold"
                                                     />
                                                 </div>
-                                                <div className="col-span-6 md:col-span-3 space-y-1">
+                                                <div className="col-span-4 md:col-span-2 space-y-1">
+                                                    <label className="text-[9px] font-black text-gray-300 uppercase ml-2">Branca</label>
+                                                    <select 
+                                                        value={dt.branca || 'CoCa'}
+                                                        onChange={e => {
+                                                            const next = [...(verbale.dateImportanti || [])];
+                                                            next[idx].branca = e.target.value;
+                                                            setVerbale(v => ({ ...v, dateImportanti: next }));
+                                                        }}
+                                                        className="w-full bg-white p-2 border border-gray-100 rounded-xl text-xs outline-none focus:ring-1 focus:ring-scout-blue font-bold"
+                                                    >
+                                                        <option value="CoCa">CoCa</option>
+                                                        <option value="L/C">L/C</option>
+                                                        <option value="E/G">E/G</option>
+                                                        <option value="R/S">R/S</option>
+                                                        <option value="Gruppo">Gruppo</option>
+                                                        <option value="Altro">Altro</option>
+                                                    </select>
+                                                </div>
+                                                <div className="col-span-6 md:col-span-2 space-y-1">
                                                     <label className="text-[9px] font-black text-gray-300 uppercase ml-2">Quando</label>
                                                     <input 
                                                         type="date" 
@@ -1012,7 +1031,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                     <div className="space-y-3">
                                         {(verbale.prossimiImpegni || []).map((imp, idx) => (
                                             <div key={imp.id} className="grid grid-cols-12 gap-3 bg-gray-50/50 p-4 rounded-3xl border border-gray-100 group">
-                                                <div className="col-span-12 md:col-span-5 space-y-1">
+                                                <div className="col-span-8 md:col-span-4 space-y-1">
                                                     <label className="text-[9px] font-black text-gray-300 uppercase ml-2">Nome impegno</label>
                                                     <input 
                                                         type="text" 
@@ -1026,7 +1045,26 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                         className="w-full bg-white p-2.5 border border-gray-100 rounded-xl text-xs outline-none focus:ring-1 focus:ring-scout-purple font-bold"
                                                     />
                                                 </div>
-                                                <div className="col-span-6 md:col-span-3 space-y-1">
+                                                <div className="col-span-4 md:col-span-2 space-y-1">
+                                                    <label className="text-[9px] font-black text-gray-300 uppercase ml-2">Branca</label>
+                                                    <select 
+                                                        value={imp.branca || 'CoCa'}
+                                                        onChange={e => {
+                                                            const next = [...(verbale.prossimiImpegni || [])];
+                                                            next[idx].branca = e.target.value;
+                                                            setVerbale(v => ({ ...v, prossimiImpegni: next }));
+                                                        }}
+                                                        className="w-full bg-white p-2 border border-gray-100 rounded-xl text-xs outline-none focus:ring-1 focus:ring-scout-purple font-bold"
+                                                    >
+                                                        <option value="CoCa">CoCa</option>
+                                                        <option value="L/C">L/C</option>
+                                                        <option value="E/G">E/G</option>
+                                                        <option value="R/S">R/S</option>
+                                                        <option value="Gruppo">Gruppo</option>
+                                                        <option value="Altro">Altro</option>
+                                                    </select>
+                                                </div>
+                                                <div className="col-span-6 md:col-span-2 space-y-1">
                                                     <label className="text-[9px] font-black text-gray-300 uppercase ml-2">Data</label>
                                                     <input 
                                                         type="date" 

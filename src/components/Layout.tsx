@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Trophy, HelpCircle, Mail, FileText, CalendarDays, Sun, Moon } from 'lucide-react';
+import { Home, Trophy, HelpCircle, Mail, FileText, CalendarDays, Sun, Moon, LogIn, UserPlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Logo from '@/components/Logo';
 import PWAInstallPrompt from './PWAInstallPrompt';
@@ -90,15 +90,38 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                             ))}
                         </nav>
                         
-                        {/* Avatar Profile Link */}
-                        {currentUser && (
+                        {/* Avatar / Login Button */}
+                        {currentUser ? (
                             <Link to="/profile" className="ml-2 ring-2 ring-transparent hover:ring-scout-green dark:hover:ring-scout-green rounded-full transition-all">
                                 <UserAvatar user={currentUser} size="sm" disablePreview={true} />
+                            </Link>
+                        ) : (
+                            <Link to="/login" className="ml-2 p-2 bg-scout-green text-white rounded-full hover:bg-scout-green-dark transition-all flex items-center justify-center shadow-sm">
+                                <LogIn size={20} />
                             </Link>
                         )}
                     </div>
                 </div>
             </header>
+
+            {/* Guest Welcome Banner */}
+            {!currentUser && (
+                <div className="bg-scout-blue text-white py-2 px-4 shadow-md sticky top-[113px] md:top-[113px] z-[40]">
+                    <div className="max-w-4xl mx-auto flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <UserPlus size={16} className="shrink-0" />
+                            <p className="text-[11px] md:text-xs font-bold leading-tight">
+                                Registrati per sbloccare tutti i luoghi e i contenuti scout del tuo gruppo!
+                            </p>
+                        </div>
+                        <div className="flex gap-2">
+                            <Link to="/register" className="text-[10px] bg-white text-scout-blue px-3 py-1 rounded-full font-black uppercase whitespace-nowrap">
+                                Iscriviti
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Main Content */}
             <main className="max-w-4xl mx-auto p-4 md:p-6">
@@ -122,8 +145,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                         </Link>
                     ))}
                     
-                    {/* Mobile Avatar Profile Link */}
-                    {currentUser && (
+                    {/* Mobile Avatar / Login Link */}
+                    {currentUser ? (
                         <Link
                             to="/profile"
                             className={cn(
@@ -136,6 +159,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                                 "text-[10px] mt-0.5",
                                 location.pathname === '/profile' ? "text-scout-green" : "text-gray-400 dark:text-gray-500"
                             )}>Profilo</span>
+                        </Link>
+                    ) : (
+                        <Link
+                            to="/login"
+                            className={cn(
+                                "flex flex-col items-center justify-center w-full h-full transition-all text-gray-400",
+                                (location.pathname === '/login' || location.pathname === '/register') && "text-scout-green"
+                            )}
+                        >
+                            <LogIn size={22} />
+                            <span className="text-[10px] mt-0.5 font-bold">Accedi</span>
                         </Link>
                     )}
                 </div>

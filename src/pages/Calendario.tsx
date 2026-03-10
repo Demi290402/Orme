@@ -1,14 +1,24 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, ChevronLeft, ChevronRight, Calendar, CalendarDays, CalendarRange, X, Pencil, Trash2, Save, MapPin, Clock } from 'lucide-react';
-import { getEventi, saveEvento, deleteEvento, EventoCalendario } from '@/lib/calendario';
+import { getEventi, saveEvento, deleteEvento, EventoCalendario, getColorByBranca, BRANCA_COLORS } from '@/lib/calendario';
 import { cn } from '@/lib/utils';
 
 type ViewMode = 'anno' | 'mese' | 'giorno';
 
 const MESI_IT = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
 const GIORNI_IT = ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'];
-const BRANCHE = ['CoCa','L/C','E/G','R/S','Altro'];
-const COLORI_PRESET = ['#4CAF50','#0288D1','#e97a00','#9c27b0','#e53935','#00897B','#F57F17'];
+const BRANCHE = ['CoCa','L/C','E/G','R/S','Gruppo', 'Altro'];
+const COLORI_PRESET = ['#4CAF50','#0288D1','#e97a00','#9c27b0','#e53935','#00897B','#F57F17','#FDD835'];
+
+function getContrastColor(hex: string) {
+    if (!hex || hex.length < 6) return 'white';
+    const color = hex.replace('#', '');
+    const r = parseInt(color.substring(0, 2), 16);
+    const g = parseInt(color.substring(2, 4), 16);
+    const b = parseInt(color.substring(4, 6), 16);
+    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+    return brightness > 180 ? '#1f2937' : 'white'; // text-gray-800 for light bgs
+}
 
 function dateYMD(d: Date) {
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -27,11 +37,20 @@ interface EventFormProps {
 }
 function EventForm({ initial, onSave, onCancel, onDelete }: EventFormProps) {
     const [form, setForm] = useState<Partial<EventoCalendario>>({
-        titolo: '', dataInizio: dateYMD(new Date()), branca: 'CoCa', colore: '#4CAF50', sorgente: 'manuale',
+        titolo: '', dataInizio: dateYMD(new Date()), branca: 'CoCa', colore: BRANCA_COLORS['CoCa'], sorgente: 'manuale',
         ...initial,
     });
     const [saving, setSaving] = useState(false);
-    const set = (k: string, v: any) => setForm(f => ({ ...f, [k]: v }));
+    const set = (k: string, v: any) => {
+        setForm(f => {
+            const next = { ...f, [k]: v };
+            // Auto update color if branca changes
+            if (k === 'branca') {
+                next.colore = getColorByBranca(v);
+            }
+            return next;
+        });
+    };
 
     return (
         <div className="fixed inset-0 bg-black/60 z-[70] flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={onCancel}>
@@ -129,8 +148,8 @@ function EventForm({ initial, onSave, onCancel, onDelete }: EventFormProps) {
 function EventPill({ evento, onClick }: { evento: EventoCalendario; onClick: () => void }) {
     return (
         <div onClick={e => { e.stopPropagation(); onClick(); }}
-            className="text-[10px] font-bold px-1.5 py-0.5 rounded-md text-white truncate cursor-pointer hover:opacity-90 transition-opacity"
-            style={{ background: evento.colore }}
+            className="text-[10px] font-bold px-1.5 py-0.5 rounded-md truncate cursor-pointer hover:opacity-90 transition-opacity"
+            style={{ background: evento.colore, color: getContrastColor(evento.colore) }}
             title={evento.titolo}
         >
             {evento.oraInizio ? `${evento.oraInizio.slice(0,5)} ` : ''}{evento.titolo}
@@ -334,7 +353,8 @@ export default function Calendario() {
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-start justify-between gap-2">
                                         <h3 className="font-bold text-gray-900 dark:text-white">{e.titolo}</h3>
-                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white flex-shrink-0" style={{ background: e.colore }}>{e.branca}</span>
+                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0" 
+                                            style={{ background: e.colore, color: getContrastColor(e.colore) }}>{e.branca}</span>
                                     </div>
                                     {(e.oraInizio || e.oraFine) && (
                                         <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -389,6 +409,16 @@ export default function Calendario() {
                     >
                         <Icon size={14} />{label}
                     </button>
+                ))}
+            </div>
+
+            {/* Colors Legend */}
+            <div className="flex flex-wrap gap-4 mb-6 bg-white dark:bg-gray-800/50 p-4 rounded-2xl border border-gray-100 dark:border-gray-700/50">
+                {Object.entries(BRANCA_COLORS).map(([branca, color]) => (
+                    <div key={branca} className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full" style={{ background: color }} />
+                        <span className="text-[10px] font-black uppercase tracking-tight text-gray-500 dark:text-gray-400">{branca}</span>
+                    </div>
                 ))}
             </div>
 

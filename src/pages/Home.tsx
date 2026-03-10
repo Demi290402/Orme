@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Search, Filter, Plus, X, Check, Clock } from 'lucide-react';
-import { getLocations } from '@/lib/data';
-import { Location } from '@/types';
+import { getLocations, getUser } from '@/lib/data';
+import { Location, User as UserType } from '@/types';
 import LocationCard from '@/components/LocationCard';
 import { Link } from 'react-router-dom';
 import { cn, getStalenessInfo } from '@/lib/utils';
@@ -40,9 +40,11 @@ export default function Home() {
     const [hasBeds, setHasBeds] = useState(false);
     const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
     const [selectedStaleness, setSelectedStaleness] = useState<number[]>([]);
+    const [currentUser, setCurrentUser] = useState<UserType | null>(null);
 
     useEffect(() => {
         getLocations().then(setLocations).catch(console.error);
+        getUser().then(setCurrentUser).catch(console.error);
     }, []);
 
     const toggleSelection = (list: any[], item: any, setList: (l: any[]) => void) => {
@@ -297,9 +299,31 @@ export default function Home() {
 
             {/* Results Grid */}
             <div className="grid gap-4 md:grid-cols-2">
-                {filteredLocations.map((location) => (
+                {(currentUser ? filteredLocations : filteredLocations.slice(0, 5)).map((location) => (
                     <LocationCard key={location.id} location={location} />
                 ))}
+
+                {/* Guest Invitation Message */}
+                {!currentUser && filteredLocations.length > 5 && (
+                    <div className="col-span-full mt-8 p-8 bg-white dark:bg-gray-800 rounded-3xl border-2 border-dashed border-scout-blue/30 text-center space-y-4 shadow-sm">
+                        <div className="bg-scout-blue/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto">
+                            <Plus className="text-scout-blue" size={32} />
+                        </div>
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white">Vuoi vedere altri luoghi?</h3>
+                        <p className="text-gray-500 dark:text-gray-400 max-w-sm mx-auto text-sm">
+                            Iscriviti gratuitamente per accedere all'intero database di {locations.length} luoghi scout e iniziare a pianificare le tue attività!
+                        </p>
+                        <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+                            <Link to="/register" className="bg-scout-blue text-white px-8 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all">
+                                Registrati ora
+                            </Link>
+                            <Link to="/login" className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-8 py-3 rounded-xl font-bold hover:bg-gray-200 dark:hover:bg-gray-600 transition-all">
+                                Accedi
+                            </Link>
+                        </div>
+                    </div>
+                )}
+
                 {filteredLocations.length === 0 && (
                     <div className="flex flex-col items-center justify-center py-20 text-center">
                         <div className="bg-gray-100 p-6 rounded-full mb-4">

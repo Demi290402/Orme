@@ -20,6 +20,19 @@ export interface EventoCalendario {
     createdAt: string;
 }
 
+export const BRANCA_COLORS: Record<string, string> = {
+    'L/C': '#FDD835',    // Giallo
+    'E/G': '#4CAF50',    // Verde
+    'R/S': '#e53935',    // Rosso
+    'CoCa': '#9c27b0',   // Viola
+    'Gruppo': '#0288D1', // Azzurro
+    'Altro': '#00897B'
+};
+
+export function getColorByBranca(branca: string): string {
+    return BRANCA_COLORS[branca] || BRANCA_COLORS['Altro'];
+}
+
 function mapRow(row: any): EventoCalendario {
     return {
         id: row.id,
@@ -130,7 +143,7 @@ export async function syncVerbaleEventi(verbale: Verbale): Promise<void> {
                 luogo: d.luogo || '',
                 note: d.note || '',
                 branca: d.branca || 'CoCa',
-                colore: '#0288D1',
+                colore: getColorByBranca(d.branca || 'CoCa'),
                 sorgente: 'verbale',
                 verbale_id: verbale.id,
                 creato_da: user.id,
@@ -147,7 +160,7 @@ export async function syncVerbaleEventi(verbale: Verbale): Promise<void> {
                 luogo: p.luogo || '',
                 note: p.note || '',
                 branca: p.branca || 'CoCa',
-                colore: '#9c27b0',
+                colore: getColorByBranca(p.branca || 'CoCa'),
                 sorgente: 'verbale',
                 verbale_id: verbale.id,
                 creato_da: user.id,
