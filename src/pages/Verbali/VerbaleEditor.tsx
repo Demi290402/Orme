@@ -102,13 +102,16 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
         if (isExporting) return;
         setIsExporting(true);
         try {
+            console.log("VerbaleEditor: Starting PDF Export...");
             await exportVerbaleToPdf(verbale as Verbale, membri, _impostazioni?.intestazioneHtml, _impostazioni?.piePaginaHtml);
+            console.log("VerbaleEditor: PDF Export finished.");
         } catch (error) {
             console.error('Error generating PDF:', error);
             alert("Errore durante l'esportazione in PDF. Se il problema persiste, riprova tra qualche istante.");
         } finally {
-            // Un piccolo ritardo per permettere al browser di riprendersi
-            setTimeout(() => setIsExporting(false), 800);
+            // Reset immediato dello stato per evitare blocchi permanenti
+            setIsExporting(false);
+            console.log("VerbaleEditor: isExporting reset to false.");
         }
     };
 

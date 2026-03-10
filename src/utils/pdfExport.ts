@@ -92,10 +92,12 @@ export async function exportVerbaleToPdf(
     container.style.position = 'fixed';
     container.style.left = '-9999px';
     container.style.top = '0';
-    container.style.width = '800px'; // Forza una larghezza fissa per evitare variazioni responsive
+    container.style.width = '800px'; 
     container.style.background = 'white';
     container.innerHTML = htmlContent;
     document.body.appendChild(container);
+
+    console.log("PDF Export: Container created and added to DOM");
 
     try {
         const filename = `Verbale_${(verbale.numero || '').toString().padStart(3, '0')}_${verbale.data || 'data'}.pdf`;
@@ -103,23 +105,28 @@ export async function exportVerbaleToPdf(
         const opt = {
             margin: [10, 10, 10, 10] as [number, number, number, number],
             filename,
-            image: { type: 'jpeg' as const, quality: 0.98 },
+            image: { type: 'jpeg' as const, quality: 0.95 },
             html2canvas: { 
-                scale: 2, // Aumentato a 2 per migliore nitidezza su PC
+                scale: 1.5, // Ridotto a 1.5 per prevenire crash di memoria su PC/Tablet
                 useCORS: true,
-                logging: false,
+                logging: true, // Attivato logging interno per diagnostica
                 letterRendering: true,
-                windowWidth: 800 // Forza html2canvas a simulare questa larghezza
+                windowWidth: 800
             },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const },
             pagebreak: { mode: ['avoid-all', 'css', 'legacy'] as any }
         };
 
+        console.log("PDF Export: Starting html2pdf save sequence...");
         await html2pdf().set(opt).from(container).save();
+        console.log("PDF Export: html2pdf save completed successfully");
     } catch (error) {
-        console.error("PDF Export Error:", error);
-        throw error; // Rethrow to let the UI catch it
+        console.error("PDF Export Error Detailed:", error);
+        throw error;
     } finally {
-        document.body.removeChild(container);
+        if (container && container.parentNode) {
+            document.body.removeChild(container);
+            console.log("PDF Export: Container removed from DOM");
+        }
     }
 }
