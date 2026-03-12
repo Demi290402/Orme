@@ -266,6 +266,22 @@ export async function getLocations(): Promise<Location[]> {
     }
 }
 
+export async function getLocation(id: string): Promise<Location | null> {
+    try {
+        const { data, error } = await supabase
+            .from('locations')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (error) throw error;
+        return mapSupabaseLocationToLocation(data);
+    } catch (error) {
+        console.error(`Error fetching location with ID ${id}:`, error);
+        return null;
+    }
+}
+
 export async function addLocation(location: Omit<Location, 'id' | 'lastUpdatedAt' | 'lastUpdatedBy'>) {
     try {
         const currentUser = await getUser();

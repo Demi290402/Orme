@@ -1,9 +1,23 @@
-import html2pdf from 'html2pdf.js';
+import pdfMake from 'pdfmake/build/pdfmake';
+import pdfFonts from 'pdfmake/build/vfs_fonts';
+import htmlToPdfmake from 'html-to-pdfmake';
 import { Verbale, MembroCoCa } from '@/types';
 
+// Inizializza i font virtuali per pdfMake (Roboto by default)
+const pdfMakeAny = pdfMake as any;
+const vfs = (pdfFonts as any).pdfMake ? (pdfFonts as any).pdfMake.vfs : (pdfFonts as any).vfs;
+
+if (pdfMakeAny && !pdfMakeAny.vfs && vfs) {
+    try {
+        pdfMakeAny.vfs = vfs;
+    } catch (e) {
+        console.warn("PDF Export Engine: Unable to set vfs directly on pdfMake, ignoring (might be handled globally).", e);
+    }
+}
+
 /**
- * Generates and downloads a PDF of the verbale using html2pdf.js.
- * Renders the verbale HTML into an off-screen container and captures it.
+ * Genera e scarica un PDF vettoriale (testo selezionabile e multi-pagina) del verbale
+ * usando pdfmake e html-to-pdfmake. Questo aggira qualsiasi limitazione del rendering CSS su Canvas.
  */
 export async function exportVerbaleToPdf(
     verbale: Partial<Verbale>,
@@ -20,18 +34,18 @@ export async function exportVerbaleToPdf(
 
     const odgHtml = (verbale.odg || []).map((p, i) => `
         <div style="margin-bottom:8pt">
-            <b>${i + 1}. ${p.titolo}</b>
+            <strong>${i + 1}. ${p.titolo}</strong>
             ${p.contenuto ? `<div style="margin-top:4pt;color:#444">${p.contenuto}</div>` : ''}
         </div>
     `).join('');
 
     const postiAzioneHtml = (verbale.sezioniAttive || []).includes('posti_azione') && (verbale.postiAzione || []).length > 0
         ? `<div style="margin-top:16pt">
-            <b style="text-transform:uppercase;letter-spacing:1px;font-size:9pt;color:#e97a00">🎯 Posti d'Azione</b>
-            <ul style="margin-top:6pt;padding-left:20pt">
+            <strong>🎯 Posti d'Azione</strong>
+            <ul style="margin-top:6pt;">
                 ${(verbale.postiAzione || []).map(pa => `
                     <li style="margin-bottom:6pt">
-                        <b>${pa.cosa}</b>
+                        <strong>${pa.cosa}</strong>
                         <span style="color:#666"> — Resp: ${(pa.chiIds || []).map(membroNome).join(', ') || '—'}${pa.quando ? ` (${formatDate(pa.quando)})` : ''}</span>
                     </li>
                 `).join('')}
@@ -41,92 +55,90 @@ export async function exportVerbaleToPdf(
 
     const ritornoHtml = (verbale.sezioniAttive || []).includes('ritorni') && (verbale.ritorni || []).length > 0
         ? `<div style="margin-top:16pt">
-            <b style="text-transform:uppercase;letter-spacing:1px;font-size:9pt;color:#4CAF50">🗣️ Ritorni</b>
-            <ul style="margin-top:6pt;padding-left:20pt">
-                ${(verbale.ritorni || []).map(r => `<li style="margin-bottom:4pt">${r.branca ? `<b>[${r.branca}]</b> ` : ''}${r.contenuto}</li>`).join('')}
+            <strong>🗣️ Ritorni</strong>
+            <ul style="margin-top:6pt;">
+                ${(verbale.ritorni || []).map(r => `<li style="margin-bottom:4pt">${r.branca ? `<strong>[${r.branca}]</strong> ` : ''}${r.contenuto}</li>`).join('')}
             </ul>
           </div>`
         : '';
 
     const varieHtml = (verbale.sezioniAttive || []).includes('varie') && verbale.varie
         ? `<div style="margin-top:16pt">
-            <b style="text-transform:uppercase;letter-spacing:1px;font-size:9pt;color:#666">💬 Varie ed Eventuali</b>
+            <strong>💬 Varie ed Eventuali</strong>
             <p style="margin-top:6pt;font-style:italic;color:#444">${verbale.varie}</p>
           </div>`
         : '';
 
-    const htmlContent = `
-        <div style="width:210mm; padding:20mm 25mm; font-family:Georgia,serif; font-size:12pt; background:white; color:#111;">
-            ${intestazioneHtml ? `<div style="margin-bottom:16pt;padding-bottom:12pt;border-bottom:2px solid #eee">${intestazioneHtml}</div>` : ''}
-
-            <div style="border-bottom:2px solid #333;padding-bottom:8pt;margin-bottom:16pt">
-                <h1 style="margin:0;font-size:18pt;color:#222">${verbale.titolo || 'Verbale di Riunione'}</h1>
+    // Costruiamo il contenuto principale come HTML e poi lo convertiamo con htmlToPdfmake
+    const contentHtml = `
+        <div>
+            <div style="margin-bottom:16pt; font-size: 18pt;">
+                <strong>${verbale.titolo || 'Verbale di Riunione'}</strong>
                 <div style="color:#666;font-size:10pt;margin-top:4pt">
-                    N° ${verbale.numero || '-'} &nbsp;|&nbsp;
-                    ${formatDate(verbale.data)} &nbsp;|&nbsp;
-                    ${verbale.luogo || '-'} &nbsp;|&nbsp;
+                    N° ${verbale.numero || '-'} |
+                    ${formatDate(verbale.data)} |
+                    ${verbale.luogo || '-'} |
                     ${verbale.oraInizio || '-'} – ${verbale.oraFine || '-'}
                 </div>
             </div>
 
             <div style="margin-bottom:12pt">
-                <b>✓ Presenti:</b> ${presenti}<br>
-                ${assenti !== '-' ? `<b>✗ Assenti:</b> ${assenti}<br>` : ''}
-                ${ritardi ? `<b>⏱ Ritardi:</b> ${ritardi}` : ''}
+                <strong>✓ Presenti:</strong> ${presenti}<br>
+                ${assenti !== '-' ? `<strong>✗ Assenti:</strong> ${assenti}<br>` : ''}
+                ${ritardi ? `<strong>⏱ Ritardi:</strong> ${ritardi}` : ''}
             </div>
 
             <div style="margin-bottom:16pt">
-                <b style="text-transform:uppercase;letter-spacing:1px;font-size:9pt;color:#4CAF50">📋 Ordine del Giorno</b>
+                <strong>📋 Ordine del Giorno</strong>
                 <div style="margin-top:8pt">${odgHtml}</div>
             </div>
 
             ${ritornoHtml}
             ${postiAzioneHtml}
             ${varieHtml}
-
-            ${piePaginaHtml ? `<div style="margin-top:32pt;padding-top:12pt;border-top:1px solid #eee">${piePaginaHtml}</div>` : ''}
         </div>
     `;
 
-    const container = document.createElement('div');
-    container.style.position = 'fixed';
-    container.style.left = '-9999px';
-    container.style.top = '0';
-    container.style.width = '800px'; 
-    container.style.background = 'white';
-    container.innerHTML = htmlContent;
-    document.body.appendChild(container);
-
-    console.log("PDF Export: Container created and added to DOM");
-
     try {
-        const filename = `Verbale_${(verbale.numero || '').toString().padStart(3, '0')}_${verbale.data || 'data'}.pdf`;
+        console.log("PDF Export Engine: parsing HTML with html-to-pdfmake...");
         
-        const opt = {
-            margin: [10, 10, 10, 10] as [number, number, number, number],
-            filename,
-            image: { type: 'jpeg' as const, quality: 0.95 },
-            html2canvas: { 
-                scale: 1.5, // Ridotto a 1.5 per prevenire crash di memoria su PC/Tablet
-                useCORS: true,
-                logging: true, // Attivato logging interno per diagnostica
-                letterRendering: true,
-                windowWidth: 800
+        // Passa window per garantire la corretta interpretazione dei nodi
+        const parsedContent = htmlToPdfmake(contentHtml, { window: window as any });
+        const parsedHeader = intestazioneHtml ? htmlToPdfmake(`<div style="font-size:10pt; color:#666; text-align:center;">${intestazioneHtml}</div>`, { window: window as any }) : null;
+        const parsedFooter = piePaginaHtml ? htmlToPdfmake(`<div style="font-size:10pt; color:#666; text-align:center;">${piePaginaHtml}</div>`, { window: window as any }) : null;
+
+        const docDefinition = {
+            content: parsedContent,
+            header: parsedHeader ? { margin: [40, 20, 40, 0] as [number, number, number, number], stack: Array.isArray(parsedHeader) ? parsedHeader : [parsedHeader] } : undefined,
+            footer: function(currentPage: number, pageCount: number) {
+                const footerStack: any[] = [];
+                if (parsedFooter) {
+                    if (Array.isArray(parsedFooter)) footerStack.push(...parsedFooter);
+                    else footerStack.push(parsedFooter);
+                }
+                footerStack.push({ text: `Pagina ${currentPage} di ${pageCount}`, alignment: 'right', fontSize: 10, color: '#999', margin: [0, 5, 0, 0] });
+                
+                return {
+                    margin: [40, 10, 40, 20] as [number, number, number, number],
+                    stack: footerStack
+                };
             },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const },
-            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] as any }
+            pageMargins: [40, 60, 40, 60] as [number, number, number, number],
+            defaultStyle: {
+                fontSize: 12,
+                color: '#111111'
+            }
         };
 
-        console.log("PDF Export: Starting html2pdf save sequence...");
-        await html2pdf().set(opt).from(container).save();
-        console.log("PDF Export: html2pdf save completed successfully");
+        const filename = `Verbale_${(verbale.numero || '').toString().padStart(3, '0')}_${verbale.data || 'data'}.pdf`;
+
+        console.log("PDF Export Engine: Generating vectorial PDF with pdfMake...");
+        // Usa pdfMake per generare e scaricare nativamente il PDF (senza dipendere dal canvas)
+        pdfMake.createPdf(docDefinition).download(filename);
+        
+        console.log("PDF Export Engine: Vectorial PDF generated successfully!");
     } catch (error) {
         console.error("PDF Export Error Detailed:", error);
         throw error;
-    } finally {
-        if (container && container.parentNode) {
-            document.body.removeChild(container);
-            console.log("PDF Export: Container removed from DOM");
-        }
     }
 }
