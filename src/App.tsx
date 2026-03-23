@@ -17,10 +17,12 @@ import MembriCoCa from '@/pages/Verbali/MembriCoCa';
 import ImpostazioniVerbale from '@/pages/Verbali/ImpostazioniVerbale';
 import VerbaliStats from '@/pages/Verbali/VerbaliStats';
 import Calendario from '@/pages/Calendario';
+import UpdateManager from '@/components/UpdateManager';
 
 function App() {
   return (
     <ThemeProvider>
+      <UpdateManager />
       <Router>
         <Routes>
           {/* Public routes */}

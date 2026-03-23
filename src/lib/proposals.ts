@@ -1,7 +1,7 @@
 import { supabase } from './supabase';
 import { Proposal, Location } from '@/types';
 import { getUser } from './data';
-import { addPoints, addPointsToUser } from './gamification';
+import { addPointsToUserWithStats } from './gamification';
 
 // =====================================================
 // PROPOSALS MANAGEMENT (Supabase)
@@ -82,6 +82,9 @@ export async function rejectProposal(proposalId: string, rejecterId: string) {
 
         if (updateError) throw updateError;
 
+        // Award 2 points to the rejecter for participating in validation + update validations_given counter
+        await addPointsToUserWithStats(rejecterId, 2, { validationsGiven: 1 });
+
         // If 2+ rejections, reject the proposal and penalize proposer
         if (newRejections.length >= 2) {
             await supabase
@@ -139,8 +142,8 @@ export async function approveProposal(proposalId: string, approverId: string) {
 
         if (updateError) throw updateError;
 
-        // Reward for approving
-        await addPoints(5);
+        // Reward 5 points to the approver + update contributions_approved and validations_given
+        await addPointsToUserWithStats(approverId, 5, { contributionsApproved: 1, validationsGiven: 1 });
 
         // If 2+ approvals, apply the proposal
         if (newApprovals.length >= 2) {
@@ -154,7 +157,7 @@ export async function approveProposal(proposalId: string, approverId: string) {
 
         return mapSupabaseProposalToProposal({ ...proposal, approvals: newApprovals });
     } catch (error) {
-        console.error('Error approving proposal:', error);
+        console.error('Error approving proposal:', error)
     }
 }
 
@@ -169,8 +172,8 @@ async function applyProposal(proposal: Proposal) {
 
             if (error) throw error;
 
-            // Reward proposer
-            await addPointsToUser(proposal.proposerId, 10);
+            // Reward proposer: 10 points + increment location-related stats
+            await addPointsToUserWithStats(proposal.proposerId, 10, { contributionsApproved: 1 });
             alert(`Il luogo "${proposal.locationName}" è stato eliminato definitivamente.`);
         } else if (proposal.type === 'update' && proposal.changes) {
             // Update the location
@@ -191,14 +194,15 @@ async function applyProposal(proposal: Proposal) {
                 throw new Error("Luogo originale non trovato. L'aggiornamento non è stato possibile.");
             }
 
-            // Reward proposer
-            await addPointsToUser(proposal.proposerId, 10);
+            // Reward proposer: 10 points + increment contributions_approved
+            await addPointsToUserWithStats(proposal.proposerId, 10, { contributionsApproved: 1 });
             alert(`Le modifiche a "${proposal.locationName}" sono state applicate correttamente sul luogo esistente!`);
         }
     } catch (error) {
         console.error('Error applying proposal:', error);
     }
 }
+
 
 // Helper functions
 function mapSupabaseProposalToProposal(data: any): Proposal {

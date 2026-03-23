@@ -66,3 +66,48 @@ export async function addPointsToUser(userId: string, amount: number) {
         console.error('Error adding points to user:', error);
     }
 }
+
+/**
+ * Adds points to a user AND increments one or more profile stat counters atomically.
+ * @param userId - target user ID
+ * @param amount - points to add (can be negative for penalties)
+ * @param stats  - an object with optional counters to increment:
+ *                 contributionsApproved, validationsGiven, locationsAdded, rsLocationsAdded, etc.
+ */
+export async function addPointsToUserWithStats(
+    userId: string,
+    amount: number,
+    stats: {
+        contributionsApproved?: number;
+        validationsGiven?: number;
+        locationsAdded?: number;
+        rsLocationsAdded?: number;
+        pricingInfoAdded?: number;
+        coordinateInfoAdded?: number;
+        websiteInfoAdded?: number;
+    } = {}
+) {
+    try {
+        const user = await getUser(userId);
+        user.points = Math.max(0, user.points + amount);
+
+        // Apply stat increments
+        if (stats.contributionsApproved) user.contributionsApproved += stats.contributionsApproved;
+        if (stats.validationsGiven)     user.validationsGiven     += stats.validationsGiven;
+        if (stats.locationsAdded)       user.locationsAdded       += stats.locationsAdded;
+        if (stats.rsLocationsAdded)     user.rsLocationsAdded     += stats.rsLocationsAdded;
+        if (stats.pricingInfoAdded)     user.pricingInfoAdded     += stats.pricingInfoAdded;
+        if (stats.coordinateInfoAdded)  user.coordinateInfoAdded  += stats.coordinateInfoAdded;
+        if (stats.websiteInfoAdded)     user.websiteInfoAdded     += stats.websiteInfoAdded;
+
+        // Check for level up
+        const newLevelInfo = getLevelInfo(user.points);
+        if (newLevelInfo.current.level > user.level) {
+            user.level = newLevelInfo.current.level;
+        }
+
+        await updateUser(user);
+    } catch (error) {
+        console.error('Error updating user stats/points:', error);
+    }
+}

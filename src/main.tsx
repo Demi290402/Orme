@@ -8,16 +8,3 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 )
-
-import { registerSW } from 'virtual:pwa-register'
-
-const updateSW = registerSW({
-  onNeedRefresh() {
-    if (confirm('Nuova versione disponibile! Vuoi ricaricare per aggiornare?')) {
-      updateSW(true)
-    }
-  },
-  onOfflineReady() {
-    console.log('App pronta per l\'uso offline.')
-  },
-})
