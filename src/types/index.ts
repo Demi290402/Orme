@@ -192,6 +192,7 @@ export interface Location {
     // Metadata
     lastUpdatedAt: string; // ISODate
     lastUpdatedBy: string; // User ID or Nickname
+    availabilityStatus: 'available' | 'maintenance' | 'closed';
 }
 
 export interface Proposal {

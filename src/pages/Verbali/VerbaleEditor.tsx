@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { getUser } from '@/lib/data';
 import VerbaleHeader from '@/components/VerbaleHeader';
 import RichTextEditor from '@/components/RichTextEditor';
+import { createNotificationsForGroup } from '@/lib/notifications';
 
 type TabType = 'presenze' | 'odg' | 'sezioni' | 'anteprima';
 
@@ -40,6 +41,11 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
     const [showNotifyModal, setShowNotifyModal] = useState(false);
     const [isFabOpen, setIsFabOpen] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
+    const [notifyStatus, setNotifyStatus] = useState<{
+        inApp: 'idle' | 'sending' | 'done' | 'error';
+        email: 'idle' | 'sending' | 'done' | 'error' | 'not_configured';
+    }>({ inApp: 'idle', email: 'idle' });
+    const [_savedVerbaleForModal, setSavedVerbaleForModal] = useState<Verbale | null>(null);
 
     const [verbale, setVerbale] = useState<Partial<Verbale>>({
         numero: 1,
@@ -153,6 +159,8 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
             }
 
             if (!silent) {
+                setSavedVerbaleForModal(saved);
+                setNotifyStatus({ inApp: 'idle', email: 'idle' });
                 setShowNotifyModal(true);
             }
             return saved;
@@ -161,6 +169,62 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
             if (!silent) alert('Errore durante il salvataggio: ' + (err.message || 'Controlla la console'));
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleNotifyInApp = async () => {
+        if (!currentUser || notifyStatus.inApp !== 'idle') return;
+        setNotifyStatus(s => ({ ...s, inApp: 'sending' }));
+        try {
+            const v = verbale as Verbale;
+            const dateStr = v.data ? new Date(v.data).toLocaleDateString('it-IT', { day: '2-digit', month: 'long' }) : '';
+            await createNotificationsForGroup(
+                currentUser.groupId,
+                'verbale_saved',
+                `📋 Verbale N. ${v.numero} — ${v.titolo || 'Riunione di CoCa'}`,
+                `${currentUser.nickname || currentUser.firstName} ha salvato il verbale del ${dateStr}.`,
+                { verbaleId: v.id, numero: v.numero },
+                currentUser.id
+            );
+            setNotifyStatus(s => ({ ...s, inApp: 'done' }));
+        } catch (e) {
+            console.error('handleNotifyInApp error:', e);
+            setNotifyStatus(s => ({ ...s, inApp: 'error' }));
+        }
+    };
+
+    const handleNotifyEmail = async () => {
+        if (!currentUser || notifyStatus.email !== 'idle') return;
+        setNotifyStatus(s => ({ ...s, email: 'sending' }));
+        try {
+            const supabaseUrl = (import.meta as any).env.VITE_SUPABASE_URL;
+            const supabaseKey = (import.meta as any).env.VITE_SUPABASE_ANON_KEY;
+            const v = verbale as Verbale;
+            const res = await fetch(`${supabaseUrl}/functions/v1/send-email-notification`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${supabaseKey}`,
+                },
+                body: JSON.stringify({
+                    groupId: currentUser.groupId,
+                    excludeUserId: currentUser.id,
+                    subject: `📋 Verbale N. ${v.numero} — ${v.titolo || 'Riunione di CoCa'}`,
+                    body: `${currentUser.nickname || currentUser.firstName} ha salvato il verbale del ${
+                        v.data ? new Date(v.data).toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric' }) : ''
+                    }. Aprilo su Orme per leggere i dettagli.`,
+                }),
+            });
+            if (!res.ok) throw new Error(await res.text());
+            setNotifyStatus(s => ({ ...s, email: 'done' }));
+        } catch (e: any) {
+            console.error('handleNotifyEmail error:', e);
+            // If function not deployed, show a friendly message
+            if (e.message?.includes('not_configured') || e.message?.includes('404') || e.message?.includes('RESEND_API_KEY')) {
+                setNotifyStatus(s => ({ ...s, email: 'not_configured' }));
+            } else {
+                setNotifyStatus(s => ({ ...s, email: 'error' }));
+            }
         }
     };
 
@@ -675,14 +739,14 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                         className="p-1.5 text-red-300 hover:text-red-500 transition-all font-bold"
                                                     >✕</button>
                                                 </div>
-                                                <textarea 
+                                                <RichTextEditor
                                                     value={rit.contenuto}
-                                                    onChange={e => {
+                                                    onChange={(val) => {
                                                         const next = [...(verbale.ritorni || [])];
-                                                        next[idx].contenuto = e.target.value;
+                                                        next[idx].contenuto = val;
                                                         setVerbale(v => ({ ...v, ritorni: next }));
                                                     }}
-                                                    className="w-full p-4 bg-white border border-gray-100 rounded-2xl text-xs focus:ring-1 focus:ring-scout-green outline-none h-24 italic font-serif"
+                                                    minHeight="96px"
                                                     placeholder="Cosa è emerso..."
                                                 />
                                             </div>
@@ -908,10 +972,10 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                     <h3 className="font-serif font-black text-gray-500 uppercase text-sm tracking-widest flex items-center gap-2">
                                         💬 Varie ed Eventuali
                                     </h3>
-                                    <textarea 
+                                    <RichTextEditor
                                         value={verbale.varie || ''}
-                                        onChange={e => setVerbale(v => ({ ...v, varie: e.target.value }))}
-                                        className="w-full p-6 bg-gray-50/50 border border-gray-100 rounded-3xl text-sm focus:ring-1 focus:ring-gray-300 outline-none min-h-[150px] font-serif italic leading-relaxed"
+                                        onChange={(val) => setVerbale(v => ({ ...v, varie: val }))}
+                                        minHeight="150px"
                                         placeholder="Note conclusive, avvisi rapidi, etc..."
                                     />
                                 </div>
@@ -1347,36 +1411,64 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                             </div>
 
                             <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100 text-left">
-                                <p className="text-sm font-bold text-amber-800 mb-3">📣 Vuoi notificare gli altri capi?</p>
+                                <p className="text-sm font-bold text-amber-800 dark:text-amber-500 mb-3">📣 Vuoi notificare gli altri capi?</p>
                                 <div className="grid grid-cols-1 gap-2">
                                     <button
-                                        onClick={() => { alert('Notifica push inviata!'); setShowNotifyModal(false); }}
-                                        className="w-full bg-amber-500 text-white py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-amber-600 transition-all active:scale-95"
+                                        onClick={handleNotifyInApp}
+                                        disabled={notifyStatus.inApp !== 'idle'}
+                                        className={cn(
+                                            "w-full py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-100 disabled:cursor-not-allowed",
+                                            notifyStatus.inApp === 'idle' ? "bg-amber-500 text-white hover:bg-amber-600" :
+                                            notifyStatus.inApp === 'sending' ? "bg-amber-300 text-white" :
+                                            notifyStatus.inApp === 'done' ? "bg-scout-green text-white" :
+                                            "bg-red-500 text-white"
+                                        )}
                                     >
-                                        <Bell size={18} />
-                                        Invia notifica push
+                                        {notifyStatus.inApp === 'done' ? <CheckCircle2 size={18} /> : <Bell size={18} />}
+                                        {notifyStatus.inApp === 'idle' ? 'Invia notifica in app' :
+                                         notifyStatus.inApp === 'sending' ? 'Invio in corso...' :
+                                         notifyStatus.inApp === 'error' ? 'Errore' :
+                                         'Notifica inviata!'}
                                     </button>
                                     <button
-                                        onClick={() => { alert('Email inviata!'); setShowNotifyModal(false); }}
-                                        className="w-full bg-blue-500 text-white py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-blue-600 transition-all active:scale-95"
+                                        onClick={handleNotifyEmail}
+                                        disabled={notifyStatus.email !== 'idle'}
+                                        className={cn(
+                                            "w-full py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-100 disabled:cursor-not-allowed",
+                                            notifyStatus.email === 'idle' ? "bg-blue-500 text-white hover:bg-blue-600" :
+                                            notifyStatus.email === 'sending' ? "bg-blue-300 text-white" :
+                                            notifyStatus.email === 'done' ? "bg-scout-green text-white" :
+                                            notifyStatus.email === 'not_configured' ? "bg-gray-200 text-gray-500" :
+                                            "bg-red-500 text-white"
+                                        )}
+                                        title={notifyStatus.email === 'not_configured' ? 'Servizio email non configurato' : ''}
                                     >
-                                        <Mail size={18} />
-                                        Invia email
+                                        {notifyStatus.email === 'done' ? <CheckCircle2 size={18} /> : 
+                                         notifyStatus.email === 'not_configured' ? <AlertCircle size={18} /> : <Mail size={18} />}
+                                        {notifyStatus.email === 'idle' ? 'Invia email' :
+                                         notifyStatus.email === 'sending' ? 'Invio in corso...' :
+                                         notifyStatus.email === 'error' ? 'Errore' :
+                                         notifyStatus.email === 'not_configured' ? 'Email disabilitate' :
+                                         'Email inviata!'}
                                     </button>
-                                    <button
-                                        onClick={() => { alert('Notifica + Email inviati!'); setShowNotifyModal(false); }}
-                                        className="w-full bg-scout-green text-white py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-scout-green-dark transition-all active:scale-95"
-                                    >
-                                        <Bell size={16} /><Mail size={16} />
-                                        Invia entrambi
-                                    </button>
-                                    <button
-                                        onClick={() => setShowNotifyModal(false)}
-                                        className="w-full bg-gray-100 text-gray-500 py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-gray-200 transition-all"
-                                    >
-                                        <BellOff size={18} />
-                                        Non notificare
-                                    </button>
+                                    
+                                    {(notifyStatus.inApp === 'done' || notifyStatus.email === 'done') ? (
+                                        <button
+                                            onClick={() => setShowNotifyModal(false)}
+                                            className="w-full bg-gray-900 text-white py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-gray-800 transition-all mt-2"
+                                        >
+                                            <CheckCircle2 size={18} />
+                                            Fatto, chiudi
+                                        </button>
+                                    ) : (
+                                        <button
+                                            onClick={() => setShowNotifyModal(false)}
+                                            className="w-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300 py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
+                                        >
+                                            <BellOff size={18} />
+                                            Non notificare
+                                        </button>
+                                    )}
                                 </div>
                             </div>
 

@@ -18,7 +18,6 @@ export default function Login() {
             const user = await loginUser(email, password);
 
             if (user) {
-                // Redirect to the page they were trying to access, or home if none
                 const from = (location.state as any)?.from?.pathname || '/';
                 navigate(from, { replace: true });
             } else {
@@ -30,43 +29,42 @@ export default function Login() {
     };
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-scout-beige-light p-4">
-            <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-100">
+        <div className="flex flex-col items-center justify-center min-h-screen bg-scout-beige-light dark:bg-gray-900 p-4">
+            <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-100 dark:border-gray-700">
                 <div className="flex justify-center mb-6">
                     <Logo className="h-24 w-auto" />
                 </div>
 
-                <h1 className="text-2xl font-bold text-center text-scout-brown mb-2">Benvenuto in Orme</h1>
-                <p className="text-center text-gray-500 mb-8">Accedi per lasciare il tuo segno.</p>
+                <h1 className="text-2xl font-bold text-center text-scout-brown dark:text-amber-400 mb-2">Benvenuto in Orme</h1>
+                <p className="text-center text-gray-500 dark:text-gray-400 mb-8">Accedi per lasciare il tuo segno.</p>
 
                 {error && (
-                    <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-center text-sm font-bold border border-red-100">
+                    <div className="bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300 p-3 rounded-lg mb-4 text-center text-sm font-bold border border-red-100 dark:border-red-800">
                         {error}
                     </div>
                 )}
 
                 <form onSubmit={handleLogin} className="space-y-4">
                     <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-1">Email</label>
+                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Email</label>
                         <input
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            className="w-full p-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-scout-green"
+                            className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white outline-none focus:ring-2 focus:ring-scout-green dark:placeholder-gray-400"
                             placeholder="turi1@scout.it"
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-1">Password</label>
+                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Password</label>
                         <input
                             type="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="w-full p-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-scout-green"
+                            className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white outline-none focus:ring-2 focus:ring-scout-green dark:placeholder-gray-400"
                             placeholder="••••••••"
                         />
                     </div>
-
 
                     <button
                         type="submit"
@@ -76,8 +74,8 @@ export default function Login() {
                     </button>
                 </form>
 
-                <p className="text-center mt-6 text-sm text-gray-500">
-                    Non hai un account? <Link to="/register" className="text-scout-brown font-bold hover:underline">Registrati</Link>
+                <p className="text-center mt-6 text-sm text-gray-500 dark:text-gray-400">
+                    Non hai un account? <Link to="/register" className="text-scout-brown dark:text-amber-400 font-bold hover:underline">Registrati</Link>
                 </p>
             </div>
         </div>

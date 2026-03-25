@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Phone, MessageCircle, Map, ArrowLeft, BedDouble, Tent, Coffee, ShieldAlert, Edit, Euro, AlertTriangle } from 'lucide-react';
+import { Phone, MessageCircle, Map, ArrowLeft, BedDouble, Tent, Coffee, ShieldAlert, Edit, Euro, AlertTriangle, Wrench, Ban } from 'lucide-react';
 import { getLocations, getUser } from '@/lib/data';
 import { Location } from '@/types';
 import { getStalenessInfo, cn } from '@/lib/utils';
@@ -58,24 +58,48 @@ export default function LocationDetail() {
                 Aggiornato a: {new Date(location.lastUpdatedAt).toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })} {updatedByText}
             </div>
 
+            {/* Availability Status Banner */}
+            {location.availabilityStatus && location.availabilityStatus !== 'available' && (
+                <div className={cn(
+                    "flex items-center gap-3 p-4 rounded-2xl border-2 font-semibold",
+                    location.availabilityStatus === 'maintenance'
+                        ? "bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300"
+                        : "bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700 text-red-800 dark:text-red-300"
+                )}>
+                    {location.availabilityStatus === 'maintenance'
+                        ? <Wrench size={22} className="shrink-0" />
+                        : <Ban size={22} className="shrink-0" />}
+                    <div>
+                        <p className="font-bold text-base">
+                            {location.availabilityStatus === 'maintenance' ? '🔧 Struttura in manutenzione' : '🚫 Struttura non disponibile'}
+                        </p>
+                        <p className="text-sm font-normal opacity-80">
+                            {location.availabilityStatus === 'maintenance'
+                                ? 'Questa struttura è temporaneamente in ristrutturazione o manutenzione. Verificare la disponibilità prima di contattare.'
+                                : 'Questa struttura non accetta più gruppi in autogestione. Verificare con il responsabile.'}
+                        </p>
+                    </div>
+                </div>
+            )}
+
             {/* Action Buttons */}
             <div className="grid grid-cols-3 gap-3">
                 {phone && (
                     <button 
                         onClick={() => currentUser ? window.open(`tel:${phone}`) : navigate('/login')}
-                        className="flex flex-col items-center justify-center bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:bg-gray-50 active:scale-95 transition-all text-center"
+                        className="flex flex-col items-center justify-center bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-95 transition-all text-center"
                     >
                         <Phone className={cn("text-scout-green mb-1", !currentUser && "blur-[2px]")} size={24} />
-                        <span className="text-xs font-medium">{currentUser ? 'Chiama' : 'Accedi'}</span>
+                        <span className="text-xs font-medium dark:text-gray-300">{currentUser ? 'Chiama' : 'Accedi'}</span>
                     </button>
                 )}
                 {whatsapp && (
                     <button 
                         onClick={() => currentUser ? window.open(`https://wa.me/${whatsapp}`) : navigate('/login')}
-                        className="flex flex-col items-center justify-center bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:bg-gray-50 active:scale-95 transition-all text-center"
+                        className="flex flex-col items-center justify-center bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-95 transition-all text-center"
                     >
                         <MessageCircle className={cn("text-green-500 mb-1", !currentUser && "blur-[2px]")} size={24} />
-                        <span className="text-xs font-medium">{currentUser ? 'WhatsApp' : 'Accedi'}</span>
+                        <span className="text-xs font-medium dark:text-gray-300">{currentUser ? 'WhatsApp' : 'Accedi'}</span>
                     </button>
                 )}
                 <a
@@ -84,77 +108,77 @@ export default function LocationDetail() {
                         : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location.name + ' ' + location.commune)}`
                     }
                     target="_blank" rel="noreferrer"
-                    className="flex flex-col items-center justify-center bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:bg-gray-50 active:scale-95 transition-all text-center"
+                    className="flex flex-col items-center justify-center bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-95 transition-all text-center"
                 >
                     <Map className="text-blue-500 mb-1" size={24} />
-                    <span className="text-xs font-medium">Mappa</span>
+                    <span className="text-xs font-medium dark:text-gray-300">Mappa</span>
                 </a>
             </div>
 
             {/* Quick Note */}
-            <div className="bg-yellow-50 p-4 rounded-xl border border-yellow-100 text-sm text-yellow-900 italic">
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-xl border border-yellow-100 dark:border-yellow-800 text-sm text-yellow-900 dark:text-yellow-200 italic">
                 "{location.quickNote}"
             </div>
 
             {/* Pricing Section */}
             {location.pricing && (
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 space-y-3">
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 space-y-3">
                     <h2 className="font-semibold flex items-center gap-2 text-scout-brown">
                         <Euro size={20} /> Prezzi e Tariffe
                     </h2>
                     <div className="flex items-baseline gap-2">
-                        <span className="text-2xl font-bold text-gray-900">{location.pricing.basePrice}€</span>
-                        <span className="text-gray-500 text-sm">
+                        <span className="text-2xl font-bold text-gray-900 dark:text-white">{location.pricing.basePrice}€</span>
+                        <span className="text-gray-500 dark:text-gray-400 text-sm">
                             {location.pricing.unit === 'per_night' ? 'a notte per persona' : 'al giorno per persona'}
                         </span>
                     </div>
                     {location.pricing.description && (
-                        <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
-                            <p className="text-sm text-gray-700 leading-relaxed">
-                                {location.pricing.description}
-                            </p>
+                        <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg border border-gray-100 dark:border-gray-600">
+                            <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed"
+                                dangerouslySetInnerHTML={{ __html: location.pricing.description }}
+                            />
                         </div>
                     )}
                 </div>
             )}
 
             {/* Details Grid */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="p-4 border-b border-gray-100">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+                <div className="p-4 border-b border-gray-100 dark:border-gray-700">
                     <h2 className="font-semibold mb-3">Caratteristiche</h2>
                     <div className="grid grid-cols-2 gap-4">
-                        <div className="flex items-center gap-2 text-sm text-gray-700">
+                        <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                             <BedDouble size={18} className="text-gray-400" />
                             <span>{location.beds ? `${location.beds} posti letto` : 'No posti letto'}</span>
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-700">
+                        <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                             <Tent size={18} className={location.hasTents ? "text-green-600" : "text-gray-400"} />
                             <span className={location.hasTents ? "font-medium" : "text-gray-400"}>{location.hasTents ? 'Tende OK' : 'No tende'}</span>
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-700">
+                        <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                             <Coffee size={18} className={location.hasRefectory ? "text-brown-600" : "text-gray-400"} />
                             <span>{location.hasRefectory ? 'Refettorio disponibile' : 'No refettorio'}</span>
                         </div>
                         {location.hasRoverService && (
-                            <div className="flex items-center gap-2 text-sm text-scout-brown font-medium col-span-2 bg-orange-50 p-2 rounded-lg">
+                            <div className="flex items-center gap-2 text-sm text-scout-brown font-medium col-span-2 bg-orange-50 dark:bg-orange-900/20 p-2 rounded-lg">
                                 <ShieldAlert size={18} />
                                 <span>Servizio RS: {location.roverServiceDescription || 'Disponibile'}</span>
                             </div>
                         )}
                         {/* New Fields */}
-                        <div className="col-span-2 grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-gray-100">
-                            {location.hasChurch && <span className="text-xs bg-gray-100 px-2 py-1 rounded">⛪ Chiesa</span>}
-                            {location.hasGreenSpace && <span className="text-xs bg-gray-100 px-2 py-1 rounded">🌳 Spazi Verdi</span>}
-                            {location.hasEquippedKitchen && <span className="text-xs bg-gray-100 px-2 py-1 rounded">🍳 Cucina Attrezzata</span>}
-                            {location.hasPoles && <span className="text-xs bg-gray-100 px-2 py-1 rounded">🪵 Paletti</span>}
-                            {location.bathrooms !== undefined && location.bathrooms > 0 && <span className="text-xs bg-gray-100 px-2 py-1 rounded">🚽 {location.bathrooms} Bagni</span>}
+                        <div className="col-span-2 grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+                            {location.hasChurch && <span className="text-xs bg-gray-100 dark:bg-gray-700 dark:text-gray-300 px-2 py-1 rounded">⛪ Chiesa</span>}
+                            {location.hasGreenSpace && <span className="text-xs bg-gray-100 dark:bg-gray-700 dark:text-gray-300 px-2 py-1 rounded">🌳 Spazi Verdi</span>}
+                            {location.hasEquippedKitchen && <span className="text-xs bg-gray-100 dark:bg-gray-700 dark:text-gray-300 px-2 py-1 rounded">🍳 Cucina Attrezzata</span>}
+                            {location.hasPoles && <span className="text-xs bg-gray-100 dark:bg-gray-700 dark:text-gray-300 px-2 py-1 rounded">🪵 Paletti</span>}
+                            {location.bathrooms !== undefined && location.bathrooms > 0 && <span className="text-xs bg-gray-100 dark:bg-gray-700 dark:text-gray-300 px-2 py-1 rounded">🚽 {location.bathrooms} Bagni</span>}
                             {location.website && (
-                                <a href={location.website} target="_blank" rel="noopener noreferrer" className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded col-span-2 truncate">
+                                <a href={location.website} target="_blank" rel="noopener noreferrer" className="text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 px-2 py-1 rounded col-span-2 truncate">
                                     🌐 {location.website}
                                 </a>
                             )}
                             {location.otherLogistics && (
-                                <span className="text-xs bg-yellow-50 text-yellow-800 px-2 py-1 rounded col-span-2">ℹ️ {location.otherLogistics}</span>
+                                <span className="text-xs bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-300 px-2 py-1 rounded col-span-2">ℹ️ {location.otherLogistics}</span>
                             )}
                         </div>
                     </div>
@@ -162,7 +186,7 @@ export default function LocationDetail() {
 
                 {/* Restrictions */}
                 {location.restrictions.length > 0 && (
-                    <div className="p-4 bg-red-50 text-red-900 text-sm">
+                    <div className="p-4 bg-red-50 dark:bg-red-900/20 text-red-900 dark:text-red-200 text-sm">
                         <h3 className="font-semibold mb-2 flex items-center gap-2">
                             <ShieldAlert size={16} /> Restrizioni
                         </h3>
@@ -174,19 +198,19 @@ export default function LocationDetail() {
 
                 {/* Attenzioni section */}
                 {(location.hasPastures || location.hasInsects || location.hasDiseases || location.hasLittleShade || location.hasVeryBusyArea || location.otherAttention) && (
-                    <div className="p-4 bg-orange-50 border-t border-orange-100">
-                        <h3 className="font-semibold mb-2 text-orange-900 flex items-center gap-2">
+                    <div className="p-4 bg-orange-50 dark:bg-orange-900/20 border-t border-orange-100 dark:border-orange-900">
+                        <h3 className="font-semibold mb-2 text-orange-900 dark:text-orange-200 flex items-center gap-2">
                             <AlertTriangle size={16} /> Attenzioni Speciali
                         </h3>
                         <div className="flex flex-wrap gap-2 mb-2">
-                            {location.hasPastures && <span className="text-[10px] bg-orange-100 text-orange-800 px-2 py-0.5 rounded-full font-medium">🐑 Pascoli/Greggi</span>}
-                            {location.hasInsects && <span className="text-[10px] bg-orange-100 text-orange-800 px-2 py-0.5 rounded-full font-medium">🐝 Insetti fastidiosi</span>}
-                            {location.hasDiseases && <span className="text-[10px] bg-orange-100 text-orange-800 px-2 py-0.5 rounded-full font-medium">🦠 Malattie/Zoonosi</span>}
-                            {location.hasLittleShade && <span className="text-[10px] bg-orange-100 text-orange-800 px-2 py-0.5 rounded-full font-medium">☀️ Poca ombra</span>}
-                            {location.hasVeryBusyArea && <span className="text-[10px] bg-orange-100 text-orange-800 px-2 py-0.5 rounded-full font-medium">👥 Zona frequentata</span>}
+                            {location.hasPastures && <span className="text-[10px] bg-orange-100 dark:bg-orange-800/40 text-orange-800 dark:text-orange-200 px-2 py-0.5 rounded-full font-medium">🐑 Pascoli/Greggi</span>}
+                            {location.hasInsects && <span className="text-[10px] bg-orange-100 dark:bg-orange-800/40 text-orange-800 dark:text-orange-200 px-2 py-0.5 rounded-full font-medium">🐝 Insetti fastidiosi</span>}
+                            {location.hasDiseases && <span className="text-[10px] bg-orange-100 dark:bg-orange-800/40 text-orange-800 dark:text-orange-200 px-2 py-0.5 rounded-full font-medium">🦠 Malattie/Zoonosi</span>}
+                            {location.hasLittleShade && <span className="text-[10px] bg-orange-100 dark:bg-orange-800/40 text-orange-800 dark:text-orange-200 px-2 py-0.5 rounded-full font-medium">☀️ Poca ombra</span>}
+                            {location.hasVeryBusyArea && <span className="text-[10px] bg-orange-100 dark:bg-orange-800/40 text-orange-800 dark:text-orange-200 px-2 py-0.5 rounded-full font-medium">👥 Zona frequentata</span>}
                         </div>
                         {location.otherAttention && (
-                            <p className="text-xs text-orange-800 italic bg-white/50 p-2 rounded-lg border border-orange-100">
+                            <p className="text-xs text-orange-800 dark:text-orange-200 italic bg-white/50 dark:bg-gray-800/50 p-2 rounded-lg border border-orange-100 dark:border-orange-800">
                                 {location.otherAttention}
                             </p>
                         )}
@@ -199,7 +223,7 @@ export default function LocationDetail() {
                 <h2 className="font-semibold mb-3 ml-1">Attività Ideali</h2>
                 <div className="flex flex-wrap gap-2">
                     {location.activities.map((act, i) => (
-                        <span key={i} className="bg-white border border-gray-200 px-3 py-1 rounded-full text-xs text-gray-600">
+                        <span key={i} className="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 px-3 py-1 rounded-full text-xs text-gray-600 dark:text-gray-300">
                             {act}
                         </span>
                     ))}
@@ -211,7 +235,7 @@ export default function LocationDetail() {
                 <div className="space-y-3 mt-8">
                     <button
                         onClick={() => navigate(`/edit/${location.id}`)}
-                        className="w-full bg-white border-2 border-scout-green text-scout-green font-bold py-3 rounded-xl flex items-center justify-center gap-2 active:bg-green-50 hover:bg-green-50 transition-colors"
+                        className="w-full bg-white dark:bg-gray-800 border-2 border-scout-green text-scout-green font-bold py-3 rounded-xl flex items-center justify-center gap-2 active:bg-green-50 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
                     >
                         <Edit size={20} />
                         Modifica Luogo

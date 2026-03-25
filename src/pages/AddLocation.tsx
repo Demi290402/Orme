@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ChevronLeft, Save, MapPin } from 'lucide-react';
 import { addLocation, getLocations } from '@/lib/data';
+import RichTextEditor from '@/components/RichTextEditor';
 // import { addPoints } from '@/lib/gamification'; // Handled in addLocation now
 
 import { ITALIAN_PROVINCIAL_DATA, ITALIAN_REGIONS } from '@/lib/constants';
@@ -67,7 +68,10 @@ export default function AddLocation() {
         // Pricing
         pricingBase: '',
         pricingUnit: 'per_night' as 'per_night' | 'per_day',
-        pricingDescription: ''
+        pricingDescription: '',
+
+        // Availability
+        availabilityStatus: 'available' as 'available' | 'maintenance' | 'closed',
     });
 
     const livePoints = useMemo(() => {
@@ -124,7 +128,8 @@ export default function AddLocation() {
                         otherRestrictionInput: '',
                         pricingBase: found.pricing?.basePrice?.toString() || '',
                         pricingUnit: found.pricing?.unit || 'per_night',
-                        pricingDescription: found.pricing?.description || ''
+                        pricingDescription: found.pricing?.description || '',
+                        availabilityStatus: (found as any).availabilityStatus || 'available',
                     });
                 }
             }).catch(console.error);
@@ -208,6 +213,7 @@ export default function AddLocation() {
             description: formData.description,
             activities: formData.activities as any[],
             restrictions: finalRestrictions as any[],
+            availabilityStatus: formData.availabilityStatus,
             pricing: formData.pricingBase ? {
                 basePrice: parseFloat(formData.pricingBase),
                 unit: formData.pricingUnit,
@@ -244,8 +250,49 @@ export default function AddLocation() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Section 0: Disponibilità */}
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 space-y-4">
+                    <h2 className="font-semibold text-lg flex items-center gap-2">
+                        <span className="text-xl">🏪</span>
+                        Stato Disponibilità Struttura
+                    </h2>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">Indica se la struttura è attualmente aperta ad accogliere gruppi scout in autogestione.</p>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <label className={`cursor-pointer border-2 rounded-xl p-3 flex flex-col items-center justify-center text-center transition-all ${
+                            formData.availabilityStatus === 'available' 
+                                ? 'border-scout-green bg-scout-green/10 text-scout-green-dark dark:text-scout-green' 
+                                : 'border-gray-200 dark:border-gray-700 hover:border-scout-green/50 dark:text-gray-300'
+                        }`}>
+                            <input type="radio" name="availabilityStatus" value="available" checked={formData.availabilityStatus === 'available'} onChange={handleChange} className="hidden" />
+                            <span className="text-2xl mb-1">✅</span>
+                            <span className="text-sm font-bold">Disponibile</span>
+                        </label>
+                        
+                        <label className={`cursor-pointer border-2 rounded-xl p-3 flex flex-col items-center justify-center text-center transition-all ${
+                            formData.availabilityStatus === 'maintenance' 
+                                ? 'border-amber-500 bg-amber-500/10 text-amber-900 dark:text-amber-500' 
+                                : 'border-gray-200 dark:border-gray-700 hover:border-amber-500/50 dark:text-gray-300'
+                        }`}>
+                            <input type="radio" name="availabilityStatus" value="maintenance" checked={formData.availabilityStatus === 'maintenance'} onChange={handleChange} className="hidden" />
+                            <span className="text-2xl mb-1">🔧</span>
+                            <span className="text-sm font-bold leading-tight">In Manutenzione</span>
+                        </label>
+                        
+                        <label className={`cursor-pointer border-2 rounded-xl p-3 flex flex-col items-center justify-center text-center transition-all ${
+                            formData.availabilityStatus === 'closed' 
+                                ? 'border-red-500 bg-red-500/10 text-red-900 dark:text-red-500' 
+                                : 'border-gray-200 dark:border-gray-700 hover:border-red-500/50 dark:text-gray-300'
+                        }`}>
+                            <input type="radio" name="availabilityStatus" value="closed" checked={formData.availabilityStatus === 'closed'} onChange={handleChange} className="hidden" />
+                            <span className="text-2xl mb-1">🚫</span>
+                            <span className="text-sm font-bold leading-tight">Non Disponibile</span>
+                        </label>
+                    </div>
+                </div>
+
                 {/* Section 1: Info Base */}
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 space-y-4">
                     <h2 className="font-semibold text-lg flex items-center gap-2">
                         <MapPin size={20} className="text-scout-green" />
                         Informazioni Base
@@ -256,7 +303,7 @@ export default function AddLocation() {
                         <input
                             type="text" name="name" required
                             value={formData.name} onChange={handleChange}
-                            className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-scout-green focus:border-transparent"
+                            className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-scout-green focus:border-transparent"
                         />
                     </div>
 
@@ -270,7 +317,7 @@ export default function AddLocation() {
                                     const val = e.target.value;
                                     setFormData(prev => ({ ...prev, region: val, province: '' }));
                                 }}
-                                className="w-full p-3 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-scout-green"
+                                className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white bg-white focus:ring-2 focus:ring-scout-green"
                             >
                                 <option value="">Seleziona Regione...</option>
                                 {ITALIAN_REGIONS.map(r => <option key={r} value={r}>{r}</option>)}
@@ -282,7 +329,7 @@ export default function AddLocation() {
                                 <select
                                     name="province" required
                                     value={formData.province} onChange={handleChange}
-                                    className="w-full p-3 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-scout-green"
+                                    className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white bg-white focus:ring-2 focus:ring-scout-green"
                                 >
                                     <option value="">Seleziona Provincia...</option>
                                     {ITALIAN_PROVINCIAL_DATA[formData.region].map(p => (
@@ -305,7 +352,7 @@ export default function AddLocation() {
                                 type="text" name="commune" required
                                 value={formData.commune} onChange={handleChange}
                                 placeholder="es. Roma, Milano..."
-                                className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-scout-green"
+                                className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-scout-green"
                             />
                         </div>
                         <div>
@@ -317,7 +364,7 @@ export default function AddLocation() {
                                 type="text" name="address"
                                 value={formData.address} onChange={handleChange}
                                 placeholder="Via dei Cerchi, 1 o link Maps..."
-                                className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-scout-green"
+                                className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-scout-green"
                             />
                         </div>
                     </div>
@@ -346,13 +393,13 @@ export default function AddLocation() {
                 </div>
 
                 {/* Section 2: Logistica Estesa and Coordinates */}
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 space-y-4">
                     <div className="flex justify-between items-center">
                         <h2 className="font-semibold text-lg text-scout-green">Logistica e Posizione</h2>
                     </div>
 
                     {/* Coordinates Section */}
-                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-4">
+                    <div className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-xl border border-gray-200 dark:border-gray-600 mb-4">
                         <label className="block text-sm font-medium mb-1">Link Google Maps (per coordinate automatiche)</label>
                         <div className="flex gap-2 mb-3">
                             <input
@@ -416,7 +463,7 @@ export default function AddLocation() {
                             <input
                                 type="number" name="beds"
                                 value={formData.beds} onChange={handleChange}
-                                className="w-full p-3 rounded-xl border border-gray-200"
+                                className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                             />
                         </div>
                         <div>
@@ -424,7 +471,7 @@ export default function AddLocation() {
                             <input
                                 type="number" name="bathrooms"
                                 value={formData.bathrooms} onChange={handleChange}
-                                className="w-full p-3 rounded-xl border border-gray-200"
+                                className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                             />
                         </div>
                     </div>
@@ -563,11 +610,10 @@ export default function AddLocation() {
 
                     <div>
                         <label className="block text-sm font-medium mb-1">Dettagli e Flessibilità Prezzi</label>
-                        <textarea
-                            name="pricingDescription"
-                            value={formData.pricingDescription} onChange={handleChange}
-                            rows={3}
-                            className="w-full p-3 rounded-xl border border-gray-200"
+                        <RichTextEditor
+                            value={formData.pricingDescription}
+                            onChange={(val) => setFormData(prev => ({ ...prev, pricingDescription: val }))}
+                            minHeight="100px"
                             placeholder="Es. 15€ con cucina, 13€ senza. Se si va via prima delle 12 la seconda giornata è a metà prezzo."
                         />
                         <p className="text-[10px] text-gray-400 mt-1">
@@ -608,7 +654,7 @@ export default function AddLocation() {
                 </div>
 
                 {/* Section 6: Note */}
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 space-y-4">
                     <h2 className="font-semibold text-lg">Note</h2>
                     <div>
                         <label className="block text-sm font-medium mb-1">Nota Rapida (max 10 parole)</label>

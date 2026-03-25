@@ -160,10 +160,10 @@ export default function Profile() {
             {/* Edit Modal */}
             {isEditing && (
                 <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
-                    <div className="bg-white rounded-2xl w-full max-w-md p-6 space-y-4 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                    <div className="bg-white dark:bg-gray-800 dark:border dark:border-gray-700 shadow-xl rounded-2xl w-full max-w-md p-6 space-y-4 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
                         <div className="flex justify-between items-center">
-                            <h2 className="text-xl font-bold">Modifica Profilo</h2>
-                            <button onClick={() => { setIsEditing(false); setEditErrors({}); }} className="p-2 hover:bg-gray-100 rounded-full">
+                            <h2 className="text-xl font-bold dark:text-white">Modifica Profilo</h2>
+                            <button onClick={() => { setIsEditing(false); setEditErrors({}); }} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full dark:text-gray-300">
                                 <X size={24} />
                             </button>
                         </div>
@@ -172,22 +172,22 @@ export default function Profile() {
                             {/* Nome e Cognome */}
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Nome*</label>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nome*</label>
                                     <input
                                         type="text"
                                         value={editForm.firstName}
                                         onChange={e => setEditForm((prev: any) => ({ ...prev, firstName: e.target.value }))}
-                                        className={cn("w-full p-2 rounded-xl border", editErrors.firstName ? "border-red-300 bg-red-50" : "border-gray-200")}
+                                        className={cn("w-full p-2 rounded-xl border dark:bg-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-scout-green", editErrors.firstName ? "border-red-300 bg-red-50 dark:bg-red-900/20" : "border-gray-200 dark:border-gray-700")}
                                     />
                                     {editErrors.firstName && <p className="text-red-500 text-[11px] mt-1 flex items-center gap-1"><AlertCircle size={11}/>{editErrors.firstName}</p>}
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Cognome*</label>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cognome*</label>
                                     <input
                                         type="text"
                                         value={editForm.lastName}
                                         onChange={e => setEditForm((prev: any) => ({ ...prev, lastName: e.target.value }))}
-                                        className={cn("w-full p-2 rounded-xl border", editErrors.lastName ? "border-red-300 bg-red-50" : "border-gray-200")}
+                                        className={cn("w-full p-2 rounded-xl border dark:bg-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-scout-green", editErrors.lastName ? "border-red-300 bg-red-50 dark:bg-red-900/20" : "border-gray-200 dark:border-gray-700")}
                                     />
                                     {editErrors.lastName && <p className="text-red-500 text-[11px] mt-1 flex items-center gap-1"><AlertCircle size={11}/>{editErrors.lastName}</p>}
                                 </div>
@@ -195,64 +195,64 @@ export default function Profile() {
 
                             {/* Nickname */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Nickname (Totem)</label>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nickname (Totem)</label>
                                 <input
                                     type="text"
                                     value={editForm.nickname}
                                     onChange={e => setEditForm((prev: any) => ({ ...prev, nickname: e.target.value }))}
-                                    className={cn("w-full p-2 rounded-xl border", editErrors.nickname ? "border-red-300 bg-red-50" : "border-gray-200")}
+                                    className={cn("w-full p-2 rounded-xl border dark:bg-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-scout-green", editErrors.nickname ? "border-red-300 bg-red-50 dark:bg-red-900/20" : "border-gray-200 dark:border-gray-700")}
                                 />
                                 {editErrors.nickname && <p className="text-red-500 text-[11px] mt-1 flex items-center gap-1"><AlertCircle size={11}/>{editErrors.nickname}</p>}
                             </div>
 
                             {/* Email */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Email*</label>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email*</label>
                                 <input
                                     type="email"
                                     value={editForm.email}
                                     onChange={e => setEditForm((prev: any) => ({ ...prev, email: e.target.value }))}
-                                    className={cn("w-full p-2 rounded-xl border", editErrors.email ? "border-red-300 bg-red-50" : "border-gray-200")}
+                                    className={cn("w-full p-2 rounded-xl border dark:bg-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-scout-green", editErrors.email ? "border-red-300 bg-red-50 dark:bg-red-900/20" : "border-gray-200 dark:border-gray-700")}
                                 />
                                 {editErrors.email && <p className="text-red-500 text-[11px] mt-1 flex items-center gap-1"><AlertCircle size={11}/>{editErrors.email}</p>}
                             </div>
 
                             {/* Dati Gruppo */}
-                            <div className="p-3 bg-gray-50 rounded-xl space-y-3">
-                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Dati Gruppo</p>
+                            <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-xl space-y-3 dark:border dark:border-gray-700">
+                                <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Dati Gruppo</p>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                        <label className="block text-xs font-bold text-gray-500 mb-1">Regione</label>
+                                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">Regione</label>
                                         <input
                                             type="text"
                                             value={editForm.region}
                                             onChange={e => setEditForm((prev: any) => ({ ...prev, region: e.target.value }))}
-                                            className={cn("w-full p-2 rounded-lg border text-sm", editErrors.region ? "border-red-300 bg-red-50" : "border-gray-200")}
+                                            className={cn("w-full p-2 rounded-lg border text-sm dark:bg-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-scout-green", editErrors.region ? "border-red-300 bg-red-50 dark:bg-red-900/20" : "border-gray-200 dark:border-gray-700")}
                                         />
                                         {editErrors.region && <p className="text-red-500 text-[11px] mt-1 flex items-center gap-1"><AlertCircle size={11}/>{editErrors.region}</p>}
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-bold text-gray-500 mb-1">Zona</label>
+                                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">Zona</label>
                                         <input
                                             type="text"
                                             value={editForm.scoutZone}
                                             onChange={e => setEditForm((prev: any) => ({ ...prev, scoutZone: e.target.value }))}
-                                            className={cn("w-full p-2 rounded-lg border text-sm", editErrors.scoutZone ? "border-red-300 bg-red-50" : "border-gray-200")}
+                                            className={cn("w-full p-2 rounded-lg border text-sm dark:bg-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-scout-green", editErrors.scoutZone ? "border-red-300 bg-red-50 dark:bg-red-900/20" : "border-gray-200 dark:border-gray-700")}
                                         />
                                         {editErrors.scoutZone && <p className="text-red-500 text-[11px] mt-1 flex items-center gap-1"><AlertCircle size={11}/>{editErrors.scoutZone}</p>}
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-500 mb-1">Nome Gruppo</label>
+                                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">Nome Gruppo</label>
                                     <input
                                         type="text"
                                         value={editForm.groupName}
                                         onChange={e => setEditForm((prev: any) => ({ ...prev, groupName: e.target.value }))}
-                                        className={cn("w-full p-2 rounded-lg border text-sm", editErrors.groupName ? "border-red-300 bg-red-50" : "border-gray-200")}
+                                        className={cn("w-full p-2 rounded-lg border text-sm dark:bg-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-scout-green", editErrors.groupName ? "border-red-300 bg-red-50 dark:bg-red-900/20" : "border-gray-200 dark:border-gray-700")}
                                     />
                                     {editErrors.groupName && <p className="text-red-500 text-[11px] mt-1 flex items-center gap-1"><AlertCircle size={11}/>{editErrors.groupName}</p>}
                                 </div>
-                                <p className="text-[9px] text-gray-400">Il cambio gruppo non sposta i dati già inseriti.</p>
+                                <p className="text-[9px] text-gray-400 dark:text-gray-500">Il cambio gruppo non sposta i dati già inseriti.</p>
                             </div>
                         </div>
 
@@ -270,16 +270,16 @@ export default function Profile() {
             {/* Badge Detail Modal */}
             {selectedBadge && (
                 <div className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center p-6" onClick={() => setSelectedBadge(null)}>
-                    <div className="bg-white rounded-3xl w-full max-w-sm p-8 text-center space-y-4 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                    <div className="bg-white dark:bg-gray-800 dark:border dark:border-gray-700 rounded-3xl w-full max-w-sm p-8 text-center space-y-4 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
                         <div className="text-6xl mb-4">{selectedBadge.icon}</div>
-                        <h2 className="text-2xl font-bold text-gray-900">{selectedBadge.name}</h2>
-                        <div className="p-4 bg-gray-50 rounded-2xl text-gray-600 leading-relaxed font-medium">
+                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{selectedBadge.name}</h2>
+                        <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-2xl text-gray-600 dark:text-gray-300 leading-relaxed font-medium">
                             {selectedBadge.description}
                         </div>
                         <div className="pt-4">
                             <button
                                 onClick={() => setSelectedBadge(null)}
-                                className="w-full bg-scout-blue text-white font-bold py-3 rounded-xl"
+                                className="w-full bg-scout-blue dark:bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-scout-blue-dark dark:hover:bg-blue-700"
                             >
                                 Chiudi
                             </button>
@@ -322,16 +322,16 @@ export default function Profile() {
                 <div className="mt-4 text-center md:text-left md:mt-0 flex-1 w-full">
                     <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                             <div>
-                                <h1 className="text-2xl font-bold text-gray-900">{user.firstName} {user.lastName}</h1>
-                                <p className="text-gray-500 font-medium">@{user.nickname || 'Nessun nickname'}</p>
+                                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{user.firstName} {user.lastName}</h1>
+                                <p className="text-gray-500 dark:text-gray-400 font-medium">@{user.nickname || 'Nessun nickname'}</p>
                                 <div className="flex flex-wrap gap-2 mt-1">
                                     {user.scoutCode && (
-                                        <p className="text-[10px] text-scout-green font-bold bg-green-50 px-2 py-0.5 rounded-full border border-green-100">
+                                        <p className="text-[10px] text-scout-green dark:text-emerald-500 font-bold bg-green-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-full border border-green-100 dark:border-emerald-800/30">
                                             Socio: {user.scoutCode}
                                         </p>
                                     )}
                                     {user.groupName && (
-                                        <p className="text-[10px] text-scout-brown font-bold bg-orange-50 px-2 py-0.5 rounded-full border border-orange-100 uppercase">
+                                        <p className="text-[10px] text-scout-brown dark:text-orange-500 font-bold bg-orange-50 dark:bg-orange-950/20 px-2 py-0.5 rounded-full border border-orange-100 dark:border-orange-900/30 uppercase">
                                             {user.groupName} ({user.scoutZone})
                                         </p>
                                     )}
@@ -348,7 +348,7 @@ export default function Profile() {
                             </Link>
                             <button
                                 onClick={() => setIsEditing(true)}
-                                className="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-xl font-medium shadow-sm hover:bg-gray-50 flex items-center justify-center gap-2"
+                                className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-xl font-medium shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-center gap-2"
                             >
                                 <Edit2 size={18} />
                                 Modifica Profilo
@@ -359,19 +359,19 @@ export default function Profile() {
             </div>
 
             {/* Level Progress */}
-            <div className="mx-6 mb-8 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+            <div className="mx-6 mb-8 bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
                 <div className="flex justify-between items-end mb-2">
                     <div>
-                        <span className="text-sm text-gray-500">Livello Attuale</span>
+                        <span className="text-sm text-gray-500 dark:text-gray-400">Livello Attuale</span>
                         <h3 className="text-xl font-bold" style={{ color: levelInfo.current.color }}>{levelInfo.current.name}</h3>
                     </div>
                     <div className="text-right">
-                        <span className="text-2xl font-bold text-gray-900">{user.points}</span>
-                        <span className="text-sm text-gray-400"> pt</span>
+                        <span className="text-2xl font-bold text-gray-900 dark:text-white">{user.points}</span>
+                        <span className="text-sm text-gray-400 dark:text-gray-500"> pt</span>
                     </div>
                 </div>
 
-                <div className="w-full bg-gray-100 rounded-full h-3 mb-2 overflow-hidden">
+                <div className="w-full bg-gray-100 dark:bg-gray-900 rounded-full h-3 mb-2 overflow-hidden">
                     <div
                         className="h-3 rounded-full transition-all duration-1000"
                         style={{ width: `${progressPercent}%`, backgroundColor: levelInfo.current.color }}
@@ -379,23 +379,28 @@ export default function Profile() {
                 </div>
 
                 {levelInfo.next && (
-                    <p className="text-xs text-center text-gray-400">
-                        Mancano <span className="font-bold text-gray-600">{levelInfo.pointsToNext}</span> punti per {levelInfo.next.name}
+                    <p className="text-xs text-center text-gray-400 dark:text-gray-500">
+                        Mancano <span className="font-bold text-gray-600 dark:text-gray-300">{levelInfo.pointsToNext}</span> punti per {levelInfo.next.name}
                     </p>
                 )}
             </div>
 
             {/* Stats Grid */}
-            <div className="mx-6 grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                <div className="bg-scout-green/10 p-4 rounded-xl flex flex-col items-center">
-                    <MapPin className="text-scout-green mb-2" />
-                    <span className="text-2xl font-bold text-gray-900">{user.locationsAdded}</span>
-                    <span className="text-xs text-gray-500">Luoghi</span>
+            <div className="mx-6 grid grid-cols-3 gap-3 mb-8">
+                <div className="bg-scout-green/10 dark:bg-emerald-900/20 p-3 rounded-xl flex flex-col items-center justify-center">
+                    <MapPin className="text-scout-green dark:text-emerald-500 mb-2" size={20} />
+                    <span className="text-xl font-bold text-gray-900 dark:text-white">{user.locationsAdded}</span>
+                    <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider text-center">Aggiunti</span>
                 </div>
-                <div className="bg-scout-blue/10 p-4 rounded-xl flex flex-col items-center">
-                    <Award className="text-scout-blue mb-2" />
-                    <span className="text-2xl font-bold text-gray-900">{user.contributionsApproved}</span>
-                    <span className="text-xs text-gray-500">Approvati</span>
+                <div className="bg-scout-brown/10 dark:bg-amber-900/20 p-3 rounded-xl flex flex-col items-center justify-center">
+                    <Edit2 className="text-scout-brown dark:text-amber-500 mb-2" size={20} />
+                    <span className="text-xl font-bold text-gray-900 dark:text-white">{user.validationsGiven}</span>
+                    <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider text-center">Modificati</span>
+                </div>
+                <div className="bg-scout-blue/10 dark:bg-blue-900/20 p-3 rounded-xl flex flex-col items-center justify-center">
+                    <Award className="text-scout-blue dark:text-blue-500 mb-2" size={20} />
+                    <span className="text-xl font-bold text-gray-900 dark:text-white">{user.contributionsApproved}</span>
+                    <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider text-center">Approvati</span>
                 </div>
             </div>
 
@@ -417,22 +422,22 @@ export default function Profile() {
                                 onClick={() => setSelectedBadge(badge)}
                                 className={cn(
                                     "flex flex-col items-center text-center p-3 rounded-2xl border transition-all cursor-pointer active:scale-95",
-                                    isEarned ? "bg-white border-yellow-200 shadow-sm" : "bg-gray-50 border-gray-100 opacity-60"
+                                    isEarned ? "bg-white dark:bg-gray-800 border-yellow-200 dark:border-yellow-900 shadow-sm" : "bg-gray-50 dark:bg-gray-900 border-gray-100 dark:border-gray-800 opacity-60"
                                 )}
                             >
                                 <div className={cn("text-3xl mb-1", !isEarned && "filter grayscale opacity-50")}>
                                     {badge.icon}
                                 </div>
-                                <span className={cn("text-[10px] font-bold leading-tight line-clamp-1", isEarned ? "text-gray-900" : "text-gray-400")}>
+                                <span className={cn("text-[10px] font-bold leading-tight line-clamp-1", isEarned ? "text-gray-900 dark:text-gray-100" : "text-gray-400 dark:text-gray-600")}>
                                     {badge.name}
                                 </span>
 
                                 <div className="mt-2 w-full">
                                     <div className="text-[9px] text-gray-400 mb-1 flex justify-between">
                                         <span>{progress}/{badge.goal}</span>
-                                        {isEarned && <CheckCircle size={8} className="text-green-500" />}
+                                        {isEarned && <CheckCircle size={8} className="text-green-500 dark:text-green-400" />}
                                     </div>
-                                    <div className="h-1 w-full bg-gray-200 rounded-full overflow-hidden">
+                                    <div className="h-1 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                                         <div
                                             className={cn("h-full rounded-full", isEarned ? "bg-yellow-400" : "bg-scout-blue/40")}
                                             style={{ width: `${(progress / badge.goal) * 100}%` }}
@@ -446,35 +451,35 @@ export default function Profile() {
             </div>
 
             {/* Monthly Backups Section */}
-            <div className="mx-6 p-6 bg-white rounded-2xl shadow-sm border border-gray-100 space-y-4">
+            <div className="mx-6 p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 space-y-4">
                 <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-bold flex items-center gap-2 text-gray-900">
-                        <Database className="text-scout-blue" size={20} />
+                    <h3 className="text-lg font-bold flex items-center gap-2 text-gray-900 dark:text-white">
+                        <Database className="text-scout-blue dark:text-blue-500" size={20} />
                         Archivio Dati Mensile
                     </h3>
-                    <div className="bg-blue-50 text-scout-blue text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider border border-blue-100">
+                    <div className="bg-blue-50 dark:bg-blue-900/30 text-scout-blue dark:text-blue-400 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider border border-blue-100 dark:border-blue-800/50">
                         Automatico
                     </div>
                 </div>
 
-                <p className="text-sm text-gray-500 leading-relaxed">
+                <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
                     Ogni mese l'app salva automaticamente una copia di tutti i luoghi e le informazioni principali per sicurezza. Questi file possono essere scaricati e conservati offline.
                 </p>
 
                 <div className="space-y-2">
                     {backups.length > 0 ? (
                         backups.map((backup: BackupSnapshot) => (
-                            <div key={backup.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100 hover:bg-gray-100 transition-colors">
+                            <div key={backup.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                                 <div className="flex items-center gap-3">
-                                    <CheckCircle size={18} className="text-green-500" />
+                                    <CheckCircle size={18} className="text-green-500 dark:text-green-400" />
                                     <div>
-                                        <p className="font-bold text-sm text-gray-900">Snapshot {backup.month_year}</p>
-                                        <p className="text-[10px] text-gray-400">{new Date(backup.created_at).toLocaleDateString('it-IT')}</p>
+                                        <p className="font-bold text-sm text-gray-900 dark:text-gray-100">Snapshot {backup.month_year}</p>
+                                        <p className="text-[10px] text-gray-400 dark:text-gray-500">{new Date(backup.created_at).toLocaleDateString('it-IT')}</p>
                                     </div>
                                 </div>
                                 <button
                                     onClick={() => downloadBackup(backup)}
-                                    className="p-2 bg-white text-scout-blue rounded-lg shadow-sm hover:shadow-md border border-blue-100 transition-all active:scale-95"
+                                    className="p-2 bg-white dark:bg-gray-800 text-scout-blue dark:text-blue-400 rounded-lg shadow-sm hover:shadow-md border border-blue-100 dark:border-gray-700 transition-all active:scale-95"
                                     title="Scarica JSON"
                                 >
                                     <Download size={18} />
@@ -482,9 +487,9 @@ export default function Profile() {
                             </div>
                         ))
                     ) : (
-                        <div className="text-center py-6 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                            <Info className="mx-auto text-gray-300 mb-2" size={24} />
-                            <p className="text-sm text-gray-400">Nessun archivio disponibile al momento.</p>
+                        <div className="text-center py-6 bg-gray-50 dark:bg-gray-900 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
+                            <Info className="mx-auto text-gray-300 dark:text-gray-600 mb-2" size={24} />
+                            <p className="text-sm text-gray-400 dark:text-gray-500">Nessun archivio disponibile al momento.</p>
                         </div>
                     )}
                 </div>
@@ -499,7 +504,7 @@ export default function Profile() {
                             window.location.href = '/login';
                         }
                     }}
-                    className="w-full py-3 bg-red-50 text-red-600 font-bold rounded-xl border border-red-100 hover:bg-red-100 transition-colors"
+                    className="w-full py-3 bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-500 font-bold rounded-xl border border-red-100 dark:border-red-900/50 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
                 >
                     Esci dal Profilo
                 </button>
@@ -509,7 +514,7 @@ export default function Profile() {
             <div className="mx-6 mb-10">
                 <button
                     onClick={() => setShowDeleteConfirm(true)}
-                    className="w-full py-2.5 text-gray-400 text-sm font-medium rounded-xl border border-dashed border-gray-200 hover:border-red-300 hover:text-red-500 hover:bg-red-50 transition-all flex items-center justify-center gap-2"
+                    className="w-full py-2.5 text-gray-400 dark:text-gray-500 text-sm font-medium rounded-xl border border-dashed border-gray-200 dark:border-gray-700 hover:border-red-300 dark:hover:border-red-800 hover:text-red-500 dark:hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all flex items-center justify-center gap-2"
                 >
                     <Trash2 size={15} />
                     Elimina il mio account
@@ -519,32 +524,32 @@ export default function Profile() {
             {/* Delete Confirmation Modal */}
             {showDeleteConfirm && (
                 <div className="fixed inset-0 bg-black/60 z-[80] flex items-center justify-center p-4" onClick={() => setShowDeleteConfirm(false)}>
-                    <div className="bg-white rounded-2xl w-full max-w-sm p-6 space-y-4" onClick={e => e.stopPropagation()}>
+                    <div className="bg-white dark:bg-gray-800 dark:border dark:border-gray-700 rounded-2xl w-full max-w-sm p-6 space-y-4 shadow-xl" onClick={e => e.stopPropagation()}>
                         <div className="text-center">
-                            <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                                <Trash2 size={24} className="text-red-500" />
+                            <div className="w-14 h-14 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-3">
+                                <Trash2 size={24} className="text-red-500 dark:text-red-400" />
                             </div>
-                            <h2 className="text-xl font-bold text-gray-900">Elimina Account</h2>
-                            <p className="text-sm text-gray-500 mt-2 leading-relaxed">
+                            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Elimina Account</h2>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 leading-relaxed">
                                 Questa azione è <strong>irreversibile</strong>. I tuoi dati del profilo verranno eliminati definitivamente.
                             </p>
                         </div>
 
-                        <div className="bg-red-50 border border-red-100 rounded-xl p-4">
-                            <p className="text-xs font-bold text-red-600 mb-2">Per confermare, scrivi <span className="bg-red-100 px-1.5 py-0.5 rounded font-mono">ELIMINA</span></p>
+                        <div className="bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 rounded-xl p-4">
+                            <p className="text-xs font-bold text-red-600 dark:text-red-400 mb-2">Per confermare, scrivi <span className="bg-red-100 dark:bg-red-900/50 px-1.5 py-0.5 rounded font-mono">ELIMINA</span></p>
                             <input
                                 type="text"
                                 value={deleteConfirmText}
                                 onChange={e => setDeleteConfirmText(e.target.value)}
                                 placeholder="ELIMINA"
-                                className="w-full p-2.5 border border-red-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-red-300 font-mono text-center tracking-widest"
+                                className="w-full p-2.5 border border-red-200 dark:border-red-800/50 rounded-lg text-sm outline-none focus:ring-2 focus:ring-red-500 dark:bg-gray-900 dark:text-white font-mono text-center tracking-widest"
                             />
                         </div>
 
                         <div className="flex gap-3">
                             <button
                                 onClick={() => { setShowDeleteConfirm(false); setDeleteConfirmText(''); }}
-                                className="flex-1 py-2.5 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-colors"
+                                className="flex-1 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                             >
                                 Annulla
                             </button>

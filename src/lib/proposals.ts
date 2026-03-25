@@ -82,8 +82,8 @@ export async function rejectProposal(proposalId: string, rejecterId: string) {
 
         if (updateError) throw updateError;
 
-        // Award 2 points to the rejecter for participating in validation + update validations_given counter
-        await addPointsToUserWithStats(rejecterId, 2, { validationsGiven: 1 });
+        // Award 2 points to the rejecter for participating in validation
+        await addPointsToUserWithStats(rejecterId, 2, { contributionsApproved: 1 });
 
         // If 2+ rejections, reject the proposal and penalize proposer
         if (newRejections.length >= 2) {
@@ -142,8 +142,8 @@ export async function approveProposal(proposalId: string, approverId: string) {
 
         if (updateError) throw updateError;
 
-        // Reward 5 points to the approver + update contributions_approved and validations_given
-        await addPointsToUserWithStats(approverId, 5, { contributionsApproved: 1, validationsGiven: 1 });
+        // Reward 5 points to the approver + update contributions_approved
+        await addPointsToUserWithStats(approverId, 5, { contributionsApproved: 1 });
 
         // If 2+ approvals, apply the proposal
         if (newApprovals.length >= 2) {
@@ -256,6 +256,7 @@ function convertLocationToSupabaseFormat(location: Partial<Location>): any {
         description: location.description,
         pricing: location.pricing,
         last_updated_at: location.lastUpdatedAt,
-        last_updated_by: location.lastUpdatedBy
+        last_updated_by: location.lastUpdatedBy,
+        availability_status: (location as any).availabilityStatus,
     };
 }

@@ -130,10 +130,10 @@ export default function Proposals() {
     };
 
     if (loading) return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-6">
             <div className="flex flex-col items-center gap-4">
                 <div className="animate-spin rounded-full h-12 w-12 border-4 border-scout-green border-t-transparent"></div>
-                <p className="text-gray-500 font-medium">Sincronizzazione proposte...</p>
+                <p className="text-gray-500 dark:text-gray-400 font-medium">Sincronizzazione proposte...</p>
             </div>
         </div>
     );
@@ -141,18 +141,18 @@ export default function Proposals() {
     return (
         <div className="pb-24 p-4 md:p-8 max-w-4xl mx-auto">
             <header className="mb-10">
-                <h1 className="text-3xl font-black text-gray-900 tracking-tight">Approvazione Modifiche</h1>
-                <p className="text-gray-500 mt-2">Revisiona i contributi della CoCa per mantenere i dati affidabili.</p>
+                <h1 className="text-3xl font-black text-gray-900 dark:text-gray-100 tracking-tight">Approvazione Modifiche</h1>
+                <p className="text-gray-500 dark:text-gray-400 mt-2">Revisiona i contributi della CoCa per mantenere i dati affidabili.</p>
             </header>
 
             <div className="grid gap-8">
                 {proposals.length === 0 && (
-                    <div className="bg-white p-12 rounded-3xl border-2 border-dashed border-gray-100 text-center shadow-sm">
-                        <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <Check className="text-gray-300" size={32} />
+                    <div className="bg-white dark:bg-gray-800 p-12 rounded-3xl border-2 border-dashed border-gray-100 dark:border-gray-700 text-center shadow-sm">
+                        <div className="bg-gray-50 dark:bg-gray-700 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <Check className="text-gray-300 dark:text-gray-500" size={32} />
                         </div>
-                        <h3 className="text-lg font-bold text-gray-800">Tutto in ordine!</h3>
-                        <p className="text-gray-400 mt-1 max-w-xs mx-auto">Non ci sono proposte in attesa di revisione al momento.</p>
+                        <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200">Tutto in ordine!</h3>
+                        <p className="text-gray-400 dark:text-gray-500 mt-1 max-w-xs mx-auto">Non ci sono proposte in attesa di revisione al momento.</p>
                     </div>
                 )}
 
@@ -162,21 +162,21 @@ export default function Proposals() {
                     const isDelete = proposal.type === 'delete';
 
                     return (
-                        <div key={proposal.id} className={`group bg-white rounded-[2rem] shadow-xl shadow-gray-100 overflow-hidden border-2 transition-all hover:shadow-2xl hover:shadow-gray-200 ${isDelete ? 'border-red-100' : 'border-scout-blue/5'}`}>
+                        <div key={proposal.id} className={`group bg-white dark:bg-gray-800 rounded-[2rem] shadow-xl shadow-gray-100 dark:shadow-none overflow-hidden border-2 transition-all hover:shadow-2xl hover:shadow-gray-200 dark:border-opacity-50 ${isDelete ? 'border-red-100 dark:border-red-900' : 'border-scout-blue/5 dark:border-gray-700'}`}>
                             {/* Proposer Header */}
-                            <div className="px-6 py-4 bg-gray-50/50 border-b border-gray-100 flex items-center justify-between">
+                            <div className="px-6 py-4 bg-gray-50/50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-scout-blue border border-gray-100">
+                                    <div className="w-10 h-10 rounded-full bg-white dark:bg-gray-700 shadow-sm flex items-center justify-center text-scout-blue border border-gray-100 dark:border-gray-600">
                                         <UserIcon size={18} />
                                     </div>
                                     <div>
-                                        <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Proposto da</p>
-                                        <p className="text-sm font-black text-gray-800">{proposerName}</p>
+                                        <p className="text-xs text-gray-400 dark:text-gray-500 font-bold uppercase tracking-widest">Proposto da</p>
+                                        <p className="text-sm font-black text-gray-800 dark:text-gray-200">{proposerName}</p>
                                     </div>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest leading-none">Data Richiesta</p>
-                                    <p className="text-xs font-semibold text-gray-500">{new Date(proposal.timestamp).toLocaleDateString('it-IT')}</p>
+                                    <p className="text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-widest leading-none">Data Richiesta</p>
+                                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">{new Date(proposal.timestamp).toLocaleDateString('it-IT')}</p>
                                 </div>
                             </div>
 
@@ -187,7 +187,7 @@ export default function Proposals() {
                                         {isDelete ? <Trash size={24} /> : <Home size={24} />}
                                     </div>
                                     <div>
-                                        <h2 className="text-2xl font-black text-gray-900 leading-tight">{proposal.locationName}</h2>
+                                        <h2 className="text-2xl font-black text-gray-900 dark:text-gray-100 leading-tight">{proposal.locationName}</h2>
                                         <div className="flex items-center gap-2 mt-1">
                                             <span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter ${isDelete ? 'bg-red-600 text-white' : 'bg-scout-blue text-white'}`}>
                                                 {isDelete ? 'Eliminazione' : 'Aggiornamento'}
@@ -210,21 +210,21 @@ export default function Proposals() {
                                                 if (!hasChanged) return null;
 
                                                 return (
-                                                    <div key={key} className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100 flex flex-col sm:flex-row sm:items-center gap-3">
+                                                    <div key={key} className="bg-gray-50/50 dark:bg-gray-700/30 p-4 rounded-2xl border border-gray-100 dark:border-gray-600 flex flex-col sm:flex-row sm:items-center gap-3">
                                                         <div className="sm:w-1/3">
-                                                            <div className="flex items-center gap-2 text-gray-400 mb-1 sm:mb-0">
+                                                            <div className="flex items-center gap-2 text-gray-400 dark:text-gray-500 mb-1 sm:mb-0">
                                                                 <Info size={14} />
                                                                 <span className="text-[10px] font-black uppercase tracking-wider">{FIELD_NAMES[key] || key}</span>
                                                             </div>
                                                         </div>
                                                         <div className="flex-1 flex items-center gap-2 overflow-hidden">
-                                                            <div className="flex-1 min-w-0 bg-white p-2 rounded-lg text-xs text-gray-400 line-through truncate border border-gray-50">
+                                                            <div className="flex-1 min-w-0 bg-white dark:bg-gray-700 p-2 rounded-lg text-xs text-gray-400 line-through truncate border border-gray-50 dark:border-gray-600">
                                                                 {formatValue(key, oldValue)}
                                                             </div>
                                                             <div className="text-scout-blue shrink-0">
                                                                 <ArrowRight size={16} />
                                                             </div>
-                                                            <div className="flex-1 min-w-0 bg-scout-green/5 p-2 rounded-lg text-sm font-bold text-scout-green-dark border border-scout-green/10">
+                                                            <div className="flex-1 min-w-0 bg-scout-green/5 dark:bg-scout-green/10 p-2 rounded-lg text-sm font-bold text-scout-green-dark dark:text-scout-green border border-scout-green/10">
                                                                 {formatValue(key, value)}
                                                             </div>
                                                         </div>
@@ -233,11 +233,11 @@ export default function Proposals() {
                                             })}
                                         </div>
                                     ) : isDelete ? (
-                                        <div className="bg-red-50 p-6 rounded-3xl border border-red-100 flex items-center gap-4">
-                                            <div className="bg-white w-12 h-12 rounded-2xl flex items-center justify-center text-red-600 shadow-sm border border-red-50">
+                                        <div className="bg-red-50 dark:bg-red-900/20 p-6 rounded-3xl border border-red-100 dark:border-red-900 flex items-center gap-4">
+                                            <div className="bg-white dark:bg-gray-800 w-12 h-12 rounded-2xl flex items-center justify-center text-red-600 shadow-sm border border-red-50 dark:border-red-900">
                                                 <X size={24} />
                                             </div>
-                                            <p className="text-red-700 font-medium leading-snug">
+                                            <p className="text-red-700 dark:text-red-300 font-medium leading-snug">
                                                 L'utente richiede la rimozione completa di questo database. <br/>
                                                 <span className="text-xs opacity-75 font-normal">Assicurati che il luogo non esista più o sia un duplicato.</span>
                                             </p>
@@ -249,14 +249,14 @@ export default function Proposals() {
                             </div>
 
                             {/* Actions */}
-                            <div className="px-6 py-6 bg-gray-50/50 border-t border-gray-100">
+                            <div className="px-6 py-6 bg-gray-50/50 dark:bg-gray-700/50 border-t border-gray-100 dark:border-gray-700">
                                 {proposal.status === 'pending' && (
                                     <div className="flex flex-col sm:flex-row gap-4">
                                         {proposal.proposerId !== currentUser?.id ? (
                                             <>
                                                 <button
                                                     onClick={() => handleReject(proposal.id, proposal.proposerId)}
-                                                    className="flex-1 py-4 px-6 bg-white border-2 border-red-50 text-red-600 rounded-2xl font-black text-xs uppercase tracking-widest transition-all hover:bg-red-600 hover:text-white hover:border-red-600 shadow-sm hover:shadow-red-200/50 flex items-center justify-center gap-3"
+                                                    className="flex-1 py-4 px-6 bg-white dark:bg-gray-700 border-2 border-red-50 dark:border-red-900 text-red-600 rounded-2xl font-black text-xs uppercase tracking-widest transition-all hover:bg-red-600 hover:text-white hover:border-red-600 shadow-sm hover:shadow-red-200/50 flex items-center justify-center gap-3"
                                                 >
                                                     <X size={18} strokeWidth={3} />
                                                     Rifiuta ({proposal.rejections.length}/2)
@@ -270,7 +270,7 @@ export default function Proposals() {
                                                 </button>
                                             </>
                                         ) : (
-                                            <div className="w-full py-4 px-6 bg-white border-2 border-dashed border-gray-200 text-gray-400 rounded-2xl font-bold text-sm text-center flex items-center justify-center gap-3">
+                                            <div className="w-full py-4 px-6 bg-white dark:bg-gray-700 border-2 border-dashed border-gray-200 dark:border-gray-600 text-gray-400 dark:text-gray-500 rounded-2xl font-bold text-sm text-center flex items-center justify-center gap-3">
                                                 <Calendar size={18} />
                                                 In attesa di approvazione da altri capi
                                             </div>

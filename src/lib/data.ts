@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { Location, User } from '@/types';
+import { createNotificationsForGroup } from './notifications';
 
 // =====================================================
 // GRUPPI SCOUT (per registrazione con cascading dropdown)
@@ -317,6 +318,7 @@ export async function addLocation(location: Omit<Location, 'id' | 'lastUpdatedAt
                 other_logistics: location.otherLogistics,
                 rover_service_description: location.roverServiceDescription,
                 restrictions: location.restrictions,
+                availability_status: (location as any).availabilityStatus || 'available',
                 other_restrictions: location.otherRestrictions,
                 website: location.website,
                 email: location.email,
@@ -354,6 +356,18 @@ export async function addLocation(location: Omit<Location, 'id' | 'lastUpdatedAt
                 points: currentUser.points + pointsAwarded,
             })
             .eq('id', currentUser.id);
+
+        // Invia notifica agli altri membri del gruppo (fire and forget)
+        if (currentUser.groupId) {
+            createNotificationsForGroup(
+                currentUser.groupId,
+                'location_added',
+                `📍 Nuovo luogo: ${location.name || 'Senza nome'}`,
+                `${currentUser.nickname || currentUser.firstName} ha aggiunto ${location.name || 'un luogo'} in ${location.commune || location.region || 'un nuovo posto'}.`,
+                { locationId: data.id },
+                currentUser.id
+            ).catch(e => console.error("Error creating location notification:", e));
+        }
 
         return mapSupabaseLocationToLocation(data);
     } catch (error) {
@@ -461,6 +475,7 @@ function mapSupabaseLocationToLocation(data: any): Location {
         pricing: data.pricing,
         lastUpdatedAt: data.last_updated_at,
         lastUpdatedBy: data.last_updated_by,
+        availabilityStatus: data.availability_status || 'available',
     };
 }
 

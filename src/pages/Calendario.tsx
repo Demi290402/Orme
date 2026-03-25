@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Plus, ChevronLeft, ChevronRight, Calendar, CalendarDays, CalendarRange, X, Pencil, Trash2, Save, MapPin, Clock } from 'lucide-react';
 import { getEventi, saveEvento, deleteEvento, EventoCalendario, getColorByBranca, BRANCA_COLORS } from '@/lib/calendario';
 import { cn } from '@/lib/utils';
+import RichTextEditor from '@/components/RichTextEditor';
 
 type ViewMode = 'anno' | 'mese' | 'giorno';
 
@@ -116,8 +117,14 @@ function EventForm({ initial, onSave, onCancel, onDelete }: EventFormProps) {
                     </div>
                     <div>
                         <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Note</label>
-                        <textarea className="w-full mt-1 p-2.5 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm outline-none focus:ring-2 focus:ring-scout-green min-h-[60px]"
-                            value={form.note || ''} onChange={e => set('note', e.target.value)} placeholder="Note aggiuntive..." />
+                        <div className="mt-1">
+                            <RichTextEditor
+                                value={form.note || ''}
+                                onChange={(val) => set('note', val)}
+                                minHeight="80px"
+                                placeholder="Note aggiuntive..."
+                            />
+                        </div>
                     </div>
                 </div>
 

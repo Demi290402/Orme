@@ -9,6 +9,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { User as UserType } from '@/types';
 import { getUser } from '@/lib/data';
 import UserAvatar from '@/components/UserAvatar';
+import NotificationBell from '@/components/NotificationBell';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
     const location = useLocation();
@@ -58,6 +59,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                             {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
                         </button>
 
+                        {/* Notification Bell */}
+                        {currentUser && <NotificationBell />}
+
+                        {/* Proposals (Pending Inbox) */}
                         <Link
                             to="/proposals"
                             className={cn(
@@ -144,34 +149,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                             <span className="text-[10px] mt-0.5">{item.label}</span>
                         </Link>
                     ))}
-                    
-                    {/* Mobile Avatar / Login Link */}
-                    {currentUser ? (
-                        <Link
-                            to="/profile"
-                            className={cn(
-                                "flex flex-col items-center justify-center w-full h-full transition-all",
-                                location.pathname === '/profile' ? "opacity-100" : "opacity-60 grayscale-[50%]"
-                            )}
-                        >
-                            <UserAvatar user={currentUser} size="sm" disablePreview={true} className="w-7 h-7 border-[1.5px]" />
-                            <span className={cn(
-                                "text-[10px] mt-0.5",
-                                location.pathname === '/profile' ? "text-scout-green" : "text-gray-400 dark:text-gray-500"
-                            )}>Profilo</span>
-                        </Link>
-                    ) : (
-                        <Link
-                            to="/login"
-                            className={cn(
-                                "flex flex-col items-center justify-center w-full h-full transition-all text-gray-400",
-                                (location.pathname === '/login' || location.pathname === '/register') && "text-scout-green"
-                            )}
-                        >
-                            <LogIn size={22} />
-                            <span className="text-[10px] mt-0.5 font-bold">Accedi</span>
-                        </Link>
-                    )}
                 </div>
             </nav>
         </div>

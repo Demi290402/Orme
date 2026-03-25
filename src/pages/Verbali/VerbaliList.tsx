@@ -64,10 +64,10 @@ export default function VerbaliList() {
     return (
         <div className="space-y-6 pb-20">
             {/* Header */}
-            <div className="bg-scout-brown dark:bg-scout-brown/80 text-white p-6 rounded-2xl shadow-lg -mx-4 md:mx-0 rounded-t-none md:rounded-2xl flex items-center justify-between">
+            <div className="bg-scout-brown dark:bg-amber-950/60 text-white p-6 rounded-2xl shadow-lg -mx-4 md:mx-0 rounded-t-none md:rounded-2xl flex items-center justify-between dark:border dark:border-amber-900/50">
                 <div>
-                    <h1 className="text-3xl font-bold mb-1">Archivio Verbali</h1>
-                    <p className="opacity-90 text-sm">Diario di Bordo della Comunità Capi</p>
+                    <h1 className="text-3xl font-bold mb-1 drop-shadow-sm">Archivio Verbali</h1>
+                    <p className="opacity-90 text-sm drop-shadow-sm">Diario di Bordo della Comunità Capi</p>
                 </div>
                 <FileText size={48} className="opacity-20 hidden md:block" />
             </div>
@@ -91,41 +91,41 @@ export default function VerbaliList() {
                             className={cn(
                                 "px-4 py-3 rounded-xl font-bold border-2 transition-all flex items-center justify-center gap-2 relative",
                                 showFilters || selectedYear !== 'all' || selectedMonth !== 'all' || hasOspite !== 'all'
-                                    ? "bg-scout-green/10 border-scout-green text-scout-green"
-                                    : "bg-white border-scout-brown/10 text-scout-brown hover:border-scout-brown/30"
+                                    ? "bg-scout-green/10 dark:bg-emerald-900/30 border-scout-green dark:border-emerald-500 text-scout-green dark:text-emerald-500"
+                                    : "bg-white dark:bg-gray-800 border-scout-brown/10 dark:border-gray-700 text-scout-brown dark:text-gray-300 hover:border-scout-brown/30 dark:hover:border-gray-600"
                             )}
                         >
                             <Filter size={20} />
                             {(selectedYear !== 'all' || selectedMonth !== 'all' || hasOspite !== 'all') && (
-                                <span className="absolute -top-2 -right-2 w-5 h-5 bg-scout-green text-white text-[10px] rounded-full flex items-center justify-center border-2 border-white shadow-sm">
+                                <span className="absolute -top-2 -right-2 w-5 h-5 bg-scout-green dark:bg-emerald-600 text-white text-[10px] rounded-full flex items-center justify-center border-2 border-white dark:border-gray-800 shadow-sm">
                                     { [selectedYear, selectedMonth, hasOspite].filter(f => f !== 'all').length }
                                 </span>
                             )}
                         </button>
                         <Link
                             to="/verbali/impostazioni"
-                            className="bg-white p-3 rounded-xl border border-scout-brown/10 shadow-sm hover:border-scout-brown/30 text-scout-brown hover:bg-scout-brown/5 transition-all outline-none"
+                            className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-scout-brown/10 dark:border-gray-700 shadow-sm hover:border-scout-brown/30 dark:hover:border-gray-600 text-scout-brown dark:text-gray-300 hover:bg-scout-brown/5 dark:hover:bg-gray-700 transition-all outline-none"
                             title="Personalizza Intestazione"
                         >
                             <Settings size={20} />
                         </Link>
                         <Link
                             to="/verbali/statistiche"
-                            className="bg-white p-3 rounded-xl border border-scout-brown/10 shadow-sm hover:border-scout-brown/30 text-amber-600 hover:bg-amber-50 transition-all outline-none"
+                            className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-scout-brown/10 dark:border-gray-700 shadow-sm hover:border-scout-brown/30 dark:hover:border-gray-600 text-amber-600 dark:text-amber-500 hover:bg-amber-50 dark:hover:bg-gray-700 transition-all outline-none"
                             title="Reportistica Presenze"
                         >
                             <FileText size={20} />
                         </Link>
                         <Link
                             to="/verbali/membri"
-                            className="bg-white text-scout-brown px-4 py-3 rounded-xl font-bold border-2 border-scout-brown/10 shadow-sm hover:border-scout-brown/30 transition-all flex items-center justify-center gap-2"
+                            className="bg-white dark:bg-gray-800 text-scout-brown dark:text-gray-300 px-4 py-3 rounded-xl font-bold border-2 border-scout-brown/10 dark:border-gray-700 shadow-sm hover:border-scout-brown/30 dark:hover:border-gray-600 transition-all flex items-center justify-center gap-2"
                         >
                             <UserIcon size={20} />
                             <span className="hidden sm:inline">Membri</span>
                         </Link>
                         <Link
                             to="/verbali/nuovo"
-                            className="bg-scout-green text-white px-6 py-3 rounded-xl font-bold shadow-md hover:bg-scout-green-dark transition-all active:scale-95 flex items-center justify-center gap-2"
+                            className="bg-scout-green dark:bg-emerald-600 text-white px-6 py-3 rounded-xl font-bold shadow-md hover:bg-scout-green-dark dark:hover:bg-emerald-700 transition-all active:scale-95 flex items-center justify-center gap-2"
                         >
                             <Plus size={20} />
                             <span className="hidden sm:inline">Nuovo</span>

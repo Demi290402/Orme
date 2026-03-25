@@ -94,25 +94,25 @@ function CascadeDropdown({ label, placeholder, options, value, onChange, disable
 
     return (
         <div className="relative">
-            <label className={cn("block text-xs font-bold mb-1", disabled ? "text-gray-300" : "text-gray-600")}>{label}*</label>
+            <label className={cn("block text-xs font-bold mb-1", disabled ? "text-gray-300 dark:text-gray-600" : "text-gray-600 dark:text-gray-300")}>{label}*</label>
             <button
                 type="button"
                 disabled={disabled}
                 onClick={() => { if (!disabled) setIsOpen(!isOpen); }}
                 className={cn(
                     "w-full p-2.5 rounded-lg border text-left flex items-center justify-between text-sm transition-all",
-                    disabled ? "bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed" : "bg-white border-gray-200 hover:border-scout-brown cursor-pointer",
+                    disabled ? "bg-gray-50 dark:bg-gray-700/50 text-gray-300 dark:text-gray-600 border-gray-100 dark:border-gray-700 cursor-not-allowed" : "bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:border-scout-brown cursor-pointer dark:text-gray-200",
                     error ? "border-red-300" : "",
                     isOpen ? "border-scout-brown ring-2 ring-scout-brown/20" : ""
                 )}
             >
-                <span className={value ? "text-gray-800 font-medium" : "text-gray-400"}>{value || placeholder}</span>
+                <span className={value ? "text-gray-800 dark:text-gray-100 font-medium" : "text-gray-400"}>{value || placeholder}</span>
                 <ChevronDown size={14} className={cn("transition-transform", isOpen ? "rotate-180" : "", disabled ? "text-gray-200" : "text-gray-400")} />
             </button>
             {error && <p className="text-red-500 text-[11px] mt-1 flex items-center gap-1"><AlertCircle size={11} />{error}</p>}
 
             {isOpen && !disabled && (
-                <div className="absolute z-50 w-full mt-1 bg-white rounded-xl border border-gray-200 shadow-xl overflow-hidden">
+                <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-600 shadow-xl overflow-hidden">
                     <div className="max-h-48 overflow-y-auto">
                         {options.length === 0 && (
                             <div className="px-3 py-4 text-center text-[12px] text-gray-400 italic">Nessuna opzione disponibile</div>
@@ -124,7 +124,7 @@ function CascadeDropdown({ label, placeholder, options, value, onChange, disable
                                 onClick={() => { onChange(opt); setIsOpen(false); }}
                                 className={cn(
                                     "w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center justify-between",
-                                    value === opt ? "bg-scout-brown/10 text-scout-brown font-bold" : "hover:bg-gray-50 text-gray-700"
+                                    value === opt ? "bg-scout-brown/10 text-scout-brown font-bold" : "hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200"
                                 )}
                             >
                                 {opt}
@@ -133,7 +133,7 @@ function CascadeDropdown({ label, placeholder, options, value, onChange, disable
                         ))}
                     </div>
                     {onAddNew && (
-                        <div className="border-t border-gray-100">
+                        <div className="border-t border-gray-100 dark:border-gray-700">
                             {!isAdding ? (
                                 <button
                                     type="button"
@@ -189,7 +189,7 @@ function ValidatedInput({ label, type = 'text', value, onChange, error, placehol
 }) {
     return (
         <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1">{label}{required && '*'}</label>
+            <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">{label}{required && '*'}</label>
             {hint && <p className="text-[11px] text-gray-400 mb-1">{hint}</p>}
             <input
                 type={type}
@@ -197,10 +197,10 @@ function ValidatedInput({ label, type = 'text', value, onChange, error, placehol
                 onChange={e => onChange(e.target.value)}
                 placeholder={placeholder}
                 className={cn(
-                    "w-full p-3 rounded-xl border outline-none focus:ring-2 transition-all",
+                    "w-full p-3 rounded-xl border outline-none focus:ring-2 transition-all dark:text-white dark:placeholder-gray-400",
                     error
-                        ? "border-red-300 bg-red-50 focus:ring-red-200"
-                        : "border-gray-200 focus:ring-scout-green focus:border-scout-green"
+                        ? "border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-700 focus:ring-red-200"
+                        : "border-gray-200 dark:border-gray-600 dark:bg-gray-700 focus:ring-scout-green focus:border-scout-green"
                 )}
             />
             {error && <p className="text-red-500 text-[11px] mt-1 flex items-center gap-1"><AlertCircle size={11} />{error}</p>}
@@ -336,8 +336,8 @@ export default function Register() {
     };
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-scout-beige-light p-4 pt-12">
-            <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-100 mb-12">
+        <div className="flex flex-col items-center justify-center min-h-screen bg-scout-beige-light dark:bg-gray-900 p-4 pt-12">
+            <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-100 dark:border-gray-700 mb-12">
                 <div className="flex justify-center mb-6">
                     <div className="bg-scout-brown p-4 rounded-full shadow-lg">
                         <UserPlus size={40} className="text-white" />
@@ -345,7 +345,7 @@ export default function Register() {
                 </div>
 
                 <h1 className="text-2xl font-bold text-center text-scout-green mb-2">Unisciti al Branco</h1>
-                <p className="text-center text-gray-500 mb-8">Crea il tuo profilo scout.</p>
+                <p className="text-center text-gray-500 dark:text-gray-400 mb-8">Crea il tuo profilo scout.</p>
 
                 {submitError && (
                     <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-center text-sm font-bold border border-red-100 flex items-center gap-2">
@@ -381,9 +381,9 @@ export default function Register() {
                     />
 
                     {/* Dati Gruppo Scout */}
-                    <div className="p-4 bg-gray-50 border border-gray-100 rounded-2xl space-y-4">
-                        <h3 className="text-xs font-bold text-scout-brown uppercase tracking-wider">Dati Gruppo Scout</h3>
-                        <p className="text-[11px] text-gray-400">Seleziona la tua regione, zona e gruppo. Se non trovi il tuo, aggiungilo.</p>
+                    <div className="p-4 bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600 rounded-2xl space-y-4">
+                        <h3 className="text-xs font-bold text-scout-brown dark:text-amber-400 uppercase tracking-wider">Dati Gruppo Scout</h3>
+                        <p className="text-[11px] text-gray-400 dark:text-gray-400">Seleziona la tua regione, zona e gruppo. Se non trovi il tuo, aggiungilo.</p>
 
                         {loadingGruppi ? (
                             <div className="text-center text-sm text-gray-400 py-4">Caricamento gruppi...</div>
@@ -472,8 +472,8 @@ export default function Register() {
                     </button>
                 </form>
 
-                <p className="text-center mt-6 text-sm text-gray-500">
-                    Hai già un account? <Link to="/login" className="text-scout-brown font-bold hover:underline">Accedi</Link>
+                <p className="text-center mt-6 text-sm text-gray-500 dark:text-gray-400">
+                    Hai già un account? <Link to="/login" className="text-scout-brown dark:text-amber-400 font-bold hover:underline">Accedi</Link>
                 </p>
             </div>
         </div>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Search, Filter, Plus, X, Check, Clock } from 'lucide-react';
+import { Search, Filter, Plus, X, Check, Clock, Tent, BedDouble } from 'lucide-react';
 import { getLocations, getUser } from '@/lib/data';
 import { Location, User as UserType } from '@/types';
 import LocationCard from '@/components/LocationCard';
@@ -192,6 +192,30 @@ export default function Home() {
                                         {branch}
                                     </button>
                                 ))}
+                                <button
+                                    onClick={() => setHasTents(!hasTents)}
+                                    className={cn(
+                                        "p-3 rounded-xl border flex flex-col items-center gap-2 transition-all",
+                                        hasTents
+                                            ? "bg-scout-green/10 border-scout-green text-scout-green-dark"
+                                            : "bg-white border-gray-200 text-gray-500 hover:border-scout-green/50"
+                                    )}
+                                >
+                                    <Tent size={20} />
+                                    <span className="text-sm font-medium">Solo con Tende</span>
+                                </button>
+                                <button
+                                    onClick={() => setHasBeds(!hasBeds)}
+                                    className={cn(
+                                        "p-3 rounded-xl border flex flex-col items-center gap-2 transition-all",
+                                        hasBeds
+                                            ? "bg-scout-green/10 border-scout-green text-scout-green-dark"
+                                            : "bg-white border-gray-200 text-gray-500 hover:border-scout-green/50"
+                                    )}
+                                >
+                                    <BedDouble size={20} />
+                                    <span className="text-sm font-medium">Solo con Letti</span>
+                                </button>
                             </div>
                         </div>
 
