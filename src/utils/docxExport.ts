@@ -1,7 +1,7 @@
 import { 
     Document, Packer, Paragraph, TextRun, AlignmentType, 
     Table, TableRow, TableCell, WidthType, BorderStyle,
-    ImageRun, Header, Footer, HeightRule, VerticalAlign
+    ImageRun, Header, Footer, VerticalAlign
 } from 'docx';
 import { saveAs } from 'file-saver';
 import { Verbale, MembroCoCa, User } from '@/types';
@@ -29,6 +29,32 @@ function cleanText(html: string): string {
     const text = tmp.textContent || tmp.innerText || "";
     // Remove control characters that might corrupt DOCX XML
     return text.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
+}
+
+/**
+ * Parses basic HTML to an array of DOCX Paragraphs to preserve line breaks
+ */
+function parseHtmlToDocxParagraphs(html: string, baseOptions: any = {}): Paragraph[] {
+    if (!html) return [];
+    
+    // Replace <br> and </p> with a unique separator
+    let processed = html.replace(/<br\s*\/?>/gi, '|||');
+    processed = processed.replace(/<\/p>/gi, '|||');
+    
+    const tmp = document.createElement("DIV");
+    tmp.innerHTML = processed;
+    let text = tmp.textContent || tmp.innerText || "";
+    text = text.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
+    
+    const chunks = text.split('|||').map(s => s.trim()).filter(Boolean);
+    
+    if (chunks.length === 0) return [];
+    
+    return chunks.map((chunk, i) => new Paragraph({
+        children: [new TextRun({ text: chunk, ...baseOptions.textRun })],
+        ...(baseOptions.paragraph || {}),
+        spacing: { before: i === 0 ? (baseOptions.paragraph?.spacing?.before || 150) : 50 }
+    }));
 }
 
 export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[], currentUser: User) => {
@@ -67,34 +93,6 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                             width: { size: 100, type: WidthType.PERCENTAGE },
                             borders: {
                                 top: { style: BorderStyle.NONE },
-                                bottom: { style: BorderStyle.NONE },
-                                left: { style: BorderStyle.NONE },
-                                right: { style: BorderStyle.NONE },
-                                insideHorizontal: { style: BorderStyle.NONE },
-                                insideVertical: { style: BorderStyle.NONE },
-                            },
-                            rows: [
-                                new TableRow({
-                                    height: { value: 100, rule: HeightRule.EXACT },
-                                    children: [
-                                        new TableCell({
-                                            width: { size: 60, type: WidthType.PERCENTAGE },
-                                            shading: { fill: "45387E" },
-                                            children: [new Paragraph({ text: "" })],
-                                        }),
-                                        new TableCell({
-                                            width: { size: 40, type: WidthType.PERCENTAGE },
-                                            shading: { fill: "F4B400" },
-                                            children: [new Paragraph({ text: "" })],
-                                        }),
-                                    ],
-                                }),
-                            ],
-                        }),
-                        new Table({
-                            width: { size: 100, type: WidthType.PERCENTAGE },
-                            borders: {
-                                top: { style: BorderStyle.NONE },
                                 bottom: { style: BorderStyle.SINGLE, size: 6, color: "45387E", space: 4 },
                                 left: { style: BorderStyle.NONE },
                                 right: { style: BorderStyle.NONE },
@@ -128,30 +126,30 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                                         new TableCell({
                                             width: { size: 70, type: WidthType.PERCENTAGE },
                                             children: [
-                                        new Paragraph({
-                                            alignment: AlignmentType.RIGHT,
-                                            children: [new TextRun({ text: `Gruppo ${currentUser.groupName || 'Turi 1'}`, bold: true, size: 16, font: "Tahoma", color: "45387E" })],
-                                        }),
-                                        new Paragraph({
-                                            alignment: AlignmentType.RIGHT,
-                                            children: [new TextRun({ text: "Associazione Guide e Scouts Cattolici Italiani", bold: true, size: 16, font: "Tahoma", color: "45387E" })],
-                                        }),
-                                        new Paragraph({
-                                            alignment: AlignmentType.RIGHT,
-                                            children: [new TextRun({ text: "Strada Mola 4 – 70010 Turi BA", size: 16, font: "Tahoma", color: "45387E" })],
-                                        }),
-                                        new Paragraph({
-                                            alignment: AlignmentType.RIGHT,
-                                            children: [new TextRun({ text: "turi1@puglia.agesci.it", size: 16, font: "Tahoma", color: "45387E", underline: { type: BorderStyle.SINGLE } })],
-                                        }),
-                                        new Paragraph({
-                                            alignment: AlignmentType.RIGHT,
-                                            children: [new TextRun({ text: "Codice fiscale: 91120250724", size: 16, font: "Tahoma", color: "45387E" })],
-                                        }),
-                                        new Paragraph({
-                                            alignment: AlignmentType.RIGHT,
-                                            children: [new TextRun({ text: "N. Iscr. R.U.N.T.S.: 64984", size: 16, font: "Tahoma", color: "45387E" })],
-                                        }),
+                                                new Paragraph({
+                                                    alignment: AlignmentType.RIGHT,
+                                                    children: [new TextRun({ text: `Gruppo ${currentUser.groupName || 'Turi 1'}`, bold: true, size: 16, font: "Tahoma", color: "45387E" })],
+                                                }),
+                                                new Paragraph({
+                                                    alignment: AlignmentType.RIGHT,
+                                                    children: [new TextRun({ text: "Associazione Guide e Scouts Cattolici Italiani", bold: true, size: 16, font: "Tahoma", color: "45387E" })],
+                                                }),
+                                                new Paragraph({
+                                                    alignment: AlignmentType.RIGHT,
+                                                    children: [new TextRun({ text: "Strada Mola 4 – 70010 Turi BA", size: 16, font: "Tahoma", color: "45387E" })],
+                                                }),
+                                                new Paragraph({
+                                                    alignment: AlignmentType.RIGHT,
+                                                    children: [new TextRun({ text: "turi1@puglia.agesci.it", size: 16, font: "Tahoma", color: "45387E", underline: { type: BorderStyle.SINGLE } })],
+                                                }),
+                                                new Paragraph({
+                                                    alignment: AlignmentType.RIGHT,
+                                                    children: [new TextRun({ text: "Codice fiscale: 91120250724", size: 16, font: "Tahoma", color: "45387E" })],
+                                                }),
+                                                new Paragraph({
+                                                    alignment: AlignmentType.RIGHT,
+                                                    children: [new TextRun({ text: "N. Iscr. R.U.N.T.S.: 64984", size: 16, font: "Tahoma", color: "45387E" })],
+                                                }),
                                             ],
                                         }),
                                     ],
@@ -162,7 +160,7 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                             children: [
                                 new TextRun({ text: "WOSM / WAGGGS Member - Iscritta al Registro Nazionale APS n.72", size: 12, color: "999999", italics: true, font: "Tahoma" }),
                             ],
-                            spacing: { before: 100 },
+                            spacing: { before: 50 },
                         }),
                     ],
                 }),
@@ -250,12 +248,10 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                         ],
                         spacing: { before: 400 },
                     }),
-                    new Paragraph({
-                        children: [new TextRun({ text: cleanText(punto.contenuto), size: 20, font: "Roboto" })],
-                        spacing: { before: 150 },
-                        alignment: AlignmentType.BOTH,
-                        indent: { left: 720 },
-                    }),
+                    ...parseHtmlToDocxParagraphs(punto.contenuto, {
+                        textRun: { size: 20, font: "Roboto" },
+                        paragraph: { alignment: AlignmentType.BOTH, indent: { left: 720 }, spacing: { before: 150 } }
+                    })
                 ]).flat(),
 
                 // SECTIONS
@@ -271,12 +267,10 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                             spacing: { before: 200 },
                             indent: { left: 400 },
                         }),
-                        new Paragraph({
-                            children: [new TextRun({ text: cleanText(r.contenuto), italics: true, font: "Georgia", size: 22 })],
-                            spacing: { before: 100 },
-                            indent: { left: 800 },
-                            alignment: AlignmentType.BOTH,
-                        }),
+                        ...parseHtmlToDocxParagraphs(r.contenuto, {
+                            textRun: { italics: true, font: "Georgia", size: 22 },
+                            paragraph: { alignment: AlignmentType.BOTH, indent: { left: 800 }, spacing: { before: 100 } }
+                        })
                     ]).flat(),
                 ] : []),
 
@@ -381,6 +375,18 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                         indent: { left: 720 },
                         spacing: { before: 200 },
                     })),
+                ] : []),
+
+                ...(verbale.sezioniAttive?.includes('varie') && verbale.varie && verbale.varie.trim().length > 0 ? [
+                    new Paragraph({
+                        children: [new TextRun({ text: "VARIE ED EVENTUALI", bold: true, size: 20, color: "45387E", font: "Georgia" })],
+                        spacing: { before: 800 },
+                        border: { bottom: { style: BorderStyle.SINGLE, size: 1, color: "EEEEEE" } },
+                    }),
+                    ...parseHtmlToDocxParagraphs(verbale.varie, {
+                        textRun: { size: 20, font: "Roboto" },
+                        paragraph: { alignment: AlignmentType.BOTH, indent: { left: 400 }, spacing: { before: 200 } }
+                    })
                 ] : []),
             ],
             footers: {

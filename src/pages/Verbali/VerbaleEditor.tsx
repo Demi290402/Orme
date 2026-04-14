@@ -26,7 +26,7 @@ const SEZIONI_DISPONIBILI = [
     { id: 'posti_azione', label: 'Posti d\'Azione', icon: '🎯', color: 'text-orange-500' },
     { id: 'prossimi_impegni', label: 'Prossimi impegni', icon: '🗓️', color: 'text-scout-purple' },
     { id: 'cassa', label: 'Cassa', icon: '💰', color: 'text-scout-brown' },
-    { id: 'varie', label: 'Varie', icon: '💬', color: 'text-gray-500' },
+    { id: 'varie', label: 'Varie', icon: '💬', color: 'text-gray-500 dark:text-gray-300' },
 ];
 
 export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean }) {
@@ -239,7 +239,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
         });
     };
 
-    if (loading) return <div className="p-8 text-center text-gray-500 font-serif italic text-xl">Preparazione diario...</div>;
+    if (loading) return <div className="p-8 text-center text-gray-500 dark:text-gray-300 font-serif italic text-xl">Preparazione diario...</div>;
 
     return (
         <div className="space-y-6 pb-20 dark:bg-gray-900 dark:text-gray-100">
@@ -307,14 +307,14 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
 
             {/* Metadata Bar */}
             {!viewMode && (
-            <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-wrap gap-4 items-end">
+            <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm flex flex-wrap gap-4 items-end">
                 <div className="space-y-1">
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Titolo</label>
                     <input 
                         type="text" 
                         value={verbale.titolo}
                         onChange={e => setVerbale(v => ({ ...v, titolo: e.target.value }))}
-                        className="p-2 border border-gray-100 rounded-lg text-sm bg-gray-50/50 focus:bg-white outline-none focus:ring-1 focus:ring-scout-green w-64"
+                        className="p-2 border border-gray-100 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-700/50 dark:bg-gray-700/50 focus:bg-white dark:bg-gray-800 outline-none focus:ring-1 focus:ring-scout-green w-64"
                     />
                 </div>
                 <div className="space-y-1">
@@ -323,7 +323,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                         type="date" 
                         value={verbale.data}
                         onChange={e => setVerbale(v => ({ ...v, data: e.target.value }))}
-                        className="p-2 border border-gray-100 rounded-lg text-sm bg-gray-50/50 focus:bg-white outline-none focus:ring-1 focus:ring-scout-green"
+                        className="p-2 border border-gray-100 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-700/50 dark:bg-gray-700/50 focus:bg-white dark:bg-gray-800 outline-none focus:ring-1 focus:ring-scout-green"
                     />
                 </div>
                 <div className="space-y-1">
@@ -332,7 +332,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                         type="text" 
                         value={verbale.luogo}
                         onChange={e => setVerbale(v => ({ ...v, luogo: e.target.value }))}
-                        className="p-2 border border-gray-100 rounded-lg text-sm bg-gray-50/50 focus:bg-white outline-none focus:ring-1 focus:ring-scout-green"
+                        className="p-2 border border-gray-100 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-700/50 dark:bg-gray-700/50 focus:bg-white dark:bg-gray-800 outline-none focus:ring-1 focus:ring-scout-green"
                     />
                 </div>
                 <div className="flex gap-2">
@@ -342,7 +342,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                             type="time" 
                             value={verbale.oraInizio}
                             onChange={e => setVerbale(v => ({ ...v, oraInizio: e.target.value }))}
-                            className="p-2 border border-gray-100 rounded-lg text-sm bg-gray-50/50 focus:bg-white outline-none focus:ring-1 focus:ring-scout-green"
+                            className="p-2 border border-gray-100 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-700/50 dark:bg-gray-700/50 focus:bg-white dark:bg-gray-800 outline-none focus:ring-1 focus:ring-scout-green"
                         />
                     </div>
                     <div className="space-y-1">
@@ -351,7 +351,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                             type="time" 
                             value={verbale.oraFine}
                             onChange={e => setVerbale(v => ({ ...v, oraFine: e.target.value }))}
-                            className="p-2 border border-gray-100 rounded-lg text-sm bg-gray-50/50 focus:bg-white outline-none focus:ring-1 focus:ring-scout-green"
+                            className="p-2 border border-gray-100 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-700/50 dark:bg-gray-700/50 focus:bg-white dark:bg-gray-800 outline-none focus:ring-1 focus:ring-scout-green"
                         />
                     </div>
                 </div>
@@ -360,7 +360,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
 
             {/* Navigation Tabs */}
             {!viewMode && (
-            <div className="flex bg-white p-1 rounded-2xl border border-gray-100 shadow-sm overflow-x-auto scrollbar-hide no-print">
+            <div className="flex bg-white dark:bg-gray-800 p-1 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-x-auto scrollbar-hide no-print">
                 {(['presenze', 'odg', 'sezioni', 'anteprima'] as TabType[]).map((tab) => (
                     <button
                         key={tab}
@@ -369,7 +369,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                             "flex-1 flex items-center justify-center gap-2 py-3 px-6 rounded-xl font-bold text-sm transition-all whitespace-nowrap",
                             activeTab === tab 
                                 ? "bg-scout-green text-white shadow-md ring-1 ring-green-100" 
-                                : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
+                                : "text-gray-400 hover:text-gray-600 hover:bg-gray-50 dark:bg-gray-700"
                         )}
                     >
                         {tab === 'presenze' && <Users size={16} />}
@@ -384,7 +384,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
 
             {/* Tab content */}
             {!viewMode && activeTab !== 'anteprima' && (
-                <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden min-h-[500px]">
+                <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden min-h-[500px]">
                 {(!viewMode && activeTab === 'presenze') && (
                     <div className="p-6 space-y-8">
                         {BRANCHE.map(branca => {
@@ -393,7 +393,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                             
                             return (
                                 <section key={branca} className="space-y-4">
-                                    <div className="flex items-center justify-between border-b border-gray-100 pb-2">
+                                    <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-2">
                                         <h3 className="font-serif font-black text-scout-brown opacity-60 uppercase text-xs tracking-widest">{branca}</h3>
                                         <div className="flex gap-2 text-[10px] font-bold">
                                             <span className="text-scout-green">P: {membriBranca.filter(m => verbale.presenti?.includes(m.id)).length}</span>
@@ -411,11 +411,11 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                 <div key={m.id} className={cn(
                                                     "p-3 rounded-2xl border transition-all",
                                                     isPresent ? "bg-green-50/30 border-green-100 shadow-sm" : 
-                                                    isAbsent ? "bg-red-50/30 border-red-100" : "bg-gray-50/30 border-gray-100"
+                                                    isAbsent ? "bg-red-50/30 border-red-100" : "bg-gray-50 dark:bg-gray-700/30 border-gray-100 dark:border-gray-700"
                                                 )}>
                                                     <div className="flex justify-between items-start mb-3">
                                                         <div>
-                                                            <p className="font-serif font-black text-sm text-gray-800">{m.nome}</p>
+                                                            <p className="font-serif font-black text-sm text-gray-800 dark:text-gray-100">{m.nome}</p>
                                                             <p className="text-[10px] text-gray-400 italic line-clamp-1">{m.ruoli.join(', ')}</p>
                                                         </div>
                                                         <div className="flex gap-1">
@@ -428,7 +428,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                                 title="Presente"
                                                                 className={cn(
                                                                     "w-7 h-7 rounded-lg flex items-center justify-center font-black text-xs transition-all",
-                                                                    isPresent ? "bg-scout-green text-white" : "bg-white border border-gray-200 text-gray-300"
+                                                                    isPresent ? "bg-scout-green text-white" : "bg-white dark:bg-gray-800 border border-gray-200 text-gray-300"
                                                                 )}
                                                             >P</button>
                                                             <button 
@@ -440,7 +440,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                                 title="Assente"
                                                                 className={cn(
                                                                     "w-7 h-7 rounded-lg flex items-center justify-center font-black text-xs transition-all",
-                                                                    isAbsent ? "bg-red-400 text-white" : "bg-white border border-gray-200 text-gray-300"
+                                                                    isAbsent ? "bg-red-400 text-white" : "bg-white dark:bg-gray-800 border border-gray-200 text-gray-300"
                                                                 )}
                                                             >A</button>
                                                         </div>
@@ -455,7 +455,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                             }))}
                                                             className={cn(
                                                                 "flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-bold transition-all border",
-                                                                isLate ? "bg-orange-100 border-orange-200 text-orange-600" : "bg-white border-gray-100 text-gray-400"
+                                                                isLate ? "bg-orange-100 border-orange-200 text-orange-600" : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 text-gray-400"
                                                             )}
                                                         >
                                                             <Clock size={12} />
@@ -476,11 +476,11 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                                     });
                                                                 }}
                                                                 className={cn(
-                                                                    "w-full bg-white border rounded-lg text-[10px] px-2 py-1 outline-none",
-                                                                    exitTime ? "border-scout-blue text-scout-blue font-bold" : "border-gray-100 text-gray-400"
+                                                                    "w-full bg-white dark:bg-gray-800 border rounded-lg text-[10px] px-2 py-1 outline-none",
+                                                                    exitTime ? "border-scout-blue text-scout-blue font-bold" : "border-gray-100 dark:border-gray-700 text-gray-400"
                                                                 )}
                                                             />
-                                                            <span className="absolute -top-3 left-1 text-[8px] bg-white px-1 text-gray-300 italic opacity-0 group-focus-within:opacity-100 font-bold uppercase">Uscita</span>
+                                                            <span className="absolute -top-3 left-1 text-[8px] bg-white dark:bg-gray-800 px-1 text-gray-300 italic opacity-0 group-focus-within:opacity-100 font-bold uppercase">Uscita</span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -492,7 +492,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                         })}
 
                         {/* Ospiti */}
-                        <section className="pt-8 border-t border-gray-100">
+                        <section className="pt-8 border-t border-gray-100 dark:border-gray-700">
                              <div className="flex items-center justify-between mb-4">
                                 <h3 className="font-serif font-black text-scout-brown uppercase text-xs tracking-widest flex items-center gap-2">
                                     <AlertCircle size={14} className="text-gray-400" />
@@ -507,7 +507,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 {(verbale.ospiti || []).map((o, idx) => (
-                                    <div key={idx} className="flex gap-2 items-center bg-gray-50/50 p-2 rounded-2xl border border-gray-100 group">
+                                    <div key={idx} className="flex gap-2 items-center bg-gray-50 dark:bg-gray-700/50 dark:bg-gray-700/50 p-2 rounded-2xl border border-gray-100 dark:border-gray-700 group">
                                         <input 
                                             type="text" 
                                             placeholder="Nome Ospite" 
@@ -517,7 +517,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                 newOspiti[idx].nome = e.target.value;
                                                 setVerbale(v => ({ ...v, ospiti: newOspiti }));
                                             }}
-                                            className="flex-1 p-2 bg-white border border-gray-100 rounded-xl text-xs outline-none focus:ring-1 focus:ring-scout-blue"
+                                            className="flex-1 p-2 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl text-xs outline-none focus:ring-1 focus:ring-scout-blue"
                                         />
                                         <input 
                                             type="text" 
@@ -528,7 +528,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                 newOspiti[idx].ruolo = e.target.value;
                                                 setVerbale(v => ({ ...v, ospiti: newOspiti }));
                                             }}
-                                            className="flex-1 p-2 bg-white border border-gray-100 rounded-xl text-xs outline-none focus:ring-1 focus:ring-scout-blue"
+                                            className="flex-1 p-2 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl text-xs outline-none focus:ring-1 focus:ring-scout-blue"
                                         />
                                         <button 
                                             onClick={() => setVerbale(v => ({ ...v, ospiti: v.ospiti?.filter((_, i) => i !== idx) }))}
@@ -565,19 +565,19 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
 
                             <div className="space-y-4 pt-4">
                                 {(verbale.odg || []).map((punto, idx) => (
-                                    <div key={punto.id} className="p-6 bg-white rounded-3xl border border-gray-100 shadow-sm space-y-4 relative group hover:border-scout-blue/20 transition-all">
+                                    <div key={punto.id} className="p-6 bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm space-y-4 relative group hover:border-scout-blue/20 transition-all">
                                         <div className="absolute md:top-6 md:right-6 top-4 right-4 flex gap-2 lg:opacity-0 lg:group-hover:opacity-100 transition-all">
                                                 <button 
                                                 onClick={() => handleReorder(idx, -1, 'odg')}
                                                 disabled={idx === 0}
-                                                className="bg-gray-50 text-gray-400 p-2 rounded-xl hover:bg-scout-blue hover:text-white disabled:opacity-30"
+                                                className="bg-gray-50 dark:bg-gray-700 text-gray-400 p-2 rounded-xl hover:bg-scout-blue hover:text-white disabled:opacity-30"
                                             >
                                                 <ArrowUp size={18} />
                                             </button>
                                             <button 
                                                 onClick={() => handleReorder(idx, 1, 'odg')}
                                                 disabled={idx === (verbale.odg?.length || 0) - 1}
-                                                className="bg-gray-50 text-gray-400 p-2 rounded-xl hover:bg-scout-blue hover:text-white disabled:opacity-30"
+                                                className="bg-gray-50 dark:bg-gray-700 text-gray-400 p-2 rounded-xl hover:bg-scout-blue hover:text-white disabled:opacity-30"
                                             >
                                                 <ArrowDown size={18} />
                                             </button>
@@ -592,7 +592,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                             </button>
                                         </div>
                                         <div className="flex items-center gap-4">
-                                            <span className="w-10 h-10 rounded-2xl bg-gray-50 flex items-center justify-center font-serif font-black text-gray-300 text-lg">
+                                            <span className="w-10 h-10 rounded-2xl bg-gray-50 dark:bg-gray-700 flex items-center justify-center font-serif font-black text-gray-300 text-lg">
                                                 {idxToAlpha(idx)}
                                             </span>
                                             <div className="flex-1">
@@ -605,7 +605,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                         newOdg[idx].titolo = e.target.value;
                                                         setVerbale(v => ({ ...v, odg: newOdg }));
                                                     }}
-                                                    className="w-full bg-transparent border-b-2 border-gray-100 focus:border-scout-blue outline-none font-serif font-black text-lg text-gray-800 py-1 transition-all"
+                                                    className="w-full bg-transparent border-b-2 border-gray-100 dark:border-gray-700 focus:border-scout-blue outline-none font-serif font-black text-lg text-gray-800 dark:text-gray-100 py-1 transition-all"
                                                 />
                                             </div>
                                         </div>
@@ -620,8 +620,8 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                     </div>
                                 ))}
                                 {verbale.odg?.length === 0 && (
-                                    <div className="text-center py-20 border-2 border-dashed border-gray-100 rounded-3xl">
-                                        <div className="bg-gray-50 w-16 h-16 rounded-3xl flex items-center justify-center mx-auto mb-4">
+                                    <div className="text-center py-20 border-2 border-dashed border-gray-100 dark:border-gray-700 rounded-3xl">
+                                        <div className="bg-gray-50 dark:bg-gray-700 w-16 h-16 rounded-3xl flex items-center justify-center mx-auto mb-4">
                                             <FileText className="text-gray-200" size={32} />
                                         </div>
                                         <p className="text-gray-400 font-serif italic">Nessun punto all'ordine del giorno</p>
@@ -647,8 +647,8 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                             className={cn(
                                                 "p-4 rounded-2xl border transition-all flex flex-col items-center gap-2",
                                                 isActive 
-                                                    ? "bg-white border-scout-green shadow-md ring-1 ring-green-50" 
-                                                    : "bg-gray-50 border-gray-100 opacity-60 grayscale"
+                                                    ? "bg-white dark:bg-gray-800 border-scout-green shadow-md ring-1 ring-green-50" 
+                                                    : "bg-gray-50 dark:bg-gray-700 border-gray-100 dark:border-gray-700 opacity-60 grayscale"
                                             )}
                                         >
                                             <span className="text-2xl">{s.icon}</span>
@@ -684,7 +684,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                     </div>
                                     <div className="space-y-4">
                                         {(verbale.ritorni || []).map((rit, idx) => (
-                                            <div key={idx} className="bg-gray-50/30 p-4 rounded-3xl border border-gray-100 group space-y-3">
+                                            <div key={idx} className="bg-gray-50 dark:bg-gray-700/30 p-4 rounded-3xl border border-gray-100 dark:border-gray-700 group space-y-3">
                                                 <div className="flex gap-3 items-center">
                                                     <select 
                                                         value={rit.tipo || 'Branca'}
@@ -774,7 +774,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                     </div>
                                     <div className="space-y-3">
                                         {(verbale.cassa || []).map((mov, idx) => (
-                                            <div key={idx} className="flex gap-3 items-center bg-gray-50/30 p-3 rounded-2xl border border-gray-100 group">
+                                            <div key={idx} className="flex gap-3 items-center bg-gray-50 dark:bg-gray-700/30 p-3 rounded-2xl border border-gray-100 dark:border-gray-700 group">
                                                 <select 
                                                     value={mov.branca}
                                                     onChange={e => {
@@ -782,7 +782,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                         next[idx].branca = e.target.value;
                                                         setVerbale(v => ({ ...v, cassa: next }));
                                                     }}
-                                                    className="p-2.5 bg-white border border-gray-100 rounded-xl text-xs outline-none focus:ring-1 focus:ring-scout-brown"
+                                                    className="p-2.5 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl text-xs outline-none focus:ring-1 focus:ring-scout-brown"
                                                 >
                                                     {['L/C', 'E/G', 'R/S', 'CoCa', 'Altro'].map(b => <option key={b} value={b}>{b}</option>)}
                                                 </select>
@@ -793,7 +793,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                         next[idx].tipo = e.target.value as 'Versamento' | 'Ricevuta';
                                                         setVerbale(v => ({ ...v, cassa: next }));
                                                     }}
-                                                    className="p-2.5 bg-white border border-gray-100 rounded-xl text-xs outline-none focus:ring-1 focus:ring-scout-brown"
+                                                    className="p-2.5 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl text-xs outline-none focus:ring-1 focus:ring-scout-brown"
                                                 >
                                                     <option value="Versamento">Versato (Uscita)</option>
                                                     <option value="Ricevuta">Ricevuto (Entrata)</option>
@@ -807,7 +807,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                         next[idx].note = e.target.value;
                                                         setVerbale(v => ({ ...v, cassa: next }));
                                                     }}
-                                                    className="flex-1 p-2.5 bg-white border border-gray-100 rounded-xl text-xs outline-none focus:ring-1 focus:ring-scout-brown"
+                                                    className="flex-1 p-2.5 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl text-xs outline-none focus:ring-1 focus:ring-scout-brown"
                                                 />
                                                 <div className="w-32 relative">
                                                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-xs">€</span>
@@ -820,7 +820,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                             next[idx].importo = parseFloat(e.target.value) || 0;
                                                             setVerbale(v => ({ ...v, cassa: next }));
                                                         }}
-                                                        className="w-full pl-7 p-2.5 bg-white border border-gray-100 rounded-xl text-xs font-bold outline-none text-right focus:ring-1 focus:ring-scout-green"
+                                                        className="w-full pl-7 p-2.5 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl text-xs font-bold outline-none text-right focus:ring-1 focus:ring-scout-green"
                                                     />
                                                 </div>
                                                 <button 
@@ -852,7 +852,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                     </div>
                                     <div className="space-y-4">
                                         {(verbale.postiAzione || []).map((pa, idx) => (
-                                            <div key={pa.id} className="bg-gray-50/50 p-4 rounded-3xl border border-gray-100 space-y-3">
+                                            <div key={pa.id} className="bg-gray-50 dark:bg-gray-700/50 dark:bg-gray-700/50 p-4 rounded-3xl border border-gray-100 dark:border-gray-700 space-y-3">
                                                 {/* Cosa */}
                                                 <div className="space-y-1">
                                                     <label className="text-[9px] font-black text-gray-300 uppercase ml-2">Cosa fare</label>
@@ -865,7 +865,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                             next[idx] = { ...next[idx], cosa: e.target.value };
                                                             setVerbale(v => ({ ...v, postiAzione: next }));
                                                         }}
-                                                        className="w-full bg-white p-2.5 border border-gray-100 rounded-xl text-xs outline-none focus:ring-1 focus:ring-orange-200 font-bold"
+                                                        className="w-full bg-white dark:bg-gray-800 p-2.5 border border-gray-100 dark:border-gray-700 rounded-xl text-xs outline-none focus:ring-1 focus:ring-orange-200 font-bold"
                                                     />
                                                 </div>
 
@@ -927,7 +927,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                                         "px-2.5 py-1 rounded-full text-[11px] font-bold transition-all border",
                                                                         selected
                                                                             ? "bg-orange-500 text-white border-orange-500 shadow-sm dark:bg-orange-600 dark:border-orange-600"
-                                                                            : "bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-orange-300 hover:text-orange-600 dark:hover:text-orange-400"
+                                                                            : "bg-white dark:bg-gray-800 dark:bg-gray-800 text-gray-500 dark:text-gray-300 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-orange-300 hover:text-orange-600 dark:hover:text-orange-400"
                                                                     )}
                                                                 >
                                                                     {m.nome}
@@ -952,7 +952,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                                 next[idx] = { ...next[idx], quando: e.target.value };
                                                                 setVerbale(v => ({ ...v, postiAzione: next }));
                                                             }}
-                                                            className="w-full bg-white p-2.5 border border-gray-100 rounded-xl text-xs outline-none focus:ring-1 focus:ring-orange-200"
+                                                            className="w-full bg-white dark:bg-gray-800 p-2.5 border border-gray-100 dark:border-gray-700 rounded-xl text-xs outline-none focus:ring-1 focus:ring-orange-200"
                                                         />
                                                     </div>
                                                     <button 
@@ -969,7 +969,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                             {/* Varie */}
                             {verbale.sezioniAttive?.includes('varie') && (
                                 <div className="pt-10 space-y-4">
-                                    <h3 className="font-serif font-black text-gray-500 uppercase text-sm tracking-widest flex items-center gap-2">
+                                    <h3 className="font-serif font-black text-gray-500 dark:text-gray-300 uppercase text-sm tracking-widest flex items-center gap-2">
                                         💬 Varie ed Eventuali
                                     </h3>
                                     <RichTextEditor
@@ -1000,7 +1000,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                     </div>
                                     <div className="space-y-3">
                                         {(verbale.dateImportanti || []).map((dt, idx) => (
-                                            <div key={dt.id} className="grid grid-cols-12 gap-3 bg-gray-50/50 p-4 rounded-3xl border border-gray-100 group">
+                                            <div key={dt.id} className="grid grid-cols-12 gap-3 bg-gray-50 dark:bg-gray-700/50 dark:bg-gray-700/50 p-4 rounded-3xl border border-gray-100 dark:border-gray-700 group">
                                                 <div className="col-span-8 md:col-span-3 space-y-1">
                                                     <label className="text-[9px] font-black text-gray-300 uppercase ml-2">Evento</label>
                                                     <input 
@@ -1012,7 +1012,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                             next[idx].evento = e.target.value;
                                                             setVerbale(v => ({ ...v, dateImportanti: next }));
                                                         }}
-                                                        className="w-full bg-white p-2.5 border border-gray-100 rounded-xl text-xs outline-none focus:ring-1 focus:ring-scout-blue font-bold"
+                                                        className="w-full bg-white dark:bg-gray-800 p-2.5 border border-gray-100 dark:border-gray-700 rounded-xl text-xs outline-none focus:ring-1 focus:ring-scout-blue font-bold"
                                                     />
                                                 </div>
                                                 <div className="col-span-4 md:col-span-2 space-y-1">
@@ -1024,7 +1024,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                             next[idx].branca = e.target.value;
                                                             setVerbale(v => ({ ...v, dateImportanti: next }));
                                                         }}
-                                                        className="w-full bg-white p-2 border border-gray-100 rounded-xl text-xs outline-none focus:ring-1 focus:ring-scout-blue font-bold"
+                                                        className="w-full bg-white dark:bg-gray-800 p-2 border border-gray-100 dark:border-gray-700 rounded-xl text-xs outline-none focus:ring-1 focus:ring-scout-blue font-bold"
                                                     >
                                                         <option value="CoCa">CoCa</option>
                                                         <option value="L/C">L/C</option>
@@ -1044,7 +1044,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                             next[idx].dataInizio = e.target.value;
                                                             setVerbale(v => ({ ...v, dateImportanti: next }));
                                                         }}
-                                                        className="w-full bg-white p-2.5 border border-gray-100 rounded-xl text-xs outline-none focus:ring-1 focus:ring-scout-blue"
+                                                        className="w-full bg-white dark:bg-gray-800 p-2.5 border border-gray-100 dark:border-gray-700 rounded-xl text-xs outline-none focus:ring-1 focus:ring-scout-blue"
                                                     />
                                                 </div>
                                                 <div className="col-span-6 md:col-span-5 space-y-1 relative">
@@ -1059,7 +1059,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                                 next[idx].note = e.target.value;
                                                                 setVerbale(v => ({ ...v, dateImportanti: next }));
                                                             }}
-                                                            className="flex-1 bg-white p-2.5 border border-gray-100 rounded-xl text-xs outline-none focus:ring-1 focus:ring-scout-blue"
+                                                            className="flex-1 bg-white dark:bg-gray-800 p-2.5 border border-gray-100 dark:border-gray-700 rounded-xl text-xs outline-none focus:ring-1 focus:ring-scout-blue"
                                                         />
                                                         <button 
                                                             onClick={() => setVerbale(v => ({ ...v, dateImportanti: v.dateImportanti?.filter((_, i) => i !== idx) }))}
@@ -1070,7 +1070,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                             </div>
                                         ))}
                                         {(!verbale.dateImportanti || verbale.dateImportanti.length === 0) && (
-                                            <div className="text-center p-6 text-gray-400 font-serif italic bg-white border border-gray-100 rounded-2xl">
+                                            <div className="text-center p-6 text-gray-400 font-serif italic bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl">
                                                 Nessuna data importante registrata
                                             </div>
                                         )}
@@ -1097,7 +1097,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                     </div>
                                     <div className="space-y-3">
                                         {(verbale.prossimiImpegni || []).map((imp, idx) => (
-                                            <div key={imp.id} className="grid grid-cols-12 gap-3 bg-gray-50/50 p-4 rounded-3xl border border-gray-100 group">
+                                            <div key={imp.id} className="grid grid-cols-12 gap-3 bg-gray-50 dark:bg-gray-700/50 dark:bg-gray-700/50 p-4 rounded-3xl border border-gray-100 dark:border-gray-700 group">
                                                 <div className="col-span-8 md:col-span-4 space-y-1">
                                                     <label className="text-[9px] font-black text-gray-300 uppercase ml-2">Nome impegno</label>
                                                     <input 
@@ -1109,7 +1109,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                             next[idx].evento = e.target.value;
                                                             setVerbale(v => ({ ...v, prossimiImpegni: next }));
                                                         }}
-                                                        className="w-full bg-white p-2.5 border border-gray-100 rounded-xl text-xs outline-none focus:ring-1 focus:ring-scout-purple font-bold"
+                                                        className="w-full bg-white dark:bg-gray-800 p-2.5 border border-gray-100 dark:border-gray-700 rounded-xl text-xs outline-none focus:ring-1 focus:ring-scout-purple font-bold"
                                                     />
                                                 </div>
                                                 <div className="col-span-4 md:col-span-2 space-y-1">
@@ -1121,7 +1121,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                             next[idx].branca = e.target.value;
                                                             setVerbale(v => ({ ...v, prossimiImpegni: next }));
                                                         }}
-                                                        className="w-full bg-white p-2 border border-gray-100 rounded-xl text-xs outline-none focus:ring-1 focus:ring-scout-purple font-bold"
+                                                        className="w-full bg-white dark:bg-gray-800 p-2 border border-gray-100 dark:border-gray-700 rounded-xl text-xs outline-none focus:ring-1 focus:ring-scout-purple font-bold"
                                                     >
                                                         <option value="CoCa">CoCa</option>
                                                         <option value="L/C">L/C</option>
@@ -1141,7 +1141,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                             next[idx].dataInizio = e.target.value;
                                                             setVerbale(v => ({ ...v, prossimiImpegni: next }));
                                                         }}
-                                                        className="w-full bg-white p-2.5 border border-gray-100 rounded-xl text-xs outline-none focus:ring-1 focus:ring-scout-purple"
+                                                        className="w-full bg-white dark:bg-gray-800 p-2.5 border border-gray-100 dark:border-gray-700 rounded-xl text-xs outline-none focus:ring-1 focus:ring-scout-purple"
                                                     />
                                                 </div>
                                                 <div className="col-span-6 md:col-span-4 space-y-1 relative">
@@ -1155,7 +1155,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                                 next[idx].note = e.target.value;
                                                                 setVerbale(v => ({ ...v, prossimiImpegni: next }));
                                                             }}
-                                                            className="flex-1 bg-white p-2.5 border border-gray-100 rounded-xl text-xs outline-none focus:ring-1 focus:ring-scout-purple"
+                                                            className="flex-1 bg-white dark:bg-gray-800 p-2.5 border border-gray-100 dark:border-gray-700 rounded-xl text-xs outline-none focus:ring-1 focus:ring-scout-purple"
                                                         />
                                                         <button 
                                                             onClick={() => setVerbale(v => ({ ...v, prossimiImpegni: v.prossimiImpegni?.filter((_, i) => i !== idx) }))}
@@ -1166,7 +1166,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                             </div>
                                         ))}
                                         {(!verbale.prossimiImpegni || verbale.prossimiImpegni.length === 0) && (
-                                            <div className="text-center p-6 text-gray-400 font-serif italic bg-white border border-gray-100 rounded-2xl">
+                                            <div className="text-center p-6 text-gray-400 font-serif italic bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl">
                                                 Nessun prossimo impegno registrato
                                             </div>
                                         )}
@@ -1180,18 +1180,18 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
             )}
 
             {(viewMode || activeTab === 'anteprima') && (
-                <div className="w-full bg-gray-100 flex flex-col items-center gap-6 print-verbale overflow-x-hidden p-0 md:p-8">
+                <div className="w-full bg-gray-100 dark:bg-gray-900 flex flex-col items-center gap-6 print-verbale overflow-x-hidden p-0 md:p-8">
                         {/* Last modifier badge - only on screen */}
                         {viewMode && verbale.lastModifiedByUsername && (
-                            <div className="w-full max-w-[850px] flex items-center gap-2 text-xs text-gray-500 bg-white/80 px-4 py-2 rounded-xl border border-gray-100 shadow-sm no-print">
-                                <Pencil size={12} className="text-gray-400" />
-                                <span>Ultima modifica di <strong className="text-gray-700">{verbale.lastModifiedByUsername}</strong></span>
-                                {verbale.updatedAt && <span className="ml-auto text-gray-400">{new Date(verbale.updatedAt).toLocaleDateString('it-IT', {day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'})}</span>}
+                            <div className="w-full max-w-[850px] flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800/80 px-4 py-2 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm no-print">
+                                <Pencil size={12} className="text-gray-400 dark:text-gray-500" />
+                                <span>Ultima modifica di <strong className="text-gray-700 dark:text-gray-200">{verbale.lastModifiedByUsername}</strong></span>
+                                {verbale.updatedAt && <span className="ml-auto text-gray-400 dark:text-gray-500">{new Date(verbale.updatedAt).toLocaleDateString('it-IT', {day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'})}</span>}
                             </div>
                         )}
                         
                         {/* A4 page - natural scroll, no fixed height */}
-                        <div className="bg-white w-full md:max-w-[850px] shadow-xl md:border md:border-gray-200 print:shadow-none print:border-none page-container mx-auto overflow-hidden">
+                        <div className="bg-white dark:bg-gray-800 w-full md:max-w-[850px] shadow-xl md:border md:border-gray-200 print:shadow-none print:border-none page-container mx-auto overflow-hidden">
                             <table className="print-table w-full">
                                 <thead>
                                     <tr>
@@ -1256,7 +1256,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                                         (sezId === 'cassa' && (verbale.cassa?.length || 0) > 0) ||
                                                                         (sezId === 'varie' && !!verbale.varie);
                                                                     if (!hasContent || !SEZIONI_LABELS[sezId]) return null;
-                                                                    return <li key={sezId} className="font-bold italic text-gray-500">{SEZIONI_LABELS[sezId]}</li>;
+                                                                    return <li key={sezId} className="font-bold italic text-gray-500 dark:text-gray-300">{SEZIONI_LABELS[sezId]}</li>;
                                                                 })}
                                                             </ul>
                                                         </div>
@@ -1281,7 +1281,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                     {/* Additional Sections */}
                                                     {verbale.sezioniAttive?.includes('ritorni') && verbale.ritorni && verbale.ritorni.length > 0 && (
                                                         <div className="space-y-4">
-                                                            <div className="font-black border-b border-gray-100 pb-1 uppercase text-[10px] tracking-widest text-[#45387E]">Ritorni</div>
+                                                            <div className="font-black border-b border-gray-100 dark:border-gray-700 pb-1 uppercase text-[10px] tracking-widest text-[#45387E]">Ritorni</div>
                                                             {verbale.ritorni.map((r, i) => (
                                                                 <div key={i} className="pl-6 space-y-1">
                                                                     <div className="font-bold text-[11px]">- {r.branca}</div>
@@ -1296,7 +1296,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
 
                                                     {verbale.sezioniAttive?.includes('date_importanti') && verbale.dateImportanti && verbale.dateImportanti.length > 0 && (
                                                         <div className="space-y-4">
-                                                            <div className="font-black border-b border-gray-100 pb-1 uppercase text-[10px] tracking-widest text-scout-blue">Date Importanti</div>
+                                                            <div className="font-black border-b border-gray-100 dark:border-gray-700 pb-1 uppercase text-[10px] tracking-widest text-scout-blue">Date Importanti</div>
                                                             <div className="pl-6 space-y-3">
                                                                 {verbale.dateImportanti.map((d, i) => (
                                                                     <div key={i} className="text-[12px] flex flex-col border-l-2 border-scout-blue/20 pl-3 py-0.5">
@@ -1316,7 +1316,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
 
                                                     {verbale.sezioniAttive?.includes('posti_azione') && verbale.postiAzione && verbale.postiAzione.length > 0 && (
                                                         <div className="space-y-4">
-                                                            <div className="font-black border-b border-gray-100 pb-1 uppercase text-[10px] tracking-widest text-orange-600">Posti d'Azione</div>
+                                                            <div className="font-black border-b border-gray-100 dark:border-gray-700 pb-1 uppercase text-[10px] tracking-widest text-orange-600">Posti d'Azione</div>
                                                             <ul className="space-y-2 pl-6">
                                                                 {verbale.postiAzione.map((pa, i) => (
                                                                     <li key={i} className="text-[12px] space-y-0.5">
@@ -1333,7 +1333,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
 
                                                     {verbale.sezioniAttive?.includes('cassa') && verbale.cassa && verbale.cassa.length > 0 && (
                                                         <div className="space-y-4">
-                                                            <div className="font-black border-b border-gray-100 pb-1 uppercase text-[10px] tracking-widest text-emerald-700">Movimenti di cassa di gruppo</div>
+                                                            <div className="font-black border-b border-gray-100 dark:border-gray-700 pb-1 uppercase text-[10px] tracking-widest text-emerald-700">Movimenti di cassa di gruppo</div>
                                                             <div className="pl-6 text-[12px]">
                                                                 {verbale.cassa.map((m, i) => (
                                                                     <div key={i} className="flex justify-between border-b border-gray-50 py-1 italic">
@@ -1347,7 +1347,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
 
                                                     {verbale.sezioniAttive?.includes('prossimi_impegni') && verbale.prossimiImpegni && verbale.prossimiImpegni.length > 0 && (
                                                         <div className="space-y-4">
-                                                            <div className="font-black border-b border-gray-100 pb-1 uppercase text-[10px] tracking-widest text-scout-purple">Prossimi impegni</div>
+                                                            <div className="font-black border-b border-gray-100 dark:border-gray-700 pb-1 uppercase text-[10px] tracking-widest text-scout-purple">Prossimi impegni</div>
                                                             <div className="pl-6 space-y-2">
                                                                 {verbale.prossimiImpegni.map((imp, i) => (
                                                                     <div key={i} className="text-[12px] flex justify-between border-b border-gray-50 py-1">
@@ -1364,7 +1364,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
 
                                                     {verbale.sezioniAttive?.includes('varie') && verbale.varie && (
                                                         <div className="space-y-2">
-                                                            <div className="font-black border-b border-gray-100 pb-1 uppercase text-[10px] tracking-widest text-gray-400">Varie ed Eventuali</div>
+                                                            <div className="font-black border-b border-gray-100 dark:border-gray-700 pb-1 uppercase text-[10px] tracking-widest text-gray-400">Varie ed Eventuali</div>
                                                             <div className="pl-6 text-[12px] italic leading-relaxed">{verbale.varie}</div>
                                                         </div>
                                                     )}
@@ -1378,7 +1378,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                         <td>
                                             <div className="px-5 md:px-[80px] pt-5 md:pt-[20px] pb-10 md:pb-[60px]">
                                                 {/* LAST MODIFIER FOOTER */}
-                                                <div className="pt-10 border-t border-gray-100">
+                                                <div className="pt-10 border-t border-gray-100 dark:border-gray-700">
                                                     <div className="flex justify-between items-center">
                                                         <div className="text-[9px] text-gray-400 max-w-[70%] leading-relaxed">
                                                             WAGGGS / WOSM Member • Iscritta al Registro Nazionale delle Associazioni di Promozione Sociale n.72 - Legge 383/2000
@@ -1398,14 +1398,14 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
             {/* NOTIFICATION MODAL */}
             {showNotifyModal && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-                    <div className="bg-white rounded-[32px] w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                    <div className="bg-white dark:bg-gray-800 rounded-[32px] w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
                         <div className="p-8 text-center space-y-5">
                             <div className="w-20 h-20 bg-green-100 text-scout-green rounded-full flex items-center justify-center mx-auto">
                                 <CheckCircle2 size={40} />
                             </div>
                             <div>
                                 <h2 className="text-2xl font-serif font-black text-gray-900 mb-2">Verbale Salvato!</h2>
-                                <p className="text-gray-500 text-sm italic">
+                                <p className="text-gray-500 dark:text-gray-300 text-sm italic">
                                     Il verbale n. {verbale.numero} è stato archiviato con successo.
                                 </p>
                             </div>
@@ -1438,7 +1438,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                             notifyStatus.email === 'idle' ? "bg-blue-500 text-white hover:bg-blue-600" :
                                             notifyStatus.email === 'sending' ? "bg-blue-300 text-white" :
                                             notifyStatus.email === 'done' ? "bg-scout-green text-white" :
-                                            notifyStatus.email === 'not_configured' ? "bg-gray-200 text-gray-500" :
+                                            notifyStatus.email === 'not_configured' ? "bg-gray-200 text-gray-500 dark:text-gray-300" :
                                             "bg-red-500 text-white"
                                         )}
                                         title={notifyStatus.email === 'not_configured' ? 'Servizio email non configurato' : ''}
@@ -1463,7 +1463,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                     ) : (
                                         <button
                                             onClick={() => setShowNotifyModal(false)}
-                                            className="w-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300 py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
+                                            className="w-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300 dark:text-gray-300 py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
                                         >
                                             <BellOff size={18} />
                                             Non notificare
@@ -1472,7 +1472,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                 </div>
                             </div>
 
-                            <div className="space-y-2 pt-2 border-t border-gray-100">
+                            <div className="space-y-2 pt-2 border-t border-gray-100 dark:border-gray-700">
                                 <button
                                     onClick={() => handleExportWord()}
                                     className="w-full bg-[#45387E] text-white py-3 px-6 rounded-2xl font-black text-sm flex items-center justify-center gap-3 hover:bg-[#352b61] transition-all shadow-md active:scale-95 disabled:opacity-50"

@@ -217,6 +217,17 @@ export default function Profile() {
                                 {editErrors.email && <p className="text-red-500 text-[11px] mt-1 flex items-center gap-1"><AlertCircle size={11}/>{editErrors.email}</p>}
                             </div>
 
+                            {/* Codice Socio */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Codice Socio</label>
+                                <input
+                                    type="text"
+                                    value={editForm.scoutCode}
+                                    onChange={e => setEditForm((prev: any) => ({ ...prev, scoutCode: e.target.value }))}
+                                    className={cn("w-full p-2 rounded-xl border dark:bg-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-scout-green", "border-gray-200 dark:border-gray-700")}
+                                />
+                            </div>
+
                             {/* Dati Gruppo */}
                             <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-xl space-y-3 dark:border dark:border-gray-700">
                                 <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Dati Gruppo</p>

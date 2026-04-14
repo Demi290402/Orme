@@ -22,8 +22,8 @@ if (pdfMakeAny && !pdfMakeAny.vfs && vfs) {
 export async function exportVerbaleToPdf(
     verbale: Partial<Verbale>,
     membri: MembroCoCa[],
-    intestazioneHtml: string = '',
-    piePaginaHtml: string = ''
+    _intestazioneHtml: string = '',
+    _piePaginaHtml: string = ''
 ): Promise<void> {
     const formatDate = (d?: string) => d ? new Date(d).toLocaleDateString('it-IT') : '-';
     const membroNome = (id: string) => membri.find(m => m.id === id)?.nome || id;
@@ -99,31 +99,99 @@ export async function exportVerbaleToPdf(
         </div>
     `;
 
+    // Fetch images natively for proper embedding in PDF
+    let logoDataUrl: string | null = null;
+    let footerLogosDataUrl: string | null = null;
+    try {
+        const logoRes = await fetch(window.location.origin + '/turi_1_no_bg.png');
+        if (logoRes.ok) {
+            const blob = await logoRes.blob();
+            logoDataUrl = await new Promise(r => { const f = new FileReader(); f.onloadend = () => r(f.result as string); f.readAsDataURL(blob); });
+        }
+        const footRes = await fetch(window.location.origin + '/footer_logos.png');
+        if (footRes.ok) {
+            const blob = await footRes.blob();
+            footerLogosDataUrl = await new Promise(r => { const f = new FileReader(); f.onloadend = () => r(f.result as string); f.readAsDataURL(blob); });
+        }
+    } catch(e) { console.error("Could not fetch images for PDF", e); }
+
     try {
         console.log("PDF Export Engine: parsing HTML with html-to-pdfmake...");
         
-        // Passa window per garantire la corretta interpretazione dei nodi
         const parsedContent = htmlToPdfmake(contentHtml, { window: window as any });
-        const parsedHeader = intestazioneHtml ? htmlToPdfmake(`<div style="font-size:10pt; color:#666; text-align:center;">${intestazioneHtml}</div>`, { window: window as any }) : null;
-        const parsedFooter = piePaginaHtml ? htmlToPdfmake(`<div style="font-size:10pt; color:#666; text-align:center;">${piePaginaHtml}</div>`, { window: window as any }) : null;
 
         const docDefinition = {
             content: parsedContent,
-            header: parsedHeader ? { margin: [40, 20, 40, 0] as [number, number, number, number], stack: Array.isArray(parsedHeader) ? parsedHeader : [parsedHeader] } : undefined,
+            header: {
+                margin: [40, 20, 40, 0] as [number, number, number, number],
+                stack: [
+                    {
+                        columns: [
+                            {
+                                width: '30%',
+                                stack: logoDataUrl 
+                                    ? [{ image: logoDataUrl, width: 60, alignment: 'left' }] 
+                                    : [{ text: 'AGESCI TURI 1', bold: true, color: '#45387E', fontSize: 14 }]
+                            },
+                            {
+                                width: '70%',
+                                text: [
+                                    { text: 'Gruppo Turi 1\n', bold: true, fontSize: 11 },
+                                    { text: 'Associazione Guide e Scouts Cattolici Italiani\n', bold: true, fontSize: 11 },
+                                    'Strada Mola 4 – 70010 Turi BA\nturi1@puglia.agesci.it\nCodice fiscale: 91120250724\nN. Iscr. R.U.N.T.S.: 64984'
+                                ],
+                                alignment: 'right',
+                                color: '#45387E',
+                                fontSize: 9,
+                                leadingIndent: 2
+                            }
+                        ],
+                        margin: [0, 0, 0, 4] as [number, number, number, number]
+                    },
+                    {
+                        canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 2, lineColor: '#45387E' }]
+                    },
+                    {
+                        text: 'WOSM / WAGGGS Member - Iscritta al Registro Nazionale APS n.72',
+                        fontSize: 8,
+                        italics: true,
+                        color: '#999999',
+                        margin: [0, 4, 0, 0] as [number, number, number, number]
+                    }
+                ]
+            } as any,
             footer: function(currentPage: number, pageCount: number) {
-                const footerStack: any[] = [];
-                if (parsedFooter) {
-                    if (Array.isArray(parsedFooter)) footerStack.push(...parsedFooter);
-                    else footerStack.push(parsedFooter);
-                }
-                footerStack.push({ text: `Pagina ${currentPage} di ${pageCount}`, alignment: 'right', fontSize: 10, color: '#999', margin: [0, 5, 0, 0] });
-                
                 return {
                     margin: [40, 10, 40, 20] as [number, number, number, number],
-                    stack: footerStack
-                };
+                    stack: [
+                        { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 1, lineColor: '#E5E7EB' }], margin: [0, 0, 0, 8] as [number, number, number, number] },
+                        {
+                            columns: [
+                                {
+                                    width: '70%',
+                                    text: 'WAGGGS / WOSM Member • Iscritta al Registro Nazionale delle Associazioni di Promozione Sociale n.72',
+                                    fontSize: 8,
+                                    color: '#999999'
+                                },
+                                {
+                                    width: '30%',
+                                    stack: footerLogosDataUrl 
+                                        ? [{ image: footerLogosDataUrl, width: 100, alignment: 'right' }] 
+                                        : []
+                                }
+                            ]
+                        },
+                        {
+                            text: `Pagina ${currentPage} di ${pageCount}`,
+                            alignment: 'right',
+                            fontSize: 9,
+                            color: '#999999',
+                            margin: [0, 10, 0, 0] as [number, number, number, number]
+                        }
+                    ]
+                } as any;
             },
-            pageMargins: [40, 60, 40, 60] as [number, number, number, number],
+            pageMargins: [40, 95, 40, 75] as [number, number, number, number],
             defaultStyle: {
                 fontSize: 12,
                 color: '#111111'

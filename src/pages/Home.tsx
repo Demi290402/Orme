@@ -101,7 +101,7 @@ export default function Home() {
     return (
         <div className="space-y-6 relative min-h-[calc(100vh-150px)] pb-20">
             {/* Header Section */}
-            <div className="bg-scout-green text-white p-6 rounded-2xl shadow-lg -mx-4 md:mx-0 rounded-t-none md:rounded-2xl">
+            <div className="bg-scout-green dark:bg-green-900/60 dark:border dark:border-green-800/50 text-white p-6 rounded-2xl shadow-lg -mx-4 md:mx-0 rounded-t-none md:rounded-2xl backdrop-blur-sm">
                 <h1 className="text-3xl font-bold mb-2">Esplora Luoghi</h1>
                 <p className="opacity-90">Trova il posto perfetto per la tua prossima caccia o campo.</p>
 
@@ -116,18 +116,18 @@ export default function Home() {
                             placeholder="Cerca per nome, comune..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-3 rounded-xl bg-white text-gray-900 focus:outline-none focus:ring-4 focus:ring-scout-green-light/50 shadow-sm placeholder:text-gray-400"
+                            className="w-full pl-10 pr-4 py-3 rounded-xl bg-white dark:bg-gray-800 dark:text-gray-100 dark:border dark:border-green-700/50 text-gray-900 focus:outline-none focus:ring-4 focus:ring-scout-green-light/50 shadow-sm placeholder:text-gray-400 dark:placeholder:text-gray-500"
                         />
                     </div>
                     <div className="flex gap-2">
-                        <Link to="/add" className="bg-scout-blue text-white p-3 rounded-xl shadow-md active:scale-95 transition-transform hover:bg-scout-blue-dark flex items-center justify-center border-2 border-white/20 aspect-square">
+                        <Link to="/add" className="bg-scout-blue dark:bg-scout-blue-dark text-white p-3 rounded-xl shadow-md active:scale-95 transition-transform flex items-center justify-center border-2 border-white/20 dark:border-white/10 aspect-square">
                             <Plus size={24} />
                         </Link>
                         <button
                             onClick={() => setShowFilters(true)}
                             className={cn(
-                                "p-3 rounded-xl shadow-md active:scale-95 transition-transform flex items-center justify-center border-2 border-white/20 relative aspect-square",
-                                activeFiltersCount > 0 ? "bg-scout-brown text-white" : "bg-white text-scout-green"
+                                "p-3 rounded-xl shadow-md active:scale-95 transition-transform flex items-center justify-center border-2 border-white/20 dark:border-white/10 relative aspect-square",
+                                activeFiltersCount > 0 ? "bg-scout-brown text-white" : "bg-white dark:bg-gray-800 text-scout-green dark:text-green-500"
                             )}
                         >
                             <Filter size={24} />

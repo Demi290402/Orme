@@ -337,7 +337,7 @@ export default function AddLocation() {
                                     ))}
                                 </select>
                             ) : (
-                                <div className="p-3 bg-red-50 text-red-600 rounded-xl text-xs border border-red-100 flex items-center gap-2">
+                                <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl text-xs border border-red-100 dark:border-red-900/50 flex items-center gap-2">
                                     <span className="font-bold">⚠️</span>
                                     Seleziona prima la regione
                                 </div>
@@ -374,7 +374,7 @@ export default function AddLocation() {
                         <input
                             type="tel" name="phone" required
                             value={formData.phone} onChange={handleChange}
-                            className="w-full p-3 rounded-xl border border-gray-200"
+                            className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                         />
                     </div>
 
@@ -387,7 +387,7 @@ export default function AddLocation() {
                             type="url" name="website"
                             value={formData.website} onChange={handleChange}
                             placeholder="https://..."
-                            className="w-full p-3 rounded-xl border border-gray-200"
+                            className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                         />
                     </div>
                 </div>
@@ -408,7 +408,7 @@ export default function AddLocation() {
                                 value={formData.googleMapsLink}
                                 onChange={handleChange}
                                 placeholder="Incolla link qui..."
-                                className="flex-1 p-3 rounded-xl border border-gray-200"
+                                className="flex-1 p-3 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                                 onBlur={(e) => {
                                     const val = e.target.value;
                                     if (val) {
@@ -441,7 +441,7 @@ export default function AddLocation() {
                                 <input
                                     type="text" name="latitude"
                                     value={(formData as any).latitude || ''} onChange={handleChange}
-                                    className="w-full p-2 rounded-lg border border-gray-200 text-sm"
+                                    className="w-full p-2 rounded-lg border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm"
                                     placeholder="Es. 45.1234"
                                 />
                             </div>
@@ -450,7 +450,7 @@ export default function AddLocation() {
                                 <input
                                     type="text" name="longitude"
                                     value={(formData as any).longitude || ''} onChange={handleChange}
-                                    className="w-full p-2 rounded-lg border border-gray-200 text-sm"
+                                    className="w-full p-2 rounded-lg border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm"
                                     placeholder="Es. 12.1234"
                                 />
                             </div>
@@ -486,7 +486,7 @@ export default function AddLocation() {
                             { key: 'hasEquippedKitchen', label: 'Cucina attrezzata' },
                             { key: 'hasPoles', label: 'Disponibilità paletti' },
                         ].map((item) => (
-                            <label key={item.key} className="flex items-center gap-2 p-3 border rounded-xl hover:bg-gray-50 transition-colors cursor-pointer">
+                            <label key={item.key} className="flex items-center gap-2 p-3 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer">
                                 <input
                                     type="checkbox"
                                     name={item.key}
@@ -504,14 +504,14 @@ export default function AddLocation() {
                         <input
                             type="text" name="otherLogistics"
                             value={formData.otherLogistics} onChange={handleChange}
-                            className="w-full p-3 rounded-xl border border-gray-200"
+                            className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                             placeholder="Es. Accessibile con furgoni..."
                         />
                     </div>
                 </div>
 
                 {/* Section 3: Attenzioni */}
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 space-y-4">
                     <h2 className="font-semibold text-lg text-orange-600 flex items-center gap-2">
                         <span className="p-1.5 bg-orange-100 rounded-lg">⚠️</span>
                         Attenzioni del Luogo
@@ -525,7 +525,7 @@ export default function AddLocation() {
                             { key: 'hasLittleShade', label: 'Poche zone ombra' },
                             { key: 'hasVeryBusyArea', label: 'Zona molto frequentata' },
                         ].map((item) => (
-                            <label key={item.key} className={`flex items-center gap-2 p-3 border rounded-xl cursor-pointer transition-colors ${(formData as any)[item.key] ? 'bg-orange-50 border-orange-200' : 'hover:bg-gray-50'}`}>
+                            <label key={item.key} className={`flex items-center gap-2 p-3 border rounded-xl cursor-pointer transition-colors ${(formData as any)[item.key] ? 'bg-orange-50 dark:bg-orange-900/40 border-orange-200 dark:border-orange-800' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'}`}>
                                 <input
                                     type="checkbox"
                                     name={item.key}
@@ -542,18 +542,18 @@ export default function AddLocation() {
                         <input
                             type="text" name="otherAttention"
                             value={formData.otherAttention} onChange={handleChange}
-                            className="w-full p-3 rounded-xl border border-gray-200"
+                            className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                             placeholder="Es. Presenza di cinghiali, terreno scosceso..."
                         />
                     </div>
                 </div>
 
                 {/* Section 4: Restrizioni */}
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 space-y-4">
                     <h2 className="font-semibold text-lg text-red-600">Restrizioni</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                         {RESTRICTIONS_LIST.map(item => (
-                            <label key={item} className={`flex items-center gap-2 p-3 border rounded-xl cursor-pointer transition-colors ${formData.restrictions.includes(item) ? 'bg-red-50 border-red-200' : 'hover:bg-gray-50'}`}>
+                            <label key={item} className={`flex items-center gap-2 p-3 border rounded-xl cursor-pointer transition-colors ${formData.restrictions.includes(item) ? 'bg-red-50 dark:bg-red-900/40 border-red-200 dark:border-red-800' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'}`}>
                                 <input
                                     type="checkbox"
                                     checked={formData.restrictions.includes(item)}
@@ -569,20 +569,20 @@ export default function AddLocation() {
                         <input
                             type="text" name="otherRestrictionInput"
                             value={formData.otherRestrictionInput} onChange={handleChange}
-                            className="w-full p-3 rounded-xl border border-gray-200"
+                            className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                             placeholder="Es. Orari di silenzio rigidi..."
                         />
                     </div>
                 </div>
 
                 {/* Section 4: Pricing */}
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 space-y-4">
                     <div className="flex justify-between items-center">
-                        <h2 className="font-semibold text-lg text-scout-brown flex items-center gap-2">
-                            <Save size={20} className="text-scout-brown" />
+                        <h2 className="font-semibold text-lg text-scout-brown dark:text-amber-500 flex items-center gap-2">
+                            <Save size={20} className="text-scout-brown dark:text-amber-500" />
                             Prezzo e Tariffe
                         </h2>
-                        <span className="text-[10px] font-bold text-scout-blue bg-scout-blue/10 px-2 py-0.5 rounded-full">+5 pt</span>
+                        <span className="text-[10px] font-bold text-scout-blue dark:text-scout-blue bg-scout-blue/10 dark:bg-scout-blue/20 px-2 py-0.5 rounded-full">+5 pt</span>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -592,7 +592,7 @@ export default function AddLocation() {
                                 type="number" name="pricingBase"
                                 value={formData.pricingBase} onChange={handleChange}
                                 placeholder="Es. 10"
-                                className="w-full p-3 rounded-xl border border-gray-200"
+                                className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                             />
                         </div>
                         <div>
@@ -600,7 +600,7 @@ export default function AddLocation() {
                             <select
                                 name="pricingUnit"
                                 value={formData.pricingUnit} onChange={handleChange}
-                                className="w-full p-3 rounded-xl border border-gray-200 bg-white"
+                                className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white"
                             >
                                 <option value="per_night">A Notte</option>
                                 <option value="per_day">Al Giorno</option>
@@ -623,8 +623,8 @@ export default function AddLocation() {
                 </div>
 
                 {/* Section 5: Activities */}
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
-                    <h2 className="font-semibold text-lg text-scout-blue">Attività Ideali</h2>
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 space-y-4">
+                    <h2 className="font-semibold text-lg text-scout-blue dark:text-blue-400">Attività Ideali</h2>
                     <div className="flex flex-wrap gap-2">
                         {(formData.activities as any[]).map(item => (
                             <button
@@ -633,7 +633,7 @@ export default function AddLocation() {
                                 onClick={() => toggleArrayItem('activities', item)}
                                 className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${formData.activities.includes(item)
                                     ? 'bg-scout-blue text-white border-scout-blue'
-                                    : 'bg-white text-gray-600 border-gray-300 hover:border-scout-blue'
+                                    : 'bg-white text-gray-600 border-gray-300 hover:border-scout-blue dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:border-scout-blue'
                                     }`}
                             >
                                 {item}
@@ -645,7 +645,7 @@ export default function AddLocation() {
                                 key={item}
                                 type="button"
                                 onClick={() => toggleArrayItem('activities', item)}
-                                className="px-3 py-1.5 rounded-full text-sm font-medium border bg-white text-gray-600 border-gray-300 hover:border-scout-blue"
+                                className="px-3 py-1.5 rounded-full text-sm font-medium border bg-white text-gray-600 border-gray-300 hover:border-scout-blue dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:border-scout-blue"
                             >
                                 {item}
                             </button>
@@ -661,7 +661,7 @@ export default function AddLocation() {
                         <input
                             type="text" name="quickNote"
                             value={formData.quickNote} onChange={handleChange}
-                            className="w-full p-3 rounded-xl border border-gray-200"
+                            className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                             placeholder="Es. Chiavi dal parroco, acqua fredda..."
                         />
                     </div>

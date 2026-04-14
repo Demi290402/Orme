@@ -27,6 +27,9 @@
   
   html.dark body {
     @apply bg-gray-900 text-gray-100;
+    --color-scout-green: #388E3C;
+    --color-scout-green-light: #4CAF50;
+    --color-scout-green-dark: #2E7D32;
   }
 }
 
