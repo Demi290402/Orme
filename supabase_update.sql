@@ -12,7 +12,9 @@ ADD COLUMN IF NOT EXISTS group_id TEXT;
 
 -- 2. Aggiornamento Tabella Locations
 ALTER TABLE locations 
-ADD COLUMN IF NOT EXISTS group_id TEXT;
+ADD COLUMN IF NOT EXISTS group_id TEXT,
+ADD COLUMN IF NOT EXISTS availability_status TEXT DEFAULT 'available',
+ADD COLUMN IF NOT EXISTS google_maps_link TEXT;
 
 -- 3. Creazione Tabella Membri (CoCa)
 CREATE TABLE IF NOT EXISTS membri (

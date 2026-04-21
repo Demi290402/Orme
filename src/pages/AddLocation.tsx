@@ -179,6 +179,7 @@ export default function AddLocation() {
             province: formData.province,
             commune: formData.commune,
             address: formData.address,
+            googleMapsLink: formData.googleMapsLink,
             contacts: [
                 { type: 'phone', value: formData.phone, name: 'Responsabile' },
                 ...(formData.whatsapp ? [{ type: 'whatsapp', value: formData.whatsapp, name: 'WhatsApp' }] as any : [])
