@@ -15,6 +15,7 @@ import { getUser } from '@/lib/data';
 import VerbaleHeader from '@/components/VerbaleHeader';
 import RichTextEditor from '@/components/RichTextEditor';
 import { createNotificationsForGroup } from '@/lib/notifications';
+import { addPointsWithStats } from '@/lib/gamification';
 
 type TabType = 'presenze' | 'odg' | 'sezioni' | 'anteprima';
 
@@ -88,7 +89,17 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                 if (id) {
                     const allVerbali = await getVerbali();
                     const found = allVerbali.find(v => v.id === id);
-                    if (found) setVerbale(found);
+                    if (found) {
+                        setVerbale(found);
+                        // Passive gamification: track verbale view (once per session per verbale)
+                        if (viewMode) {
+                            const sessionKey = `read_verbale_${id}`;
+                            if (!sessionStorage.getItem(sessionKey)) {
+                                sessionStorage.setItem(sessionKey, '1');
+                                addPointsWithStats(2, { verbaliRead: 1 }).catch(console.error);
+                            }
+                        }
+                    }
                 } else {
                     const allVerbali = await getVerbali();
                     const validNums = allVerbali.map(v => Number(v.numero)).filter(n => !isNaN(n));

@@ -18,6 +18,10 @@ export interface User {
     pricingInfoAdded: number;
     coordinateInfoAdded: number;
     websiteInfoAdded: number;
+    // Passive gamification counters
+    verbaliRead: number;
+    locationsSearched: number;
+    eventiAggiunti: number;
     
     // Multi-tenancy
     region?: string;

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Trophy, HelpCircle, Mail, FileText, CalendarDays, Sun, Moon, LogIn, UserPlus } from 'lucide-react';
+import { Home, Trophy, HelpCircle, Mail, FileText, CalendarDays, Sun, Moon, LogIn, UserPlus, Megaphone, Archive } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Logo from '@/components/Logo';
 import PWAInstallPrompt from './PWAInstallPrompt';
@@ -34,9 +34,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
     const navItems: NavItem[] = [
         { icon: Home, label: 'Home', path: '/' },
-        { icon: Trophy, label: 'Classifica', path: '/leaderboard' },
         { icon: CalendarDays, label: 'Calendario', path: '/calendario' },
         { icon: FileText, label: 'Verbali', path: '/verbali' },
+        { icon: Archive, label: 'Storico', path: '/storico' },
+        { icon: Megaphone, label: 'Bacheca', path: '/annunci' },
+        { icon: Trophy, label: 'Punti', path: '/leaderboard' },
         { icon: HelpCircle, label: 'Guida', path: '/guide' },
     ];
 

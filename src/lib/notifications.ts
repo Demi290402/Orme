@@ -5,7 +5,7 @@ export interface AppNotification {
     id: string;
     userId: string;
     groupId: string;
-    type: 'verbale_saved' | 'location_added' | 'proposal' | 'generic';
+    type: 'verbale_saved' | 'location_added' | 'proposal' | 'calendario_evento' | 'annuncio' | 'generic';
     title: string;
     body: string;
     data?: Record<string, any>;

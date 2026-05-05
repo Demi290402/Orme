@@ -18,6 +18,8 @@ import ImpostazioniVerbale from '@/pages/Verbali/ImpostazioniVerbale';
 import VerbaliStats from '@/pages/Verbali/VerbaliStats';
 import Calendario from '@/pages/Calendario';
 import UpdateManager from '@/components/UpdateManager';
+import Annunci from '@/pages/Annunci';
+import StoricoAttivita from '@/pages/StoricoAttivita';
 
 function App() {
   return (
@@ -46,6 +48,8 @@ function App() {
           <Route path="/verbali/membri" element={<ProtectedRoute><Layout><MembriCoCa /></Layout></ProtectedRoute>} />
           <Route path="/verbali/impostazioni" element={<ProtectedRoute><Layout><ImpostazioniVerbale /></Layout></ProtectedRoute>} />
           <Route path="/verbali/statistiche" element={<ProtectedRoute><Layout><VerbaliStats /></Layout></ProtectedRoute>} />
+          <Route path="/annunci" element={<ProtectedRoute><Layout><Annunci /></Layout></ProtectedRoute>} />
+          <Route path="/storico" element={<ProtectedRoute><Layout><StoricoAttivita /></Layout></ProtectedRoute>} />
         </Routes>
       </Router>
     </ThemeProvider>

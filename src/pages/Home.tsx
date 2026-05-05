@@ -5,6 +5,7 @@ import { Location, User as UserType } from '@/types';
 import LocationCard from '@/components/LocationCard';
 import { Link } from 'react-router-dom';
 import { cn, getStalenessInfo } from '@/lib/utils';
+import { addPointsWithStats } from '@/lib/gamification';
 
 const ITALIAN_REGIONS = [
     "Abruzzo", "Basilicata", "Calabria", "Campania", "Emilia-Romagna",
@@ -115,7 +116,13 @@ export default function Home() {
                             type="text"
                             placeholder="Cerca per nome, comune..."
                             value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
+                            onChange={(e) => {
+                                setSearchTerm(e.target.value);
+                                if (!sessionStorage.getItem('search_done') && e.target.value.length > 2) {
+                                    sessionStorage.setItem('search_done', '1');
+                                    addPointsWithStats(1, { locationsSearched: 1 }).catch(console.error);
+                                }
+                            }}
                             className="w-full pl-10 pr-4 py-3 rounded-xl bg-white dark:bg-gray-800 dark:text-gray-100 dark:border dark:border-green-700/50 text-gray-900 focus:outline-none focus:ring-4 focus:ring-scout-green-light/50 shadow-sm placeholder:text-gray-400 dark:placeholder:text-gray-500"
                         />
                     </div>

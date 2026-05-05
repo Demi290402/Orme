@@ -33,7 +33,10 @@ export default function Guide() {
         { action: 'Aggiunta Indirizzo/Maps/GPS', points: 3, icon: <Zap size={18} className="text-scout-blue" /> },
         { action: 'Inserimento prezzi e tariffe', points: 5, icon: <Zap size={18} className="text-scout-blue" /> },
         { action: 'Approvazione modifica (Capi)', points: 5, icon: <CheckCircle2 size={18} className="text-scout-green" /> },
-        { action: 'Proposta modifica o eliminazione approvata (Autore)', points: 10, icon: <Edit3 size={18} className="text-scout-brown" /> },
+        { action: 'Proposta approvata', points: 10, icon: <Edit3 size={18} className="text-scout-brown" /> },
+        { action: 'Aggiunta evento a calendario', points: 3, icon: <Trophy size={18} className="text-scout-green" /> },
+        { action: 'Ricerca nei luoghi (1 al giorno)', points: 1, icon: <Footprints size={18} className="text-scout-blue" /> },
+        { action: 'Lettura di un verbale', points: 2, icon: <BookOpen size={18} className="text-scout-brown" /> },
     ];
 
     const stalenessRules = [

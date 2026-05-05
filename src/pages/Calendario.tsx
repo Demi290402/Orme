@@ -3,6 +3,7 @@ import { Plus, ChevronLeft, ChevronRight, Calendar, CalendarDays, CalendarRange,
 import { getEventi, saveEvento, deleteEvento, EventoCalendario, getColorByBranca, BRANCA_COLORS } from '@/lib/calendario';
 import { cn } from '@/lib/utils';
 import RichTextEditor from '@/components/RichTextEditor';
+import { addPointsWithStats, addPoints } from '@/lib/gamification';
 
 type ViewMode = 'anno' | 'mese' | 'giorno';
 
@@ -200,7 +201,13 @@ export default function Calendario() {
         setShowForm(true);
     };
     const handleSave = async (form: Partial<EventoCalendario>) => {
+        const isUpdate = !!editingEvento;
         await saveEvento({ ...form, id: editingEvento?.id });
+        if (isUpdate) {
+            addPoints(1).catch(console.error);
+        } else {
+            addPointsWithStats(3, { eventiAggiunti: 1 }).catch(console.error);
+        }
         setShowForm(false);
         reload();
     };

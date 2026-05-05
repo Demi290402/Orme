@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { getUser } from './data';
+import { createNotificationsForGroup } from './notifications';
 import { Verbale } from '@/types';
 
 export interface EventoCalendario {
@@ -95,6 +96,17 @@ export async function saveEvento(evento: Partial<EventoCalendario>): Promise<Eve
             .select()
             .single();
         if (error) throw error;
+        // Notify group about update
+        if (user.groupId) {
+            createNotificationsForGroup(
+                user.groupId,
+                'calendario_evento',
+                `✏️ Evento aggiornato — ${payload.titolo}`,
+                `${user.nickname || user.firstName} ha modificato "${payload.titolo}" (${payload.data_inizio}).`,
+                { eventoId: data.id },
+                user.id
+            ).catch(console.error);
+        }
         return mapRow(data);
     } else {
         const { data, error } = await supabase
@@ -103,16 +115,41 @@ export async function saveEvento(evento: Partial<EventoCalendario>): Promise<Eve
             .select()
             .single();
         if (error) throw error;
+        // Notify group about new event
+        if (user.groupId) {
+            createNotificationsForGroup(
+                user.groupId,
+                'calendario_evento',
+                `📅 Nuovo evento — ${payload.titolo}`,
+                `${user.nickname || user.firstName} ha aggiunto "${payload.titolo}" il ${payload.data_inizio}.`,
+                { eventoId: data.id },
+                user.id
+            ).catch(console.error);
+        }
         return mapRow(data);
     }
 }
 
 export async function deleteEvento(id: string): Promise<void> {
+    // Fetch title before delete for notification
+    const user = await getUser().catch(() => null);
+    const { data: row } = await supabase.from('eventi_calendario').select('titolo, group_id').eq('id', id).single();
     const { error } = await supabase
         .from('eventi_calendario')
         .delete()
         .eq('id', id);
     if (error) throw error;
+    // Notify group about removal
+    if (user?.groupId && row?.titolo) {
+        createNotificationsForGroup(
+            user.groupId,
+            'calendario_evento',
+            `🗑️ Evento rimosso — ${row.titolo}`,
+            `${user.nickname || user.firstName} ha rimosso "${row.titolo}" dal calendario.`,
+            {},
+            user.id
+        ).catch(console.error);
+    }
 }
 
 /**

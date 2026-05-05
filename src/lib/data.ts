@@ -235,6 +235,9 @@ export async function updateUser(user: User): Promise<User> {
                 pricing_info_added: user.pricingInfoAdded,
                 coordinate_info_added: user.coordinateInfoAdded,
                 website_info_added: user.websiteInfoAdded,
+                verbali_read: user.verbaliRead,
+                locations_searched: user.locationsSearched,
+                eventi_aggiunti: user.eventiAggiunti,
             })
             .eq('id', user.id)
             .select()
@@ -430,6 +433,9 @@ function mapSupabaseUserToUser(data: any): User {
         pricingInfoAdded: data.pricing_info_added || 0,
         coordinateInfoAdded: data.coordinate_info_added || 0,
         websiteInfoAdded: data.website_info_added || 0,
+        verbaliRead: data.verbali_read || 0,
+        locationsSearched: data.locations_searched || 0,
+        eventiAggiunti: data.eventi_aggiunti || 0,
         region: data.region,
         scoutZone: data.scout_zone,
         groupName: data.group_name,
