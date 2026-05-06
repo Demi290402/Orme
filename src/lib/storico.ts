@@ -28,7 +28,7 @@ function mapRow(row: any): EventoStorico {
         dataFine: row.data_fine,
         autoreId: row.autore_id,
         autoreNome: row.autore?.nickname || (row.autore?.first_name ? `${row.autore.first_name} ${row.autore.last_name || ''}`.trim() : null),
-        autoreAvatar: row.autore?.avatar_url,
+        autoreAvatar: row.autore?.profile_picture,
         createdAt: row.created_at
     };
 }
@@ -46,7 +46,7 @@ export async function getStorico(): Promise<EventoStorico[]> {
             .from('storico_eventi')
             .select(`
                 *,
-                autore:users(first_name, last_name, nickname, avatar_url)
+                autore:users(first_name, last_name, nickname, profile_picture)
             `)
             .eq('group_id', usr.groupId.toString().trim())
             .order('data_inizio', { ascending: false });
