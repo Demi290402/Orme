@@ -63,6 +63,7 @@ export async function getStorico(): Promise<EventoStorico[]> {
 
 export async function salvaEventoStorico(evento: Partial<EventoStorico>): Promise<void> {
     const usr = await getUser();
+    if (!usr || !usr.groupId) throw new Error('Utente non autorizzato o gruppo non trovato');
     
     const record = {
         group_id: usr.groupId.toString(),
