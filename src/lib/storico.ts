@@ -34,28 +34,38 @@ function mapRow(row: any): EventoStorico {
 }
 
 export async function getStorico(): Promise<EventoStorico[]> {
-    const usr = await getUser();
-    const { data, error } = await supabase
-        .from('storico_eventi')
-        .select(`
-            *,
-            autore:users(first_name, last_name, nickname, avatar_url)
-        `)
-        .eq('group_id', usr.groupId)
-        .order('data_inizio', { ascending: false });
-        
-    if (error) {
-        console.error('Error fetching storico:', error);
+    try {
+        const usr = await getUser();
+        if (!usr || !usr.groupId) {
+            console.warn('getStorico: User or Group ID not found');
+            return [];
+        }
+
+        const { data, error } = await supabase
+            .from('storico_eventi')
+            .select(`
+                *,
+                autore:users(first_name, last_name, nickname, avatar_url)
+            `)
+            .eq('group_id', usr.groupId.toString()) // Ensure it's a string
+            .order('data_inizio', { ascending: false });
+            
+        if (error) {
+            console.error('Error fetching storico:', error);
+            return [];
+        }
+        return (data || []).map(mapRow);
+    } catch (err) {
+        console.error('getStorico: Unexpected error', err);
         return [];
     }
-    return (data || []).map(mapRow);
 }
 
 export async function salvaEventoStorico(evento: Partial<EventoStorico>): Promise<void> {
     const usr = await getUser();
     
     const record = {
-        group_id: usr.groupId,
+        group_id: usr.groupId.toString(),
         anno_scout: evento.annoScout,
         branca: evento.branca,
         tipo_evento: evento.tipoEvento,
