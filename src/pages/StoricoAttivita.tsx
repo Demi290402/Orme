@@ -167,17 +167,6 @@ export default function StoricoAttivita() {
                         
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-1.5">Anno Scout (Inizio)</label>
-                                <input
-                                    type="number"
-                                    value={annoScout}
-                                    onChange={e => setAnnoScout(Number(e.target.value))}
-                                    className="w-full p-3.5 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-scout-blue font-bold text-lg dark:text-white"
-                                    placeholder="Es. 2024"
-                                />
-                                <p className="text-[10px] text-gray-400 mt-1">L'anno d'inizio asssociativo (Es. 2024 per il 2024-2025).</p>
-                            </div>
-                            <div>
                                 <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-1.5">Branca</label>
                                 <select
                                     value={branca}
@@ -189,19 +178,18 @@ export default function StoricoAttivita() {
                                     ))}
                                 </select>
                             </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-1.5">Tipo Evento</label>
-                            <select
-                                value={tipoEvento}
-                                onChange={e => setTipoEvento(e.target.value)}
-                                className="w-full p-3.5 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-scout-blue font-bold dark:text-white"
-                            >
-                                {BRANCH_ACTIVITIES[branca]?.map(t => (
-                                    <option key={t} value={t}>{t}</option>
-                                ))}
-                            </select>
+                            <div>
+                                <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-1.5">Tipo Evento</label>
+                                <select
+                                    value={tipoEvento}
+                                    onChange={e => setTipoEvento(e.target.value)}
+                                    className="w-full p-3.5 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-scout-blue font-bold dark:text-white"
+                                >
+                                    {BRANCH_ACTIVITIES[branca]?.map(t => (
+                                        <option key={t} value={t}>{t}</option>
+                                    ))}
+                                </select>
+                            </div>
                         </div>
 
                         <div>
