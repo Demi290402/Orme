@@ -1,8 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { getEventi, EventoCalendario, getColorByBranca } from '@/lib/calendario';
+import { getEventi, EventoCalendario } from '@/lib/calendario';
 import { Archive, ChevronDown, ChevronUp, MapPin, Search } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { getUser } from '@/lib/data';
 
 function getAnnoScout(dateStr: string) {
     const d = new Date(dateStr);

@@ -2,9 +2,8 @@ import { useState, useEffect } from 'react';
 import { getAnnunci, salvaAnnuncio, eliminaAnnuncio, Annuncio } from '@/lib/annunci';
 import { getUser } from '@/lib/data';
 import { User } from '@/types';
-import { AlertCircle, CalendarClock, Info, Plus, Megaphone, Trash2, X, Send } from 'lucide-react';
+import { CalendarClock, Info, Plus, Megaphone, Trash2, X, Send } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import UserAvatar from '@/components/UserAvatar';
 
 const PRIORITA_COLORS = {
     normale: 'bg-scout-blue text-white',
