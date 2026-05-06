@@ -39,7 +39,7 @@ export async function getStorico(): Promise<EventoStorico[]> {
         .from('storico_eventi')
         .select(`
             *,
-            autore:users!storico_eventi_autore_id_fkey(nome, nickname, avatar_url)
+            autore:users(nome, nickname, avatar_url)
         `)
         .eq('group_id', usr.groupId)
         .order('data_inizio', { ascending: false });
