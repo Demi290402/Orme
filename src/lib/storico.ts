@@ -37,9 +37,10 @@ export async function getStorico(): Promise<EventoStorico[]> {
     try {
         const usr = await getUser();
         if (!usr || !usr.groupId) {
-            console.warn('getStorico: User or Group ID not found');
+            console.warn('DEBUG: getStorico: User or Group ID not found', usr);
             return [];
         }
+        console.log('DEBUG: Fetching storico for groupId:', usr.groupId);
 
         const { data, error } = await supabase
             .from('storico_eventi')
@@ -51,14 +52,34 @@ export async function getStorico(): Promise<EventoStorico[]> {
             .order('data_inizio', { ascending: false });
             
         if (error) {
-            console.error('Error fetching storico:', error);
+            console.error('DEBUG: Supabase error in getStorico:', error);
             return [];
         }
-        return (data || []).map(mapRow);
+
+        console.log('DEBUG: Raw data received from Supabase:', data);
+        
+        const mapped = (data || []).map(mapRow);
+        console.log('DEBUG: Mapped events:', mapped);
+        
+        return mapped;
     } catch (err) {
-        console.error('getStorico: Unexpected error', err);
+        console.error('DEBUG: getStorico: Unexpected error', err);
         return [];
     }
+}
+
+export async function getStoricoRaw(): Promise<EventoStorico[]> {
+    console.log('DEBUG: Running RAW query (no joins, no filters)...');
+    const { data, error } = await supabase
+        .from('storico_eventi')
+        .select('*');
+        
+    if (error) {
+        console.error('DEBUG: Supabase error in getStoricoRaw:', error);
+        return [];
+    }
+    console.log('DEBUG: Raw diagnosis response:', data);
+    return (data || []).map(mapRow);
 }
 
 export async function salvaEventoStorico(evento: Partial<EventoStorico>): Promise<void> {

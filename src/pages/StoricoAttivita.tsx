@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Archive, Plus, MapPin, Calendar, Trash2, X, Send, User } from 'lucide-react';
-import { getStorico, salvaEventoStorico, eliminaEventoStorico, EventoStorico } from '@/lib/storico';
+import { getStorico, salvaEventoStorico, eliminaEventoStorico, EventoStorico, getStoricoRaw } from '@/lib/storico';
 import { getUser } from '@/lib/data';
 import { User as UserType } from '@/types';
 
@@ -113,6 +113,13 @@ export default function StoricoAttivita() {
 
     const sortedYears = Object.keys(groupedEvents).map(Number).sort((a,b) => b - a);
 
+    const handleDiagnosticRaw = async () => {
+        setLoading(true);
+        const data = await getStoricoRaw();
+        setEventi(data);
+        setLoading(false);
+    };
+
     return (
         <div className="pb-24 max-w-4xl mx-auto space-y-8">
             <header className="mb-8 flex items-center justify-between">
@@ -122,8 +129,19 @@ export default function StoricoAttivita() {
                         Storico Attività
                     </h1>
                     <p className="text-gray-500 mt-1 dark:text-gray-400 font-medium tracking-wide">
-                        L'enciclopedia delle route, campi e caccie della storia del gruppo.
+                        L\'enciclopedia delle route, campi e caccie della storia del gruppo.
                     </p>
+                    <div className="mt-2 flex gap-2">
+                        <span className="text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-bold">
+                            DIAGNOSTIC: {eventi.length} eventi caricati
+                        </span>
+                        <button 
+                            onClick={handleDiagnosticRaw}
+                            className="text-[10px] bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-0.5 rounded-full font-bold transition-colors"
+                        >
+                            Esegui Query RAW
+                        </button>
+                    </div>
                 </div>
                 <button
                     onClick={() => setShowForm(true)}
