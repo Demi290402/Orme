@@ -46,8 +46,13 @@ export default function StoricoAttivita() {
     const calculateScoutYear = (dateStr: string) => {
         const date = new Date(dateStr);
         if (isNaN(date.getTime())) return currentYear;
-        // Ottobre è il mese 9 (0-indexed)
-        return date.getMonth() >= 9 ? date.getFullYear() : date.getFullYear() - 1;
+        
+        const year = date.getFullYear();
+        const month = date.getMonth() + 1; // Portiamo il mese a 1-12 per chiarezza
+        
+        // Se il mese è >= 10 (Ottobre), l'anno associativo è quello dell'anno in corso
+        // Se il mese è < 10 (Gen-Set), l'anno associativo è quello dell'anno precedente
+        return month >= 10 ? year : year - 1;
     };
 
     useEffect(() => {
@@ -57,10 +62,10 @@ export default function StoricoAttivita() {
 
     // Aggiorna l'anno scout automaticamente quando cambia la data di inizio
     useEffect(() => {
-        if (dataInizio && !editId) {
+        if (dataInizio) {
             setAnnoScout(calculateScoutYear(dataInizio));
         }
-    }, [dataInizio, editId]);
+    }, [dataInizio]);
 
     // Change tipoEvento options when branca changes
     useEffect(() => {
