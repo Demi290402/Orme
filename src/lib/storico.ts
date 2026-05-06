@@ -47,7 +47,7 @@ export async function getStorico(): Promise<EventoStorico[]> {
                 *,
                 autore:users(first_name, last_name, nickname, avatar_url)
             `)
-            // .eq('group_id', usr.groupId.toString()) // Rimosso temporaneamente per debug
+            .eq('group_id', usr.groupId.toString().trim())
             .order('data_inizio', { ascending: false });
             
         if (error) {
