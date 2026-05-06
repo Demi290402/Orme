@@ -182,7 +182,6 @@ export default function StoricoAttivita() {
                                 {BRANCH_ACTIVITIES[branca]?.map(t => (
                                     <option key={t} value={t}>{t}</option>
                                 ))}
-                                <option value="Altro">Altro</option>
                             </select>
                         </div>
 
