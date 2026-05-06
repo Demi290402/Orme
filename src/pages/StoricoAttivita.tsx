@@ -43,10 +43,24 @@ export default function StoricoAttivita() {
         setLoading(false);
     };
 
+    const calculateScoutYear = (dateStr: string) => {
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) return currentYear;
+        // Ottobre è il mese 9 (0-indexed)
+        return date.getMonth() >= 9 ? date.getFullYear() : date.getFullYear() - 1;
+    };
+
     useEffect(() => {
         getUser().then(setCurrentUser).catch(console.error);
         reload();
     }, []);
+
+    // Aggiorna l'anno scout automaticamente quando cambia la data di inizio
+    useEffect(() => {
+        if (dataInizio && !editId) {
+            setAnnoScout(calculateScoutYear(dataInizio));
+        }
+    }, [dataInizio, editId]);
 
     // Change tipoEvento options when branca changes
     useEffect(() => {
