@@ -152,6 +152,28 @@ export interface LocationContact {
     name?: string;
 }
 
+export interface LocationReview {
+    id: string;
+    locationId: string;
+    userId: string;
+    userNickname?: string;
+    userProfilePicture?: string;
+    
+    // Ratings (1-5, null if skipped)
+    ombra?: number;
+    acquaPotabile?: boolean;
+    legna?: number;
+    fuochi?: boolean;
+    suolo?: number;
+    servizi?: number;
+    prezzo?: number;
+    sicurezza?: number;
+    isolamento?: number;
+    
+    commento?: string;
+    createdAt: string;
+}
+
 export interface Location {
     id: string;
     name: string;
@@ -192,6 +214,11 @@ export interface Location {
     description?: string;
     pricing?: PricingInfo; // New field
     googleMapsLink?: string;
+
+    // Aggregate Ratings & Stats
+    avgRating: number;
+    reviewsCount: number;
+    priceCategory: number; // 0: N/D, 1: €, 2: €€, 3: €€€
 
     // Metadata
     lastUpdatedAt: string; // ISODate

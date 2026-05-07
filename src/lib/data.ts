@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { Location, User } from '@/types';
+import { Location, User, LocationReview } from '@/types';
 import { createNotificationsForGroup } from './notifications';
 
 // =====================================================
@@ -380,6 +380,72 @@ export async function addLocation(location: Omit<Location, 'id' | 'lastUpdatedAt
 }
 
 // =====================================================
+// REVIEWS & RATINGS (LE ORME)
+// =====================================================
+
+export async function getReviews(locationId: string): Promise<LocationReview[]> {
+    const { data, error } = await supabase
+        .from('location_reviews')
+        .select(`
+            *,
+            users (
+                nickname,
+                profile_picture
+            )
+        `)
+        .eq('location_id', locationId)
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error('Error fetching reviews:', error);
+        return [];
+    }
+
+    return (data || []).map(r => ({
+        id: r.id,
+        locationId: r.location_id,
+        userId: r.user_id,
+        userNickname: r.users?.nickname,
+        userProfilePicture: r.users?.profile_picture,
+        ombra: r.ombra,
+        acquaPotabile: r.acqua_potabile,
+        legna: r.legna,
+        fuochi: r.fuochi,
+        suolo: r.suolo,
+        servizi: r.servizi,
+        prezzo: r.prezzo,
+        sicurezza: r.sicurezza,
+        isolamento: r.isolamento,
+        commento: r.commento,
+        createdAt: r.created_at,
+    }));
+}
+
+export async function saveReview(review: Partial<LocationReview>): Promise<void> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Devi essere autenticato per lasciare una recensione');
+
+    const { error } = await supabase
+        .from('location_reviews')
+        .upsert({
+            location_id: review.locationId,
+            user_id: user.id,
+            ombra: review.ombra,
+            acqua_potabile: review.acquaPotabile,
+            legna: review.legna,
+            fuochi: review.fuochi,
+            suolo: review.suolo,
+            servizi: review.servizi,
+            prezzo: review.prezzo,
+            sicurezza: review.sicurezza,
+            isolamento: review.isolamento,
+            commento: review.commento,
+        }, { onConflict: 'location_id,user_id' });
+
+    if (error) throw error;
+}
+
+// =====================================================
 // METADATA HELPERS
 // =====================================================
 
@@ -482,6 +548,9 @@ function mapSupabaseLocationToLocation(data: any): Location {
         lastUpdatedAt: data.last_updated_at,
         lastUpdatedBy: data.last_updated_by,
         availabilityStatus: data.availability_status || 'available',
+        avgRating: Number(data.avg_rating) || 0,
+        reviewsCount: data.reviews_count || 0,
+        priceCategory: data.price_category || 0,
     };
 }
 

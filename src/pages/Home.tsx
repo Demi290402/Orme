@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Search, Filter, Plus, X, Check, Clock, Tent, BedDouble } from 'lucide-react';
+import { Search, Filter, Plus, X, Check, Clock, Tent, BedDouble, Star } from 'lucide-react';
 import { getLocations, getUser } from '@/lib/data';
 import { Location, User as UserType } from '@/types';
 import LocationCard from '@/components/LocationCard';
@@ -41,6 +41,8 @@ export default function Home() {
     const [hasBeds, setHasBeds] = useState(false);
     const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
     const [selectedStaleness, setSelectedStaleness] = useState<number[]>([]);
+    const [minRating, setMinRating] = useState(0);
+    const [selectedPrices, setSelectedPrices] = useState<number[]>([]);
     const [currentUser, setCurrentUser] = useState<UserType | null>(null);
 
     useEffect(() => {
@@ -88,7 +90,15 @@ export default function Home() {
             matchesStaleness = selectedStaleness.includes(info.level);
         }
 
-        return matchesSearch && matchesTents && matchesBeds && matchesRegion && matchesBranch && matchesActivity && matchesStaleness;
+        // 6. Rating
+        const matchesRating = loc.avgRating >= minRating;
+
+        // 7. Price
+        const matchesPrice = selectedPrices.length > 0 ? selectedPrices.includes(loc.priceCategory) : true;
+
+        return matchesSearch && matchesTents && matchesBeds && matchesRegion && 
+               matchesBranch && matchesActivity && matchesStaleness && 
+               matchesRating && matchesPrice;
     });
 
     const activeFiltersCount =
@@ -96,6 +106,8 @@ export default function Home() {
         selectedRegions.length +
         selectedActivities.length +
         selectedStaleness.length +
+        selectedPrices.length +
+        (minRating > 0 ? 1 : 0) +
         (hasTents ? 1 : 0) +
         (hasBeds ? 1 : 0);
 
@@ -247,7 +259,44 @@ export default function Home() {
                             </div>
                         </div>
 
-                        {/* 2. Logistica */}
+                        {/* 1c. Rating & Prezzo */}
+                        <div className="grid grid-cols-2 gap-6">
+                            <div>
+                                <h3 className="font-bold text-gray-900 mb-3 text-sm">Rating Minimo</h3>
+                                <div className="flex items-center gap-2 bg-gray-50 p-2 rounded-xl border border-gray-100">
+                                    <Star size={16} fill={minRating > 0 ? "#d97706" : "none"} className={minRating > 0 ? "text-amber-600" : "text-gray-300"} />
+                                    <select 
+                                        value={minRating}
+                                        onChange={e => setMinRating(Number(e.target.value))}
+                                        className="bg-transparent font-bold text-gray-700 outline-none flex-1 text-sm"
+                                    >
+                                        <option value={0}>Qualsiasi</option>
+                                        <option value={3}>3+ Stelle</option>
+                                        <option value={4}>4+ Stelle</option>
+                                        <option value={4.5}>4.5+ Stelle</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <h3 className="font-bold text-gray-900 mb-3 text-sm">Fascia Prezzo</h3>
+                                <div className="flex gap-1.5">
+                                    {[1, 2, 3].map(p => (
+                                        <button
+                                            key={p}
+                                            onClick={() => toggleSelection(selectedPrices, p, setSelectedPrices)}
+                                            className={cn(
+                                                "w-10 h-10 rounded-xl font-black text-sm border transition-all",
+                                                selectedPrices.includes(p)
+                                                    ? "bg-scout-green text-white border-scout-green shadow-sm"
+                                                    : "bg-white text-gray-400 border-gray-200"
+                                            )}
+                                        >
+                                            {"€".repeat(p)}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
                         <div>
                             <h3 className="font-bold text-gray-900 mb-3">Logistica</h3>
                             <div className="flex gap-3">
@@ -315,6 +364,8 @@ export default function Home() {
                                         setSelectedRegions([]);
                                         setSelectedActivities([]);
                                         setSelectedStaleness([]);
+                                        setSelectedPrices([]);
+                                        setMinRating(0);
                                         setHasTents(false);
                                         setHasBeds(false);
                                     }}

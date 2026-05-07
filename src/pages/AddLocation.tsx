@@ -72,6 +72,7 @@ export default function AddLocation() {
 
         // Availability
         availabilityStatus: 'available' as 'available' | 'maintenance' | 'closed',
+        priceCategory: 0,
     });
 
     const livePoints = useMemo(() => {
@@ -130,6 +131,7 @@ export default function AddLocation() {
                         pricingUnit: found.pricing?.unit || 'per_night',
                         pricingDescription: found.pricing?.description || '',
                         availabilityStatus: (found as any).availabilityStatus || 'available',
+                        priceCategory: found.priceCategory || 0,
                     });
                 }
             }).catch(console.error);
@@ -215,6 +217,9 @@ export default function AddLocation() {
             activities: formData.activities as any[],
             restrictions: finalRestrictions as any[],
             availabilityStatus: formData.availabilityStatus,
+            priceCategory: formData.priceCategory,
+            avgRating: 0,
+            reviewsCount: 0,
             pricing: formData.pricingBase ? {
                 basePrice: parseFloat(formData.pricingBase),
                 unit: formData.pricingUnit,
@@ -584,6 +589,31 @@ export default function AddLocation() {
                             Prezzo e Tariffe
                         </h2>
                         <span className="text-[10px] font-bold text-scout-blue dark:text-scout-blue bg-scout-blue/10 dark:bg-scout-blue/20 px-2 py-0.5 rounded-full">+5 pt</span>
+                    </div>
+
+                    <div className="space-y-4">
+                        <label className="block text-sm font-medium mb-1">Fascia di Prezzo (Budget)</label>
+                        <div className="grid grid-cols-4 gap-2">
+                            {[
+                                { val: 0, label: 'N/D', color: 'gray' },
+                                { val: 1, label: '€', color: 'green' },
+                                { val: 2, label: '€€', color: 'green' },
+                                { val: 3, label: '€€€', color: 'green' },
+                            ].map((p) => (
+                                <button
+                                    key={p.val}
+                                    type="button"
+                                    onClick={() => setFormData({ ...formData, priceCategory: p.val })}
+                                    className={`py-3 rounded-xl border-2 font-black transition-all ${
+                                        formData.priceCategory === p.val 
+                                            ? 'border-scout-green bg-scout-green/10 text-scout-green-dark' 
+                                            : 'border-gray-100 dark:border-gray-700 text-gray-400'
+                                    }`}
+                                >
+                                    {p.label}
+                                </button>
+                            ))}
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">

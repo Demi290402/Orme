@@ -1,5 +1,5 @@
 
-import { MapPin, Tent, BedDouble, AlertCircle, Wrench, Ban } from 'lucide-react';
+import { MapPin, Tent, BedDouble, AlertCircle, Wrench, Ban, Star } from 'lucide-react';
 import { Location } from '@/types';
 import { Link } from 'react-router-dom';
 import { getStalenessInfo } from '@/lib/utils';
@@ -58,6 +58,39 @@ export default function LocationCard({ location }: LocationCardProps) {
                     <p className="text-sm text-gray-600 dark:text-gray-300 mb-3 line-clamp-2 italic">
                         "{location.quickNote}"
                     </p>
+
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-1.5">
+                            {location.reviewsCount > 0 ? (
+                                <>
+                                    <div className="bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded-lg flex items-center gap-1 text-xs font-black">
+                                        <Star size={12} fill="currentColor" />
+                                        {Number(location.avgRating).toFixed(1)}
+                                    </div>
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
+                                        {location.reviewsCount} {location.reviewsCount === 1 ? 'Orma' : 'Orme'}
+                                    </span>
+                                </>
+                            ) : (
+                                <span className="text-[10px] font-black text-scout-blue dark:text-blue-400 uppercase tracking-tighter bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded-lg">
+                                    Nessuna orma
+                                </span>
+                            )}
+                        </div>
+
+                        {location.priceCategory > 0 && (
+                            <div className="flex gap-0.5">
+                                {[1, 2, 3].map(i => (
+                                    <span 
+                                        key={i} 
+                                        className={i <= location.priceCategory ? "text-scout-green font-black" : "text-gray-200 dark:text-gray-700"}
+                                    >
+                                        €
+                                    </span>
+                                ))}
+                            </div>
+                        )}
+                    </div>
 
                     <div className="flex flex-wrap gap-2 text-xs text-gray-600 dark:text-gray-300">
                         {location.beds !== undefined && (
