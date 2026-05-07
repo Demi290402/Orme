@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Archive, Plus, MapPin, Calendar, Trash2, X, Send, User, ChevronDown, ChevronRight, Layers } from 'lucide-react';
+import { Archive, Plus, MapPin, Calendar, Trash2, X, Send, ChevronDown, Layers } from 'lucide-react';
 import { getStorico, salvaEventoStorico, eliminaEventoStorico, EventoStorico } from '@/lib/storico';
 import { getUser } from '@/lib/data';
 import { User as UserType } from '@/types';
