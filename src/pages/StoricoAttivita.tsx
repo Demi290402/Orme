@@ -255,7 +255,8 @@ export default function StoricoAttivita() {
                 </div>
             )}
 
-            {/* Timelin            <div className="space-y-4">
+            {/* Timeline Pivot View */}
+            <div className="space-y-4">
                 {loading ? (
                     <div className="text-center py-20 text-gray-500 flex flex-col items-center">
                         <Archive size={48} className="animate-pulse mb-4 text-gray-300" />
@@ -384,7 +385,7 @@ export default function StoricoAttivita() {
                         );
                     })
                 )}
-            </div>   </div>
+            </div>
             
             {/* Guide Info */}
             <div className="bg-blue-50 dark:bg-blue-900/10 p-6 rounded-3xl mt-12 border border-blue-100 dark:border-blue-900/30">
