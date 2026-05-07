@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Archive, Plus, MapPin, Calendar, Trash2, X, Send, User } from 'lucide-react';
+import { Archive, Plus, MapPin, Calendar, Trash2, X, Send, User, ChevronDown, ChevronRight, Layers } from 'lucide-react';
 import { getStorico, salvaEventoStorico, eliminaEventoStorico, EventoStorico } from '@/lib/storico';
 import { getUser } from '@/lib/data';
 import { User as UserType } from '@/types';
@@ -25,6 +25,14 @@ export default function StoricoAttivita() {
     const [loading, setLoading] = useState(true);
     const [currentUser, setCurrentUser] = useState<UserType | null>(null);
     const [showForm, setShowForm] = useState(false);
+    const [expandedYears, setExpandedYears] = useState<Record<number, boolean>>({});
+
+    const toggleYear = (year: number) => {
+        setExpandedYears(prev => ({
+            ...prev,
+            [year]: !prev[year]
+        }));
+    };
 
     // Form state
     const currentYear = new Date().getMonth() >= 9 ? new Date().getFullYear() : new Date().getFullYear() - 1;
@@ -132,6 +140,16 @@ export default function StoricoAttivita() {
 
     const sortedYears = Object.keys(groupedEvents).map(Number).sort((a,b) => b - a);
 
+    // Grouping by branch within year for the pivot view
+    const getEventsByBranch = (yearEvents: EventoStorico[]) => {
+        const branches: Record<string, EventoStorico[]> = {};
+        yearEvents.forEach(e => {
+            if (!branches[e.branca]) branches[e.branca] = [];
+            branches[e.branca].push(e);
+        });
+        return branches;
+    };
+
     return (
         <div className="pb-24 max-w-4xl mx-auto space-y-8">
             <header className="mb-8 flex items-center justify-between">
@@ -237,8 +255,7 @@ export default function StoricoAttivita() {
                 </div>
             )}
 
-            {/* Timeline */}
-            <div className="space-y-12">
+            {/* Timelin            <div className="space-y-4">
                 {loading ? (
                     <div className="text-center py-20 text-gray-500 flex flex-col items-center">
                         <Archive size={48} className="animate-pulse mb-4 text-gray-300" />
@@ -251,86 +268,123 @@ export default function StoricoAttivita() {
                         <p className="text-gray-500 font-medium">Inizia a scrivere la storia del gruppo inserendo il primo evento passato!</p>
                     </div>
                 ) : (
-                    sortedYears.map(year => (
-                        <div key={year} className="relative">
-                            <div className="sticky top-[73px] z-20 py-2 -mx-4 px-4 bg-scout-beige-light/95 dark:bg-gray-900/95 backdrop-blur-md">
-                                <h2 className="text-2xl font-black text-gray-900 dark:text-white flex items-center gap-3 w-fit">
-                                    <span className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-4 py-1.5 rounded-full shadow-lg">
-                                        {year} — {year + 1}
-                                    </span>
-                                </h2>
-                            </div>
-                            
-                            <div className="mt-6 ml-4 sm:ml-8 border-l-2 border-gray-200 dark:border-gray-700 pl-6 sm:pl-10 space-y-8 relative">
-                                {groupedEvents[year].map(ev => {
-                                    const dotColor = BRANCH_COLORS[ev.branca] || '#9CA3AF';
-                                    const isOwn = ev.autoreId === currentUser?.id;
-                                    
-                                    return (
-                                        <div key={ev.id} className="relative group">
-                                            {/* Timeline Node */}
-                                            <div 
-                                                className="absolute -left-[31px] sm:-left-[47px] top-4 w-4 h-4 rounded-full border-4 border-white dark:border-gray-900 shadow-sm z-10 transition-transform group-hover:scale-125"
-                                                style={{ backgroundColor: dotColor }}
-                                            />
-                                            
-                                            {/* Event Card */}
-                                            <div className="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 shadow-[0_4px_20px_-8px_rgba(0,0,0,0.1)] dark:shadow-none border border-gray-100 dark:border-gray-700 transition-all hover:shadow-[0_8px_30px_-10px_rgba(0,0,0,0.15)] group-hover:-translate-y-1">
-                                                <div className="flex flex-col sm:flex-row justify-between gap-4">
-                                                    
-                                                    {/* Content Left */}
-                                                    <div className="flex-1 space-y-3">
-                                                        <div className="flex flex-wrap items-center gap-2">
-                                                            <span 
-                                                                className="text-xs font-black uppercase tracking-widest px-2.5 py-1 rounded-lg text-white shadow-sm"
-                                                                style={{ backgroundColor: dotColor }}
-                                                            >
-                                                                {ev.branca}
-                                                            </span>
-                                                            <span className="text-sm font-bold text-gray-500 bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-lg">
-                                                                {ev.tipoEvento}
-                                                            </span>
-                                                        </div>
-                                                        
-                                                        <h3 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white leading-tight">
-                                                            <MapPin className="inline-block mr-1 text-gray-400" size={20} />
-                                                            {ev.luogoNome}
-                                                        </h3>
-                                                        
-                                                        <div className="flex items-center gap-2 text-scout-blue dark:text-blue-400 font-bold bg-blue-50 dark:bg-blue-900/20 w-fit px-3 py-1.5 rounded-xl">
-                                                            <Calendar size={16} />
-                                                            {new Date(ev.dataInizio).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })}
-                                                            {ev.dataFine && ` - ${new Date(ev.dataFine).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })}`}
-                                                        </div>
-                                                        
-                                                        {ev.autoreNome && (
-                                                            <div className="flex items-center gap-1.5 text-xs font-medium text-gray-400 mt-4 pt-4 border-t border-gray-50 dark:border-gray-700">
-                                                                <User size={14} /> Memoria aggiunta da: {ev.autoreNome}
-                                                            </div>
-                                                        )}
-                                                    </div>
+                    sortedYears.map(year => {
+                        const isExpanded = expandedYears[year];
+                        const eventsByBranch = getEventsByBranch(groupedEvents[year]);
+                        const branchOrder = ['L/C', 'E/G', 'R/S', 'CoCa', 'Gruppo'];
 
-                                                    {/* Actions Right */}
-                                                    <div className="flex sm:flex-col justify-end sm:justify-start gap-2 border-t sm:border-t-0 sm:border-l border-gray-100 dark:border-gray-700 pt-4 sm:pt-0 sm:pl-4">
-                                                        <button onClick={() => openEdit(ev)} className="px-4 py-2 sm:p-2 sm:w-10 sm:h-10 text-gray-400 hover:text-scout-blue hover:bg-blue-50 dark:hover:bg-gray-700 rounded-xl transition-colors font-bold sm:font-normal text-sm flex items-center justify-center">
-                                                            Modifica
-                                                        </button>
-                                                        {isOwn && (
-                                                            <button onClick={() => handleDelete(ev.id)} className="px-4 py-2 sm:p-2 sm:w-10 sm:h-10 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors font-bold sm:font-normal text-sm flex items-center justify-center">
-                                                                <Trash2 size={18} />
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
+                        return (
+                            <div key={year} className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden transition-all duration-300">
+                                {/* Year Header / Toggle */}
+                                <button
+                                    onClick={() => toggleYear(year)}
+                                    className="w-full flex items-center justify-between p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div className="bg-scout-blue text-white w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+                                            <Calendar size={24} />
                                         </div>
-                                    );
-                                })}
+                                        <div className="text-left">
+                                            <h2 className="text-xl font-black text-gray-900 dark:text-white leading-none">
+                                                Anno Scout {year} — {year + 1}
+                                            </h2>
+                                            <p className="text-xs font-bold text-gray-400 uppercase tracking-tighter mt-1">
+                                                {groupedEvents[year].length} ATTIVITÀ REGISTRATE
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className={`p-2 rounded-full bg-gray-100 dark:bg-gray-700 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
+                                        <ChevronDown size={20} className="text-gray-500 dark:text-gray-400" />
+                                    </div>
+                                </button>
+
+                                {/* Pivot Content */}
+                                {isExpanded && (
+                                    <div className="px-6 pb-8 pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                                        <div className="space-y-10">
+                                            {branchOrder.map(branch => {
+                                                const branchEvents = eventsByBranch[branch];
+                                                if (!branchEvents) return null;
+                                                const dotColor = BRANCH_COLORS[branch] || '#9CA3AF';
+
+                                                return (
+                                                    <section key={branch} className="relative">
+                                                        <div className="flex items-center gap-3 mb-4 sticky top-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm py-2 z-10">
+                                                            <div className="w-2 h-6 rounded-full" style={{ backgroundColor: dotColor }}></div>
+                                                            <h3 className="text-lg font-black tracking-tight dark:text-white flex items-center gap-2">
+                                                                Branche {branch}
+                                                                <span className="text-[10px] bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-md text-gray-500">
+                                                                    {branchEvents.length}
+                                                                </span>
+                                                            </h3>
+                                                        </div>
+
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                            {branchEvents.map(ev => {
+                                                                const isOwn = ev.autoreId === currentUser?.id;
+                                                                return (
+                                                                    <div key={ev.id} className="group relative bg-gray-50 dark:bg-gray-900/50 rounded-2xl p-4 border border-transparent hover:border-gray-200 dark:hover:border-gray-600 transition-all">
+                                                                        <div className="flex justify-between items-start gap-3">
+                                                                            <div className="space-y-1">
+                                                                                <p className="text-[10px] font-black text-scout-blue dark:text-blue-400 uppercase tracking-widest leading-none">
+                                                                                    {ev.tipoEvento}
+                                                                                </p>
+                                                                                <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                                                                                    <MapPin size={14} className="text-gray-400" />
+                                                                                    {ev.luogoNome}
+                                                                                </h4>
+                                                                                <div className="flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                                                                                    <Calendar size={12} />
+                                                                                    {new Date(ev.dataInizio).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}
+                                                                                    {ev.dataFine && ` - ${new Date(ev.dataFine).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}`}
+                                                                                </div>
+                                                                            </div>
+                                                                            
+                                                                            <div className="flex gap-1">
+                                                                                <button 
+                                                                                    onClick={() => openEdit(ev)} 
+                                                                                    className="p-1.5 text-gray-400 hover:text-scout-blue hover:bg-white dark:hover:bg-gray-800 rounded-lg transition-all"
+                                                                                    title="Modifica"
+                                                                                >
+                                                                                    <Layers size={14} />
+                                                                                </button>
+                                                                                {isOwn && (
+                                                                                    <button 
+                                                                                        onClick={() => handleDelete(ev.id)} 
+                                                                                        className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-white dark:hover:bg-gray-800 rounded-lg transition-all"
+                                                                                        title="Elimina"
+                                                                                    >
+                                                                                        <Trash2 size={14} />
+                                                                                    </button>
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+                                                                        
+                                                                        {ev.autoreNome && (
+                                                                            <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-800 flex items-center gap-2 opacity-60">
+                                                                                <div className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-[8px] font-bold text-scout-blue">
+                                                                                    {ev.autoreNome.charAt(0)}
+                                                                                </div>
+                                                                                <span className="text-[10px] font-medium text-gray-500 italic">
+                                                                                    Memoria di {ev.autoreNome}
+                                                                                </span>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </section>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
-                        </div>
-                    ))
+                        );
+                    })
                 )}
-            </div>
+            </div>   </div>
             
             {/* Guide Info */}
             <div className="bg-blue-50 dark:bg-blue-900/10 p-6 rounded-3xl mt-12 border border-blue-100 dark:border-blue-900/30">
