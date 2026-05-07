@@ -74,6 +74,14 @@ function SpiderChart({ reviews }: { reviews: LocationReview[] }) {
 
 // --- REVIEW MODAL COMPONENT ---
 function ReviewModal({ location, onClose, onSave }: { location: Location, onClose: () => void, onSave: () => void }) {
+    // Automating initial values based on location census
+    const censusAcqua = !location.restrictions.includes('Acqua non potabile');
+    const censusFuochi = !location.restrictions.includes('No fuochi di bivacco');
+    
+    // Map priceCategory (0-3) to a starting rating (1-5)
+    // 1 (€) -> 4 (Good value), 2 (€€) -> 3 (Average), 3 (€€€) -> 2 (Expensive), 0 -> 3
+    const initialPriceRating = location.priceCategory === 1 ? 4 : (location.priceCategory === 3 ? 2 : 3);
+
     const [rating, setRating] = useState<Partial<LocationReview>>({
         locationId: location.id,
         ombra: 3,
@@ -82,9 +90,9 @@ function ReviewModal({ location, onClose, onSave }: { location: Location, onClos
         servizi: 3,
         sicurezza: 3,
         isolamento: 3,
-        prezzo: 3,
-        acquaPotabile: true,
-        fuochi: true,
+        prezzo: initialPriceRating,
+        acquaPotabile: censusAcqua,
+        fuochi: censusFuochi,
         commento: ''
     });
 

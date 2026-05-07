@@ -116,9 +116,10 @@ export interface Verbale {
 
 export type Restriction =
     | 'Acqua non potabile'
-    | 'No fuochi'
+    | 'No fuochi di bivacco'
     | 'No tende'
     | 'No riscaldamento'
+    | 'Accesso difficile veicoli'
     | 'Gestore invadente'
     | 'Acqua ed elettricità limitate'
     | 'Altro';
