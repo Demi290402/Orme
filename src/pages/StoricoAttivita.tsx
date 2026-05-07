@@ -287,7 +287,7 @@ export default function StoricoAttivita() {
                                         </div>
                                         <div className="text-left">
                                             <h2 className="text-xl font-black text-gray-900 dark:text-white leading-none">
-                                                Anno Scout {year} — {year + 1}
+                                                {year} — {year + 1}
                                             </h2>
                                             <p className="text-xs font-bold text-gray-400 uppercase tracking-tighter mt-1">
                                                 {groupedEvents[year].length} ATTIVITÀ REGISTRATE
@@ -313,7 +313,7 @@ export default function StoricoAttivita() {
                                                         <div className="flex items-center gap-3 mb-4 sticky top-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm py-2 z-10">
                                                             <div className="w-2 h-6 rounded-full" style={{ backgroundColor: dotColor }}></div>
                                                             <h3 className="text-lg font-black tracking-tight dark:text-white flex items-center gap-2">
-                                                                Branche {branch}
+                                                                {branch}
                                                                 <span className="text-[10px] bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-md text-gray-500">
                                                                     {branchEvents.length}
                                                                 </span>
