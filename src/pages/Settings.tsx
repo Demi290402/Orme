@@ -399,7 +399,7 @@ export default function Settings() {
                     label="Privacy & Dati"
                     subtitle="Gestisci i tuoi dati personali"
                     color="text-gray-500"
-                    onClick={() => alert('Tutti i tuoi dati sono archiviati su Supabase e non vengono condivisi con terze parti.')}
+                    onClick={() => navigate('/privacy')}
                 />
                 <SettingsRow
                     icon={Trash2}

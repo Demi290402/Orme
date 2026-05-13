@@ -20,6 +20,7 @@ import Calendario from '@/pages/Calendario';
 import UpdateManager from '@/components/UpdateManager';
 import StoricoAttivita from '@/pages/StoricoAttivita';
 import Settings from '@/pages/Settings';
+import PrivacyPolicy from '@/pages/PrivacyPolicy';
 
 function App() {
   return (
@@ -32,6 +33,7 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/" element={<Layout><Home /></Layout>} />
           <Route path="/location/:id" element={<Layout><LocationDetail /></Layout>} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
 
           {/* Protected routes */}
           <Route path="/leaderboard" element={<ProtectedRoute><Layout><Leaderboard /></Layout></ProtectedRoute>} />

@@ -132,7 +132,18 @@ export default function Home() {
                                 setSearchTerm(e.target.value);
                                 if (!sessionStorage.getItem('search_done') && e.target.value.length > 2) {
                                     sessionStorage.setItem('search_done', '1');
-                                    addPointsWithStats(1, { locationsSearched: 1 }).catch(console.error);
+                                    
+                                    const stats: any = { locationsSearched: 1 };
+                                    // If branch filters are active, count them too
+                                    selectedBranches.forEach(branch => {
+                                        if (branch === 'L/C') stats.searchesLC = (stats.searchesLC || 0) + 1;
+                                        if (branch === 'E/G') stats.searchesEG = (stats.searchesEG || 0) + 1;
+                                        if (branch === 'R/S') stats.searchesRS = (stats.searchesRS || 0) + 1;
+                                        if (branch === 'Co.Ca.') stats.searchesCoCa = (stats.searchesCoCa || 0) + 1;
+                                        if (branch === 'Gruppo') stats.searchesGruppo = (stats.searchesGruppo || 0) + 1;
+                                    });
+
+                                    addPointsWithStats(1, stats).catch(console.error);
                                 }
                             }}
                             className="w-full pl-10 pr-4 py-3 rounded-xl bg-white dark:bg-gray-800 dark:text-gray-100 dark:border dark:border-green-700/50 text-gray-900 focus:outline-none focus:ring-4 focus:ring-scout-green-light/50 shadow-sm placeholder:text-gray-400 dark:placeholder:text-gray-500"
@@ -352,7 +363,27 @@ export default function Home() {
 
                         <div className="pt-4 border-t border-gray-100">
                             <button
-                                onClick={() => setShowFilters(false)}
+                                onClick={() => {
+                                    setShowFilters(false);
+                                    // Track branch searches when applying filters
+                                    if (selectedBranches.length > 0) {
+                                        const stats: any = {};
+                                        selectedBranches.forEach(branch => {
+                                            const key = `search_track_${branch}`;
+                                            if (!sessionStorage.getItem(key)) {
+                                                sessionStorage.setItem(key, '1');
+                                                if (branch === 'L/C') stats.searchesLC = 1;
+                                                if (branch === 'E/G') stats.searchesEG = 1;
+                                                if (branch === 'R/S') stats.searchesRS = 1;
+                                                if (branch === 'Co.Ca.') stats.searchesCoCa = 1;
+                                                if (branch === 'Gruppo') stats.searchesGruppo = 1;
+                                            }
+                                        });
+                                        if (Object.keys(stats).length > 0) {
+                                            addPointsWithStats(1, stats).catch(console.error);
+                                        }
+                                    }
+                                }}
                                 className="w-full bg-scout-green text-white font-bold py-4 rounded-xl shadow-lg hover:bg-scout-green-dark active:transform active:scale-[0.98] transition-all"
                             >
                                 Applica Filtri ({activeFiltersCount})
