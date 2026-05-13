@@ -172,8 +172,8 @@ async function applyProposal(proposal: Proposal) {
 
             if (error) throw error;
 
-            // Reward proposer: 10 points + increment location-related stats
-            await addPointsToUserWithStats(proposal.proposerId, 10, { contributionsApproved: 1 });
+            // Reward proposer: 10 points + increment validations_given (modifiche fatte)
+            await addPointsToUserWithStats(proposal.proposerId, 10, { validationsGiven: 1 });
             alert(`Il luogo "${proposal.locationName}" è stato eliminato definitivamente.`);
         } else if (proposal.type === 'update' && proposal.changes) {
             // Update the location
@@ -194,8 +194,8 @@ async function applyProposal(proposal: Proposal) {
                 throw new Error("Luogo originale non trovato. L'aggiornamento non è stato possibile.");
             }
 
-            // Reward proposer: 10 points + increment contributions_approved
-            await addPointsToUserWithStats(proposal.proposerId, 10, { contributionsApproved: 1 });
+            // Reward proposer: 10 points + increment validations_given (modifiche fatte)
+            await addPointsToUserWithStats(proposal.proposerId, 10, { validationsGiven: 1 });
             alert(`Le modifiche a "${proposal.locationName}" sono state applicate correttamente sul luogo esistente!`);
         }
     } catch (error) {

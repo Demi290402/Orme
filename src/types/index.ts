@@ -22,6 +22,11 @@ export interface User {
     verbaliRead: number;
     locationsSearched: number;
     eventiAggiunti: number;
+    searchesLC: number;
+    searchesEG: number;
+    searchesRS: number;
+    searchesCoCa: number;
+    searchesGruppo: number;
     
     // Multi-tenancy
     region?: string;

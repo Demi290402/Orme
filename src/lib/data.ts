@@ -237,6 +237,11 @@ export async function updateUser(user: User): Promise<User> {
                 website_info_added: user.websiteInfoAdded,
                 verbali_read: user.verbaliRead,
                 locations_searched: user.locationsSearched,
+                searches_lc: user.searchesLC,
+                searches_eg: user.searchesEG,
+                searches_rs: user.searchesRS,
+                searches_coca: user.searchesCoCa,
+                searches_gruppo: user.searchesGruppo,
                 eventi_aggiunti: user.eventiAggiunti,
             })
             .eq('id', user.id)
@@ -501,6 +506,11 @@ function mapSupabaseUserToUser(data: any): User {
         websiteInfoAdded: data.website_info_added || 0,
         verbaliRead: data.verbali_read || 0,
         locationsSearched: data.locations_searched || 0,
+        searchesLC: data.searches_lc || 0,
+        searchesEG: data.searches_eg || 0,
+        searchesRS: data.searches_rs || 0,
+        searchesCoCa: data.searches_coca || 0,
+        searchesGruppo: data.searches_gruppo || 0,
         eventiAggiunti: data.eventi_aggiunti || 0,
         region: data.region,
         scoutZone: data.scout_zone,

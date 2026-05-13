@@ -35,14 +35,33 @@ export const BADGES: Record<string, BadgeDef> = {
     'primo_verbale':    { name: 'Primo Verbale',    icon: '📖', description: 'Hai visualizzato il tuo primo verbale',        statKey: 'verbaliRead',         goal: 1,  bonusPoints: 5  },
     'lettore_assiduo':  { name: 'Lettore Assiduo',  icon: '📚', description: 'Hai visualizzato 5 verbali',                  statKey: 'verbaliRead',         goal: 5,  bonusPoints: 10 },
     'archivista':       { name: 'Archivista',       icon: '🗂️', description: 'Hai visualizzato 20 verbali',                 statKey: 'verbaliRead',         goal: 20, bonusPoints: 20 },
-    // ── Passive: Ricerca luoghi ───────────────────────────────────────────────
-    'prima_traccia':    { name: 'Prima Traccia',    icon: '🐾', description: 'Hai cercato un luogo per la prima volta',     statKey: 'locationsSearched',   goal: 1,  bonusPoints: 5  },
-    'esploratore_lc':   { name: 'Esploratore L/C',  icon: '🐺', description: 'Hai cercato luoghi per L/C 5 volte',         statKey: 'locationsSearched',   goal: 5,  bonusPoints: 10 },
-    'esploratore_eg':   { name: 'Esploratore E/G',  icon: '⚜️', description: 'Hai cercato luoghi per E/G 10 volte',        statKey: 'locationsSearched',   goal: 10, bonusPoints: 10 },
-    'esploratore_rs':   { name: 'Esploratore R/S',  icon: '🔥', description: 'Hai cercato luoghi per R/S 15 volte',        statKey: 'locationsSearched',   goal: 15, bonusPoints: 10 },
+
+    // ── Passive: Ricerca luoghi (SCALETTA 5, 10, 15) ─────────────────────────
+    // L/C
+    'esploratore_lc_5':  { name: 'Cucciolo L/C',     icon: '🐺', description: 'Hai cercato luoghi per L/C 5 volte',         statKey: 'searchesLC',          goal: 5,  bonusPoints: 5 },
+    'esploratore_lc_10': { name: 'Lupo Anziano',     icon: '🐾', description: 'Hai cercato luoghi per L/C 10 volte',        statKey: 'searchesLC',          goal: 10, bonusPoints: 10 },
+    'esploratore_lc_15': { name: 'Akela della Map',  icon: '🏔️', description: 'Hai cercato luoghi per L/C 15 volte',        statKey: 'searchesLC',          goal: 15, bonusPoints: 15 },
+    // E/G
+    'esploratore_eg_5':  { name: 'Novizio E/G',      icon: '⚜️', description: 'Hai cercato luoghi per E/G 5 volte',         statKey: 'searchesEG',          goal: 5,  bonusPoints: 5 },
+    'esploratore_eg_10': { name: 'Esploratore',      icon: '⛺', description: 'Hai cercato luoghi per E/G 10 volte',        statKey: 'searchesEG',          goal: 10, bonusPoints: 10 },
+    'esploratore_eg_15': { name: 'Mastro dei Campi', icon: '🛶', description: 'Hai cercato luoghi per E/G 15 volte',        statKey: 'searchesEG',          goal: 15, bonusPoints: 15 },
+    // R/S
+    'esploratore_rs_5':  { name: 'Rover Novizio',    icon: '🔥', description: 'Hai cercato luoghi per R/S 5 volte',         statKey: 'searchesRS',          goal: 5,  bonusPoints: 5 },
+    'esploratore_rs_10': { name: 'Cercatore di Strade',icon: '🛤️', description: 'Hai cercato luoghi per R/S 10 volte',      statKey: 'searchesRS',          goal: 10, bonusPoints: 10 },
+    'esploratore_rs_15': { name: 'Maestro di Route',  icon: '👣', description: 'Hai cercato luoghi per R/S 15 volte',        statKey: 'searchesRS',          goal: 15, bonusPoints: 15 },
+    // CoCa
+    'esploratore_coca_5': { name: 'Capo in Prova',    icon: '🧢', description: 'Hai cercato luoghi per CoCa 5 volte',        statKey: 'searchesCoCa',        goal: 5,  bonusPoints: 5 },
+    'esploratore_coca_10':{ name: 'Capo Iniziato',    icon: '👔', description: 'Hai cercato luoghi per CoCa 10 volte',       statKey: 'searchesCoCa',        goal: 10, bonusPoints: 10 },
+    'esploratore_coca_15':{ name: 'Esperto di Diari', icon: '📂', description: 'Hai cercato luoghi per CoCa 15 volte',       statKey: 'searchesCoCa',        goal: 15, bonusPoints: 15 },
+    // Gruppo
+    'esploratore_gru_5': { name: 'Aiuto Organizzatore',icon: '🎪', description: 'Hai cercato luoghi di Gruppo 5 volte',     statKey: 'searchesGruppo',      goal: 5,  bonusPoints: 5 },
+    'esploratore_gru_10':{ name: 'Logista di Gruppo', icon: '🚚', description: 'Hai cercato luoghi di Gruppo 10 volte',    statKey: 'searchesGruppo',      goal: 10, bonusPoints: 10 },
+    'esploratore_gru_15':{ name: 'Gran Maestro di Campo',icon: '🏰', description: 'Hai cercato luoghi di Gruppo 15 volte',  statKey: 'searchesGruppo',      goal: 15, bonusPoints: 15 },
+
     // ── Passive: Calendario ───────────────────────────────────────────────────
     'pianificatore':    { name: 'Pianificatore',    icon: '🗓️', description: 'Hai aggiunto il tuo primo evento al calendario', statKey: 'eventiAggiunti',  goal: 1,  bonusPoints: 5  },
     'calendariosta':    { name: 'Calendariosta',    icon: '📅', description: 'Hai aggiunto 5 eventi al calendario',         statKey: 'eventiAggiunti',      goal: 5,  bonusPoints: 15 },
+
     // ── Active: Luoghi (mantenuti) ────────────────────────────────────────────
     'piede_leggero':    { name: 'Piede Leggero',    icon: '🦶', description: 'Fai approvare 5 modifiche o nuovi luoghi',   statKey: 'contributionsApproved', goal: 5,  bonusPoints: 10 },
     'tracciatore':      { name: 'Tracciatore',      icon: '🗺️', description: 'Aggiungi 15 nuovi luoghi alla mappa',        statKey: 'locationsAdded',      goal: 15, bonusPoints: 20 },
@@ -113,6 +132,11 @@ export async function addPointsWithStats(
     stats: {
         verbaliRead?: number;
         locationsSearched?: number;
+        searchesLC?: number;
+        searchesEG?: number;
+        searchesRS?: number;
+        searchesCoCa?: number;
+        searchesGruppo?: number;
         eventiAggiunti?: number;
         contributionsApproved?: number;
         validationsGiven?: number;
@@ -129,6 +153,11 @@ export async function addPointsWithStats(
 
         if (stats.verbaliRead)          user.verbaliRead          += stats.verbaliRead;
         if (stats.locationsSearched)    user.locationsSearched    += stats.locationsSearched;
+        if (stats.searchesLC)           user.searchesLC           += stats.searchesLC;
+        if (stats.searchesEG)           user.searchesEG           += stats.searchesEG;
+        if (stats.searchesRS)           user.searchesRS           += stats.searchesRS;
+        if (stats.searchesCoCa)         user.searchesCoCa         += stats.searchesCoCa;
+        if (stats.searchesGruppo)       user.searchesGruppo       += stats.searchesGruppo;
         if (stats.eventiAggiunti)       user.eventiAggiunti       += stats.eventiAggiunti;
         if (stats.contributionsApproved) user.contributionsApproved += stats.contributionsApproved;
         if (stats.validationsGiven)     user.validationsGiven     += stats.validationsGiven;
@@ -164,6 +193,11 @@ export async function addPointsToUserWithStats(
         pricingInfoAdded?: number;
         coordinateInfoAdded?: number;
         websiteInfoAdded?: number;
+        searchesLC?: number;
+        searchesEG?: number;
+        searchesRS?: number;
+        searchesCoCa?: number;
+        searchesGruppo?: number;
     } = {}
 ) {
     try {
@@ -177,6 +211,11 @@ export async function addPointsToUserWithStats(
         if (stats.pricingInfoAdded)     user.pricingInfoAdded     += stats.pricingInfoAdded;
         if (stats.coordinateInfoAdded)  user.coordinateInfoAdded  += stats.coordinateInfoAdded;
         if (stats.websiteInfoAdded)     user.websiteInfoAdded     += stats.websiteInfoAdded;
+        if (stats.searchesLC)           user.searchesLC           += stats.searchesLC;
+        if (stats.searchesEG)           user.searchesEG           += stats.searchesEG;
+        if (stats.searchesRS)           user.searchesRS           += stats.searchesRS;
+        if (stats.searchesCoCa)         user.searchesCoCa         += stats.searchesCoCa;
+        if (stats.searchesGruppo)       user.searchesGruppo       += stats.searchesGruppo;
 
         const bonus = await checkAndAwardBadges(user);
         user.points += bonus;
