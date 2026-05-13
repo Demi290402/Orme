@@ -67,7 +67,7 @@ export default function PrivacyPolicy() {
             <div className="bg-scout-blue/5 dark:bg-blue-900/10 p-6 rounded-3xl border border-scout-blue/10 text-center">
                 <p className="text-xs text-gray-500 dark:text-gray-400 uppercase font-black tracking-widest mb-2">Contatti</p>
                 <p className="text-sm dark:text-gray-300">
-                    Per domande sulla privacy contattaci presso il tuo rappresentante di zona o via email.
+                    Per domande sulla privacy contattaci presso il tuo rappresentante di zona o via email a <a href="mailto:appormescout@gmail.com" className="text-scout-blue font-bold">appormescout@gmail.com</a>.
                 </p>
             </div>
         </div>
