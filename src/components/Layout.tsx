@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Trophy, HelpCircle, Mail, FileText, CalendarDays, Sun, Moon, LogIn, UserPlus, Archive, Settings } from 'lucide-react';
+import { Home, Trophy, HelpCircle, Mail, FileText, CalendarDays, LogIn, UserPlus, Archive, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Logo from '@/components/Logo';
 import PWAInstallPrompt from './PWAInstallPrompt';
 import { getProposals } from '@/lib/proposals';
-import { useTheme } from '@/context/ThemeContext';
 import { User as UserType } from '@/types';
 import { getUser } from '@/lib/data';
 import UserAvatar from '@/components/UserAvatar';
@@ -15,7 +14,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     const location = useLocation();
     const [pendingCount, setPendingCount] = useState(0);
     const [currentUser, setCurrentUser] = useState<UserType | null>(null);
-    const { theme, toggleTheme } = useTheme();
+
 
     useEffect(() => {
         getProposals().then(ps => {
@@ -39,7 +38,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         { icon: Archive, label: 'Storico', path: '/storico' },
         { icon: Trophy, label: 'Punti', path: '/leaderboard' },
         { icon: HelpCircle, label: 'Guida', path: '/guide' },
-        { icon: Settings, label: 'Altro', path: '/settings' },
     ];
 
     return (
@@ -53,14 +51,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     </Link>
 
                     <div className="flex items-center space-x-2">
-                        {/* Dark mode toggle */}
-                        <button onClick={toggleTheme}
-                            className="p-2 text-gray-500 dark:text-gray-400 hover:text-scout-green dark:hover:text-scout-green transition-colors rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
-                            title={theme === 'dark' ? 'Modalità chiara' : 'Modalità scura'}
-                        >
-                            {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-                        </button>
-
                         {/* Settings */}
                         {currentUser && (
                             <Link

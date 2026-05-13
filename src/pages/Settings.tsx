@@ -195,15 +195,7 @@ export default function Settings() {
                     label="Modalità visiva"
                     subtitle={theme === 'dark' ? 'Modalità scura attiva' : 'Modalità chiara attiva'}
                     color={theme === 'dark' ? 'text-indigo-500' : 'text-amber-500'}
-                    right={
-                        <button
-                            onClick={toggleTheme}
-                            className="flex items-center gap-2 bg-gray-50 dark:bg-gray-700 px-3 py-1.5 rounded-xl border border-gray-100 dark:border-gray-600 font-bold text-xs text-gray-700 dark:text-gray-300"
-                        >
-                            {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
-                            {theme === 'dark' ? 'Chiara' : 'Scura'}
-                        </button>
-                    }
+                    right={<Toggle value={theme === 'dark'} onChange={toggleTheme} />}
                 />
             </SettingsSection>
 
