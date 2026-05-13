@@ -19,6 +19,7 @@ import VerbaliStats from '@/pages/Verbali/VerbaliStats';
 import Calendario from '@/pages/Calendario';
 import UpdateManager from '@/components/UpdateManager';
 import StoricoAttivita from '@/pages/StoricoAttivita';
+import Settings from '@/pages/Settings';
 
 function App() {
   return (
@@ -48,6 +49,7 @@ function App() {
           <Route path="/verbali/impostazioni" element={<ProtectedRoute><Layout><ImpostazioniVerbale /></Layout></ProtectedRoute>} />
           <Route path="/verbali/statistiche" element={<ProtectedRoute><Layout><VerbaliStats /></Layout></ProtectedRoute>} />
           <Route path="/storico" element={<ProtectedRoute><Layout><StoricoAttivita /></Layout></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
         </Routes>
       </Router>
     </ThemeProvider>

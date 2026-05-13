@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Camera, MapPin, Award, Trophy, Edit2, X, Save, Database, Download, CheckCircle, Info, Mail, AlertCircle, Trash2 } from 'lucide-react';
+import { Camera, MapPin, Award, Trophy, Edit2, X, Save, Download, CheckCircle, Mail, AlertCircle, Trash2, Settings } from 'lucide-react';
 import { getUser, updateUser, logoutUser, deleteUserProfile } from '@/lib/data';
 import { getLevelInfo, BADGES } from '@/lib/gamification';
-import { autoCreateMonthlySnapshot, getBackups, downloadBackup, BackupSnapshot } from '@/lib/backups';
 import { User } from '@/types';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import UserAvatar from '@/components/UserAvatar';
 import { cn, getDefaultCover } from '@/lib/utils';
 
@@ -38,8 +37,8 @@ function validateGroupField(val: string, label: string): string {
 
 export default function Profile() {
     const [user, setUser] = useState<User | null>(null);
-    const [backups, setBackups] = useState<BackupSnapshot[]>([]);
     const [isEditing, setIsEditing] = useState(false);
+    const navigate = useNavigate();
     const [selectedBadge, setSelectedBadge] = useState<any>(null);
     const [editErrors, setEditErrors] = useState<Record<string, string>>({});
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -75,12 +74,6 @@ export default function Profile() {
                     scoutZone: currentUser.scoutZone || '',
                     groupName: currentUser.groupName || ''
                 });
-
-                // Auto-create backup check
-                await autoCreateMonthlySnapshot();
-                // Load backups
-                const availableBackups = await getBackups();
-                setBackups(availableBackups);
             } catch (error) {
                 console.error('Error loading profile data:', error);
             }
@@ -461,49 +454,27 @@ export default function Profile() {
                 </div>
             </div>
 
-            {/* Monthly Backups Section */}
-            <div className="mx-6 p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 space-y-4">
+            {/* Data & Settings Card */}
+            <div className="mx-6 p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
                 <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-bold flex items-center gap-2 text-gray-900 dark:text-white">
-                        <Database className="text-scout-blue dark:text-blue-500" size={20} />
-                        Archivio Dati Mensile
+                    <h3 className="text-base font-black text-gray-900 dark:text-white flex items-center gap-2">
+                        <Settings className="text-scout-blue dark:text-blue-400" size={18} />
+                        Impostazioni e Dati
                     </h3>
-                    <div className="bg-blue-50 dark:bg-blue-900/30 text-scout-blue dark:text-blue-400 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider border border-blue-100 dark:border-blue-800/50">
-                        Automatico
-                    </div>
                 </div>
-
-                <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-                    Ogni mese l'app salva automaticamente una copia di tutti i luoghi e le informazioni principali per sicurezza. Questi file possono essere scaricati e conservati offline.
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 mb-4 leading-relaxed">
+                    Gestisci il tuo tema, le notifiche, scarica i tuoi dati o configura estrazioni automatiche.
                 </p>
-
-                <div className="space-y-2">
-                    {backups.length > 0 ? (
-                        backups.map((backup: BackupSnapshot) => (
-                            <div key={backup.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                                <div className="flex items-center gap-3">
-                                    <CheckCircle size={18} className="text-green-500 dark:text-green-400" />
-                                    <div>
-                                        <p className="font-bold text-sm text-gray-900 dark:text-gray-100">Snapshot {backup.month_year}</p>
-                                        <p className="text-[10px] text-gray-400 dark:text-gray-500">{new Date(backup.created_at).toLocaleDateString('it-IT')}</p>
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={() => downloadBackup(backup)}
-                                    className="p-2 bg-white dark:bg-gray-800 text-scout-blue dark:text-blue-400 rounded-lg shadow-sm hover:shadow-md border border-blue-100 dark:border-gray-700 transition-all active:scale-95"
-                                    title="Scarica JSON"
-                                >
-                                    <Download size={18} />
-                                </button>
-                            </div>
-                        ))
-                    ) : (
-                        <div className="text-center py-6 bg-gray-50 dark:bg-gray-900 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
-                            <Info className="mx-auto text-gray-300 dark:text-gray-600 mb-2" size={24} />
-                            <p className="text-sm text-gray-400 dark:text-gray-500">Nessun archivio disponibile al momento.</p>
-                        </div>
-                    )}
-                </div>
+                <button
+                    onClick={() => navigate('/settings')}
+                    className="w-full flex items-center justify-between bg-scout-blue/5 dark:bg-blue-900/20 border border-scout-blue/20 dark:border-blue-800/30 rounded-xl px-4 py-3 hover:bg-scout-blue/10 dark:hover:bg-blue-900/30 transition-colors"
+                >
+                    <div className="flex items-center gap-3">
+                        <Download size={16} className="text-scout-blue dark:text-blue-400" />
+                        <span className="text-sm font-bold text-scout-blue dark:text-blue-400">Apri Impostazioni</span>
+                    </div>
+                    <span className="text-scout-blue dark:text-blue-400 text-xs font-black">→</span>
+                </button>
             </div>
 
             {/* Logout Button */}

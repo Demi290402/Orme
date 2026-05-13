@@ -325,7 +325,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                         type="text" 
                         value={verbale.titolo}
                         onChange={e => setVerbale(v => ({ ...v, titolo: e.target.value }))}
-                        className="p-2 border border-gray-100 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-700/50 dark:bg-gray-700/50 focus:bg-white dark:bg-gray-800 outline-none focus:ring-1 focus:ring-scout-green w-64"
+                        className="p-2 border border-gray-100 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-scout-green w-64 transition-all"
                     />
                 </div>
                 <div className="space-y-1">
@@ -334,7 +334,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                         type="date" 
                         value={verbale.data}
                         onChange={e => setVerbale(v => ({ ...v, data: e.target.value }))}
-                        className="p-2 border border-gray-100 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-700/50 dark:bg-gray-700/50 focus:bg-white dark:bg-gray-800 outline-none focus:ring-1 focus:ring-scout-green"
+                        className="p-2 border border-gray-100 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-scout-green transition-all"
                     />
                 </div>
                 <div className="space-y-1">
@@ -343,7 +343,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                         type="text" 
                         value={verbale.luogo}
                         onChange={e => setVerbale(v => ({ ...v, luogo: e.target.value }))}
-                        className="p-2 border border-gray-100 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-700/50 dark:bg-gray-700/50 focus:bg-white dark:bg-gray-800 outline-none focus:ring-1 focus:ring-scout-green"
+                        className="p-2 border border-gray-100 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-scout-green transition-all"
                     />
                 </div>
                 <div className="flex gap-2">
@@ -353,7 +353,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                             type="time" 
                             value={verbale.oraInizio}
                             onChange={e => setVerbale(v => ({ ...v, oraInizio: e.target.value }))}
-                            className="p-2 border border-gray-100 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-700/50 dark:bg-gray-700/50 focus:bg-white dark:bg-gray-800 outline-none focus:ring-1 focus:ring-scout-green"
+                            className="p-2 border border-gray-100 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-scout-green transition-all"
                         />
                     </div>
                     <div className="space-y-1">
@@ -362,7 +362,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                             type="time" 
                             value={verbale.oraFine}
                             onChange={e => setVerbale(v => ({ ...v, oraFine: e.target.value }))}
-                            className="p-2 border border-gray-100 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-700/50 dark:bg-gray-700/50 focus:bg-white dark:bg-gray-800 outline-none focus:ring-1 focus:ring-scout-green"
+                            className="p-2 border border-gray-100 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-scout-green transition-all"
                         />
                     </div>
                 </div>
