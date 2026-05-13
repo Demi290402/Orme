@@ -57,13 +57,13 @@ export default function ImpostazioniVerbale() {
             <div className="flex items-center justify-between gap-4">
                 <button 
                     onClick={() => navigate('/verbali')}
-                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
                 >
-                    <ChevronLeft size={24} />
+                    <ChevronLeft size={24} className="dark:text-white" />
                 </button>
                 <div className="flex-1">
-                    <h1 className="text-xl font-serif font-black text-scout-brown flex items-center gap-2">
-                        <Brush className="text-scout-blue" />
+                    <h1 className="text-xl font-serif font-black text-scout-brown dark:text-scout-brown-light flex items-center gap-2">
+                        <Brush className="text-scout-blue dark:text-scout-blue-light" />
                         Personalizzazione Verbale
                     </h1>
                 </div>
@@ -82,15 +82,15 @@ export default function ImpostazioniVerbale() {
                 </div>
             </div>
 
-            <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm space-y-12">
+            <div className="bg-white dark:bg-gray-800 p-8 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm space-y-12">
                 {/* Font Selection */}
                 <div className="space-y-4">
                     <div>
-                        <h2 className="text-lg font-black text-scout-brown uppercase tracking-widest font-serif mb-1 flex items-center gap-2">
+                        <h2 className="text-lg font-black text-scout-brown dark:text-scout-brown-light uppercase tracking-widest font-serif mb-1 flex items-center gap-2">
                             <Type size={18} />
                             Font del Verbale
                         </h2>
-                        <p className="text-sm text-gray-500 italic font-serif">Scegli il carattere tipografico usato nell'anteprima e nel PDF del verbale.</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 italic font-serif">Scegli il carattere tipografico usato nell'anteprima e nel PDF del verbale.</p>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {FONTS.map(f => (
@@ -100,14 +100,17 @@ export default function ImpostazioniVerbale() {
                                 className={cn(
                                     "p-4 rounded-2xl border-2 text-left transition-all",
                                     settings.fontFamily === f.value
-                                        ? "border-scout-green bg-green-50 shadow-inner"
-                                        : "border-gray-100 hover:border-scout-green/40 bg-white"
+                                        ? "border-scout-green bg-green-50 dark:bg-scout-green/10 shadow-inner"
+                                        : "border-gray-100 dark:border-gray-700 hover:border-scout-green/40 bg-white dark:bg-gray-900"
                                 )}
                             >
-                                <span className="block text-base mb-1" style={{ fontFamily: f.value }}>
+                                <span className={cn(
+                                    "block text-base mb-1",
+                                    settings.fontFamily === f.value ? "text-gray-900 dark:text-scout-green-dark" : "text-gray-600 dark:text-gray-300"
+                                )} style={{ fontFamily: f.value }}>
                                     Anteprima testo verbale
                                 </span>
-                                <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">{f.label}</span>
+                                <span className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">{f.label}</span>
                             </button>
                         ))}
                     </div>
@@ -116,8 +119,8 @@ export default function ImpostazioniVerbale() {
                 {/* Header Editor */}
                 <div className="space-y-4">
                     <div>
-                        <h2 className="text-lg font-black text-scout-blue uppercase tracking-widest font-serif mb-1">Intestazione (Header)</h2>
-                        <p className="text-sm text-gray-500 italic font-serif">Questo contenuto apparirà all'inizio della prima pagina del documento esportato (e in anteprima).</p>
+                        <h2 className="text-lg font-black text-scout-blue dark:text-scout-blue-light uppercase tracking-widest font-serif mb-1">Intestazione (Header)</h2>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 italic font-serif">Questo contenuto apparirà all'inizio della prima pagina del documento esportato (e in anteprima).</p>
                     </div>
                     
                     <RichTextEditor 
@@ -129,8 +132,8 @@ export default function ImpostazioniVerbale() {
                 {/* Footer Editor */}
                 <div className="space-y-4">
                     <div>
-                        <h2 className="text-lg font-black text-scout-brown uppercase tracking-widest font-serif mb-1">Piè di Pagina (Footer)</h2>
-                        <p className="text-sm text-gray-500 italic font-serif">Questo contenuto apparirà in fondo all'ultima pagina del documento (e in anteprima).</p>
+                        <h2 className="text-lg font-black text-scout-brown dark:text-scout-brown-light uppercase tracking-widest font-serif mb-1">Piè di Pagina (Footer)</h2>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 italic font-serif">Questo contenuto apparirà in fondo all'ultima pagina del documento (e in anteprima).</p>
                     </div>
                     
                     <RichTextEditor 
@@ -139,8 +142,8 @@ export default function ImpostazioniVerbale() {
                     />
                 </div>
                 
-                <div className="bg-blue-50/50 p-6 rounded-2xl border border-blue-100 text-sm text-blue-800 space-y-2">
-                    <h3 className="font-bold border-b border-blue-200 pb-2 mb-2">💡 Suggerimenti:</h3>
+                <div className="bg-blue-50/50 dark:bg-blue-900/10 p-6 rounded-2xl border border-blue-100 dark:border-blue-900/40 text-sm text-blue-800 dark:text-blue-300 space-y-2">
+                    <h3 className="font-bold border-b border-blue-200 dark:border-blue-800 pb-2 mb-2">💡 Suggerimenti:</h3>
                     <ul className="list-disc pl-5 space-y-1">
                         <li>Le immagini inserite (tramite URL) compariranno direttamente nel verbale web e PDF.</li>
                         <li><strong>PDF:</strong> Usa il pulsante "Scarica PDF" dalla pagina di visualizzazione per ottenere il documento perfetto.</li>
