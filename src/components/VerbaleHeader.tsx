@@ -2,9 +2,9 @@ export default function VerbaleHeader() {
     return (
         <div className="mb-6 font-serif text-[11px] leading-tight">
             {/* Top Multi-color Banner */}
-            <div className="w-full h-[12px] flex mb-1">
-                <div className="h-full bg-[#45387E]" style={{ width: '60%', clipPath: 'polygon(0 0, 100% 0, 95% 100%, 0% 100%)' }}></div>
-                <div className="h-full bg-[#F4B400] -ml-[2%] flex-1"></div>
+            <div className="w-full h-[12px] flex mb-1 overflow-hidden rounded-sm bg-gray-50 dark:bg-gray-800">
+                <div className="h-full bg-[#45387E]" style={{ width: '60%', clipPath: 'polygon(0 0, 100% 0, 95% 100%, 0% 100%)', zIndex: 2 }}></div>
+                <div className="h-full bg-[#F4B400] flex-1 -ml-4" style={{ zIndex: 1 }}></div>
             </div>
 
             {/* Official AGESCI Header */}

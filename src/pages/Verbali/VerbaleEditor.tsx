@@ -1205,7 +1205,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                         )}
                         
                         {/* A4 page - natural scroll, no fixed height */}
-                        <div className="bg-white dark:bg-gray-800 w-full md:max-w-[850px] shadow-xl md:border md:border-gray-200 print:shadow-none print:border-none page-container mx-auto overflow-hidden">
+                        <div className="bg-white dark:bg-gray-800 w-full max-w-[850px] shadow-xl md:border md:border-gray-200 print:shadow-none print:border-none page-container overflow-hidden">
                             <table className="print-table w-full">
                                 <thead>
                                     <tr>
