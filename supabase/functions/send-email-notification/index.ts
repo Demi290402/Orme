@@ -43,7 +43,7 @@ serve(async (req) => {
       .eq('group_id', groupId)
 
     if (excludeUserId) {
-      query = query.ne('id', excludeUserId)
+      query = query.neq('id', excludeUserId)
     }
 
     const { data: users, error: usersErr } = await query
