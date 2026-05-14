@@ -1194,7 +1194,8 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
             )}
 
             {(viewMode || activeTab === 'anteprima') && (
-                <div className="w-full bg-gray-100 dark:bg-gray-900 flex flex-col items-center gap-6 print-verbale overflow-x-hidden p-0 md:p-8">
+                <div className="w-full bg-gray-100 dark:bg-gray-900 flex justify-center py-6 md:py-12 print-verbale overflow-x-hidden no-scrollbar">
+                    <div className="w-full flex flex-col items-center gap-8 px-4">
                         {/* Last modifier badge - only on screen */}
                         {viewMode && verbale.lastModifiedByUsername && (
                             <div className="w-full max-w-[850px] flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800/80 px-4 py-2 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm no-print">
@@ -1205,8 +1206,8 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                         )}
                         
                         {/* A4 page - natural scroll, no fixed height */}
-                        <div className="bg-white dark:bg-gray-800 w-full max-w-[850px] shadow-xl md:border md:border-gray-200 print:shadow-none print:border-none page-container overflow-hidden">
-                            <table className="print-table w-full">
+                        <div className="bg-white dark:bg-gray-800 w-full max-w-[850px] shadow-2xl md:border md:border-gray-200 print:shadow-none print:border-none page-container overflow-hidden flex-shrink-0">
+                            <table className="print-table w-full border-collapse" style={{ tableLayout: 'fixed' }}>
                                 <thead>
                                     <tr>
                                         <td>
@@ -1286,7 +1287,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                                 <span className="font-black whitespace-nowrap">• {punto.titolo}</span>
                                                             </div>
                                                             <div 
-                                                                className="text-[12px] leading-relaxed text-justify pl-6 prose prose-sm max-w-none prose-p:m-0"
+                                                                className="text-[12px] leading-relaxed text-justify pl-6 prose prose-sm max-w-none prose-p:m-0 overflow-hidden break-words"
                                                                 dangerouslySetInnerHTML={{ __html: punto.contenuto }}
                                                             />
                                                         </div>
@@ -1407,6 +1408,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                             </table>
                         </div>
                     </div>
+                </div>
                 )}
 
             {/* NOTIFICATION MODAL */}
