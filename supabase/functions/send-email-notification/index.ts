@@ -74,9 +74,9 @@ serve(async (req) => {
         'Authorization': `Bearer ${RESEND_API_KEY}`
       },
       body: JSON.stringify({
-        from: 'Orme App <notifiche@orme.app>', 
-        to: 'notifiche@orme.app', // Destinatario fittizio
-        bcc: validEmails,         // Tutti i capi in BCC per privacy
+        from: 'Orme App <onboarding@resend.dev>',
+        to: validEmails[0],       // Resend richiede almeno un destinatario nel campo "to"
+        bcc: validEmails.slice(1),// Gli altri in BCC per privacy
         reply_to: 'appormescout@gmail.com',
         subject: subject,
         html: `
