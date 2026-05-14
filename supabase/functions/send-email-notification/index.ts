@@ -37,25 +37,28 @@ serve(async (req) => {
     )
 
     // Fetch users in the same group, optionally excluding the sender
+    console.log(`Inizializzazione query per group_id="${groupId}" (tipo: ${typeof groupId})`)
     let query = supabaseAdmin
       .from('users')
       .select('email, id')
-      .eq('group_id', groupId)
+      .eq('group_id', String(groupId)) // forza stringa per sicurezza
 
     if (excludeUserId) {
       query = query.neq('id', excludeUserId)
     }
 
+    console.log('Query pronta, in attesa del risultato...')
     const { data: users, error: usersErr } = await query
+    console.log(`Query completata. Utenti trovati: ${users?.length ?? 0}, Errore: ${usersErr?.message ?? 'nessuno'}`)
 
     if (usersErr) {
-      console.error('Errore durante il recupero degli utenti:', usersErr)
-      throw usersErr
+      console.error('Errore durante il recupero degli utenti:', JSON.stringify(usersErr))
+      throw new Error(`DB Error: ${usersErr.message}`)
     }
     
     const validEmails = users
-      ?.map(u => u.email)
-      .filter(e => e && e.includes('@')) || []
+      ?.map((u: any) => u.email)
+      .filter((e: any) => e && e.includes('@')) || []
 
     console.log(`Trovati ${validEmails.length} destinatari validi:`, validEmails)
 
