@@ -47,6 +47,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
         email: 'idle' | 'sending' | 'done' | 'error' | 'not_configured';
     }>({ inApp: 'idle', email: 'idle' });
     const [_savedVerbaleForModal, setSavedVerbaleForModal] = useState<Verbale | null>(null);
+    const [isNewVerbale, setIsNewVerbale] = useState(false);
 
     const [verbale, setVerbale] = useState<Partial<Verbale>>({
         numero: 1,
@@ -170,6 +171,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
             }
 
             if (!silent) {
+                setIsNewVerbale(!id);
                 setSavedVerbaleForModal(saved);
                 setNotifyStatus({ inApp: 'idle', email: 'idle' });
                 setShowNotifyModal(true);
@@ -211,6 +213,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
             const supabaseUrl = (import.meta as any).env.VITE_SUPABASE_URL;
             const supabaseKey = (import.meta as any).env.VITE_SUPABASE_ANON_KEY;
             const v = verbale as Verbale;
+            const actionLabel = isNewVerbale ? 'pubblicato' : 'aggiornato';
             const res = await fetch(`${supabaseUrl}/functions/v1/send-email-notification`, {
                 method: 'POST',
                 headers: {
@@ -220,8 +223,8 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                 body: JSON.stringify({
                     groupId: currentUser.groupId,
                     excludeUserId: currentUser.id,
-                    subject: `📋 Verbale N. ${v.numero} — ${v.titolo || 'Riunione di CoCa'}`,
-                    body: `${currentUser.nickname || currentUser.firstName} ha salvato il verbale del ${
+                    subject: `${isNewVerbale ? '🆕' : '🔄'} Verbale ${actionLabel}: N. ${v.numero} — ${v.titolo || 'Riunione di CoCa'}`,
+                    body: `${currentUser.nickname || currentUser.firstName} ha ${actionLabel} il verbale del ${
                         v.data ? new Date(v.data).toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric' }) : ''
                     }. Aprilo su Orme per leggere i dettagli.`,
                 }),

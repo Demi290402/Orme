@@ -80,20 +80,30 @@ serve(async (req) => {
         },
         subject: subject,
         htmlContent: `
-          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 12px; border-top: 5px solid #2F855A;">
-            <div style="text-align: center; margin-bottom: 20px;">
-                <h1 style="color: #2F855A; margin:0;">Orme</h1>
-                <p style="color: #718096; font-size: 14px; margin-top: 5px;">Diario di Bordo & Notifiche</p>
-            </div>
-            <div style="background-color: #f7fafc; padding: 25px; border-radius: 10px; border: 1px solid #e2e8f0;">
-              <p style="font-size: 16px; line-height: 1.6; color: #2d3748; margin: 0;">${body}</p>
-            </div>
-            <div style="margin-top: 30px; text-align: center;">
-                <a href="https://orme.pages.dev" style="background-color: #2F855A; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px;">Apri l'app</a>
-            </div>
-            <p style="font-size: 11px; color: #a0aec0; text-align: center; margin-top: 40px; border-top: 1px solid #edf2f7; pt-20">
-              Questa è una notifica automatica. Per domande contatta appormescout@gmail.com
-            </p>
+          <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f4f7f6; padding: 40px 20px; color: #333;">
+              <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-top: 6px solid #2F855A;">
+                  <div style="padding: 40px 30px; text-align: center;">
+                      <div style="background-color: #f0fff4; width: 60px; h-60px; border-radius: 20px; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                          <span style="font-size: 30px;">📋</span>
+                      </div>
+                      <h1 style="color: #2F855A; margin: 0; font-size: 24px; letter-spacing: -0.5px;">Notifica Verbale</h1>
+                      <p style="color: #718096; font-size: 14px; margin-top: 5px;">Orme — Diario di Bordo</p>
+                      
+                      <div style="margin-top: 30px; padding: 25px; background-color: #f8fafc; border-radius: 12px; border: 1px solid #edf2f7; text-align: left;">
+                          <p style="font-size: 16px; line-height: 1.6; color: #2d3748; margin: 0;">
+                              ${body}
+                          </p>
+                      </div>
+
+                      <div style="margin-top: 35px;">
+                          <a href="https://orme.pages.dev/verbali" style="background-color: #2F855A; color: #ffffff; padding: 14px 28px; border-radius: 10px; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px rgba(47, 133, 90, 0.2);">Visualizza su Orme</a>
+                      </div>
+                  </div>
+                  <div style="background-color: #f8fafc; padding: 20px; text-align: center; border-top: 1px solid #edf2f7;">
+                      <p style="font-size: 11px; color: #a0aec0; margin: 0;">Questa è una notifica automatica per la tua Comunità Capi.</p>
+                      <p style="font-size: 11px; color: #a0aec0; margin: 5px 0 0;">Problemi? <a href="mailto:appormescout@gmail.com" style="color: #2F855A; text-decoration: none;">Contattaci qui</a></p>
+                  </div>
+              </div>
           </div>
         `
       })
