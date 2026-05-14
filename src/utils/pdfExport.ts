@@ -33,18 +33,18 @@ export async function exportVerbaleToPdf(
     const ritardi = (verbale.ritardi || []).map(membroNome).join(', ') || '';
 
     const odgHtml = (verbale.odg || []).map((p, i) => `
-        <div style="margin-bottom:8pt">
+        <div style="margin-bottom:6pt">
             <strong>${i + 1}. ${p.titolo}</strong>
-            ${p.contenuto ? `<div style="margin-top:4pt;color:#444">${p.contenuto}</div>` : ''}
+            ${p.contenuto ? `<div style="margin-top:2pt;color:#333">${p.contenuto}</div>` : ''}
         </div>
     `).join('');
 
     const postiAzioneHtml = (verbale.sezioniAttive || []).includes('posti_azione') && (verbale.postiAzione || []).length > 0
-        ? `<div style="margin-top:16pt">
+        ? `<div style="margin-top:10pt">
             <strong>🎯 Posti d'Azione</strong>
-            <ul style="margin-top:6pt;">
+            <ul style="margin-top:4pt;">
                 ${(verbale.postiAzione || []).map(pa => `
-                    <li style="margin-bottom:6pt">
+                    <li style="margin-bottom:4pt">
                         <strong>${pa.cosa}</strong>
                         <span style="color:#666"> — Resp: ${(pa.chiIds || []).map(membroNome).join(', ') || '—'}${pa.quando ? ` (${formatDate(pa.quando)})` : ''}</span>
                     </li>
@@ -54,27 +54,27 @@ export async function exportVerbaleToPdf(
         : '';
 
     const ritornoHtml = (verbale.sezioniAttive || []).includes('ritorni') && (verbale.ritorni || []).length > 0
-        ? `<div style="margin-top:16pt">
+        ? `<div style="margin-top:10pt">
             <strong>🗣️ Ritorni</strong>
-            <ul style="margin-top:6pt;">
-                ${(verbale.ritorni || []).map(r => `<li style="margin-bottom:4pt">${r.branca ? `<strong>[${r.branca}]</strong> ` : ''}${r.contenuto}</li>`).join('')}
+            <ul style="margin-top:4pt;">
+                ${(verbale.ritorni || []).map(r => `<li style="margin-bottom:3pt">${r.branca ? `<strong>[${r.branca}]</strong> ` : ''}${r.contenuto}</li>`).join('')}
             </ul>
           </div>`
         : '';
 
     const varieHtml = (verbale.sezioniAttive || []).includes('varie') && verbale.varie
-        ? `<div style="margin-top:16pt">
+        ? `<div style="margin-top:10pt">
             <strong>💬 Varie ed Eventuali</strong>
-            <p style="margin-top:6pt;font-style:italic;color:#444">${verbale.varie}</p>
+            <p style="margin-top:4pt;font-style:italic;color:#444">${verbale.varie}</p>
           </div>`
         : '';
 
     // Costruiamo il contenuto principale come HTML e poi lo convertiamo con htmlToPdfmake
     const contentHtml = `
         <div>
-            <div style="margin-bottom:16pt; font-size: 18pt;">
+            <div style="margin-bottom:12pt; font-size: 16pt;">
                 <strong>${verbale.titolo || 'Verbale di Riunione'}</strong>
-                <div style="color:#666;font-size:10pt;margin-top:4pt">
+                <div style="color:#666;font-size:10pt;margin-top:2pt">
                     N° ${verbale.numero || '-'} |
                     ${formatDate(verbale.data)} |
                     ${verbale.luogo || '-'} |
@@ -82,15 +82,15 @@ export async function exportVerbaleToPdf(
                 </div>
             </div>
 
-            <div style="margin-bottom:12pt">
+            <div style="margin-bottom:10pt; font-size: 11pt;">
                 <strong>✓ Presenti:</strong> ${presenti}<br>
                 ${assenti !== '-' ? `<strong>✗ Assenti:</strong> ${assenti}<br>` : ''}
                 ${ritardi ? `<strong>⏱ Ritardi:</strong> ${ritardi}` : ''}
             </div>
 
-            <div style="margin-bottom:16pt">
-                <strong>📋 Ordine del Giorno</strong>
-                <div style="margin-top:8pt">${odgHtml}</div>
+            <div style="margin-bottom:12pt">
+                <strong style="font-size: 11pt">📋 Ordine del Giorno</strong>
+                <div style="margin-top:4pt">${odgHtml}</div>
             </div>
 
             ${ritornoHtml}
@@ -118,7 +118,16 @@ export async function exportVerbaleToPdf(
     try {
         console.log("PDF Export Engine: parsing HTML with html-to-pdfmake...");
         
-        const parsedContent = htmlToPdfmake(contentHtml, { window: window as any });
+        // Impostiamo defaultStyles per evitare margini doppi tra paragrafi e liste
+        const parsedContent = htmlToPdfmake(contentHtml, { 
+            window: window as any,
+            defaultStyles: {
+                p: { margin: [0, 0, 0, 4] },
+                div: { margin: [0, 0, 0, 2] },
+                ul: { margin: [0, 0, 0, 5] },
+                li: { margin: [0, 0, 0, 2] }
+            }
+        });
 
         const docDefinition = {
             content: parsedContent,
@@ -198,7 +207,11 @@ export async function exportVerbaleToPdf(
             }
         };
 
-        const filename = `Verbale_${(verbale.numero || '').toString().padStart(3, '0')}_${verbale.data || 'data'}.pdf`;
+        const dateObj = verbale.data ? new Date(verbale.data) : new Date();
+        const dd = String(dateObj.getDate()).padStart(2, '0');
+        const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const yy = String(dateObj.getFullYear()).slice(-2);
+        const filename = `Verbale ${dd}-${mm}-${yy}.pdf`;
 
         console.log("PDF Export Engine: Generating vectorial PDF with pdfMake...");
         // Usa pdfMake per generare e scaricare nativamente il PDF (senza dipendere dal canvas)
