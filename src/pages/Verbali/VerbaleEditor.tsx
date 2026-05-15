@@ -1284,7 +1284,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                     {verbale.odg?.map((punto, i) => (
                                                         <div key={i} className="space-y-3">
                                                             <div className="flex gap-2">
-                                                                <span className="font-black whitespace-nowrap">• {punto.titolo}</span>
+                                                                <span className="font-black break-words">• {punto.titolo}</span>
                                                             </div>
                                                             <div 
                                                                 className="text-[12px] leading-relaxed text-justify pl-6 prose prose-sm max-w-none prose-p:m-0 overflow-hidden break-words"
