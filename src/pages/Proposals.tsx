@@ -264,8 +264,12 @@ export default function Proposals() {
                                                 if (key === 'lastUpdatedAt' || key === 'lastUpdatedBy') return null;
                                                 const oldValue = originalLocation ? (originalLocation as any)[key] : null;
 
-                                                // Only show if different
-                                                const hasChanged = JSON.stringify(oldValue) !== JSON.stringify(value);
+                                                // Improved change detection: treat null, undefined, and empty strings as the same
+                                                const normalize = (v: any) => (v === null || v === undefined || v === '') ? null : v;
+                                                const effectiveOld = normalize(oldValue);
+                                                const effectiveNew = normalize(value);
+
+                                                const hasChanged = JSON.stringify(effectiveOld) !== JSON.stringify(effectiveNew);
                                                 if (!hasChanged) return null;
 
                                                 return (
