@@ -27,7 +27,9 @@ export interface User {
     searchesRS: number;
     searchesCoCa: number;
     searchesGruppo: number;
-    
+    verbaliReadIds: string[];
+    storicoItemsAdded: number;
+    reviewsAdded: number;
     // Multi-tenancy
     region?: string;
     scoutZone?: string;

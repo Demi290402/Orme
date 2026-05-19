@@ -92,12 +92,10 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                     const found = allVerbali.find(v => v.id === id);
                     if (found) {
                         setVerbale(found);
-                        // Passive gamification: track verbale view (once per session per verbale)
-                        if (viewMode) {
-                            const sessionKey = `read_verbale_${id}`;
-                            if (!sessionStorage.getItem(sessionKey)) {
-                                sessionStorage.setItem(sessionKey, '1');
-                                addPointsWithStats(2, { verbaliRead: 1 }).catch(console.error);
+                        // Passive gamification: track verbale view (once ever per verbale)
+                        if (viewMode && userData) {
+                            if (!userData.verbaliReadIds?.includes(id)) {
+                                addPointsWithStats(5, { verbaliRead: 1, newVerbaleReadId: id }).catch(console.error);
                             }
                         }
                     }

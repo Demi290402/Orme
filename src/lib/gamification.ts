@@ -68,6 +68,14 @@ export const BADGES: Record<string, BadgeDef> = {
     'sentinella':       { name: 'Sentinella',       icon: '👁️', description: 'Dai 10 conferme di validità ai luoghi',      statKey: 'validationsGiven',    goal: 10, bonusPoints: 15 },
     'rover_servizio':   { name: 'Rover di Servizio',icon: '🤝', description: 'Aggiungi 10 luoghi con servizio R/S',        statKey: 'rsLocationsAdded',    goal: 10, bonusPoints: 15 },
     'cartografo':       { name: 'Cartografo',       icon: '📍', description: 'Inserisci coordinate GPS in 10 luoghi',      statKey: 'coordinateInfoAdded', goal: 10, bonusPoints: 15 },
+    
+    // ── Storico Attività Badges ──────────────────────────────────────────────
+    'memoria_viva':     { name: 'Memoria Viva',     icon: '📜', description: 'Hai aggiunto il tuo primo evento storico',     statKey: 'storicoItemsAdded',   goal: 1,  bonusPoints: 5 },
+    'cronista_gruppo':  { name: 'Cronista Gruppo',  icon: '🖋️', description: 'Hai aggiunto 5 eventi allo storico',           statKey: 'storicoItemsAdded',   goal: 5,  bonusPoints: 10 },
+    'custode_storia':   { name: 'Custode Storia',   icon: '🗝️', description: 'Hai aggiunto 15 eventi allo storico',          statKey: 'storicoItemsAdded',   goal: 15, bonusPoints: 15 },
+
+    // ── Reviews Badges ───────────────────────────────────────────────────────
+    'tracciatore_orme': { name: 'Tracciatore Orme', icon: '🐾', description: 'Hai lasciato 5 orme (recensioni) nei luoghi',  statKey: 'reviewsAdded',        goal: 5,  bonusPoints: 10 },
 };
 
 // ─── POINT ACTIONS ───────────────────────────────────────────────────────────
@@ -145,6 +153,9 @@ export async function addPointsWithStats(
         pricingInfoAdded?: number;
         coordinateInfoAdded?: number;
         websiteInfoAdded?: number;
+        storicoItemsAdded?: number;
+        reviewsAdded?: number;
+        newVerbaleReadId?: string;
     } = {}
 ) {
     try {
@@ -166,6 +177,15 @@ export async function addPointsWithStats(
         if (stats.pricingInfoAdded)     user.pricingInfoAdded     += stats.pricingInfoAdded;
         if (stats.coordinateInfoAdded)  user.coordinateInfoAdded  += stats.coordinateInfoAdded;
         if (stats.websiteInfoAdded)     user.websiteInfoAdded     += stats.websiteInfoAdded;
+        if (stats.storicoItemsAdded)    user.storicoItemsAdded    += stats.storicoItemsAdded;
+        if (stats.reviewsAdded)        user.reviewsAdded        += stats.reviewsAdded;
+
+        if (stats.newVerbaleReadId) {
+            if (!user.verbaliReadIds) user.verbaliReadIds = [];
+            if (!user.verbaliReadIds.includes(stats.newVerbaleReadId)) {
+                user.verbaliReadIds.push(stats.newVerbaleReadId);
+            }
+        }
 
         const bonus = await checkAndAwardBadges(user);
         user.points += bonus;
@@ -198,6 +218,8 @@ export async function addPointsToUserWithStats(
         searchesRS?: number;
         searchesCoCa?: number;
         searchesGruppo?: number;
+        storicoItemsAdded?: number;
+        reviewsAdded?: number;
     } = {}
 ) {
     try {
@@ -216,6 +238,8 @@ export async function addPointsToUserWithStats(
         if (stats.searchesRS)           user.searchesRS           += stats.searchesRS;
         if (stats.searchesCoCa)         user.searchesCoCa         += stats.searchesCoCa;
         if (stats.searchesGruppo)       user.searchesGruppo       += stats.searchesGruppo;
+        if (stats.storicoItemsAdded)    user.storicoItemsAdded    += stats.storicoItemsAdded;
+        if (stats.reviewsAdded)        user.reviewsAdded        += stats.reviewsAdded;
 
         const bonus = await checkAndAwardBadges(user);
         user.points += bonus;

@@ -243,6 +243,9 @@ export async function updateUser(user: User): Promise<User> {
                 searches_coca: user.searchesCoCa,
                 searches_gruppo: user.searchesGruppo,
                 eventi_aggiunti: user.eventiAggiunti,
+                verbali_read_ids: user.verbaliReadIds,
+                storico_items_added: user.storicoItemsAdded,
+                reviews_added: user.reviewsAdded,
             })
             .eq('id', user.id)
             .select()
@@ -512,6 +515,9 @@ function mapSupabaseUserToUser(data: any): User {
         searchesCoCa: data.searches_coca || 0,
         searchesGruppo: data.searches_gruppo || 0,
         eventiAggiunti: data.eventi_aggiunti || 0,
+        verbaliReadIds: data.verbali_read_ids || [],
+        storicoItemsAdded: data.storico_items_added || 0,
+        reviewsAdded: data.reviews_added || 0,
         region: data.region,
         scoutZone: data.scout_zone,
         groupName: data.group_name,

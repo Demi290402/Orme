@@ -12,7 +12,8 @@ import {
     Clock,
     Footprints,
     ShieldCheck,
-    Users
+    Users,
+    Archive
 } from 'lucide-react';
 import { User } from '@/types';
 import { getAllUsers } from '@/lib/data';
@@ -36,7 +37,9 @@ export default function Guide() {
         { action: 'Proposta approvata', points: 10, icon: <Edit3 size={18} className="text-scout-brown" /> },
         { action: 'Aggiunta evento a calendario', points: 3, icon: <Trophy size={18} className="text-scout-green" /> },
         { action: 'Ricerca nei luoghi (1 al giorno)', points: 1, icon: <Footprints size={18} className="text-scout-blue" /> },
-        { action: 'Lettura di un verbale', points: 2, icon: <BookOpen size={18} className="text-scout-brown" /> },
+        { action: 'Lettura di un verbale (una tantum)', points: 5, icon: <BookOpen size={18} className="text-scout-brown" /> },
+        { action: 'Aggiunta memoria storica', points: 5, icon: <Archive size={18} className="text-scout-blue" /> },
+        { action: 'Lasciare un\'orma (recensione)', points: 10, icon: <Footprints size={18} className="text-scout-green" /> },
     ];
 
     const stalenessRules = [

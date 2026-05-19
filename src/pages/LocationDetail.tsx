@@ -4,6 +4,7 @@ import { Phone, MessageCircle, Map, ArrowLeft, BedDouble, Tent, Coffee, ShieldAl
 import { getLocations, getUser, getReviews, saveReview } from '@/lib/data';
 import { Location, LocationReview } from '@/types';
 import { getStalenessInfo, cn } from '@/lib/utils';
+import { addPointsWithStats } from '@/lib/gamification';
 
 // --- HELPER FUNCTIONS ---
 const calculateAvg = (reviews: LocationReview[], field: keyof LocationReview) => {
@@ -177,7 +178,11 @@ function ReviewModal({ location, onClose, onSave }: { location: Location, onClos
 
                     <button 
                         onClick={async () => {
-                            try { await saveReview(rating); onSave(); } catch(e) { alert(e); }
+                            try { 
+                                await saveReview(rating); 
+                                addPointsWithStats(10, { reviewsAdded: 1 }).catch(console.error);
+                                onSave(); 
+                            } catch(e) { alert(e); }
                         }}
                         className="w-full bg-scout-green text-white font-black py-4 rounded-2xl shadow-xl shadow-green-900/20 active:scale-95 transition-all"
                     >
@@ -280,10 +285,13 @@ export default function LocationDetail() {
                         
                         <button 
                             onClick={() => currentUser ? setShowReviewModal(true) : navigate('/login')}
-                            className="bg-scout-blue dark:bg-scout-blue-dark text-white px-8 py-3 rounded-2xl font-black text-sm shadow-lg shadow-scout-blue/20 flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                            className="relative bg-scout-blue dark:bg-scout-blue-dark text-white px-8 py-3 rounded-2xl font-black text-sm shadow-lg shadow-scout-blue/20 flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all group"
                         >
                             <Footprints size={18} />
                             Lascia un'orma
+                            <span className="absolute -top-3 -right-2 bg-yellow-400 text-scout-brown text-[10px] font-black px-2 py-1 rounded-lg shadow-md animate-bounce group-hover:animate-none">
+                                +10 PT
+                            </span>
                         </button>
                     </div>
 

@@ -3,6 +3,7 @@ import { Archive, Plus, MapPin, Calendar, Trash2, X, Send, ChevronDown, Layers }
 import { getStorico, salvaEventoStorico, eliminaEventoStorico, EventoStorico } from '@/lib/storico';
 import { getUser } from '@/lib/data';
 import { User as UserType } from '@/types';
+import { addPointsWithStats } from '@/lib/gamification';
 
 const BRANCH_COLORS: Record<string, string> = {
     'L/C': '#facc15', // Yellow
@@ -115,6 +116,10 @@ export default function StoricoAttivita() {
             dataInizio,
             dataFine: dataFine || undefined
         });
+        
+        if (!editId) {
+            addPointsWithStats(5, { storicoItemsAdded: 1 }).catch(console.error);
+        }
         
         onCloseForm();
         reload();
