@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Trophy, HelpCircle, Mail, FileText, CalendarDays, LogIn, UserPlus, Archive, Settings, Package, Menu, X } from 'lucide-react';
+import { Home, Trophy, HelpCircle, Mail, FileText, CalendarDays, LogIn, UserPlus, Archive, Settings, Package, Menu, X, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Logo from '@/components/Logo';
 import PWAInstallPrompt from './PWAInstallPrompt';
@@ -213,31 +213,54 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             {showAltroMenu && (
                 <div className="md:hidden fixed inset-0 z-[60] flex items-end justify-center">
                     <div className="fixed inset-0 bg-black/60 backdrop-blur-xs" onClick={() => setShowAltroMenu(false)} />
-                    <div className="bg-white dark:bg-gray-850 w-full rounded-t-[2rem] border-t border-gray-200 dark:border-gray-750 p-6 pb-8 z-[70] shadow-2xl space-y-4 animate-in slide-in-from-bottom duration-200">
+                    <div className="bg-white dark:bg-gray-800 w-full rounded-t-[2.5rem] border-t border-gray-200 dark:border-gray-700 p-6 pb-10 z-[70] shadow-2xl space-y-4 animate-in slide-in-from-bottom duration-250">
+                        {/* Drag indicator */}
+                        <div className="w-12 h-1 bg-gray-200 dark:bg-gray-700 rounded-full mx-auto mb-1 shrink-0" />
+                        
                         <div className="flex justify-between items-center pb-2 border-b border-gray-100 dark:border-gray-700/50">
-                            <h3 className="font-extrabold text-gray-900 dark:text-white text-base">Menu</h3>
+                            <h3 className="font-extrabold text-gray-900 dark:text-white text-base">Altro</h3>
                             <button 
                                 onClick={() => setShowAltroMenu(false)}
-                                className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-750 rounded-full dark:text-gray-400"
+                                className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full dark:text-gray-400"
                             >
                                 <X size={20} />
                             </button>
                         </div>
-                        <div className="grid grid-cols-3 gap-3 py-2">
-                            {secondaryNavItems.map((item) => (
-                                <Link
-                                    key={item.path}
-                                    to={item.path}
-                                    onClick={() => setShowAltroMenu(false)}
-                                    className={cn(
-                                        "flex flex-col items-center justify-center p-3 bg-gray-50 dark:bg-gray-900 border border-gray-150 dark:border-gray-750 rounded-2xl transition-all active:scale-95",
-                                        location.pathname === item.path ? "border-scout-green bg-scout-green/5 dark:bg-emerald-950/20 text-scout-green font-bold" : "text-gray-600 dark:text-gray-400"
-                                    )}
-                                >
-                                    <item.icon size={20} className={location.pathname === item.path ? "text-scout-green" : "text-gray-500 dark:text-gray-400"} />
-                                    <span className="text-[10px] font-bold mt-2 text-center">{item.label}</span>
-                                </Link>
-                            ))}
+                        <div className="space-y-2.5 py-2">
+                            {secondaryNavItems.map((item) => {
+                                const isActive = location.pathname === item.path;
+                                return (
+                                    <Link
+                                        key={item.path}
+                                        to={item.path}
+                                        onClick={() => setShowAltroMenu(false)}
+                                        className={cn(
+                                            "flex items-center justify-between p-3.5 rounded-2xl border transition-all active:scale-[0.98]",
+                                            isActive 
+                                                ? "bg-scout-green/10 dark:bg-emerald-950/20 border-scout-green/20 text-scout-green font-extrabold" 
+                                                : "bg-gray-50 dark:bg-gray-900/50 border-gray-100 dark:border-gray-700/50 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                                        )}
+                                    >
+                                        <div className="flex items-center gap-3.5">
+                                            <div className={cn(
+                                                "w-10 h-10 rounded-xl flex items-center justify-center transition-colors shrink-0",
+                                                isActive ? "bg-scout-green text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
+                                            )}>
+                                                <item.icon size={20} />
+                                            </div>
+                                            <div className="flex flex-col text-left">
+                                                <span className="text-xs font-bold leading-none">{item.label}</span>
+                                                <span className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 font-medium leading-tight">
+                                                    {item.label === 'Storico' && 'Cronologia completa delle attività passate'}
+                                                    {item.label === 'Punti' && 'Classifica di reparto, punteggi e badge'}
+                                                    {item.label === 'Guida' && 'Regolamento e modalità di gioco per i capi'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <ChevronRight size={16} className={cn("transition-transform shrink-0", isActive ? "text-scout-green" : "text-gray-400 dark:text-gray-500")} />
+                                    </Link>
+                                );
+                            })}
                         </div>
                     </div>
                 </div>
