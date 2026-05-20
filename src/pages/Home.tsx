@@ -368,20 +368,20 @@ export default function Home() {
                                         key={region}
                                         onClick={() => toggleSelection(selectedRegions, region, setSelectedRegions)}
                                         className={cn(
-                                            "flex items-center gap-2 p-2 rounded-lg cursor-pointer text-sm border transition-colors",
+                                            "flex items-center gap-2 p-3 rounded-xl cursor-pointer text-sm border transition-all duration-200",
                                             selectedRegions.includes(region)
-                                                ? "bg-scout-green/10 dark:bg-emerald-950/20 border-scout-green text-scout-green dark:text-emerald-400 font-bold"
-                                                : "bg-white dark:bg-gray-750 border-transparent hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"
+                                                ? "bg-scout-green/10 dark:bg-emerald-950/30 border-scout-green text-scout-green-dark dark:text-emerald-400 font-bold"
+                                                : "bg-gray-50 dark:bg-gray-700 border-gray-150 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-650"
                                         )}>
                                         <div className={cn(
-                                            "w-4 h-4 rounded-full border flex items-center justify-center",
+                                            "w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-all",
                                             selectedRegions.includes(region) 
                                                 ? "bg-scout-green border-scout-green" 
-                                                : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
+                                                : "border-gray-300 dark:border-gray-500 bg-white dark:bg-gray-800"
                                         )}>
                                             {selectedRegions.includes(region) && <Check size={10} className="text-white" />}
                                         </div>
-                                        {region}
+                                        <span className="font-semibold">{region}</span>
                                     </label>
                                 ))}
                             </div>
