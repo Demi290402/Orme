@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
     Wrench, Box, Plus, Search, AlertTriangle, 
-    Printer, QrCode, ClipboardCheck, Trash2, Edit, XCircle, 
+    Printer, QrCode, ClipboardCheck, Trash2, XCircle, 
     Home, Archive, Warehouse, Compass, Check, 
     RefreshCw, Layers, CheckCircle2, MapPin, Image as ImageIcon,
-    Minus, AlertCircle, X
+    Minus, AlertCircle, X, Filter
 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { 
@@ -79,6 +79,14 @@ export default function Inventario() {
     const [selectedLuogo, setSelectedLuogo] = useState<string>('Tutti');
     const [showOnlyDangerous, setShowOnlyDangerous] = useState(false);
     const [showOnlyIssues, setShowOnlyIssues] = useState(false);
+    const [showFilters, setShowFilters] = useState(false);
+
+    const activeFiltersCount = useMemo(() => {
+        return (selectedCategory !== 'Tutti' ? 1 : 0) +
+            (selectedLuogo !== 'Tutti' ? 1 : 0) +
+            (showOnlyDangerous ? 1 : 0) +
+            (showOnlyIssues ? 1 : 0);
+    }, [selectedCategory, selectedLuogo, showOnlyDangerous, showOnlyIssues]);
 
     // Modals visibility
     const [showAttrezzoForm, setShowAttrezzoForm] = useState(false);
@@ -477,30 +485,33 @@ export default function Inventario() {
                 </div>
                 
                 <div className="flex gap-2">
-                    <button
-                        onClick={() => {
-                            setEditingLuogo(null);
-                            setLuogoForm({ name: '', description: '', color: '#4CAF50', icon: 'MapPin' });
-                            setShowLuogoForm(true);
-                        }}
-                        className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-750 transition-all active:scale-95 shadow-sm"
-                    >
-                        <Plus size={16} /> Luogo
-                    </button>
-                    <button
-                        onClick={() => {
-                            setEditingAttrezzo(null);
-                            setAttrezzoForm({
-                                name: '', category: 'Generico', description: '', tagsInput: '', tags: [],
-                                status: 'disponibile', luogoId: luoghi[0]?.id || '', quantity: 1,
-                                isDangerous: false, isConsumable: false, imageFile: null, imageUrl: ''
-                            });
-                            setShowAttrezzoForm(true);
-                        }}
-                        className="bg-scout-green text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-scout-green-dark transition-all active:scale-95 shadow-md"
-                    >
-                        <Plus size={16} /> Attrezzo
-                    </button>
+                    {activeTab === 'luoghi' ? (
+                        <button
+                            onClick={() => {
+                                setEditingLuogo(null);
+                                setLuogoForm({ name: '', description: '', color: '#4CAF50', icon: 'MapPin' });
+                                setShowLuogoForm(true);
+                            }}
+                            className="bg-scout-green text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-scout-green-dark transition-all active:scale-95 shadow-md cursor-pointer"
+                        >
+                            <Plus size={16} /> Nuovo Luogo
+                        </button>
+                    ) : (
+                        <button
+                            onClick={() => {
+                                setEditingAttrezzo(null);
+                                setAttrezzoForm({
+                                    name: '', category: 'Generico', description: '', tagsInput: '', tags: [],
+                                    status: 'disponibile', luogoId: luoghi[0]?.id || '', quantity: 1,
+                                    isDangerous: false, isConsumable: false, imageFile: null, imageUrl: ''
+                                });
+                                setShowAttrezzoForm(true);
+                            }}
+                            className="bg-scout-green text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-scout-green-dark transition-all active:scale-95 shadow-md cursor-pointer"
+                        >
+                            <Plus size={16} /> Nuovo Attrezzo
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -581,75 +592,102 @@ export default function Inventario() {
             ) : activeTab === 'attrezzi' ? (
                 <>
                     {/* Advanced Search & Filtering Dashboard */}
-                    <div className="bg-white dark:bg-gray-800 p-5 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm space-y-4 mb-6">
-                        <div className="relative">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                            <input
-                                type="text"
-                                value={searchQuery}
-                                onChange={e => setSearchQuery(e.target.value)}
-                                placeholder="Cerca attrezzo per nome, descrizione, categoria o tags..."
-                                className="w-full pl-12 pr-4 py-3 rounded-2xl border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-scout-green text-sm transition-all"
-                            />
-                            {searchQuery && (
-                                <button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-650">
-                                    <XCircle size={16} />
-                                </button>
-                            )}
+                    <div className="bg-white dark:bg-gray-800 p-4 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm space-y-4 mb-6">
+                        <div className="flex gap-2">
+                            <div className="relative flex-1">
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                                <input
+                                    type="text"
+                                    value={searchQuery}
+                                    onChange={e => setSearchQuery(e.target.value)}
+                                    placeholder="Cerca attrezzo per nome, descrizione, categoria o tags..."
+                                    className="w-full pl-12 pr-4 py-3 rounded-2xl border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-scout-green text-sm transition-all"
+                                />
+                                {searchQuery && (
+                                    <button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-650 cursor-pointer">
+                                        <XCircle size={16} />
+                                    </button>
+                                )}
+                            </div>
+                            
+                            <button
+                                type="button"
+                                onClick={() => setShowFilters(!showFilters)}
+                                className={cn(
+                                    "px-4 py-3 rounded-2xl border flex items-center gap-2 text-sm font-bold transition-all cursor-pointer select-none",
+                                    showFilters || activeFiltersCount > 0
+                                        ? "bg-scout-green/10 border-scout-green/35 text-scout-green font-extrabold"
+                                        : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-750 text-gray-600 dark:text-gray-400"
+                                )}
+                            >
+                                <Filter size={16} />
+                                <span className="hidden sm:inline">Filtra</span>
+                                {activeFiltersCount > 0 && (
+                                    <span className="bg-scout-green text-white text-xs px-2 py-0.5 rounded-full font-black">
+                                        {activeFiltersCount}
+                                    </span>
+                                )}
+                            </button>
                         </div>
 
-                        <div className="flex flex-wrap gap-3 items-center justify-between">
-                            <div className="flex flex-wrap gap-3">
+                        {showFilters && (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-gray-100 dark:border-gray-700/50 animate-in fade-in slide-in-from-top-2 duration-150">
                                 {/* Category Dropdown Filter */}
-                                <div className="flex items-center gap-1.5 bg-gray-50 dark:bg-gray-900 px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-750">
-                                    <Layers size={13} className="text-gray-450" />
-                                    <select
-                                        value={selectedCategory}
-                                        onChange={e => setSelectedCategory(e.target.value)}
-                                        className="bg-transparent text-xs font-bold text-gray-650 dark:text-gray-300 outline-none border-none cursor-pointer"
-                                    >
-                                        <option value="Tutti">Tutte Categorie</option>
-                                        {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
-                                    </select>
+                                <div>
+                                    <label className="block text-[10px] font-black text-gray-400 dark:text-gray-550 uppercase mb-1">Categoria</label>
+                                    <div className="flex items-center gap-1.5 bg-gray-50 dark:bg-gray-900 px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 w-full">
+                                        <Layers size={13} className="text-gray-405" />
+                                        <select
+                                            value={selectedCategory}
+                                            onChange={e => setSelectedCategory(e.target.value)}
+                                            className="bg-transparent text-xs font-bold text-gray-700 dark:text-gray-300 outline-none border-none cursor-pointer w-full"
+                                        >
+                                            <option value="Tutti">Tutte Categorie</option>
+                                            {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+                                        </select>
+                                    </div>
                                 </div>
 
                                 {/* Location Dropdown Filter */}
-                                <div className="flex items-center gap-1.5 bg-gray-50 dark:bg-gray-900 px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-750">
-                                    <MapPin size={13} className="text-gray-450" />
-                                    <select
-                                        value={selectedLuogo}
-                                        onChange={e => setSelectedLuogo(e.target.value)}
-                                        className="bg-transparent text-xs font-bold text-gray-650 dark:text-gray-300 outline-none border-none cursor-pointer"
-                                    >
-                                        <option value="Tutti">Tutti i Luoghi</option>
-                                        <option value="">Senza Luogo</option>
-                                        {luoghi.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-                                    </select>
+                                <div>
+                                    <label className="block text-[10px] font-black text-gray-400 dark:text-gray-550 uppercase mb-1">Collocazione</label>
+                                    <div className="flex items-center gap-1.5 bg-gray-50 dark:bg-gray-900 px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 w-full">
+                                        <MapPin size={13} className="text-gray-405" />
+                                        <select
+                                            value={selectedLuogo}
+                                            onChange={e => setSelectedLuogo(e.target.value)}
+                                            className="bg-transparent text-xs font-bold text-gray-700 dark:text-gray-300 outline-none border-none cursor-pointer w-full"
+                                        >
+                                            <option value="Tutti">Tutti i Luoghi</option>
+                                            <option value="">Senza Luogo</option>
+                                            {luoghi.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {/* Toggles */}
+                                <div className="flex flex-col justify-center gap-2 pt-2 sm:col-span-2">
+                                    <label className="flex items-center gap-2.5 cursor-pointer text-xs font-bold text-gray-650 dark:text-gray-400 select-none">
+                                        <input
+                                            type="checkbox"
+                                            checked={showOnlyDangerous}
+                                            onChange={e => setShowOnlyDangerous(e.target.checked)}
+                                            className="rounded text-scout-green focus:ring-scout-green border-gray-300 w-4 h-4 cursor-pointer"
+                                        />
+                                        Solo Pericolosi ⚠️
+                                    </label>
+                                    <label className="flex items-center gap-2.5 cursor-pointer text-xs font-bold text-gray-650 dark:text-gray-400 select-none">
+                                        <input
+                                            type="checkbox"
+                                            checked={showOnlyIssues}
+                                            onChange={e => setShowOnlyIssues(e.target.checked)}
+                                            className="rounded text-scout-green focus:ring-scout-green border-gray-300 w-4 h-4 cursor-pointer"
+                                        />
+                                        Solo Danneggiati 🛠️
+                                    </label>
                                 </div>
                             </div>
-
-                            {/* Toggles */}
-                            <div className="flex gap-4">
-                                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-gray-600 dark:text-gray-400 select-none">
-                                    <input
-                                        type="checkbox"
-                                        checked={showOnlyDangerous}
-                                        onChange={e => setShowOnlyDangerous(e.target.checked)}
-                                        className="rounded text-scout-green focus:ring-scout-green border-gray-300 w-4 h-4"
-                                    />
-                                    Solo Pericolosi ⚠️
-                                </label>
-                                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-gray-600 dark:text-gray-400 select-none">
-                                    <input
-                                        type="checkbox"
-                                        checked={showOnlyIssues}
-                                        onChange={e => setShowOnlyIssues(e.target.checked)}
-                                        className="rounded text-scout-green focus:ring-scout-green border-gray-300 w-4 h-4"
-                                    />
-                                    Solo Danneggiati 🛠️
-                                </label>
-                            </div>
-                        </div>
+                        )}
                     </div>
 
                     {/* Tools Grid */}
@@ -668,7 +706,8 @@ export default function Inventario() {
                                 return (
                                     <div 
                                         key={item.id}
-                                        className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-shadow relative group"
+                                        onClick={() => openEditAttrezzo(item)}
+                                        className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-shadow relative group cursor-pointer"
                                     >
                                         {/* Image Section */}
                                         <div className="h-40 bg-gray-150 dark:bg-gray-900 relative flex items-center justify-center overflow-hidden shrink-0">
@@ -676,11 +715,14 @@ export default function Inventario() {
                                                 <img 
                                                     src={item.imageUrl} 
                                                     alt={item.name} 
-                                                    className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
-                                                    onClick={() => setFullscreenImage(item.imageUrl || null)}
+                                                    className="w-full h-full object-cover hover:scale-105 transition-transform"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setFullscreenImage(item.imageUrl || null);
+                                                    }}
                                                 />
                                             ) : (
-                                                <div className="flex flex-col items-center justify-center text-gray-400 dark:text-gray-600">
+                                                <div className="flex flex-col items-center justify-center text-gray-400 dark:text-gray-655">
                                                     <Wrench size={40} className="stroke-[1.5]" />
                                                     <span className="text-[10px] uppercase font-black tracking-widest mt-2">Nessuna Foto</span>
                                                 </div>
@@ -706,7 +748,7 @@ export default function Inventario() {
                                             <div className="flex items-start justify-between mb-2">
                                                 <div>
                                                     <span className="text-[10px] text-scout-green dark:text-emerald-400 font-black uppercase tracking-widest block">{item.category}</span>
-                                                    <h3 className="font-extrabold text-gray-950 dark:text-white text-base leading-tight mt-0.5 line-clamp-1">{item.name}</h3>
+                                                    <h3 className="font-extrabold text-gray-955 dark:text-white text-base leading-tight mt-0.5 line-clamp-1">{item.name}</h3>
                                                 </div>
                                                 <div className="text-right">
                                                     <span className="text-lg font-black text-gray-900 dark:text-white">x{item.quantity}</span>
@@ -723,7 +765,7 @@ export default function Inventario() {
                                             {item.tags && item.tags.length > 0 && (
                                                 <div className="flex flex-wrap gap-1.5 mb-4">
                                                     {item.tags.map((tag, ti) => (
-                                                        <span key={ti} className="text-[9px] font-bold bg-gray-150 dark:bg-gray-900 text-gray-600 dark:text-gray-450 px-2 py-0.5 rounded-full">
+                                                        <span key={ti} className="text-[9px] font-bold bg-gray-150 dark:bg-gray-900 text-gray-600 dark:text-gray-455 px-2 py-0.5 rounded-full">
                                                             #{tag}
                                                         </span>
                                                     ))}
@@ -762,31 +804,6 @@ export default function Inventario() {
                                                 </span>
                                             </div>
                                         </div>
-
-                                        {/* Action Overlay buttons */}
-                                        <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 dark:bg-gray-800/80 p-1.5 rounded-xl shadow-lg backdrop-blur-sm">
-                                            <button 
-                                                onClick={() => openQrModal(item.id, item.name, 'attrezzo')}
-                                                className="p-1.5 hover:bg-gray-150 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-300 rounded-lg"
-                                                title="Stampa codice QR"
-                                            >
-                                                <QrCode size={14} />
-                                            </button>
-                                            <button 
-                                                onClick={() => openEditAttrezzo(item)}
-                                                className="p-1.5 hover:bg-gray-150 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg"
-                                                title="Modifica attrezzo"
-                                            >
-                                                <Edit size={14} />
-                                            </button>
-                                            <button 
-                                                onClick={() => handleDeleteAttrezzo(item.id)}
-                                                className="p-1.5 hover:bg-red-50 dark:hover:bg-red-950/30 text-red-500 rounded-lg"
-                                                title="Elimina attrezzo"
-                                            >
-                                                <Trash2 size={14} />
-                                            </button>
-                                        </div>
                                     </div>
                                 );
                             })}
@@ -803,7 +820,8 @@ export default function Inventario() {
                         return (
                             <div 
                                 key={l.id}
-                                className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 flex flex-col relative group"
+                                onClick={() => openEditLuogo(l)}
+                                className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 flex flex-col relative group cursor-pointer hover:shadow-md transition-shadow"
                             >
                                 {/* Header / Color / Icon */}
                                 <div className="flex items-center justify-between mb-4">
@@ -813,35 +831,11 @@ export default function Inventario() {
                                     >
                                         <LIcon size={24} className="stroke-[2]" />
                                     </div>
-                                    
-                                    <div className="flex gap-2">
-                                        <button 
-                                            onClick={() => openQrModal(l.id, l.name, 'luogo')}
-                                            className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-lg"
-                                            title="Genera QR"
-                                        >
-                                            <QrCode size={14} />
-                                        </button>
-                                        <button 
-                                            onClick={() => openEditLuogo(l)}
-                                            className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-250 rounded-lg"
-                                            title="Modifica"
-                                        >
-                                            <Edit size={14} />
-                                        </button>
-                                        <button 
-                                            onClick={() => handleDeleteLuogo(l.id)}
-                                            className="p-1.5 hover:bg-red-50 dark:hover:bg-red-950/30 text-red-500 rounded-lg"
-                                            title="Elimina"
-                                        >
-                                            <Trash2 size={14} />
-                                        </button>
-                                    </div>
                                 </div>
 
-                                <h3 className="font-extrabold text-gray-950 dark:text-white text-lg">{l.name}</h3>
+                                <h3 className="font-extrabold text-gray-955 dark:text-white text-lg">{l.name}</h3>
                                 {l.description && (
-                                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 mb-4 leading-relaxed">
+                                    <p className="text-xs text-gray-400 dark:text-gray-550 mt-1 mb-4 leading-relaxed line-clamp-2">
                                         {l.description}
                                     </p>
                                 )}
@@ -852,8 +846,11 @@ export default function Inventario() {
                                     </span>
                                     
                                     <button
-                                        onClick={() => openAuditWizard(l.id)}
-                                        className="bg-gray-50 dark:bg-gray-900 border border-gray-250 dark:border-gray-750 hover:bg-scout-green hover:text-white dark:hover:bg-scout-green hover:border-transparent text-gray-750 dark:text-gray-300 font-bold px-3.5 py-1.5 rounded-xl text-xs flex items-center gap-1.5 transition-colors active:scale-95 shadow-sm"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            openAuditWizard(l.id);
+                                        }}
+                                        className="bg-gray-50 dark:bg-gray-900 border border-gray-250 dark:border-gray-750 hover:bg-scout-green hover:text-white dark:hover:bg-scout-green hover:border-transparent text-gray-750 dark:text-gray-300 font-bold px-3.5 py-1.5 rounded-xl text-xs flex items-center gap-1.5 transition-colors active:scale-95 shadow-sm cursor-pointer"
                                     >
                                         <ClipboardCheck size={14} /> Censimento Rapido
                                     </button>
@@ -1238,21 +1235,47 @@ export default function Inventario() {
                             </div>
                         </div>
 
-                        <div className="flex gap-3 pt-2">
+                        <div className="flex flex-wrap gap-2 pt-3 border-t border-gray-100 dark:border-gray-750">
+                            {editingAttrezzo && (
+                                <>
+                                    <button
+                                        type="button"
+                                        onClick={() => openQrModal(editingAttrezzo.id, editingAttrezzo.name, 'attrezzo')}
+                                        className="p-3 border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-750 rounded-xl transition-colors cursor-pointer"
+                                        title="Stampa QR"
+                                    >
+                                        <QrCode size={16} />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            handleDeleteAttrezzo(editingAttrezzo.id);
+                                            setShowAttrezzoForm(false);
+                                        }}
+                                        className="p-3 border border-red-200 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-xl transition-colors cursor-pointer mr-auto"
+                                        title="Elimina"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                </>
+                            )}
                             <button 
                                 type="button"
                                 onClick={() => {
                                     setShowAttrezzoForm(false);
                                     setEditingAttrezzo(null);
                                 }}
-                                className="flex-1 py-3 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-xl hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors"
+                                className={cn(
+                                    "py-3 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-xl hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors px-4 cursor-pointer",
+                                    editingAttrezzo ? "" : "flex-1"
+                                )}
                             >
                                 Annulla
                             </button>
                             <button 
                                 type="submit"
                                 disabled={saving}
-                                className="flex-1 py-3 bg-scout-green text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-scout-green-dark transition-colors disabled:opacity-40 shadow-md"
+                                className="flex-1 py-3 bg-scout-green text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-scout-green-dark transition-colors disabled:opacity-40 shadow-md px-4 cursor-pointer"
                             >
                                 <Check size={16} /> {saving ? 'Salvataggio...' : 'Salva'}
                             </button>
@@ -1384,21 +1407,47 @@ export default function Inventario() {
                             </div>
                         </div>
 
-                        <div className="flex gap-3 pt-2">
+                        <div className="flex flex-wrap gap-2 pt-3 border-t border-gray-100 dark:border-gray-750">
+                            {editingLuogo && (
+                                <>
+                                    <button
+                                        type="button"
+                                        onClick={() => openQrModal(editingLuogo.id, editingLuogo.name, 'luogo')}
+                                        className="p-3 border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-750 rounded-xl transition-colors cursor-pointer"
+                                        title="Stampa QR"
+                                    >
+                                        <QrCode size={16} />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            handleDeleteLuogo(editingLuogo.id);
+                                            setShowLuogoForm(false);
+                                        }}
+                                        className="p-3 border border-red-200 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-xl transition-colors cursor-pointer mr-auto"
+                                        title="Elimina Luogo"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                </>
+                            )}
                             <button 
                                 type="button"
                                 onClick={() => {
                                     setShowLuogoForm(false);
                                     setEditingLuogo(null);
                                 }}
-                                className="flex-1 py-3 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-xl hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors"
+                                className={cn(
+                                    "py-3 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-xl hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors px-4 cursor-pointer",
+                                    editingLuogo ? "" : "flex-1"
+                                )}
                             >
                                 Annulla
                             </button>
                             <button 
                                 type="submit"
                                 disabled={saving}
-                                className="flex-1 py-3 bg-scout-green text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-scout-green-dark transition-colors disabled:opacity-40 shadow-md"
+                                className="flex-1 py-3 bg-scout-green text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-scout-green-dark transition-colors disabled:opacity-40 shadow-md px-4 cursor-pointer"
                             >
                                 <Check size={16} /> {saving ? 'Salvo...' : 'Salva'}
                             </button>
