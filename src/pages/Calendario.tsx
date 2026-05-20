@@ -4,6 +4,8 @@ import { getEventi, saveEvento, deleteEvento, EventoCalendario, getColorByBranca
 import { cn } from '@/lib/utils';
 import RichTextEditor from '@/components/RichTextEditor';
 import { addPointsWithStats, addPoints } from '@/lib/gamification';
+import { getInventarioAttrezzi, getAttrezziForEvento, saveAttrezzoForEvento, removeAttrezzoFromEvento, toggleCheckedOutAttrezzoEvento, toggleCheckedInAttrezzoEvento } from '@/lib/inventario';
+import { InventarioAttrezzo, EventoAttrezzoRelation } from '@/types';
 
 type ViewMode = 'anno' | 'mese' | 'giorno';
 
@@ -43,6 +45,52 @@ function EventForm({ initial, onSave, onCancel, onDelete }: EventFormProps) {
         ...initial,
     });
     const [saving, setSaving] = useState(false);
+
+    // Inventory Calendar Integration states
+    const [linkedTools, setLinkedTools] = useState<EventoAttrezzoRelation[]>([]);
+    const [allTools, setAllTools] = useState<InventarioAttrezzo[]>([]);
+    const [showAddToolSelector, setShowAddToolSelector] = useState(false);
+    const [selectedToolId, setSelectedToolId] = useState('');
+    const [selectedToolQty, setSelectedToolQty] = useState(1);
+
+    useEffect(() => {
+        if (initial?.id) {
+            getAttrezziForEvento(initial.id).then(setLinkedTools);
+            getInventarioAttrezzi().then(setAllTools);
+        }
+    }, [initial?.id]);
+
+    const handleAddTool = async () => {
+        if (!selectedToolId || !initial?.id) return;
+        await saveAttrezzoForEvento(initial.id, selectedToolId, selectedToolQty);
+        const updated = await getAttrezziForEvento(initial.id);
+        setLinkedTools(updated);
+        setSelectedToolId('');
+        setSelectedToolQty(1);
+        setShowAddToolSelector(false);
+    };
+
+    const handleRemoveTool = async (attrezzoId: string) => {
+        if (!initial?.id) return;
+        await removeAttrezzoFromEvento(initial.id, attrezzoId);
+        const updated = await getAttrezziForEvento(initial.id);
+        setLinkedTools(updated);
+    };
+
+    const handleToggleCheckout = async (attrezzoId: string, currentVal: boolean) => {
+        if (!initial?.id) return;
+        await toggleCheckedOutAttrezzoEvento(initial.id, attrezzoId, !currentVal);
+        const updated = await getAttrezziForEvento(initial.id);
+        setLinkedTools(updated);
+    };
+
+    const handleToggleCheckin = async (attrezzoId: string, currentVal: boolean) => {
+        if (!initial?.id) return;
+        await toggleCheckedInAttrezzoEvento(initial.id, attrezzoId, !currentVal);
+        const updated = await getAttrezziForEvento(initial.id);
+        setLinkedTools(updated);
+    };
+
     const set = (k: string, v: any) => {
         setForm(f => {
             const next = { ...f, [k]: v };
@@ -127,6 +175,116 @@ function EventForm({ initial, onSave, onCancel, onDelete }: EventFormProps) {
                             />
                         </div>
                     </div>
+
+                    {/* Integrated Tools for Event */}
+                    {initial?.id && (
+                        <div className="border-t border-gray-100 dark:border-gray-700 pt-4 space-y-3">
+                            <div className="flex items-center justify-between">
+                                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Materiali per Attività</label>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowAddToolSelector(!showAddToolSelector)}
+                                    className="text-[10px] text-scout-green font-bold hover:underline"
+                                >
+                                    {showAddToolSelector ? 'Chiudi' : '+ Collega Attrezzo'}
+                                </button>
+                            </div>
+
+                            {showAddToolSelector && (
+                                <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-xl space-y-2 border border-gray-200 dark:border-gray-700">
+                                    <select
+                                        value={selectedToolId}
+                                        onChange={e => setSelectedToolId(e.target.value)}
+                                        className="w-full p-2 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg text-xs outline-none focus:ring-1 focus:ring-scout-green"
+                                    >
+                                        <option value="">Seleziona un attrezzo...</option>
+                                        {allTools
+                                            .filter(t => !linkedTools.some(lt => lt.attrezzoId === t.id))
+                                            .map(t => (
+                                                <option key={t.id} value={t.id}>
+                                                    {t.name} (Disp: {t.quantity})
+                                                </option>
+                                            ))}
+                                    </select>
+
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            value={selectedToolQty}
+                                            onChange={e => setSelectedToolQty(Math.max(1, parseInt(e.target.value) || 1))}
+                                            className="w-20 p-2 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg text-xs outline-none focus:ring-1 focus:ring-scout-green"
+                                            placeholder="Qta"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={handleAddTool}
+                                            disabled={!selectedToolId}
+                                            className="flex-1 bg-scout-green text-white font-bold py-2 rounded-lg text-xs hover:bg-scout-green-dark transition-colors disabled:opacity-40"
+                                        >
+                                            Aggiungi
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="space-y-2 max-h-48 overflow-y-auto">
+                                {linkedTools.length === 0 ? (
+                                    <p className="text-[11px] text-gray-400 dark:text-gray-500 italic">Nessun attrezzo collegato a questa attività.</p>
+                                ) : (
+                                    linkedTools.map(lt => (
+                                        <div key={lt.attrezzoId} className="flex flex-col gap-1.5 p-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-150 dark:border-gray-750 rounded-xl">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-xs font-bold dark:text-white truncate max-w-[170px]" title={lt.attrezzo?.name}>
+                                                    {lt.attrezzo?.name || 'Attrezzo sconosciuto'}
+                                                </span>
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className="text-[10px] font-black text-gray-500 dark:text-gray-450 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-1.5 py-0.5 rounded">
+                                                        x{lt.quantity}
+                                                    </span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleRemoveTool(lt.attrezzoId)}
+                                                        className="p-1 hover:bg-red-50 text-red-500 rounded"
+                                                    >
+                                                        <Trash2 size={12} />
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleToggleCheckout(lt.attrezzoId, lt.checkedOut)}
+                                                    className={cn(
+                                                        "flex-1 py-1.5 rounded-lg text-[10px] font-bold border transition-colors",
+                                                        lt.checkedOut 
+                                                            ? "bg-green-50 text-green-600 border-green-200 dark:bg-green-950/20 dark:text-green-400 dark:border-green-900/50" 
+                                                            : "bg-white text-gray-500 border-gray-205 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 dark:hover:bg-gray-750"
+                                                    )}
+                                                >
+                                                    {lt.checkedOut ? '✓ Prelevato' : 'Preleva'}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    disabled={!lt.checkedOut}
+                                                    onClick={() => handleToggleCheckin(lt.attrezzoId, lt.checkedIn)}
+                                                    className={cn(
+                                                        "flex-1 py-1.5 rounded-lg text-[10px] font-bold border transition-colors disabled:opacity-40",
+                                                        lt.checkedIn 
+                                                            ? "bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-900/50" 
+                                                            : "bg-white text-gray-500 border-gray-205 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 dark:hover:bg-gray-750"
+                                                    )}
+                                                >
+                                                    {lt.checkedIn ? '✓ Restituito' : 'Restituisci'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex gap-2 pt-2">

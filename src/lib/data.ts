@@ -246,6 +246,8 @@ export async function updateUser(user: User): Promise<User> {
                 verbali_read_ids: user.verbaliReadIds,
                 storico_items_added: user.storicoItemsAdded,
                 reviews_added: user.reviewsAdded,
+                inventory_updates: user.inventoryUpdates || 0,
+                inventory_audits: user.inventoryAudits || 0,
             })
             .eq('id', user.id)
             .select()
@@ -518,6 +520,8 @@ function mapSupabaseUserToUser(data: any): User {
         verbaliReadIds: data.verbali_read_ids || [],
         storicoItemsAdded: data.storico_items_added || 0,
         reviewsAdded: data.reviews_added || 0,
+        inventoryUpdates: data.inventory_updates || 0,
+        inventoryAudits: data.inventory_audits || 0,
         region: data.region,
         scoutZone: data.scout_zone,
         groupName: data.group_name,

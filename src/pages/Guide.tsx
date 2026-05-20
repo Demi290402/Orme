@@ -13,7 +13,9 @@ import {
     Footprints,
     ShieldCheck,
     Users,
-    Archive
+    Archive,
+    Wrench,
+    ClipboardCheck
 } from 'lucide-react';
 import { User } from '@/types';
 import { getAllUsers } from '@/lib/data';
@@ -40,6 +42,8 @@ export default function Guide() {
         { action: 'Lettura di un verbale (una tantum)', points: 5, icon: <BookOpen size={18} className="text-scout-brown" /> },
         { action: 'Aggiunta memoria storica', points: 5, icon: <Archive size={18} className="text-scout-blue" /> },
         { action: 'Lasciare un\'orma (recensione)', points: 10, icon: <Footprints size={18} className="text-scout-green" /> },
+        { action: 'Controllo / aggiornamento attrezzi (magazzino)', points: 2, icon: <Wrench size={18} className="text-scout-blue" /> },
+        { action: 'Censimento rapido di un luogo (Audit)', points: 15, icon: <ClipboardCheck size={18} className="text-scout-green" /> },
     ];
 
     const stalenessRules = [

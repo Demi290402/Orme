@@ -21,6 +21,7 @@ import UpdateManager from '@/components/UpdateManager';
 import StoricoAttivita from '@/pages/StoricoAttivita';
 import Settings from '@/pages/Settings';
 import PrivacyPolicy from '@/pages/PrivacyPolicy';
+import Inventario from '@/pages/Inventario';
 
 function App() {
   return (
@@ -43,6 +44,7 @@ function App() {
           <Route path="/profile" element={<ProtectedRoute><Layout><Profile /></Layout></ProtectedRoute>} />
           <Route path="/proposals" element={<ProtectedRoute><Layout><Proposals /></Layout></ProtectedRoute>} />
           <Route path="/calendario" element={<ProtectedRoute><Layout><Calendario /></Layout></ProtectedRoute>} />
+          <Route path="/inventario" element={<ProtectedRoute><Layout><Inventario /></Layout></ProtectedRoute>} />
           <Route path="/verbali" element={<ProtectedRoute><Layout><VerbaliList /></Layout></ProtectedRoute>} />
           <Route path="/verbali/nuovo" element={<ProtectedRoute><Layout><VerbaleEditor /></Layout></ProtectedRoute>} />
           <Route path="/verbali/modifica/:id" element={<ProtectedRoute><Layout><VerbaleEditor /></Layout></ProtectedRoute>} />

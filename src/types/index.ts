@@ -30,6 +30,9 @@ export interface User {
     verbaliReadIds: string[];
     storicoItemsAdded: number;
     reviewsAdded: number;
+    // Inventory Gamification
+    inventoryUpdates?: number;
+    inventoryAudits?: number;
     // Multi-tenancy
     region?: string;
     scoutZone?: string;
@@ -246,3 +249,46 @@ export interface Proposal {
     rejections: string[]; // User IDs who rejected
     status: 'pending' | 'approved' | 'rejected' | 'superseded';
 }
+
+export interface InventarioLuogo {
+    id: string;
+    groupId: string;
+    name: string;
+    description?: string;
+    color: string;
+    icon: string;
+    createdAt?: string;
+    updatedAt?: string;
+}
+
+export type AttrezzoStatus = 'disponibile' | 'danneggiato' | 'in_manutenzione' | 'perso';
+
+export interface InventarioAttrezzo {
+    id: string;
+    groupId: string;
+    name: string;
+    category: string; // e.g. Pioneering, Camping, Kitchen, Safety, Stationery, etc.
+    description?: string;
+    tags: string[];
+    status: AttrezzoStatus;
+    luogoId: string | null; // references InventarioLuogo.id
+    imageUrl?: string;
+    quantity: number;
+    isDangerous: boolean;
+    isConsumable: boolean;
+    lastCheckedAt?: string;
+    lastCheckedBy?: string; // User UUID
+    createdAt?: string;
+    updatedAt?: string;
+}
+
+export interface EventoAttrezzoRelation {
+    eventoId: string;
+    attrezzoId: string;
+    quantity: number;
+    checkedOut: boolean;
+    checkedIn: boolean;
+    attrezzo?: InventarioAttrezzo;
+}
+
+

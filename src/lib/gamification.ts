@@ -76,6 +76,11 @@ export const BADGES: Record<string, BadgeDef> = {
 
     // ── Reviews Badges ───────────────────────────────────────────────────────
     'tracciatore_orme': { name: 'Tracciatore Orme', icon: '🐾', description: 'Hai lasciato 5 orme (recensioni) nei luoghi',  statKey: 'reviewsAdded',        goal: 5,  bonusPoints: 10 },
+
+    // ── Inventory Badges ─────────────────────────────────────────────────────
+    'primo_attrezzo':     { name: 'Logista Novizio',      icon: '📦', description: 'Aggiungi o aggiorna il tuo primo attrezzo', statKey: 'inventoryUpdates', goal: 1,  bonusPoints: 5 },
+    'censore_attrezzi':   { name: 'Mastro del Magazzino', icon: '🛠️', description: 'Effettua 15 aggiornamenti di materiali o luoghi', statKey: 'inventoryUpdates', goal: 15, bonusPoints: 20 },
+    'auditore_magazzino': { name: 'Ispettore di Reparto', icon: '🔍', description: 'Completa il tuo primo censimento rapido di un luogo', statKey: 'inventoryAudits', goal: 1, bonusPoints: 10 },
 };
 
 // ─── POINT ACTIONS ───────────────────────────────────────────────────────────
@@ -155,6 +160,8 @@ export async function addPointsWithStats(
         websiteInfoAdded?: number;
         storicoItemsAdded?: number;
         reviewsAdded?: number;
+        inventoryUpdates?: number;
+        inventoryAudits?: number;
         newVerbaleReadId?: string;
     } = {}
 ) {
@@ -179,6 +186,8 @@ export async function addPointsWithStats(
         if (stats.websiteInfoAdded)     user.websiteInfoAdded     += stats.websiteInfoAdded;
         if (stats.storicoItemsAdded)    user.storicoItemsAdded    += stats.storicoItemsAdded;
         if (stats.reviewsAdded)        user.reviewsAdded        += stats.reviewsAdded;
+        if (stats.inventoryUpdates)     user.inventoryUpdates     = (user.inventoryUpdates || 0) + stats.inventoryUpdates;
+        if (stats.inventoryAudits)      user.inventoryAudits      = (user.inventoryAudits || 0) + stats.inventoryAudits;
 
         if (stats.newVerbaleReadId) {
             if (!user.verbaliReadIds) user.verbaliReadIds = [];
