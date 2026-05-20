@@ -94,7 +94,27 @@ export default function Home() {
         const matchesRating = loc.avgRating >= minRating;
 
         // 7. Price
-        const matchesPrice = selectedPrices.length > 0 ? selectedPrices.includes(loc.priceCategory) : true;
+        let matchesPrice = true;
+        if (selectedPrices.length > 0) {
+            matchesPrice = selectedPrices.some(p => {
+                if (loc.priceCategory === p) return true;
+                
+                // Se la categoria prezzo è 0 (N/D) ma c'è un basePrice, deduciamo la fascia per la ricerca
+                if ((!loc.priceCategory || loc.priceCategory === 0) && loc.pricing?.basePrice) {
+                    const price = loc.pricing.basePrice;
+                    if (loc.pricing.unit === 'per_night') {
+                        if (p === 1 && price <= 8) return true;
+                        if (p === 2 && price > 8 && price <= 15) return true;
+                        if (p === 3 && price > 15) return true;
+                    } else {
+                        if (p === 1 && price <= 50) return true;
+                        if (p === 2 && price > 50 && price <= 150) return true;
+                        if (p === 3 && price > 150) return true;
+                    }
+                }
+                return false;
+            });
+        }
 
         return matchesSearch && matchesTents && matchesBeds && matchesRegion && 
                matchesBranch && matchesActivity && matchesStaleness && 
@@ -174,16 +194,16 @@ export default function Home() {
             {/* Filter Modal */}
             {showFilters && (
                 <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setShowFilters(false)}>
-                    <div className="bg-white rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 space-y-6 shadow-2xl" onClick={e => e.stopPropagation()}>
-                        <div className="flex justify-between items-center border-b border-gray-100 pb-4">
-                            <h2 className="text-2xl font-bold text-scout-green">Filtri</h2>
-                            <button onClick={() => setShowFilters(false)} className="p-2 hover:bg-gray-100 rounded-full text-gray-500"><X size={24} /></button>
+                    <div className="bg-white dark:bg-gray-800 rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 space-y-6 shadow-2xl border border-gray-100 dark:border-gray-700 text-gray-900 dark:text-gray-100" onClick={e => e.stopPropagation()}>
+                        <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-700 pb-4">
+                            <h2 className="text-2xl font-bold text-scout-green dark:text-green-500">Filtri</h2>
+                            <button onClick={() => setShowFilters(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-500 dark:text-gray-400"><X size={24} /></button>
                         </div>
 
                         {/* 0. Stato Dati */}
                         <div>
-                            <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                                <Clock size={16} className="text-scout-brown" /> Stato Aggiornamento Dati
+                            <h3 className="font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                                <Clock size={16} className="text-scout-brown dark:text-amber-500" /> Stato Aggiornamento Dati
                             </h3>
                             <div className="grid grid-cols-2 gap-2">
                                 {STALENESS_LEVELS.map(s => (
@@ -193,8 +213,8 @@ export default function Home() {
                                         className={cn(
                                             "flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-bold border transition-all",
                                             selectedStaleness.includes(s.level)
-                                                ? "bg-gray-900 text-white border-gray-900 shadow-md"
-                                                : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
+                                                ? "bg-gray-900 dark:bg-gray-105 text-white dark:text-gray-900 border-gray-900 dark:border-gray-105 shadow-md"
+                                                : "bg-white dark:bg-gray-700 text-gray-650 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:bg-gray-650"
                                         )}
                                     >
                                         <div className={cn("w-3 h-3 rounded-full shrink-0", s.color)} />
@@ -206,7 +226,7 @@ export default function Home() {
 
                         {/* 1. Branche */}
                         <div>
-                            <h3 className="font-bold text-gray-900 mb-3 text-sm">Filtra per Branca</h3>
+                            <h3 className="font-bold text-gray-900 dark:text-white mb-3 text-sm">Filtra per Branca</h3>
                             <div className="flex flex-wrap gap-2">
                                 {Object.keys(BRANCH_ACTIVITIES).map(branch => (
                                     <button
@@ -216,7 +236,7 @@ export default function Home() {
                                             "px-4 py-2 rounded-full text-xs font-bold border transition-all",
                                             selectedBranches.includes(branch)
                                                 ? "bg-scout-green text-white border-scout-green shadow-sm"
-                                                : "bg-white text-gray-600 border-gray-200"
+                                                : "bg-white dark:bg-gray-700 text-gray-605 dark:text-gray-350 border-gray-200 dark:border-gray-650 hover:bg-gray-55 dark:hover:bg-gray-600"
                                         )}
                                     >
                                         {branch}
@@ -227,8 +247,8 @@ export default function Home() {
                                     className={cn(
                                         "p-3 rounded-xl border flex flex-col items-center gap-2 transition-all",
                                         hasTents
-                                            ? "bg-scout-green/10 border-scout-green text-scout-green-dark"
-                                            : "bg-white border-gray-200 text-gray-500 hover:border-scout-green/50"
+                                            ? "bg-scout-green/10 border-scout-green text-scout-green-dark dark:text-emerald-400"
+                                            : "bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-scout-green/50"
                                     )}
                                 >
                                     <Tent size={20} />
@@ -239,8 +259,8 @@ export default function Home() {
                                     className={cn(
                                         "p-3 rounded-xl border flex flex-col items-center gap-2 transition-all",
                                         hasBeds
-                                            ? "bg-scout-green/10 border-scout-green text-scout-green-dark"
-                                            : "bg-white border-gray-200 text-gray-500 hover:border-scout-green/50"
+                                            ? "bg-scout-green/10 border-scout-green text-scout-green-dark dark:text-emerald-400"
+                                            : "bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-scout-green/50"
                                     )}
                                 >
                                     <BedDouble size={20} />
@@ -251,7 +271,7 @@ export default function Home() {
 
                         {/* 1b. Attività specifiche */}
                         <div>
-                            <h3 className="font-bold text-gray-900 mb-3 text-sm">Attività Specifica</h3>
+                            <h3 className="font-bold text-gray-900 dark:text-white mb-3 text-sm">Attività Specifica</h3>
                             <div className="flex flex-wrap gap-2">
                                 {Array.from(new Set(Object.values(BRANCH_ACTIVITIES).flat())).sort().map(activity => (
                                     <button
@@ -261,7 +281,7 @@ export default function Home() {
                                             "px-3 py-1.5 rounded-lg text-[10px] font-bold border transition-all",
                                             selectedActivities.includes(activity)
                                                 ? "bg-scout-blue text-white border-scout-blue"
-                                                : "bg-white text-gray-500 border-gray-100 hover:border-scout-blue/30"
+                                                : "bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-100 dark:border-gray-600 hover:border-scout-blue/30"
                                         )}
                                     >
                                         {activity}
@@ -273,13 +293,13 @@ export default function Home() {
                         {/* 1c. Rating & Prezzo */}
                         <div className="grid grid-cols-2 gap-6">
                             <div>
-                                <h3 className="font-bold text-gray-900 mb-3 text-sm">Rating Minimo</h3>
-                                <div className="flex items-center gap-2 bg-gray-50 p-2 rounded-xl border border-gray-100">
+                                <h3 className="font-bold text-gray-900 dark:text-white mb-3 text-sm">Rating Minimo</h3>
+                                <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-900 p-2 rounded-xl border border-gray-100 dark:border-gray-700">
                                     <Star size={16} fill={minRating > 0 ? "#d97706" : "none"} className={minRating > 0 ? "text-amber-600" : "text-gray-300"} />
                                     <select 
                                         value={minRating}
                                         onChange={e => setMinRating(Number(e.target.value))}
-                                        className="bg-transparent font-bold text-gray-700 outline-none flex-1 text-sm"
+                                        className="bg-transparent font-bold text-gray-700 dark:text-gray-300 outline-none flex-1 text-sm border-none"
                                     >
                                         <option value={0}>Qualsiasi</option>
                                         <option value={3}>3+ Stelle</option>
@@ -289,7 +309,7 @@ export default function Home() {
                                 </div>
                             </div>
                             <div>
-                                <h3 className="font-bold text-gray-900 mb-3 text-sm">Fascia Prezzo</h3>
+                                <h3 className="font-bold text-gray-900 dark:text-white mb-3 text-sm">Fascia Prezzo</h3>
                                 <div className="flex gap-1.5">
                                     {[1, 2, 3].map(p => (
                                         <button
@@ -299,7 +319,7 @@ export default function Home() {
                                                 "w-10 h-10 rounded-xl font-black text-sm border transition-all",
                                                 selectedPrices.includes(p)
                                                     ? "bg-scout-green text-white border-scout-green shadow-sm"
-                                                    : "bg-white text-gray-400 border-gray-200"
+                                                    : "bg-white dark:bg-gray-700 text-gray-400 dark:text-gray-450 border-gray-200 dark:border-gray-650 hover:bg-gray-55 dark:hover:bg-gray-600"
                                             )}
                                         >
                                             {"€".repeat(p)}
@@ -309,18 +329,22 @@ export default function Home() {
                             </div>
                         </div>
                         <div>
-                            <h3 className="font-bold text-gray-900 mb-3">Logistica</h3>
+                            <h3 className="font-bold text-gray-900 dark:text-white mb-3">Logistica</h3>
                             <div className="flex gap-3">
                                 <label className={cn(
                                     "flex-1 flex items-center justify-center gap-2 p-3 border rounded-xl cursor-pointer transition-all",
-                                    hasTents ? "bg-green-50 border-green-500 text-green-700" : "bg-white border-gray-200 hover:bg-gray-50"
+                                    hasTents 
+                                        ? "bg-green-50 dark:bg-emerald-950/20 border-green-500 text-green-700 dark:text-emerald-400" 
+                                        : "bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-650 text-gray-700 dark:text-gray-300"
                                 )}>
                                     <input type="checkbox" checked={hasTents} onChange={e => setHasTents(e.target.checked)} className="hidden" />
                                     <span className="font-semibold">🏕️ Tende</span>
                                 </label>
                                 <label className={cn(
                                     "flex-1 flex items-center justify-center gap-2 p-3 border rounded-xl cursor-pointer transition-all",
-                                    hasBeds ? "bg-green-50 border-green-500 text-green-700" : "bg-white border-gray-200 hover:bg-gray-50"
+                                    hasBeds 
+                                        ? "bg-green-50 dark:bg-emerald-950/20 border-green-500 text-green-700 dark:text-emerald-400" 
+                                        : "bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-650 text-gray-700 dark:text-gray-300"
                                 )}>
                                     <input type="checkbox" checked={hasBeds} onChange={e => setHasBeds(e.target.checked)} className="hidden" />
                                     <span className="font-semibold">🛏️ Letti</span>
@@ -331,7 +355,7 @@ export default function Home() {
                         {/* 3. Regioni */}
                         <div>
                             <div className="flex justify-between items-center mb-3">
-                                <h3 className="font-bold text-gray-900">Regioni</h3>
+                                <h3 className="font-bold text-gray-900 dark:text-white">Regioni</h3>
                                 {selectedRegions.length > 0 && (
                                     <button onClick={() => setSelectedRegions([])} className="text-xs text-red-500 font-bold hover:underline">
                                         Resetta ({selectedRegions.length})
@@ -346,12 +370,14 @@ export default function Home() {
                                         className={cn(
                                             "flex items-center gap-2 p-2 rounded-lg cursor-pointer text-sm border transition-colors",
                                             selectedRegions.includes(region)
-                                                ? "bg-scout-green/10 border-scout-green text-scout-green font-bold"
-                                                : "bg-white border-transparent hover:bg-gray-50 text-gray-600"
+                                                ? "bg-scout-green/10 dark:bg-emerald-950/20 border-scout-green text-scout-green dark:text-emerald-400 font-bold"
+                                                : "bg-white dark:bg-gray-750 border-transparent hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"
                                         )}>
                                         <div className={cn(
                                             "w-4 h-4 rounded-full border flex items-center justify-center",
-                                            selectedRegions.includes(region) ? "bg-scout-green border-scout-green" : "border-gray-300"
+                                            selectedRegions.includes(region) 
+                                                ? "bg-scout-green border-scout-green" 
+                                                : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
                                         )}>
                                             {selectedRegions.includes(region) && <Check size={10} className="text-white" />}
                                         </div>
@@ -361,7 +387,7 @@ export default function Home() {
                             </div>
                         </div>
 
-                        <div className="pt-4 border-t border-gray-100">
+                        <div className="pt-4 border-t border-gray-100 dark:border-gray-700">
                             <button
                                 onClick={() => {
                                     setShowFilters(false);
@@ -400,7 +426,7 @@ export default function Home() {
                                         setHasTents(false);
                                         setHasBeds(false);
                                     }}
-                                    className="w-full mt-3 text-gray-500 font-medium py-2 hover:text-gray-900"
+                                    className="w-full mt-3 text-gray-500 dark:text-gray-400 font-medium py-2 hover:text-gray-900 dark:hover:text-white"
                                 >
                                     Cancella tutto
                                 </button>
