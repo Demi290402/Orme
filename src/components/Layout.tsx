@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Trophy, HelpCircle, Mail, FileText, CalendarDays, LogIn, UserPlus, Archive, Settings, Package, Menu, X, ChevronRight } from 'lucide-react';
+import { Home, Trophy, HelpCircle, Mail, FileText, CalendarDays, LogIn, UserPlus, Archive, Settings, Package, Menu, X, ChevronRight, Wallet } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Logo from '@/components/Logo';
 import PWAInstallPrompt from './PWAInstallPrompt';
@@ -42,6 +42,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     const secondaryNavItems: NavItem[] = [
         { icon: Archive, label: 'Storico', path: '/storico' },
         { icon: Trophy, label: 'Punti', path: '/leaderboard' },
+        { icon: Wallet, label: 'Bilancio', path: '/bilancio' },
         { icon: HelpCircle, label: 'Guida', path: '/guide' },
     ];
 
@@ -253,6 +254,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                                                 <span className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 font-medium leading-tight">
                                                     {item.label === 'Storico' && 'Cronologia completa delle attività passate'}
                                                     {item.label === 'Punti' && 'Classifica di reparto, punteggi e badge'}
+                                                    {item.label === 'Bilancio' && 'Gestione del patrimonio e cassa di gruppo'}
                                                     {item.label === 'Guida' && 'Regolamento e modalità di gioco per i capi'}
                                                 </span>
                                             </div>

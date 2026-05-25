@@ -291,4 +291,18 @@ export interface EventoAttrezzoRelation {
     attrezzo?: InventarioAttrezzo;
 }
 
+export type BrancaType = 'L/C' | 'E/G' | 'R/S' | 'Gruppo' | 'CoCa';
 
+export interface BilancioMovimento {
+    id: string;
+    groupId: string;
+    titolo: string;
+    importo: number;
+    tipo: 'entrata' | 'uscita';
+    branca: BrancaType;
+    categoria?: string;
+    data: string; // YYYY-MM-DD
+    note?: string;
+    createdBy?: string;
+    createdAt?: string;
+}

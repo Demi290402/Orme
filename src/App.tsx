@@ -22,6 +22,7 @@ import StoricoAttivita from '@/pages/StoricoAttivita';
 import Settings from '@/pages/Settings';
 import PrivacyPolicy from '@/pages/PrivacyPolicy';
 import Inventario from '@/pages/Inventario';
+import Bilancio from '@/pages/Bilancio';
 
 function App() {
   return (
@@ -45,6 +46,7 @@ function App() {
           <Route path="/proposals" element={<ProtectedRoute><Layout><Proposals /></Layout></ProtectedRoute>} />
           <Route path="/calendario" element={<ProtectedRoute><Layout><Calendario /></Layout></ProtectedRoute>} />
           <Route path="/inventario" element={<ProtectedRoute><Layout><Inventario /></Layout></ProtectedRoute>} />
+          <Route path="/bilancio" element={<ProtectedRoute><Layout><Bilancio /></Layout></ProtectedRoute>} />
           <Route path="/verbali" element={<ProtectedRoute><Layout><VerbaliList /></Layout></ProtectedRoute>} />
           <Route path="/verbali/nuovo" element={<ProtectedRoute><Layout><VerbaleEditor /></Layout></ProtectedRoute>} />
           <Route path="/verbali/modifica/:id" element={<ProtectedRoute><Layout><VerbaleEditor /></Layout></ProtectedRoute>} />
