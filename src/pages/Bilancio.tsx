@@ -57,18 +57,24 @@ export default function Bilancio() {
         }
     };
 
-    // Saldo Generale
-    const totalBalance = movimenti.reduce((acc, m) => {
-        return acc + (m.tipo === 'entrata' ? m.importo : -m.importo);
-    }, 0);
+    // Saldo Generale (filtrato per la branca 'Gruppo')
+    const totalBalance = movimenti
+        .filter(m => m.branca === 'Gruppo')
+        .reduce((acc, m) => {
+            return acc + (m.tipo === 'entrata' ? m.importo : -m.importo);
+        }, 0);
 
-    const totalEntrate = movimenti.reduce((acc, m) => {
-        return acc + (m.tipo === 'entrata' ? m.importo : 0);
-    }, 0);
+    const totalEntrate = movimenti
+        .filter(m => m.branca === 'Gruppo')
+        .reduce((acc, m) => {
+            return acc + (m.tipo === 'entrata' ? m.importo : 0);
+        }, 0);
 
-    const totalUscite = movimenti.reduce((acc, m) => {
-        return acc + (m.tipo === 'uscita' ? m.importo : 0);
-    }, 0);
+    const totalUscite = movimenti
+        .filter(m => m.branca === 'Gruppo')
+        .reduce((acc, m) => {
+            return acc + (m.tipo === 'uscita' ? m.importo : 0);
+        }, 0);
 
     // Saldi per singola branca
     const getBalanceByBranca = (b: BrancaType) => {
