@@ -673,7 +673,7 @@ export default function ListaAttesa() {
                                                 <span className="block text-[10px] text-gray-400 dark:text-gray-500">{item.classe}</span>
                                             </td>
                                             <td className="p-4">
-                                                <div className="font-medium text-gray-800 dark:text-gray-250 flex items-center gap-1">
+                                                <div className="font-medium text-gray-800 dark:text-gray-200 flex items-center gap-1">
                                                     <User className="w-3.5 h-3.5 text-gray-400" />
                                                     {item.nomeGenitore}
                                                 </div>
