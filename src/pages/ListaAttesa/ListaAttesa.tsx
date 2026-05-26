@@ -897,42 +897,54 @@ export default function ListaAttesa() {
                                     <HelpCircle className="w-4 h-4 text-amber-500" />
                                     Metodo 2: Collegamento con Google Form Esistente
                                 </h4>
-                                <p className="text-xs text-gray-600 dark:text-gray-450 leading-relaxed">
-                                    Se utilizzi già un Google Form e un Google Sheet, puoi sincronizzare automaticamente ogni nuova compilazione con l'app di Orme seguendo questi passaggi:
+                                <p className="text-xs text-gray-600 dark:text-gray-450 leading-relaxed font-bold">
+                                    Segui questa guida passo-passo per collegare le risposte del tuo Google Form all'app di Orme:
                                 </p>
-                                <ol className="list-decimal pl-5 text-xs text-gray-600 dark:text-gray-450 space-y-2">
-                                    <li>Apri lo <strong>Sheet di Google</strong> collegato al tuo Google Form.</li>
-                                    <li>Nel menu in alto, seleziona <strong>Estensioni &gt; Apps Script</strong>.</li>
-                                    <li>Cancella l'editor e incolla lo script Javascript fornito sotto.</li>
+                                <ol className="list-decimal pl-5 text-xs text-gray-600 dark:text-gray-450 space-y-2.5">
+                                    <li>Apri lo <strong>Sheet di Google</strong> (foglio di calcolo) dove arrivano le risposte dei genitori.</li>
+                                    <li>Nel menu in alto del foglio di calcolo, seleziona <strong>Estensioni &gt; Apps Script</strong>.</li>
+                                    <li>Cancella qualsiasi codice presente nell'editor e incolla lo script fornito sotto.</li>
                                     <li>
-                                        Nel menu a sinistra, clicca sull'icona della sveglia (<strong>Attivatori</strong>) e premi "Aggiungi attivatore". Imposta:
-                                        <br />
-                                        <span className="text-[10px] font-bold text-scout-green">
-                                            "Seleziona la sorgente dell'evento: Da foglio di calcolo" | "Tipo di evento: All'invio del modulo"
-                                        </span>
+                                        <strong>IMPORTANTE (Salvataggio):</strong> Clicca sull'icona del <strong>Floppy Disk (Salva)</strong> in alto nella barra degli strumenti, o premi <code>Ctrl + S</code>. Senza salvare, Google non vedrà la funzione nei passaggi successivi.
                                     </li>
-                                    <li>Salva ed esegui l'autorizzazione di Google.</li>
+                                    <li>
+                                        Nel menu verticale a sinistra (icona con l'orologio), fai clic su <strong>Attivatori</strong> e poi premi il pulsante <strong>+ Aggiungi attivatore</strong> in basso a destra.
+                                    </li>
+                                    <li>
+                                        Configura i campi della finestra di dialogo esattamente come segue:
+                                        <ul className="list-disc pl-5 mt-1.5 space-y-1 text-[11px] bg-indigo-50/50 dark:bg-gray-900/50 p-2.5 rounded-xl border border-indigo-100/30 dark:border-gray-800">
+                                            <li>Scegli quale funzione eseguire: <strong className="text-indigo-650 dark:text-indigo-400">onFormSubmit</strong> <em>(se non compare, ricontrolla di aver salvato al punto 4 e prova a ricaricare la pagina)</em></li>
+                                            <li>Scegli quale versione eseguire: <strong>Head</strong></li>
+                                            <li>Scegli l'origine dell'evento: <strong>Da foglio di calcolo</strong></li>
+                                            <li>Seleziona il tipo di evento: <strong className="text-scout-green">All'invio del modulo</strong></li>
+                                        </ul>
+                                    </li>
+                                    <li>
+                                        Fai clic su <strong>Salva</strong> in basso a destra. Conferma l'accesso al tuo account Google e autorizza lo script se richiesto (se appare un avviso di sicurezza, clicca su <em>Avanzate</em> e poi su <em>Procedi</em>).
+                                    </li>
                                 </ol>
                                 <div className="space-y-1">
                                     <span className="text-[10px] font-bold text-gray-400 uppercase">Google Apps Script da copiare:</span>
-                                    <pre className="p-4 bg-gray-900 text-emerald-400 rounded-2xl text-[10px] font-mono overflow-x-auto max-h-[180px] leading-relaxed">
+                                    <pre className="p-4 bg-gray-900 text-emerald-400 rounded-2xl text-[10px] font-mono overflow-x-auto max-h-[220px] leading-relaxed">
 {`function onFormSubmit(e) {
-  var row = e.values;
+  var row = e.values; // Contiene le risposte del modulo nell'ordine in cui appaiono nello Sheet
   
-  // URL del database Supabase
+  // URL e Anon Key del database Supabase
   var supabaseUrl = "${(import.meta as any).env.VITE_SUPABASE_URL}";
   var anonKey = "${(import.meta as any).env.VITE_SUPABASE_ANON_KEY}";
   
   var payload = {
     group_id: "${currentUser?.groupId || ''}",
-    nome_genitore: row[1], // Modifica l'indice in base alle colonne dello sheet
-    telefono_genitore: row[2],
-    nome_ragazzo: row[3],
-    cognome_ragazzo: row[4],
-    data_nascita: row[5],
-    classe: row[6],
+    // NOTA: La prima colonna (A - Timestamp) corrisponde a row[0].
+    // Modifica gli indici numerici (es: row[1], row[2]) in base alla colonna corretta del tuo Sheet.
+    nome_genitore: row[1],     // Modifica l'indice
+    telefono_genitore: row[2], // Modifica l'indice
+    nome_ragazzo: row[3],      // Modifica l'indice
+    cognome_ragazzo: row[4],   // Modifica l'indice
+    data_nascita: row[5],      // Modifica l'indice
+    classe: row[6],           // Modifica l'indice
     data_iscrizione: new Date().toISOString().split('T')[0],
-    note: row[7] || '',
+    note: row[7] || '',        // Modifica l'indice (lascia vuoto se non c'è una colonna note)
     stato: 'In attesa'
   };
   
