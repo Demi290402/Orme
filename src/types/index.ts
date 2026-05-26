@@ -318,6 +318,5 @@ export interface ListaAttesa {
     classe: string;
     dataIscrizione: string; // YYYY-MM-DD
     note?: string;
-    stato: 'In attesa' | 'Accettato' | 'Rifiutato';
     createdAt?: string;
 }

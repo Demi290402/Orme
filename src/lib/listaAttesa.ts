@@ -47,7 +47,7 @@ export async function addIscritto(
                 classe: iscritto.classe,
                 data_iscrizione: iscritto.dataIscrizione,
                 note: (iscritto.note || '').trim(),
-                stato: iscritto.stato || 'In attesa'
+                stato: 'In attesa'
             })
             .select()
             .single();
@@ -65,7 +65,7 @@ export async function addIscritto(
  */
 export async function addIscrittoPubblico(
     groupId: string,
-    iscritto: Omit<ListaAttesa, 'id' | 'groupId' | 'stato' | 'createdAt'>
+    iscritto: Omit<ListaAttesa, 'id' | 'groupId' | 'createdAt'>
 ): Promise<boolean> {
     try {
         const { error } = await supabase
@@ -106,8 +106,7 @@ export async function updateIscritto(iscritto: ListaAttesa): Promise<ListaAttesa
                 data_nascita: iscritto.dataNascita,
                 classe: iscritto.classe,
                 data_iscrizione: iscritto.dataIscrizione,
-                note: (iscritto.note || '').trim(),
-                stato: iscritto.stato
+                note: (iscritto.note || '').trim()
             })
             .eq('id', iscritto.id)
             .select()
@@ -154,7 +153,6 @@ function mapDbRowToListaAttesa(row: any): ListaAttesa {
         classe: row.classe,
         dataIscrizione: row.data_iscrizione,
         note: row.note,
-        stato: row.stato as ListaAttesa['stato'],
         createdAt: row.created_at
     };
 }

@@ -142,11 +142,8 @@ export default function IscrizionePubblica() {
                         <div className="space-y-2">
                             <h2 className="text-2xl font-extrabold text-emerald-800 dark:text-emerald-250">Iscrizione Ricevuta!</h2>
                             <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-sm">
-                                Grazie per l'interesse verso il nostro gruppo scout! I dati di <strong>{nomeRagazzo} {cognomeRagazzo}</strong> sono stati inseriti correttamente nella nostra lista d'attesa.
+                                Grazie per aver espresso la volontà di iscrivere <strong>{nomeRagazzo} {cognomeRagazzo}</strong>.
                             </p>
-                        </div>
-                        <div className="p-4 bg-emerald-50 dark:bg-emerald-950/30 rounded-2xl border border-emerald-100/50 dark:border-emerald-900/30 text-xs text-emerald-800 dark:text-emerald-200 leading-relaxed">
-                            I capi del gruppo esamineranno la richiesta in base alla disponibilità dei posti per l'anno scout di riferimento. Sarai ricontattato telefonicamente o via email non appena si libererà un posto.
                         </div>
                         <div className="pt-2">
                             <p className="text-[11px] text-gray-400 dark:text-gray-500">
@@ -156,6 +153,27 @@ export default function IscrizionePubblica() {
                     </div>
                 ) : (
                     <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-3xl p-6 md:p-8 shadow-xl border border-gray-150 dark:border-gray-750 space-y-6">
+                        <div className="space-y-4">
+                            <h2 className="text-lg font-black text-emerald-700 dark:text-emerald-300">
+                                🎉 Benvenuti nel grande gioco dello scoutismo! 🌲⛺
+                            </h2>
+                            <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                                Ciao! Siamo felici che tu stia pensando di far vivere a tuo/a figlio/a l’avventura più bella di tutte: quella scout! 🐾
+                            </p>
+                            <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                                Compilando questo modulo ci aiuterai a raccogliere le informazioni necessarie per organizzare al meglio le iscrizioni e per conoscerci un po’ prima di iniziare il cammino insieme.
+                            </p>
+                            <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                                Lo scoutismo è un mondo fatto di amicizia, natura, sorrisi e crescita personale — e non vediamo l’ora di accogliervi nella nostra grande famiglia! 💚✨
+                            </p>
+                            <div className="bg-emerald-50 dark:bg-emerald-950/20 p-4 rounded-2xl border border-emerald-100/30 font-bold text-xs text-emerald-800 dark:text-emerald-250">
+                                Pronti a partire?<br />
+                                👉 Compila il modulo e... Buona Caccia! 🦊
+                            </div>
+                        </div>
+
+                        <hr className="border-gray-100 dark:border-gray-700/50" />
+
                         {errorMsg && (
                             <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-300 p-4 rounded-2xl flex items-start gap-2.5 text-xs">
                                 <AlertCircle className="w-5 h-5 shrink-0" />

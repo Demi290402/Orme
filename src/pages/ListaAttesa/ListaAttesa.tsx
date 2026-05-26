@@ -69,7 +69,6 @@ export default function ListaAttesa() {
 
     // Filters
     const [searchTerm, setSearchTerm] = useState('');
-    const [filterStato, setFilterStato] = useState<string>('Tutti');
     const [filterClasse, setFilterClasse] = useState<string>('Tutti');
 
     // Modals
@@ -87,7 +86,6 @@ export default function ListaAttesa() {
     const [classe, setClasse] = useState('');
     const [dataIscrizione, setDataIscrizione] = useState(new Date().toISOString().split('T')[0]);
     const [note, setNote] = useState('');
-    const [stato, setStato] = useState<IscrittoType['stato']>('In attesa');
 
     // Import Excel Mapping states
     const [importData, setImportData] = useState<any[]>([]);
@@ -134,7 +132,6 @@ export default function ListaAttesa() {
         setClasse(iscritto.classe);
         setDataIscrizione(iscritto.dataIscrizione);
         setNote(iscritto.note || '');
-        setStato(iscritto.stato);
         setShowAddModal(true);
     };
 
@@ -149,7 +146,6 @@ export default function ListaAttesa() {
         setClasse('');
         setDataIscrizione(new Date().toISOString().split('T')[0]);
         setNote('');
-        setStato('In attesa');
     };
 
     const handleSave = async (e: React.FormEvent) => {
@@ -167,8 +163,7 @@ export default function ListaAttesa() {
             dataNascita,
             classe,
             dataIscrizione,
-            note,
-            stato
+            note
         };
 
         if (editingIscritto) {
@@ -201,16 +196,6 @@ export default function ListaAttesa() {
             } else {
                 showToast('Errore nell\'eliminazione', 'error');
             }
-        }
-    };
-
-    const handleStatoChange = async (iscritto: IscrittoType, nuovoStato: IscrittoType['stato']) => {
-        const updated = await updateIscritto({ ...iscritto, stato: nuovoStato });
-        if (updated) {
-            showToast(`Stato aggiornato a "${nuovoStato}"`);
-            fetchLista();
-        } else {
-            showToast('Errore durante l\'aggiornamento dello stato', 'error');
         }
     };
 
@@ -302,8 +287,7 @@ export default function ListaAttesa() {
                 nomeGenitore: String(row[mappings.nomeGenitore] || '').trim(),
                 telefonoGenitore: String(row[mappings.telefonoGenitore] || '').trim(),
                 dataIscrizione: parsedIDate,
-                note: mappings.note ? String(row[mappings.note] || '').trim() : '',
-                stato: 'In attesa' as const
+                note: mappings.note ? String(row[mappings.note] || '').trim() : ''
             };
 
             const res = await addIscritto(payload);
@@ -322,9 +306,8 @@ export default function ListaAttesa() {
         const fullChildName = `${item.nomeRagazzo} ${item.cognomeRagazzo}`.toLowerCase();
         const parentName = item.nomeGenitore.toLowerCase();
         const matchesSearch = fullChildName.includes(searchTerm.toLowerCase()) || parentName.includes(searchTerm.toLowerCase()) || item.telefonoGenitore.includes(searchTerm);
-        const matchesStato = filterStato === 'Tutti' || item.stato === filterStato;
         const matchesClasse = filterClasse === 'Tutti' || item.classe === filterClasse;
-        return matchesSearch && matchesStato && matchesClasse;
+        return matchesSearch && matchesClasse;
     });
 
     const publicUrl = currentUser?.groupId ? `${window.location.origin}/iscrizione/${currentUser.groupId}` : '';
@@ -393,16 +376,22 @@ export default function ListaAttesa() {
                     <h2 className="text-3xl font-black text-gray-900 dark:text-white">{lista.length}</h2>
                 </div>
                 <div className="bg-white dark:bg-gray-800 rounded-3xl p-5 border border-gray-150 dark:border-gray-750 text-center space-y-1.5">
-                    <span className="text-[10px] uppercase font-black tracking-wider text-amber-500">In attesa</span>
-                    <h2 className="text-3xl font-black text-amber-500">{lista.filter(i => i.stato === 'In attesa').length}</h2>
+                    <span className="text-[10px] uppercase font-black tracking-wider text-emerald-500">Asilo / Elementari</span>
+                    <h2 className="text-3xl font-black text-emerald-500">
+                        {lista.filter(i => i.classe.includes('Asilo') || i.classe.includes('Elementare')).length}
+                    </h2>
                 </div>
                 <div className="bg-white dark:bg-gray-800 rounded-3xl p-5 border border-gray-150 dark:border-gray-750 text-center space-y-1.5">
-                    <span className="text-[10px] uppercase font-black tracking-wider text-emerald-500">Accettati</span>
-                    <h2 className="text-3xl font-black text-emerald-500">{lista.filter(i => i.stato === 'Accettato').length}</h2>
+                    <span className="text-[10px] uppercase font-black tracking-wider text-amber-500">Medie</span>
+                    <h2 className="text-3xl font-black text-amber-500">
+                        {lista.filter(i => i.classe.includes('Media')).length}
+                    </h2>
                 </div>
                 <div className="bg-white dark:bg-gray-800 rounded-3xl p-5 border border-gray-150 dark:border-gray-750 text-center space-y-1.5">
-                    <span className="text-[10px] uppercase font-black tracking-wider text-red-500">Rifiutati/Archivio</span>
-                    <h2 className="text-3xl font-black text-red-500">{lista.filter(i => i.stato === 'Rifiutato').length}</h2>
+                    <span className="text-[10px] uppercase font-black tracking-wider text-indigo-500">Superiori</span>
+                    <h2 className="text-3xl font-black text-indigo-500">
+                        {lista.filter(i => i.classe.includes('Superiore')).length}
+                    </h2>
                 </div>
             </div>
 
@@ -412,7 +401,7 @@ export default function ListaAttesa() {
                     <Filter className="w-3.5 h-3.5" />
                     Filtra & Cerca
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="relative">
                         <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
                         <input
@@ -422,19 +411,6 @@ export default function ListaAttesa() {
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-xs focus:outline-hidden focus:ring-2 focus:ring-scout-green focus:border-transparent transition-all"
                         />
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <label className="text-[10px] font-bold text-gray-400 shrink-0 uppercase">Stato:</label>
-                        <select
-                            value={filterStato}
-                            onChange={(e) => setFilterStato(e.target.value)}
-                            className="w-full px-3 py-2.5 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-xs focus:outline-hidden focus:ring-2 focus:ring-scout-green transition-all"
-                        >
-                            <option value="Tutti">Tutti gli stati</option>
-                            <option value="In attesa">In attesa</option>
-                            <option value="Accettato">Accettato</option>
-                            <option value="Rifiutato">Rifiutato</option>
-                        </select>
                     </div>
                     <div className="flex items-center gap-2">
                         <label className="text-[10px] font-bold text-gray-400 shrink-0 uppercase">Classe:</label>
@@ -471,7 +447,6 @@ export default function ListaAttesa() {
                                     <th className="p-4">Età / Classe</th>
                                     <th className="p-4">Genitore / Telefono</th>
                                     <th className="p-4 text-center">Giorni in lista</th>
-                                    <th className="p-4 text-center">Stato</th>
                                     <th className="p-4 pr-6 text-right">Azioni</th>
                                 </tr>
                             </thead>
@@ -508,23 +483,6 @@ export default function ListaAttesa() {
                                                     <Clock className="w-3.5 h-3.5" />
                                                     {days} gg
                                                 </span>
-                                            </td>
-                                            <td className="p-4 text-center">
-                                                <select
-                                                    value={item.stato}
-                                                    onChange={(e) => handleStatoChange(item, e.target.value as IscrittoType['stato'])}
-                                                    className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase text-center border-0 cursor-pointer ${
-                                                        item.stato === 'In attesa' 
-                                                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-350'
-                                                            : item.stato === 'Accettato'
-                                                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-350'
-                                                            : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-350'
-                                                    }`}
-                                                >
-                                                    <option value="In attesa">In attesa</option>
-                                                    <option value="Accettato">Accettato</option>
-                                                    <option value="Rifiutato">Rifiutato</option>
-                                                </select>
                                             </td>
                                             <td className="p-4 pr-6 text-right space-x-2">
                                                 <button
@@ -635,29 +593,15 @@ export default function ListaAttesa() {
                                     />
                                 </div>
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Data Iscrizione *</label>
-                                    <input
-                                        type="date"
-                                        required
-                                        value={dataIscrizione}
-                                        onChange={(e) => setDataIscrizione(e.target.value)}
-                                        className="w-full px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-xs"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Stato *</label>
-                                    <select
-                                        value={stato}
-                                        onChange={(e) => setStato(e.target.value as IscrittoType['stato'])}
-                                        className="w-full px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-xs font-bold"
-                                    >
-                                        <option value="In attesa">In attesa</option>
-                                        <option value="Accettato">Accettato</option>
-                                        <option value="Rifiutato">Rifiutato</option>
-                                    </select>
-                                </div>
+                            <div>
+                                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Data Iscrizione *</label>
+                                <input
+                                    type="date"
+                                    required
+                                    value={dataIscrizione}
+                                    onChange={(e) => setDataIscrizione(e.target.value)}
+                                    className="w-full px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-xs"
+                                />
                             </div>
                             <div>
                                 <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Note (Opzionale)</label>
