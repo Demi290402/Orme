@@ -133,7 +133,7 @@ export default function IscrizionePubblica() {
     return (
         <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-amber-50/30 dark:from-gray-900 dark:to-gray-950 text-gray-900 dark:text-gray-100 flex flex-col justify-between">
             {/* Main Form Box */}
-            <div className="flex-1 max-w-xl md:max-w-2xl lg:max-w-[50vw] w-full mx-auto px-2 py-4 md:px-4 md:py-8 space-y-4">
+            <div className="flex-1 max-w-xl md:max-w-2xl lg:max-w-[60vw] w-full mx-auto px-2 py-4 md:px-4 md:py-8 space-y-4">
                 {/* Header / Vetrina (Allineato alla larghezza del form) */}
                 <div 
                     className="w-full h-32 md:h-52 bg-cover bg-center rounded-lg md:rounded-xl shadow-md"
@@ -330,7 +330,7 @@ export default function IscrizionePubblica() {
             </div>
 
             {/* Footer */}
-            <footer className="w-full text-center py-6 text-[10px] text-gray-400 dark:text-gray-600 max-w-xl md:max-w-2xl lg:max-w-[50vw] mx-auto px-4">
+            <footer className="w-full text-center py-6 text-[10px] text-gray-400 dark:text-gray-600 max-w-xl md:max-w-2xl lg:max-w-[60vw] mx-auto px-4">
                 {settings?.disclaimerText || 'Inviando questo modulo, acconsenti al trattamento dei dati personali forniti al fine di gestire l\'inserimento del minore nella lista d\'attesa del gruppo scout indicato, in conformità con le policy di privacy vigenti.'}
             </footer>
         </div>
