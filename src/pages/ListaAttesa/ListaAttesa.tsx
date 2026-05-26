@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { 
     getListaAttesa, 
     addIscritto, 
+    addIscrittiBatch,
     updateIscritto, 
     deleteIscritto,
     getImpostazioniIscrizione,
@@ -122,6 +123,7 @@ export default function ListaAttesa() {
         note: ''
     });
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [importing, setImporting] = useState(false);
 
     // Alerts/Feedback
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -342,67 +344,158 @@ export default function ListaAttesa() {
     };
 
     const confirmImport = async () => {
+        if (importing) return;
         if (!mappings.nomeRagazzo || !mappings.cognomeRagazzo || !mappings.dataNascita || !mappings.classe || !mappings.nomeGenitore || !mappings.telefonoGenitore) {
             showToast('Mappa almeno i campi obbligatori (Nome, Cognome, Nascita, Classe, Genitore, Telefono).', 'error');
             return;
         }
 
+        setImporting(true);
         let successCount = 0;
-        for (const row of importData) {
-            // Helper to clean dates
-            let rawBDate = row[mappings.dataNascita];
-            let parsedBDate = '';
-            if (rawBDate) {
-                // If excel parsed as number
-                if (typeof rawBDate === 'number') {
-                    const utc_days = Math.floor(rawBDate - 25569);
-                    const utc_value = utc_days * 86400;
-                    parsedBDate = new Date(utc_value * 1000).toISOString().split('T')[0];
+        let duplicateInFileCount = 0;
+        let duplicateInDbCount = 0;
+        let errorCount = 0;
+
+        try {
+            // Processa tutte le righe dal file Excel/CSV
+            const processedRows: any[] = [];
+            for (const row of importData) {
+                const nomeRagazzo = String(row[mappings.nomeRagazzo] || '').trim();
+                const cognomeRagazzo = String(row[mappings.cognomeRagazzo] || '').trim();
+
+                // Se nome e cognome sono entrambi vuoti, salta la riga (es. righe vuote in fondo al foglio)
+                if (!nomeRagazzo && !cognomeRagazzo) {
+                    continue;
+                }
+
+                // Helper to clean dates
+                let rawBDate = row[mappings.dataNascita];
+                let parsedBDate = '';
+                if (rawBDate) {
+                    // If excel parsed as number
+                    if (typeof rawBDate === 'number') {
+                        const utc_days = Math.floor(rawBDate - 25569);
+                        const utc_value = utc_days * 86400;
+                        parsedBDate = new Date(utc_value * 1000).toISOString().split('T')[0];
+                    } else {
+                        const dateObj = new Date(rawBDate);
+                        parsedBDate = isNaN(dateObj.getTime()) ? '' : dateObj.toISOString().split('T')[0];
+                    }
+                }
+
+                let rawIDate = row[mappings.dataIscrizione];
+                let parsedIDate = new Date().toISOString().split('T')[0];
+                if (rawIDate) {
+                    if (typeof rawIDate === 'number') {
+                        const utc_days = Math.floor(rawIDate - 25569);
+                        const utc_value = utc_days * 86400;
+                        parsedIDate = new Date(utc_value * 1000).toISOString().split('T')[0];
+                    } else {
+                        const dateObj = new Date(rawIDate);
+                        if (!isNaN(dateObj.getTime())) parsedIDate = dateObj.toISOString().split('T')[0];
+                    }
+                }
+
+                // Normalizza la classe per rientrare nella lista CLASSI
+                let rawClasse = String(row[mappings.classe] || '').trim();
+                let matchedClasse = '1a Elementare'; // default fallback
+                const match = CLASSI.find(c => c.toLowerCase() === rawClasse.toLowerCase() || rawClasse.toLowerCase().includes(c.toLowerCase()));
+                if (match) matchedClasse = match;
+
+                const payload = {
+                    nomeRagazzo,
+                    cognomeRagazzo,
+                    dataNascita: parsedBDate || new Date().toISOString().split('T')[0],
+                    classe: matchedClasse,
+                    nomeGenitore: String(row[mappings.nomeGenitore] || '').trim(),
+                    telefonoGenitore: String(row[mappings.telefonoGenitore] || '').trim(),
+                    dataIscrizione: parsedIDate,
+                    note: mappings.note ? String(row[mappings.note] || '').trim() : ''
+                };
+
+                processedRows.push(payload);
+            }
+
+            // 1. Rimuovi i duplicati all'interno dello stesso file caricato
+            const uniqueUploadedRows: any[] = [];
+            for (const row of processedRows) {
+                const isDupInFile = uniqueUploadedRows.some(r => 
+                    r.nomeRagazzo.toLowerCase().trim() === row.nomeRagazzo.toLowerCase().trim() &&
+                    r.cognomeRagazzo.toLowerCase().trim() === row.cognomeRagazzo.toLowerCase().trim() &&
+                    r.dataNascita === row.dataNascita &&
+                    r.classe === row.classe &&
+                    r.nomeGenitore.toLowerCase().trim() === row.nomeGenitore.toLowerCase().trim() &&
+                    r.telefonoGenitore.trim() === row.telefonoGenitore.trim() &&
+                    r.dataIscrizione === row.dataIscrizione &&
+                    (r.note || '').trim().toLowerCase() === (row.note || '').trim().toLowerCase()
+                );
+
+                if (isDupInFile) {
+                    duplicateInFileCount++;
                 } else {
-                    const dateObj = new Date(rawBDate);
-                    parsedBDate = isNaN(dateObj.getTime()) ? '' : dateObj.toISOString().split('T')[0];
+                    uniqueUploadedRows.push(row);
                 }
             }
 
-            let rawIDate = row[mappings.dataIscrizione];
-            let parsedIDate = new Date().toISOString().split('T')[0];
-            if (rawIDate) {
-                if (typeof rawIDate === 'number') {
-                    const utc_days = Math.floor(rawIDate - 25569);
-                    const utc_value = utc_days * 86400;
-                    parsedIDate = new Date(utc_value * 1000).toISOString().split('T')[0];
+            // 2. Filtra i duplicati rispetto ai dati già presenti nel database
+            const rowsToInsert: any[] = [];
+            for (const row of uniqueUploadedRows) {
+                const isDupInDb = lista.some(r => 
+                    r.nomeRagazzo.toLowerCase().trim() === row.nomeRagazzo.toLowerCase().trim() &&
+                    r.cognomeRagazzo.toLowerCase().trim() === row.cognomeRagazzo.toLowerCase().trim() &&
+                    r.dataNascita === row.dataNascita &&
+                    r.classe === row.classe &&
+                    r.nomeGenitore.toLowerCase().trim() === row.nomeGenitore.toLowerCase().trim() &&
+                    r.telefonoGenitore.trim() === row.telefonoGenitore.trim() &&
+                    r.dataIscrizione === row.dataIscrizione &&
+                    (r.note || '').trim().toLowerCase() === (row.note || '').trim().toLowerCase()
+                );
+
+                if (isDupInDb) {
+                    duplicateInDbCount++;
                 } else {
-                    const dateObj = new Date(rawIDate);
-                    if (!isNaN(dateObj.getTime())) parsedIDate = dateObj.toISOString().split('T')[0];
+                    rowsToInsert.push(row);
                 }
             }
 
-            // Normalizza la classe per rientrare nella lista CLASSI
-            let rawClasse = String(row[mappings.classe] || '').trim();
-            let matchedClasse = '1a Elementare'; // default fallback
-            const match = CLASSI.find(c => c.toLowerCase() === rawClasse.toLowerCase() || rawClasse.toLowerCase().includes(c.toLowerCase()));
-            if (match) matchedClasse = match;
+            // Inserisci in batch i record non duplicati
+            if (rowsToInsert.length > 0) {
+                try {
+                    const insertedList = await addIscrittiBatch(rowsToInsert);
+                    successCount = insertedList.length;
+                    errorCount = rowsToInsert.length - successCount;
+                } catch (err) {
+                    console.error("Errore nell'importazione batch:", err);
+                    errorCount = rowsToInsert.length;
+                }
+            }
 
-            const payload = {
-                nomeRagazzo: String(row[mappings.nomeRagazzo] || '').trim(),
-                cognomeRagazzo: String(row[mappings.cognomeRagazzo] || '').trim(),
-                dataNascita: parsedBDate || new Date().toISOString().split('T')[0],
-                classe: matchedClasse,
-                nomeGenitore: String(row[mappings.nomeGenitore] || '').trim(),
-                telefonoGenitore: String(row[mappings.telefonoGenitore] || '').trim(),
-                dataIscrizione: parsedIDate,
-                note: mappings.note ? String(row[mappings.note] || '').trim() : ''
-            };
+            const totalDuplicates = duplicateInFileCount + duplicateInDbCount;
+            let msg = `Importazione completata con successo!`;
+            if (successCount > 0) {
+                msg = `Importati con successo ${successCount} record!`;
+            } else if (totalDuplicates > 0 && errorCount === 0) {
+                msg = `Nessun record importato: tutti i dati erano duplicati.`;
+            }
 
-            const res = await addIscritto(payload);
-            if (res) successCount++;
+            if (totalDuplicates > 0) {
+                msg += ` (${totalDuplicates} duplicati ignorati)`;
+            }
+            if (errorCount > 0) {
+                msg += ` Errore su ${errorCount} record.`;
+            }
+
+            showToast(msg, errorCount > 0 && successCount === 0 ? 'error' : 'success');
+        } catch (globalError) {
+            console.error("Errore imprevisto durante l'importazione:", globalError);
+            showToast("Si è verificato un errore imprevisto durante l'importazione.", "error");
+        } finally {
+            setImporting(false);
+            setShowImportModal(false);
+            setImportData([]);
+            setExcelHeaders([]);
+            fetchLista();
         }
-
-        showToast(`Importati con successo ${successCount} record su ${importData.length}!`);
-        setShowImportModal(false);
-        setImportData([]);
-        setExcelHeaders([]);
-        fetchLista();
     };
 
     // Filter Logic
@@ -737,14 +830,18 @@ export default function ListaAttesa() {
             {/* Modal: Importa da Excel */}
             {showImportModal && (
                 <div className="fixed inset-0 z-55 flex items-center justify-center p-4">
-                    <div className="fixed inset-0 bg-black/60 backdrop-blur-xs" onClick={() => setShowImportModal(false)} />
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-xs" onClick={() => !importing && setShowImportModal(false)} />
                     <div className="bg-white dark:bg-gray-800 w-full max-w-2xl rounded-3xl p-6 md:p-8 z-10 border border-gray-150 dark:border-gray-750 shadow-2xl relative space-y-6 animate-in zoom-in-95 duration-200">
                         <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-700 pb-3">
                             <h3 className="font-extrabold text-base text-gray-900 dark:text-white flex items-center gap-2">
                                 <FileSpreadsheet className="w-5 h-5 text-amber-500" />
                                 Carica da File Excel / CSV
                             </h3>
-                            <button onClick={() => setShowImportModal(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full dark:text-gray-400">
+                            <button 
+                                onClick={() => !importing && setShowImportModal(false)} 
+                                disabled={importing}
+                                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full dark:text-gray-400 disabled:opacity-50"
+                            >
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
@@ -783,14 +880,15 @@ export default function ListaAttesa() {
                                 <div className="p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/30 rounded-2xl text-[11px] font-bold text-amber-800 dark:text-amber-300 flex items-center justify-between">
                                     <span>Trovate {importData.length} righe! Associa le colonne del file ai dati di Orme:</span>
                                     <button 
-                                        onClick={() => { setImportData([]); setExcelHeaders([]); }} 
-                                        className="text-xs underline hover:text-amber-900 dark:hover:text-amber-100"
+                                        onClick={() => { if (!importing) { setImportData([]); setExcelHeaders([]); } }} 
+                                        disabled={importing}
+                                        className="text-xs underline hover:text-amber-900 dark:hover:text-amber-100 disabled:opacity-50"
                                     >
                                         Annulla
                                     </button>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[300px] overflow-y-auto p-1 border border-gray-100 dark:border-gray-700/50 rounded-2xl">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[300px] overflow-y-auto p-1 border border-gray-150 dark:border-gray-750/50 rounded-2xl">
                                     {Object.keys(mappings).map((fieldKey) => {
                                         const isRequired = ['nomeRagazzo', 'cognomeRagazzo', 'dataNascita', 'classe', 'nomeGenitore', 'telefonoGenitore'].includes(fieldKey);
                                         return (
@@ -808,8 +906,9 @@ export default function ListaAttesa() {
                                                 </label>
                                                 <select
                                                     value={mappings[fieldKey]}
+                                                    disabled={importing}
                                                     onChange={(e) => setMappings({ ...mappings, [fieldKey]: e.target.value })}
-                                                    className="w-full px-2 py-1.5 border border-gray-250 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-lg text-xs"
+                                                    className="w-full px-2 py-1.5 border border-gray-250 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-lg text-xs disabled:opacity-50"
                                                 >
                                                     <option value="">-- Non mappare --</option>
                                                     {excelHeaders.map((header) => (
@@ -823,9 +922,20 @@ export default function ListaAttesa() {
 
                                 <button
                                     onClick={confirmImport}
-                                    className="w-full bg-scout-green hover:bg-scout-green-dark text-white font-extrabold py-3.5 rounded-2xl text-xs transition-all shadow-md cursor-pointer"
+                                    disabled={importing}
+                                    className="w-full bg-scout-green hover:bg-scout-green-dark disabled:bg-gray-400 text-white font-extrabold py-3.5 rounded-2xl text-xs transition-all shadow-md cursor-pointer disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                 >
-                                    Conferma Importazione
+                                    {importing ? (
+                                        <>
+                                            <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            Importazione in corso...
+                                        </>
+                                    ) : (
+                                        'Conferma Importazione'
+                                    )}
                                 </button>
                             </div>
                         )}

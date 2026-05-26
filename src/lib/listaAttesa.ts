@@ -61,6 +61,43 @@ export async function addIscritto(
 }
 
 /**
+ * Aggiunge molteplici iscritti in un'unica transazione/richiesta (batch insert).
+ */
+export async function addIscrittiBatch(
+    iscritti: Omit<ListaAttesa, 'id' | 'groupId' | 'createdAt'>[]
+): Promise<ListaAttesa[]> {
+    if (iscritti.length === 0) return [];
+    try {
+        const currentUser = await getUser();
+        if (!currentUser.groupId) throw new Error('Utente non associato a un gruppo scout');
+
+        const rowsToInsert = iscritti.map(iscritto => ({
+            group_id: currentUser.groupId,
+            nome_genitore: iscritto.nomeGenitore.trim(),
+            telefono_genitore: iscritto.telefonoGenitore.trim(),
+            nome_ragazzo: iscritto.nomeRagazzo.trim(),
+            cognome_ragazzo: iscritto.cognomeRagazzo.trim(),
+            data_nascita: iscritto.dataNascita,
+            classe: iscritto.classe,
+            data_iscrizione: iscritto.dataIscrizione,
+            note: (iscritto.note || '').trim(),
+            stato: 'In attesa'
+        }));
+
+        const { data, error } = await supabase
+            .from('lista_attesa')
+            .insert(rowsToInsert)
+            .select();
+
+        if (error) throw error;
+        return (data || []).map(mapDbRowToListaAttesa);
+    } catch (error) {
+        console.error("Errore nell'inserimento batch degli iscritti:", error);
+        return [];
+    }
+}
+
+/**
  * Inserimento pubblico per il form dei genitori (senza autenticazione).
  */
 export async function addIscrittoPubblico(
