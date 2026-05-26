@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
-import { addIscrittoPubblico } from '@/lib/listaAttesa';
+import { addIscrittoPubblico, getImpostazioniIscrizione } from '@/lib/listaAttesa';
+import { ImpostazioniIscrizione } from '@/types';
 import { Compass, User, Award, CheckCircle, AlertCircle } from 'lucide-react';
 
 const CLASSI = [
@@ -28,6 +29,7 @@ export default function IscrizionePubblica() {
     const [submitting, setSubmitting] = useState(false);
     const [success, setSuccess] = useState(false);
     const [errorMsg, setErrorMsg] = useState<string>('');
+    const [settings, setSettings] = useState<ImpostazioniIscrizione | null>(null);
 
     // Form states
     const [nomeGenitore, setNomeGenitore] = useState('');
@@ -38,16 +40,22 @@ export default function IscrizionePubblica() {
     const [classe, setClasse] = useState('');
     const [note, setNote] = useState('');
 
+    const formatSuccessMessage = (template: string) => {
+        return template
+            .replace(/{nomeRagazzo}/g, nomeRagazzo)
+            .replace(/{cognomeRagazzo}/g, cognomeRagazzo)
+            .replace(/{groupName}/g, groupName);
+    };
+
     useEffect(() => {
-        async function fetchGroupName() {
+        async function loadData() {
             if (!groupId) {
                 setErrorMsg('Codice gruppo non specificato.');
                 setLoading(false);
                 return;
             }
             try {
-                // Cerchiamo il nome del gruppo dalla tabella users o altre tabelle
-                // Visto che groupName è registrato negli utenti di quel gruppo, possiamo provare a trovarlo
+                // Carica nome del gruppo
                 const { data, error } = await supabase
                     .from('users')
                     .select('group_name')
@@ -61,15 +69,21 @@ export default function IscrizionePubblica() {
                 } else {
                     setGroupName(`Gruppo Scout (Codice: ${groupId})`);
                 }
+
+                // Carica impostazioni form
+                const formSettings = await getImpostazioniIscrizione(groupId);
+                if (formSettings) {
+                    setSettings(formSettings);
+                }
             } catch (err) {
-                console.error('Errore nel caricamento del nome gruppo:', err);
+                console.error('Errore nel caricamento dei dati:', err);
                 setGroupName(`Gruppo Scout (Codice: ${groupId})`);
             } finally {
                 setLoading(false);
             }
         }
 
-        fetchGroupName();
+        loadData();
     }, [groupId]);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -119,22 +133,28 @@ export default function IscrizionePubblica() {
     return (
         <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-amber-50/30 dark:from-gray-900 dark:to-gray-950 text-gray-900 dark:text-gray-100 flex flex-col justify-between">
             {/* Main Form Box */}
-            <div className="flex-1 max-w-xl w-full mx-auto px-2 py-4 md:px-4 md:py-8 space-y-4">
+            <div className="flex-1 max-w-xl md:max-w-2xl lg:max-w-[50vw] w-full mx-auto px-2 py-4 md:px-4 md:py-8 space-y-4">
                 {/* Header / Vetrina (Allineato alla larghezza del form) */}
                 <div 
-                    className="w-full h-32 md:h-52 bg-cover bg-center rounded-2xl md:rounded-3xl shadow-md"
-                    style={{ backgroundImage: "url('/scout_banner.png')" }}
+                    className="w-full h-32 md:h-52 bg-cover bg-center rounded-lg md:rounded-xl shadow-md"
+                    style={{ backgroundImage: `url('${settings?.bannerUrl || '/scout_banner.png'}')` }}
                 />
 
                 {success ? (
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl md:rounded-3xl p-6 md:p-8 shadow-xl border border-emerald-100 dark:border-gray-700 text-center space-y-6 animate-in zoom-in-95 duration-300">
+                    <div className="bg-white dark:bg-gray-800 rounded-lg md:rounded-xl p-6 md:p-8 shadow-xl border border-emerald-100 dark:border-gray-700 text-center space-y-6 animate-in zoom-in-95 duration-300">
                         <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-950/50 rounded-full flex items-center justify-center mx-auto text-emerald-600">
                             <CheckCircle className="w-12 h-12" />
                         </div>
                         <div className="space-y-2">
-                            <h2 className="text-2xl font-extrabold text-emerald-800 dark:text-emerald-250">Iscrizione Ricevuta!</h2>
+                            <h2 className="text-2xl font-extrabold text-emerald-800 dark:text-emerald-250">
+                                {settings?.successTitle || 'Iscrizione Ricevuta!'}
+                            </h2>
                             <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-sm">
-                                Grazie per aver espresso la volontà di iscrivere <strong>{nomeRagazzo} {cognomeRagazzo}</strong> nel gruppo <strong>{groupName}</strong>.
+                                {settings?.successMessage ? (
+                                    formatSuccessMessage(settings.successMessage)
+                                ) : (
+                                    <>Grazie per aver espresso la volontà di iscrivere <strong>{nomeRagazzo} {cognomeRagazzo}</strong> nel gruppo <strong>{groupName}</strong>.</>
+                                )}
                             </p>
                         </div>
                         <div className="pt-2">
@@ -144,32 +164,46 @@ export default function IscrizionePubblica() {
                         </div>
                     </div>
                 ) : (
-                    <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-2xl md:rounded-3xl p-4 md:p-8 shadow-xl border border-gray-150 dark:border-gray-750 space-y-6">
+                    <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-lg md:rounded-xl p-4 md:p-8 shadow-xl border border-gray-150 dark:border-gray-750 space-y-6">
                         {/* Titolo */}
                         <div className="text-center border-b border-gray-100 dark:border-gray-700/50 pb-4">
                             <h1 className="text-xl md:text-2xl font-black tracking-tight leading-tight text-gray-950 dark:text-white">
-                                Modulo richiesta inserimento negli scout
+                                {settings?.formTitle || 'Modulo richiesta inserimento negli scout'}
                             </h1>
                         </div>
 
                         <div className="space-y-4">
                             <h2 className="text-lg font-black text-emerald-700 dark:text-emerald-300">
-                                🎉 Benvenuti nel grande gioco dello scoutismo! 🌲⛺
+                                {settings?.welcomeTitle || '🎉 Benvenuti nel grande gioco dello scoutismo! 🌲⛺'}
                             </h2>
                             <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
-                                Ciao! Siamo felici che tu stia pensando di far vivere a tuo/a figlio/a l’avventura più bella di tutte: quella scout! 🐾
+                                {settings?.paragraph1 || 'Ciao! Siamo felici che tu stia pensando di far vivere a tuo/a figlio/a l’avventura più bella di tutte: quella scout! 🐾'}
                             </p>
                             <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
-                                Compilando questo modulo ci aiuterai a raccogliere le informazioni necessarie per organizzare al meglio le iscrizioni e per conoscerci un po’ prima di iniziare il cammino insieme.
+                                {settings?.paragraph2 || 'Compilando questo modulo ci aiuterai a raccogliere le informazioni necessarie per organizzare al meglio le iscrizioni e per conoscerci un po’ prima di iniziare il cammino insieme.'}
                             </p>
-                            <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
-                                Lo scoutismo è un mondo fatto di amicizia, natura, sorrisi e crescita personale — e non vediamo l’ora di accogliervi nella nostra grande famiglia! 💚✨
-                                <br />
-                                <br />
-                                Pronti a partire?
-                                <br />
-                                👉 Compila il modulo e... Buona Caccia! 🦊
-                            </p>
+                            <div className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed whitespace-pre-line">
+                                {settings ? (
+                                    <>
+                                        {settings.paragraph3}
+                                        {settings.footerText && (
+                                            <>
+                                                {"\n\n"}
+                                                {settings.footerText}
+                                            </>
+                                        )}
+                                    </>
+                                ) : (
+                                    <>
+                                        Lo scoutismo è un mondo fatto di amicizia, natura, sorrisi e crescita personale — e non vediamo l’ora di accogliervi nella nostra grande famiglia! 💚✨
+                                        <br />
+                                        <br />
+                                        Pronti a partire?
+                                        <br />
+                                        👉 Compila il modulo e... Buona Caccia! 🦊
+                                    </>
+                                )}
+                            </div>
                         </div>
 
                         <hr className="border-gray-100 dark:border-gray-700/50" />
@@ -195,7 +229,7 @@ export default function IscrizionePubblica() {
                                         placeholder="es. Mario Rossi"
                                         value={nomeGenitore}
                                         onChange={(e) => setNomeGenitore(e.target.value)}
-                                        className="w-full px-4 py-2.5 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm transition-all"
+                                        className="w-full px-4 py-2.5 rounded-lg border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm transition-all"
                                     />
                                 </div>
                                 <div>
@@ -206,7 +240,7 @@ export default function IscrizionePubblica() {
                                         placeholder="es. 3331234567"
                                         value={telefonoGenitore}
                                         onChange={(e) => setTelefonoGenitore(e.target.value)}
-                                        className="w-full px-4 py-2.5 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm transition-all"
+                                        className="w-full px-4 py-2.5 rounded-lg border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm transition-all"
                                     />
                                 </div>
                             </div>
@@ -228,7 +262,7 @@ export default function IscrizionePubblica() {
                                         placeholder="Nome del ragazzo/a"
                                         value={nomeRagazzo}
                                         onChange={(e) => setNomeRagazzo(e.target.value)}
-                                        className="w-full px-4 py-2.5 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm transition-all"
+                                        className="w-full px-4 py-2.5 rounded-lg border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm transition-all"
                                     />
                                 </div>
                                 <div>
@@ -239,7 +273,7 @@ export default function IscrizionePubblica() {
                                         placeholder="Cognome del ragazzo/a"
                                         value={cognomeRagazzo}
                                         onChange={(e) => setCognomeRagazzo(e.target.value)}
-                                        className="w-full px-4 py-2.5 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm transition-all"
+                                        className="w-full px-4 py-2.5 rounded-lg border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm transition-all"
                                     />
                                 </div>
                             </div>
@@ -251,7 +285,7 @@ export default function IscrizionePubblica() {
                                         required
                                         value={dataNascita}
                                         onChange={(e) => setDataNascita(e.target.value)}
-                                        className="w-full px-4 py-2.5 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm transition-all"
+                                        className="w-full px-4 py-2.5 rounded-lg border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm transition-all"
                                     />
                                 </div>
                                 <div>
@@ -260,7 +294,7 @@ export default function IscrizionePubblica() {
                                         required
                                         value={classe}
                                         onChange={(e) => setClasse(e.target.value)}
-                                        className="w-full px-4 py-2.5 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm transition-all"
+                                        className="w-full px-4 py-2.5 rounded-lg border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm transition-all"
                                     >
                                         <option value="">Seleziona classe...</option>
                                         {CLASSI.map((c) => (
@@ -280,14 +314,14 @@ export default function IscrizionePubblica() {
                                 value={note}
                                 onChange={(e) => setNote(e.target.value)}
                                 rows={3}
-                                className="w-full px-4 py-2.5 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm transition-all resize-none"
+                                className="w-full px-4 py-2.5 rounded-lg border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm transition-all resize-none"
                             />
                         </div>
 
                         <button
                             type="submit"
                             disabled={submitting}
-                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-3.5 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-3.5 rounded-lg transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                         >
                             {submitting ? 'Invio in corso...' : 'Invia Iscrizione'}
                         </button>
@@ -296,8 +330,8 @@ export default function IscrizionePubblica() {
             </div>
 
             {/* Footer */}
-            <footer className="w-full text-center py-6 text-[10px] text-gray-400 dark:text-gray-600 max-w-xl mx-auto px-4">
-                Inviando questo modulo, acconsenti al trattamento dei dati personali forniti al fine di gestire l'inserimento del minore nella lista d'attesa del gruppo scout indicato, in conformità con le policy di privacy vigenti.
+            <footer className="w-full text-center py-6 text-[10px] text-gray-400 dark:text-gray-600 max-w-xl md:max-w-2xl lg:max-w-[50vw] mx-auto px-4">
+                {settings?.disclaimerText || 'Inviando questo modulo, acconsenti al trattamento dei dati personali forniti al fine di gestire l\'inserimento del minore nella lista d\'attesa del gruppo scout indicato, in conformità con le policy di privacy vigenti.'}
             </footer>
         </div>
     );
