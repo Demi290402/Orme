@@ -120,15 +120,9 @@ export default function IscrizionePubblica() {
         <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-amber-50/30 dark:from-gray-900 dark:to-gray-950 text-gray-900 dark:text-gray-100 flex flex-col justify-between">
             {/* Header / Vetrina */}
             <div 
-                className="w-full text-white py-10 md:py-16 px-4 shadow-md text-center relative bg-cover bg-center flex items-center justify-center min-h-[140px] md:min-h-[220px]"
+                className="w-full h-32 md:h-56 bg-cover bg-center shadow-md relative"
                 style={{ backgroundImage: "url('/scout_banner.png')" }}
-            >
-                <div className="max-w-xl w-full mx-auto p-4 md:p-6 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md rounded-2xl md:rounded-3xl shadow-lg border border-white/20 dark:border-gray-700/30 text-gray-900 dark:text-white space-y-2 md:space-y-3">
-                    <Compass className="w-10 h-10 mx-auto text-emerald-600 dark:text-emerald-450 drop-shadow-xs animate-pulse" />
-                    <h1 className="text-xl md:text-2xl font-black tracking-tight leading-tight">Modulo richiesta inserimento negli scout</h1>
-                    <p className="text-emerald-700 dark:text-emerald-350 font-bold text-sm md:text-base leading-none">{groupName}</p>
-                </div>
-            </div>
+            />
 
             {/* Main Form Box */}
             <div className="flex-1 max-w-xl w-full mx-auto px-2 py-4 md:px-4 md:py-8">
@@ -151,6 +145,17 @@ export default function IscrizionePubblica() {
                     </div>
                 ) : (
                     <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-2xl md:rounded-3xl p-4 md:p-8 shadow-xl border border-gray-150 dark:border-gray-750 space-y-6">
+                        {/* Titolo e Gruppo */}
+                        <div className="text-center space-y-2 border-b border-gray-100 dark:border-gray-700/50 pb-4">
+                            <Compass className="w-10 h-10 mx-auto text-emerald-600 dark:text-emerald-450 drop-shadow-xs animate-pulse" />
+                            <h1 className="text-xl md:text-2xl font-black tracking-tight leading-tight text-gray-950 dark:text-white">
+                                Modulo richiesta inserimento negli scout
+                            </h1>
+                            <p className="text-emerald-700 dark:text-emerald-350 font-bold text-sm md:text-base leading-none">
+                                {groupName}
+                            </p>
+                        </div>
+
                         <div className="space-y-4">
                             <h2 className="text-lg font-black text-emerald-700 dark:text-emerald-300">
                                 🎉 Benvenuti nel grande gioco dello scoutismo! 🌲⛺
