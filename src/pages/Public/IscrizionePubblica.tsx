@@ -118,14 +118,14 @@ export default function IscrizionePubblica() {
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-amber-50/30 dark:from-gray-900 dark:to-gray-950 text-gray-900 dark:text-gray-100 flex flex-col justify-between">
-            {/* Header / Vetrina */}
-            <div 
-                className="w-full h-32 md:h-56 bg-cover bg-center shadow-md relative"
-                style={{ backgroundImage: "url('/scout_banner.png')" }}
-            />
-
             {/* Main Form Box */}
-            <div className="flex-1 max-w-xl w-full mx-auto px-2 py-4 md:px-4 md:py-8">
+            <div className="flex-1 max-w-xl w-full mx-auto px-2 py-4 md:px-4 md:py-8 space-y-4">
+                {/* Header / Vetrina (Allineato alla larghezza del form) */}
+                <div 
+                    className="w-full h-32 md:h-52 bg-cover bg-center rounded-2xl md:rounded-3xl shadow-md"
+                    style={{ backgroundImage: "url('/scout_banner.png')" }}
+                />
+
                 {success ? (
                     <div className="bg-white dark:bg-gray-800 rounded-2xl md:rounded-3xl p-6 md:p-8 shadow-xl border border-emerald-100 dark:border-gray-700 text-center space-y-6 animate-in zoom-in-95 duration-300">
                         <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-950/50 rounded-full flex items-center justify-center mx-auto text-emerald-600">
@@ -134,7 +134,7 @@ export default function IscrizionePubblica() {
                         <div className="space-y-2">
                             <h2 className="text-2xl font-extrabold text-emerald-800 dark:text-emerald-250">Iscrizione Ricevuta!</h2>
                             <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-sm">
-                                Grazie per aver espresso la volontà di iscrivere <strong>{nomeRagazzo} {cognomeRagazzo}</strong>.
+                                Grazie per aver espresso la volontà di iscrivere <strong>{nomeRagazzo} {cognomeRagazzo}</strong> nel gruppo <strong>{groupName}</strong>.
                             </p>
                         </div>
                         <div className="pt-2">
@@ -145,15 +145,11 @@ export default function IscrizionePubblica() {
                     </div>
                 ) : (
                     <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-2xl md:rounded-3xl p-4 md:p-8 shadow-xl border border-gray-150 dark:border-gray-750 space-y-6">
-                        {/* Titolo e Gruppo */}
-                        <div className="text-center space-y-2 border-b border-gray-100 dark:border-gray-700/50 pb-4">
-                            <Compass className="w-10 h-10 mx-auto text-emerald-600 dark:text-emerald-450 drop-shadow-xs animate-pulse" />
+                        {/* Titolo */}
+                        <div className="text-center border-b border-gray-100 dark:border-gray-700/50 pb-4">
                             <h1 className="text-xl md:text-2xl font-black tracking-tight leading-tight text-gray-950 dark:text-white">
                                 Modulo richiesta inserimento negli scout
                             </h1>
-                            <p className="text-emerald-700 dark:text-emerald-350 font-bold text-sm md:text-base leading-none">
-                                {groupName}
-                            </p>
                         </div>
 
                         <div className="space-y-4">
