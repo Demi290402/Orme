@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { addIscrittoPubblico } from '@/lib/listaAttesa';
-import { Compass, User, Award, CheckCircle, AlertCircle, Sparkles } from 'lucide-react';
+import { Compass, User, Award, CheckCircle, AlertCircle } from 'lucide-react';
 
 const CLASSI = [
     'Asilo',
@@ -119,16 +119,14 @@ export default function IscrizionePubblica() {
     return (
         <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-amber-50/30 dark:from-gray-900 dark:to-gray-950 text-gray-900 dark:text-gray-100 flex flex-col justify-between">
             {/* Header / Vetrina */}
-            <div className="w-full bg-emerald-700 dark:bg-emerald-900 text-white py-12 px-4 shadow-md text-center relative overflow-hidden">
-                <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]"></div>
+            <div 
+                className="w-full text-white py-14 px-4 shadow-md text-center relative overflow-hidden bg-cover bg-center"
+                style={{ backgroundImage: "linear-gradient(to bottom, rgba(6, 78, 59, 0.7), rgba(4, 120, 87, 0.55)), url('/scout_banner.png')" }}
+            >
                 <div className="max-w-xl mx-auto space-y-3 relative z-10">
                     <Compass className="w-12 h-12 mx-auto text-amber-400 drop-shadow-md" />
-                    <h1 className="text-3xl font-extrabold tracking-tight">Iscrizioni & Lista d'Attesa</h1>
+                    <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">Modulo richiesta inserimento negli scout</h1>
                     <p className="text-emerald-100 font-medium text-lg">{groupName}</p>
-                    <div className="inline-flex items-center gap-1.5 bg-emerald-600/50 px-3 py-1 rounded-full text-xs font-bold border border-emerald-500/30">
-                        <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                        Lascia qui i dati per iscrivere tuo figlio/a
-                    </div>
                 </div>
             </div>
 
@@ -165,11 +163,12 @@ export default function IscrizionePubblica() {
                             </p>
                             <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
                                 Lo scoutismo è un mondo fatto di amicizia, natura, sorrisi e crescita personale — e non vediamo l’ora di accogliervi nella nostra grande famiglia! 💚✨
-                            </p>
-                            <div className="bg-emerald-50 dark:bg-emerald-950/20 p-4 rounded-2xl border border-emerald-100/30 font-bold text-xs text-emerald-800 dark:text-emerald-250">
-                                Pronti a partire?<br />
+                                <br />
+                                <br />
+                                Pronti a partire?
+                                <br />
                                 👉 Compila il modulo e... Buona Caccia! 🦊
-                            </div>
+                            </p>
                         </div>
 
                         <hr className="border-gray-100 dark:border-gray-700/50" />
