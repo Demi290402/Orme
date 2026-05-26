@@ -89,9 +89,7 @@ export default function ListaAttesa() {
     // Settings fields states
     const [formTitle, setFormTitle] = useState('');
     const [welcomeTitle, setWelcomeTitle] = useState('');
-    const [paragraph1, setParagraph1] = useState('');
-    const [paragraph2, setParagraph2] = useState('');
-    const [paragraph3, setParagraph3] = useState('');
+    const [descriptionText, setDescriptionText] = useState('');
     const [footerText, setFooterText] = useState('');
     const [bannerUrl, setBannerUrl] = useState('');
     const [successTitle, setSuccessTitle] = useState('');
@@ -145,6 +143,25 @@ export default function ListaAttesa() {
         fetchLista();
     }, []);
 
+    const handleBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const maxSize = 800 * 1024; // max 800 KB
+            if (file.size > maxSize) {
+                alert('L\'immagine inserita è troppo grande (max 800 KB).\n\nCONSIGLIO: riduci le dimensioni dell\'immagine o fai uno screenshot.');
+                e.target.value = '';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const result = reader.result as string;
+                setBannerUrl(result);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
     const openSettingsModal = async () => {
         if (!currentUser?.groupId) {
             showToast('Errore: ID gruppo non trovato.', 'error');
@@ -157,9 +174,7 @@ export default function ListaAttesa() {
             if (settings) {
                 setFormTitle(settings.formTitle);
                 setWelcomeTitle(settings.welcomeTitle);
-                setParagraph1(settings.paragraph1);
-                setParagraph2(settings.paragraph2);
-                setParagraph3(settings.paragraph3);
+                setDescriptionText(settings.descriptionText);
                 setFooterText(settings.footerText);
                 setBannerUrl(settings.bannerUrl);
                 setSuccessTitle(settings.successTitle);
@@ -168,9 +183,7 @@ export default function ListaAttesa() {
             } else {
                 setFormTitle('Modulo richiesta inserimento negli scout');
                 setWelcomeTitle('🎉 Benvenuti nel grande gioco dello scoutismo! 🌲⛺');
-                setParagraph1('Ciao! Siamo felici che tu stia pensando di far vivere a tuo/a figlio/a l’avventura più bella di tutte: quella scout! 🐾');
-                setParagraph2('Compilando questo modulo ci aiuterai a raccogliere le informazioni necessarie per organizzare al meglio le iscrizioni e per conoscerci un po’ prima di iniziare il cammino insieme.');
-                setParagraph3('Lo scoutismo è un mondo fatto di amicizia, natura, sorrisi e crescita personale — e non vediamo l’ora di accogliervi nella nostra grande famiglia! 💚✨');
+                setDescriptionText(`Ciao! Siamo felici che tu stia pensando di far vivere a tuo/a figlio/a l’avventura più bella di tutte: quella scout! 🐾\n\nCompilando questo modulo ci aiuterai a raccogliere le informazioni necessarie per organizzare al meglio le iscrizioni e per conoscerci un po’ prima di iniziare il cammino insieme.\n\nLo scoutismo è un mondo fatto di amicizia, natura, sorrisi e crescita personale — e non vediamo l’ora di accogliervi nella nostra grande famiglia! 💚✨`);
                 setFooterText('Pronti a partire?\n👉 Compila il modulo e... Buona Caccia! 🦊');
                 setBannerUrl('/scout_banner.png');
                 setSuccessTitle('Iscrizione Ricevuta!');
@@ -191,9 +204,7 @@ export default function ListaAttesa() {
             const success = await saveImpostazioniIscrizione({
                 formTitle,
                 welcomeTitle,
-                paragraph1,
-                paragraph2,
-                paragraph3,
+                descriptionText,
                 footerText,
                 bannerUrl,
                 successTitle,
@@ -982,14 +993,42 @@ export default function ListaAttesa() {
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-[10px] font-bold text-gray-700 dark:text-gray-300 mb-1">URL Immagine Banner (Copertina)</label>
-                                            <input
-                                                type="text"
-                                                required
-                                                value={bannerUrl}
-                                                onChange={(e) => setBannerUrl(e.target.value)}
-                                                className="w-full px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-xs focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
-                                            />
+                                            <label className="block text-[10px] font-bold text-gray-700 dark:text-gray-300 mb-1">Immagine Banner (Copertina)</label>
+                                            <div className="flex flex-col gap-2">
+                                                <div className="flex items-center gap-2">
+                                                    <input
+                                                        type="file"
+                                                        accept="image/*"
+                                                        onChange={handleBannerUpload}
+                                                        className="hidden"
+                                                        id="banner-upload"
+                                                    />
+                                                    <label
+                                                        htmlFor="banner-upload"
+                                                        className="px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/20 dark:text-indigo-300 rounded-xl text-xs font-bold border border-indigo-100 dark:border-indigo-900/30 transition-all cursor-pointer flex items-center gap-1.5"
+                                                    >
+                                                        Seleziona Immagine
+                                                    </label>
+                                                    {bannerUrl !== '/scout_banner.png' && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setBannerUrl('/scout_banner.png')}
+                                                            className="px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-950/20 dark:text-red-400 rounded-xl text-xs font-bold border border-red-100 dark:border-red-900/30 transition-all cursor-pointer"
+                                                        >
+                                                            Ripristina Default
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                {bannerUrl && (
+                                                    <div className="relative w-full h-16 rounded-lg overflow-hidden border border-gray-250 dark:border-gray-700 bg-gray-100 dark:bg-gray-900">
+                                                        <img
+                                                            src={bannerUrl}
+                                                            alt="Banner Preview"
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -1010,33 +1049,13 @@ export default function ListaAttesa() {
                                     </div>
                                     <div className="grid grid-cols-1 gap-3">
                                         <div>
-                                            <label className="block text-[10px] font-bold text-gray-700 dark:text-gray-300 mb-1">Paragrafo Descrizione 1</label>
+                                            <label className="block text-[10px] font-bold text-gray-700 dark:text-gray-300 mb-1">Descrizione Modulo (unico paragrafo, supporta a capo)</label>
                                             <textarea
                                                 required
-                                                value={paragraph1}
-                                                onChange={(e) => setParagraph1(e.target.value)}
-                                                rows={2}
-                                                className="w-full px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-xs resize-none focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-gray-700 dark:text-gray-300 mb-1">Paragrafo Descrizione 2</label>
-                                            <textarea
-                                                required
-                                                value={paragraph2}
-                                                onChange={(e) => setParagraph2(e.target.value)}
-                                                rows={2}
-                                                className="w-full px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-xs resize-none focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-gray-700 dark:text-gray-300 mb-1">Paragrafo Descrizione 3</label>
-                                            <textarea
-                                                required
-                                                value={paragraph3}
-                                                onChange={(e) => setParagraph3(e.target.value)}
-                                                rows={2}
-                                                className="w-full px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-xs resize-none focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
+                                                value={descriptionText}
+                                                onChange={(e) => setDescriptionText(e.target.value)}
+                                                rows={5}
+                                                className="w-full px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-xs focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
                                             />
                                         </div>
                                     </div>

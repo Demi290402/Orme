@@ -7,9 +7,11 @@ CREATE TABLE IF NOT EXISTS impostazioni_iscrizione (
     group_id TEXT PRIMARY KEY,
     form_title TEXT NOT NULL DEFAULT 'Modulo richiesta inserimento negli scout',
     welcome_title TEXT NOT NULL DEFAULT '🎉 Benvenuti nel grande gioco dello scoutismo! 🌲⛺',
-    paragraph_1 TEXT NOT NULL DEFAULT 'Ciao! Siamo felici che tu stia pensando di far vivere a tuo/a figlio/a l’avventura più bella di tutte: quella scout! 🐾',
-    paragraph_2 TEXT NOT NULL DEFAULT 'Compilando questo modulo ci aiuterai a raccogliere le informazioni necessarie per organizzare al meglio le iscrizioni e per conoscerci un po’ prima di iniziare il cammino insieme.',
-    paragraph_3 TEXT NOT NULL DEFAULT 'Lo scoutismo è un mondo fatto di amicizia, natura, sorrisi e crescita personale — e non vediamo l’ora di accogliervi nella nostra grande famiglia! 💚✨',
+    description_text TEXT NOT NULL DEFAULT 'Ciao! Siamo felici che tu stia pensando di far vivere a tuo/a figlio/a l’avventura più bella di tutte: quella scout! 🐾
+
+Compilando questo modulo ci aiuterai a raccogliere le informazioni necessarie per organizzare al meglio le iscrizioni e per conoscerci un po’ prima di iniziare il cammino insieme.
+
+Lo scoutismo è un mondo fatto di amicizia, natura, sorrisi e crescita personale — e non vediamo l’ora di accogliervi nella nostra grande famiglia! 💚✨',
     footer_text TEXT NOT NULL DEFAULT 'Pronti a partire?
 👉 Compila il modulo e... Buona Caccia! 🦊',
     banner_url TEXT NOT NULL DEFAULT '/scout_banner.png',

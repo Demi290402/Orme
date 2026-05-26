@@ -176,16 +176,10 @@ export default function IscrizionePubblica() {
                             <h2 className="text-lg font-black text-emerald-700 dark:text-emerald-300">
                                 {settings?.welcomeTitle || '🎉 Benvenuti nel grande gioco dello scoutismo! 🌲⛺'}
                             </h2>
-                            <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
-                                {settings?.paragraph1 || 'Ciao! Siamo felici che tu stia pensando di far vivere a tuo/a figlio/a l’avventura più bella di tutte: quella scout! 🐾'}
-                            </p>
-                            <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
-                                {settings?.paragraph2 || 'Compilando questo modulo ci aiuterai a raccogliere le informazioni necessarie per organizzare al meglio le iscrizioni e per conoscerci un po’ prima di iniziare il cammino insieme.'}
-                            </p>
                             <div className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed whitespace-pre-line">
                                 {settings ? (
                                     <>
-                                        {settings.paragraph3}
+                                        {settings.descriptionText}
                                         {settings.footerText && (
                                             <>
                                                 {"\n\n"}
@@ -195,6 +189,12 @@ export default function IscrizionePubblica() {
                                     </>
                                 ) : (
                                     <>
+                                        Ciao! Siamo felici che tu stia pensando di far vivere a tuo/a figlio/a l’avventura più bella di tutte: quella scout! 🐾
+                                        <br />
+                                        <br />
+                                        Compilando questo modulo ci aiuterai a raccogliere le informazioni necessarie per organizzare al meglio le iscrizioni e per conoscerci un po’ prima di iniziare il cammino insieme.
+                                        <br />
+                                        <br />
                                         Lo scoutismo è un mondo fatto di amicizia, natura, sorrisi e crescita personale — e non vediamo l’ora di accogliervi nella nostra grande famiglia! 💚✨
                                         <br />
                                         <br />

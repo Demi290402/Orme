@@ -325,9 +325,7 @@ export interface ImpostazioniIscrizione {
     groupId: string;
     formTitle: string;
     welcomeTitle: string;
-    paragraph1: string;
-    paragraph2: string;
-    paragraph3: string;
+    descriptionText: string;
     footerText: string;
     bannerUrl: string;
     successTitle: string;
