@@ -1,7 +1,7 @@
 // src/pages/Bilancio.tsx
 import { useEffect, useState } from 'react';
 import { Wallet, Filter, Plus, X } from 'lucide-react';
-import { fetchBilancio, addBilancioMovimento, updateBilancioMovimento, deleteBilancioMovimento } from '@/lib/bilancio';
+import { fetchBilancio, addBilancioMovimento } from '@/lib/bilancio';
 import type { BilancioMovimento, BrancaType } from '@/types';
 import { DisclaimerBanner } from '@/components/DisclaimerBanner';
 
