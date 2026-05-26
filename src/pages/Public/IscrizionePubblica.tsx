@@ -120,20 +120,20 @@ export default function IscrizionePubblica() {
         <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-amber-50/30 dark:from-gray-900 dark:to-gray-950 text-gray-900 dark:text-gray-100 flex flex-col justify-between">
             {/* Header / Vetrina */}
             <div 
-                className="w-full text-white py-14 px-4 shadow-md text-center relative overflow-hidden bg-cover bg-center"
-                style={{ backgroundImage: "linear-gradient(to bottom, rgba(6, 78, 59, 0.7), rgba(4, 120, 87, 0.55)), url('/scout_banner.png')" }}
+                className="w-full text-white py-10 md:py-16 px-4 shadow-md text-center relative bg-cover bg-center flex items-center justify-center min-h-[140px] md:min-h-[220px]"
+                style={{ backgroundImage: "url('/scout_banner.png')" }}
             >
-                <div className="max-w-xl mx-auto space-y-3 relative z-10">
-                    <Compass className="w-12 h-12 mx-auto text-amber-400 drop-shadow-md" />
-                    <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">Modulo richiesta inserimento negli scout</h1>
-                    <p className="text-emerald-100 font-medium text-lg">{groupName}</p>
+                <div className="max-w-xl w-full mx-auto p-4 md:p-6 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md rounded-2xl md:rounded-3xl shadow-lg border border-white/20 dark:border-gray-700/30 text-gray-900 dark:text-white space-y-2 md:space-y-3">
+                    <Compass className="w-10 h-10 mx-auto text-emerald-600 dark:text-emerald-450 drop-shadow-xs animate-pulse" />
+                    <h1 className="text-xl md:text-2xl font-black tracking-tight leading-tight">Modulo richiesta inserimento negli scout</h1>
+                    <p className="text-emerald-700 dark:text-emerald-350 font-bold text-sm md:text-base leading-none">{groupName}</p>
                 </div>
             </div>
 
             {/* Main Form Box */}
-            <div className="flex-1 max-w-xl w-full mx-auto p-4 md:py-8">
+            <div className="flex-1 max-w-xl w-full mx-auto px-2 py-4 md:px-4 md:py-8">
                 {success ? (
-                    <div className="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-xl border border-emerald-100 dark:border-gray-700 text-center space-y-6 animate-in zoom-in-95 duration-300">
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl md:rounded-3xl p-6 md:p-8 shadow-xl border border-emerald-100 dark:border-gray-700 text-center space-y-6 animate-in zoom-in-95 duration-300">
                         <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-950/50 rounded-full flex items-center justify-center mx-auto text-emerald-600">
                             <CheckCircle className="w-12 h-12" />
                         </div>
@@ -150,7 +150,7 @@ export default function IscrizionePubblica() {
                         </div>
                     </div>
                 ) : (
-                    <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-3xl p-6 md:p-8 shadow-xl border border-gray-150 dark:border-gray-750 space-y-6">
+                    <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-2xl md:rounded-3xl p-4 md:p-8 shadow-xl border border-gray-150 dark:border-gray-750 space-y-6">
                         <div className="space-y-4">
                             <h2 className="text-lg font-black text-emerald-700 dark:text-emerald-300">
                                 🎉 Benvenuti nel grande gioco dello scoutismo! 🌲⛺
