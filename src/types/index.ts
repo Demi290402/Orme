@@ -306,3 +306,18 @@ export interface BilancioMovimento {
     createdBy?: string;
     createdAt?: string;
 }
+
+export interface ListaAttesa {
+    id: string;
+    groupId: string;
+    nomeGenitore: string;
+    telefonoGenitore: string;
+    nomeRagazzo: string;
+    cognomeRagazzo: string;
+    dataNascita: string; // YYYY-MM-DD
+    classe: string;
+    dataIscrizione: string; // YYYY-MM-DD
+    note?: string;
+    stato: 'In attesa' | 'Accettato' | 'Rifiutato';
+    createdAt?: string;
+}

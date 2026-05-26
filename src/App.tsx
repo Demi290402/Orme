@@ -23,6 +23,8 @@ import Settings from '@/pages/Settings';
 import PrivacyPolicy from '@/pages/PrivacyPolicy';
 import Inventario from '@/pages/Inventario';
 import Bilancio from '@/pages/Bilancio';
+import ListaAttesa from '@/pages/ListaAttesa/ListaAttesa';
+import IscrizionePubblica from '@/pages/Public/IscrizionePubblica';
 
 function App() {
   return (
@@ -36,6 +38,7 @@ function App() {
           <Route path="/" element={<Layout><Home /></Layout>} />
           <Route path="/location/:id" element={<Layout><LocationDetail /></Layout>} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/iscrizione/:groupId" element={<IscrizionePubblica />} />
 
           {/* Protected routes */}
           <Route path="/leaderboard" element={<ProtectedRoute><Layout><Leaderboard /></Layout></ProtectedRoute>} />
@@ -47,6 +50,7 @@ function App() {
           <Route path="/calendario" element={<ProtectedRoute><Layout><Calendario /></Layout></ProtectedRoute>} />
           <Route path="/inventario" element={<ProtectedRoute><Layout><Inventario /></Layout></ProtectedRoute>} />
           <Route path="/bilancio" element={<ProtectedRoute><Layout><Bilancio /></Layout></ProtectedRoute>} />
+          <Route path="/lista-attesa" element={<ProtectedRoute><Layout><ListaAttesa /></Layout></ProtectedRoute>} />
           <Route path="/verbali" element={<ProtectedRoute><Layout><VerbaliList /></Layout></ProtectedRoute>} />
           <Route path="/verbali/nuovo" element={<ProtectedRoute><Layout><VerbaleEditor /></Layout></ProtectedRoute>} />
           <Route path="/verbali/modifica/:id" element={<ProtectedRoute><Layout><VerbaleEditor /></Layout></ProtectedRoute>} />
