@@ -1,29 +1,56 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Trophy, HelpCircle, Mail, FileText, CalendarDays, LogIn, UserPlus, Archive, Settings, Package, Menu, X, ChevronRight, Wallet, Clock } from 'lucide-react';
+import { Home, Trophy, HelpCircle, FileText, CalendarDays, LogIn, UserPlus, Archive, Settings, Package, Menu, X, ChevronRight, Wallet, Clock, WifiOff, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Logo from '@/components/Logo';
 import PWAInstallPrompt from './PWAInstallPrompt';
-import { getProposals } from '@/lib/proposals';
 import { User as UserType } from '@/types';
 import { getUser } from '@/lib/data';
 import UserAvatar from '@/components/UserAvatar';
 import NotificationBell from '@/components/NotificationBell';
+import { isOnline as checkOnline, getOfflineQueue, syncOfflineQueue } from '@/lib/offline';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
     const location = useLocation();
-    const [pendingCount, setPendingCount] = useState(0);
     const [currentUser, setCurrentUser] = useState<UserType | null>(null);
     const [showAltroMenu, setShowAltroMenu] = useState(false);
-
+    const [online, setOnline] = useState(checkOnline());
+    const [queueLength, setQueueLength] = useState(0);
+    const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'error' | 'done'>('idle');
 
     useEffect(() => {
-        getProposals().then(ps => {
-            setPendingCount(ps.filter(p => p.status === 'pending').length);
-        }).catch(console.error);
-        
         getUser().then(setCurrentUser).catch(console.error);
     }, [location.pathname]);
+
+    useEffect(() => {
+        const handleOnline = () => setOnline(true);
+        const handleOffline = () => setOnline(false);
+        const handleQueue = () => {
+            setQueueLength(getOfflineQueue().length);
+        };
+        const handleSyncStatus = (e: Event) => {
+            const status = (e as CustomEvent).detail;
+            setSyncStatus(status);
+            if (status === 'done') {
+                setTimeout(() => setSyncStatus('idle'), 3000);
+            }
+        };
+
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+        window.addEventListener('offline_queue_changed', handleQueue);
+        window.addEventListener('offline_sync_status', handleSyncStatus);
+
+        // Initial values
+        setQueueLength(getOfflineQueue().length);
+
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+            window.removeEventListener('offline_queue_changed', handleQueue);
+            window.removeEventListener('offline_sync_status', handleSyncStatus);
+        };
+    }, []);
 
     interface NavItem {
         icon: React.ElementType;
@@ -75,21 +102,36 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                         {/* Notification Bell */}
                         {currentUser && <NotificationBell />}
 
-                        {/* Proposals (Pending Inbox) */}
-                        <Link
-                            to="/proposals"
-                            className={cn(
-                                "relative p-2 text-gray-600 dark:text-gray-400 hover:text-scout-green transition-colors",
-                                location.pathname === '/proposals' && "text-scout-green"
-                            )}
-                        >
-                            <Mail size={24} />
-                            {pendingCount > 0 && (
-                                <span className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white dark:border-gray-800">
-                                    {pendingCount}
-                                </span>
-                            )}
-                        </Link>
+                        {/* Offline / Sync Indicator */}
+                        {!online ? (
+                            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-full border border-amber-500/20 text-xs font-semibold" title="Modalità Offline - I dati salvati localmente verranno sincronizzati quando torni online">
+                                <WifiOff size={16} className="animate-pulse shrink-0" />
+                                <span className="hidden sm:inline">Offline</span>
+                                {queueLength > 0 && (
+                                    <span className="ml-1 bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0">
+                                        {queueLength}
+                                    </span>
+                                )}
+                            </div>
+                        ) : queueLength > 0 || syncStatus === 'syncing' ? (
+                            <button
+                                onClick={() => syncOfflineQueue()}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-scout-green/10 text-scout-green rounded-full border border-scout-green/20 text-xs font-semibold hover:bg-scout-green/20 transition-all cursor-pointer"
+                                title="Sincronizzazione modifiche in corso..."
+                            >
+                                <RefreshCw size={16} className="animate-spin shrink-0" />
+                                <span className="hidden sm:inline">Sincronizzo ({queueLength})</span>
+                            </button>
+                        ) : syncStatus === 'error' ? (
+                            <button
+                                onClick={() => syncOfflineQueue()}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/10 text-red-500 rounded-full border border-red-500/20 text-xs font-semibold hover:bg-red-500/20 transition-all cursor-pointer"
+                                title="Errore di sincronizzazione. Clicca per riprovare."
+                            >
+                                <WifiOff size={16} className="shrink-0" />
+                                <span className="hidden sm:inline font-bold">Errore Sync</span>
+                            </button>
+                        ) : null}
 
                         {/* Desktop Nav */}
                         <nav className="hidden md:flex items-center space-x-5 relative">

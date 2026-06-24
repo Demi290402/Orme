@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { Location, User, LocationReview } from '@/types';
 import { createNotificationsForGroup } from './notifications';
+import { isOnline, getCachedData, setCachedData, enqueueOfflineWrite } from './offline';
 
 // =====================================================
 // GRUPPI SCOUT (per registrazione con cascading dropdown)
@@ -72,6 +73,8 @@ export async function registerUser(userData: {
     scoutZone: string;
     groupName: string;
     groupId: string; // numeric group id as string (e.g. "1", "2")
+    formazione?: any[];
+    hasNominaCapo?: boolean;
 }): Promise<User | null> {
     try {
         // 1. Create auth user in Supabase Auth
@@ -99,6 +102,8 @@ export async function registerUser(userData: {
                 scout_zone: userData.scoutZone,
                 group_name: userData.groupName,
                 group_id: userData.groupId,
+                formazione: userData.formazione || [],
+                has_nomina_capo: userData.hasNominaCapo || false,
             })
             .select()
             .single();
@@ -163,6 +168,12 @@ export async function deleteUserProfile(): Promise<void> {
 export async function getUser(id?: string): Promise<User> {
     try {
         if (id) {
+            if (!isOnline()) {
+                const cachedUsers = getCachedData<any[]>('users') || [];
+                const found = cachedUsers.find(u => u.id === id);
+                if (found) return mapSupabaseUserToUser(found);
+                return { id, firstName: 'Utente', lastName: 'Offline', nickname: 'Offline', email: '', password: '', points: 0, level: 1, badges: [], locationsAdded: 0, contributionsApproved: 0, validationsGiven: 0, rsLocationsAdded: 0, pricingInfoAdded: 0, coordinateInfoAdded: 0, websiteInfoAdded: 0, verbaliRead: 0, locationsSearched: 0, eventiAggiunti: 0, searchesLC: 0, searchesEG: 0, searchesRS: 0, searchesCoCa: 0, searchesGruppo: 0, verbaliReadIds: [], storicoItemsAdded: 0, reviewsAdded: 0, formazione: [], hasNominaCapo: false };
+            }
             // Get specific user by ID
             const { data, error } = await supabase
                 .from('users')
@@ -175,6 +186,12 @@ export async function getUser(id?: string): Promise<User> {
         }
 
         // Get current logged-in user
+        if (!isOnline()) {
+            const cached = getCachedData<any>('currentUser');
+            if (cached) return mapSupabaseUserToUser(cached);
+            throw new Error('No user logged in (offline)');
+        }
+
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('No user logged in');
 
@@ -185,14 +202,23 @@ export async function getUser(id?: string): Promise<User> {
             .single();
 
         if (profileError) throw profileError;
+        setCachedData('currentUser', profileData);
 
         return mapSupabaseUserToUser(profileData);
     } catch (error) {
+        const cached = getCachedData<any>('currentUser');
+        if (cached) return mapSupabaseUserToUser(cached);
         throw new Error('No user logged in');
     }
 }
 
 export async function getAllUsers(): Promise<User[]> {
+    const cacheKey = 'users';
+    if (!isOnline()) {
+        const cached = getCachedData<any[]>(cacheKey);
+        if (cached) return cached.map(mapSupabaseUserToUser);
+        return [];
+    }
     try {
         const currentUser = await getUser();
         const { data, error } = await supabase
@@ -202,58 +228,73 @@ export async function getAllUsers(): Promise<User[]> {
             .order('points', { ascending: false });
 
         if (error) throw error;
+        setCachedData(cacheKey, data);
         return data.map(mapSupabaseUserToUser);
     } catch (error) {
         console.error('Error fetching users:', error);
+        const cached = getCachedData<any[]>(cacheKey);
+        if (cached) return cached.map(mapSupabaseUserToUser);
         return [];
     }
 }
 
 export async function updateUser(user: User): Promise<User> {
+    const updateData = {
+        first_name: user.firstName,
+        last_name: user.lastName,
+        nickname: user.nickname,
+        profile_picture: user.profilePicture,
+        cover_image: user.coverImage,
+        scout_code: user.scoutCode,
+        email: user.email,
+        region: user.region,
+        scout_zone: user.scoutZone,
+        group_name: user.groupName,
+        group_id: user.groupId,
+        points: user.points,
+        level: user.level,
+        badges: user.badges,
+        locations_added: user.locationsAdded,
+        contributions_approved: user.contributionsApproved,
+        validations_given: user.validationsGiven,
+        rs_locations_added: user.rsLocationsAdded,
+        pricing_info_added: user.pricingInfoAdded,
+        coordinate_info_added: user.coordinateInfoAdded,
+        website_info_added: user.websiteInfoAdded,
+        verbali_read: user.verbaliRead,
+        locations_searched: user.locationsSearched,
+        searches_lc: user.searchesLC,
+        searches_eg: user.searchesEG,
+        searches_rs: user.searchesRS,
+        searches_coca: user.searchesCoCa,
+        searches_gruppo: user.searchesGruppo,
+        eventi_aggiunti: user.eventiAggiunti,
+        verbali_read_ids: user.verbaliReadIds,
+        storico_items_added: user.storicoItemsAdded,
+        reviews_added: user.reviewsAdded,
+        inventory_updates: user.inventoryUpdates || 0,
+        inventory_audits: user.inventoryAudits || 0,
+        formazione: user.formazione || [],
+        has_nomina_capo: user.hasNominaCapo || false,
+    };
+    if (!isOnline()) {
+        enqueueOfflineWrite('update', 'users', updateData, { id: user.id });
+        const cached = getCachedData<any>('currentUser');
+        if (cached && cached.id === user.id) {
+            setCachedData('currentUser', { ...cached, ...updateData });
+        }
+        return user;
+    }
     try {
         const { data, error } = await supabase
             .from('users')
-            .update({
-                first_name: user.firstName,
-                last_name: user.lastName,
-                nickname: user.nickname,
-                profile_picture: user.profilePicture,
-                cover_image: user.coverImage,
-                scout_code: user.scoutCode,
-                email: user.email,
-                region: user.region,
-                scout_zone: user.scoutZone,
-                group_name: user.groupName,
-                group_id: user.groupId,
-                points: user.points,
-                level: user.level,
-                badges: user.badges,
-                locations_added: user.locationsAdded,
-                contributions_approved: user.contributionsApproved,
-                validations_given: user.validationsGiven,
-                rs_locations_added: user.rsLocationsAdded,
-                pricing_info_added: user.pricingInfoAdded,
-                coordinate_info_added: user.coordinateInfoAdded,
-                website_info_added: user.websiteInfoAdded,
-                verbali_read: user.verbaliRead,
-                locations_searched: user.locationsSearched,
-                searches_lc: user.searchesLC,
-                searches_eg: user.searchesEG,
-                searches_rs: user.searchesRS,
-                searches_coca: user.searchesCoCa,
-                searches_gruppo: user.searchesGruppo,
-                eventi_aggiunti: user.eventiAggiunti,
-                verbali_read_ids: user.verbaliReadIds,
-                storico_items_added: user.storicoItemsAdded,
-                reviews_added: user.reviewsAdded,
-                inventory_updates: user.inventoryUpdates || 0,
-                inventory_audits: user.inventoryAudits || 0,
-            })
+            .update(updateData)
             .eq('id', user.id)
             .select()
             .single();
 
         if (error) throw error;
+        setCachedData('currentUser', data);
         return mapSupabaseUserToUser(data);
     } catch (error) {
         console.error('Error updating user:', error);
@@ -266,6 +307,12 @@ export async function updateUser(user: User): Promise<User> {
 // =====================================================
 
 export async function getLocations(): Promise<Location[]> {
+    const cacheKey = 'locations';
+    if (!isOnline()) {
+        const cached = getCachedData<any[]>(cacheKey);
+        if (cached) return cached.map(mapSupabaseLocationToLocation);
+        return [];
+    }
     try {
         const { data, error } = await supabase
             .from('locations')
@@ -273,9 +320,12 @@ export async function getLocations(): Promise<Location[]> {
             .order('created_at', { ascending: false });
 
         if (error) throw error;
+        setCachedData(cacheKey, data);
         return data.map(mapSupabaseLocationToLocation);
     } catch (error) {
         console.error('Error fetching locations:', error);
+        const cached = getCachedData<any[]>(cacheKey);
+        if (cached) return cached.map(mapSupabaseLocationToLocation);
         return [];
     }
 }
@@ -299,47 +349,56 @@ export async function getLocation(id: string): Promise<Location | null> {
 export async function addLocation(location: Omit<Location, 'id' | 'lastUpdatedAt' | 'lastUpdatedBy'>) {
     try {
         const currentUser = await getUser();
+        const locationId = crypto.randomUUID();
+
+        const insertData = {
+            id: locationId,
+            name: location.name,
+            region: location.region,
+            province: location.province,
+            commune: location.commune,
+            address: location.address,
+            google_maps_link: location.googleMapsLink,
+            contacts: location.contacts,
+            activities: location.activities,
+            quick_note: location.quickNote,
+            coordinates: location.coordinates,
+            beds: location.beds,
+            bathrooms: location.bathrooms,
+            has_tents: location.hasTents,
+            has_refectory: location.hasRefectory,
+            has_rover_service: location.hasRoverService,
+            has_church: location.hasChurch,
+            has_green_space: location.hasGreenSpace,
+            has_equipped_kitchen: location.hasEquippedKitchen,
+            has_poles: location.hasPoles,
+            has_pastures: location.hasPastures,
+            has_insects: location.hasInsects,
+            has_diseases: location.hasDiseases,
+            has_little_shade: location.hasLittleShade,
+            has_very_busy_area: location.hasVeryBusyArea,
+            other_attention: location.otherAttention,
+            other_logistics: location.otherLogistics,
+            rover_service_description: location.roverServiceDescription,
+            restrictions: location.restrictions,
+            availability_status: (location as any).availabilityStatus || 'available',
+            other_restrictions: location.otherRestrictions,
+            website: location.website,
+            email: location.email,
+            description: location.description,
+            pricing: location.pricing,
+            last_updated_by: currentUser.id,
+            group_id: currentUser.groupId,
+        };
+
+        if (!isOnline()) {
+            enqueueOfflineWrite('insert', 'locations', insertData);
+            return mapSupabaseLocationToLocation({ ...insertData, created_at: new Date().toISOString() });
+        }
 
         const { data, error } = await supabase
             .from('locations')
-            .insert({
-                name: location.name,
-                region: location.region,
-                province: location.province,
-                commune: location.commune,
-                address: location.address,
-                google_maps_link: location.googleMapsLink,
-                contacts: location.contacts,
-                activities: location.activities,
-                quick_note: location.quickNote,
-                coordinates: location.coordinates,
-                beds: location.beds,
-                bathrooms: location.bathrooms,
-                has_tents: location.hasTents,
-                has_refectory: location.hasRefectory,
-                has_rover_service: location.hasRoverService,
-                has_church: location.hasChurch,
-                has_green_space: location.hasGreenSpace,
-                has_equipped_kitchen: location.hasEquippedKitchen,
-                has_poles: location.hasPoles,
-                has_pastures: location.hasPastures,
-                has_insects: location.hasInsects,
-                has_diseases: location.hasDiseases,
-                has_little_shade: location.hasLittleShade,
-                has_very_busy_area: location.hasVeryBusyArea,
-                other_attention: location.otherAttention,
-                other_logistics: location.otherLogistics,
-                rover_service_description: location.roverServiceDescription,
-                restrictions: location.restrictions,
-                availability_status: (location as any).availabilityStatus || 'available',
-                other_restrictions: location.otherRestrictions,
-                website: location.website,
-                email: location.email,
-                description: location.description,
-                pricing: location.pricing,
-                last_updated_by: currentUser.id,
-                group_id: currentUser.groupId,
-            })
+            .insert(insertData)
             .select()
             .single();
 
@@ -386,6 +445,85 @@ export async function addLocation(location: Omit<Location, 'id' | 'lastUpdatedAt
     } catch (error) {
         console.error('Error adding location:', error);
         throw error;
+    }
+}
+
+export async function updateLocation(id: string, location: Partial<Location>, detailsSummary: string): Promise<Location | null> {
+    try {
+        const currentUser = await getUser();
+        const supabaseData = convertLocationToSupabaseFormat(location);
+
+        if (!isOnline()) {
+            enqueueOfflineWrite('update', 'locations', supabaseData, { id });
+            
+            // Log history offline
+            const historyData = {
+                location_id: id,
+                user_id: currentUser.id,
+                author_name: currentUser.nickname || currentUser.firstName,
+                details: detailsSummary,
+                created_at: new Date().toISOString()
+            };
+            enqueueOfflineWrite('insert', 'location_history', historyData);
+
+            const cachedLocations = getCachedData<any[]>('locations') || [];
+            const found = cachedLocations.find(l => l.id === id);
+            return found ? mapSupabaseLocationToLocation({ ...found, ...supabaseData }) : null;
+        }
+
+        const { data, error } = await supabase
+            .from('locations')
+            .update({
+                ...supabaseData,
+                last_updated_at: new Date().toISOString(),
+                last_updated_by: currentUser.id
+            })
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        // Log to history online
+        const { error: historyErr } = await supabase
+            .from('location_history')
+            .insert({
+                location_id: id,
+                user_id: currentUser.id,
+                author_name: currentUser.nickname || currentUser.firstName,
+                details: detailsSummary
+            });
+        if (historyErr) console.error("Error saving history:", historyErr);
+
+        // Update local cache
+        await getLocations();
+
+        return mapSupabaseLocationToLocation(data);
+    } catch (error) {
+        console.error('Error updating location:', error);
+        throw error;
+    }
+}
+
+export async function deleteLocation(id: string): Promise<boolean> {
+    try {
+        if (!isOnline()) {
+            enqueueOfflineWrite('delete', 'locations', null, { id });
+            return true;
+        }
+        const { error } = await supabase
+            .from('locations')
+            .delete()
+            .eq('id', id);
+        if (error) throw error;
+        
+        // Update local cache
+        await getLocations();
+        
+        return true;
+    } catch (error) {
+        console.error('Error deleting location:', error);
+        return false;
     }
 }
 
@@ -526,7 +664,156 @@ function mapSupabaseUserToUser(data: any): User {
         scoutZone: data.scout_zone,
         groupName: data.group_name,
         groupId: data.group_id,
+        formazione: data.formazione || [],
+        hasNominaCapo: data.has_nomina_capo || false,
     };
+}
+
+export async function getLocationHistory(locationId: string): Promise<any[]> {
+    const cacheKey = `location_history_${locationId}`;
+    if (!isOnline()) {
+        const cached = getCachedData<any[]>(cacheKey);
+        return cached || [];
+    }
+    try {
+        const { data, error } = await supabase
+            .from('location_history')
+            .select('*')
+            .eq('location_id', locationId)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        setCachedData(cacheKey, data);
+        return data;
+    } catch (error) {
+        console.error('Error fetching location history:', error);
+        const cached = getCachedData<any[]>(cacheKey);
+        return cached || [];
+    }
+}
+
+export async function getAllLocationHistory(): Promise<any[]> {
+    const cacheKey = 'all_location_history';
+    if (!isOnline()) {
+        const cached = getCachedData<any[]>(cacheKey);
+        return cached || [];
+    }
+    try {
+        const { data, error } = await supabase
+            .from('location_history')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        setCachedData(cacheKey, data);
+        return data;
+    } catch (error) {
+        console.error('Error fetching all location history:', error);
+        const cached = getCachedData<any[]>(cacheKey);
+        return cached || [];
+    }
+}
+
+export async function getUserLocationViews(): Promise<Record<string, string>> {
+    const cacheKey = 'user_location_views';
+    if (!isOnline()) {
+        const cached = getCachedData<Record<string, string>>(cacheKey);
+        return cached || {};
+    }
+    try {
+        const currentUser = await getUser();
+        const { data, error } = await supabase
+            .from('user_location_views')
+            .select('location_id, last_viewed_at')
+            .eq('user_id', currentUser.id);
+
+        if (error) throw error;
+        
+        const viewsMap: Record<string, string> = {};
+        data?.forEach((row: any) => {
+            viewsMap[row.location_id] = row.last_viewed_at;
+        });
+        
+        setCachedData(cacheKey, viewsMap);
+        return viewsMap;
+    } catch (error) {
+        console.error('Error fetching user location views:', error);
+        const cached = getCachedData<Record<string, string>>(cacheKey);
+        return cached || {};
+    }
+}
+
+export async function upsertLocationView(locationId: string): Promise<void> {
+    try {
+        const currentUser = await getUser();
+        const nowStr = new Date().toISOString();
+        
+        // Cache update
+        const cacheKey = 'user_location_views';
+        const cached = getCachedData<Record<string, string>>(cacheKey) || {};
+        cached[locationId] = nowStr;
+        setCachedData(cacheKey, cached);
+
+        if (!isOnline()) {
+            enqueueOfflineWrite('upsert', 'user_location_views', {
+                user_id: currentUser.id,
+                location_id: locationId,
+                last_viewed_at: nowStr
+            }, { user_id: currentUser.id, location_id: locationId });
+            return;
+        }
+
+        const { error } = await supabase
+            .from('user_location_views')
+            .upsert({
+                user_id: currentUser.id,
+                location_id: locationId,
+                last_viewed_at: nowStr
+            });
+
+        if (error) throw error;
+    } catch (error) {
+        console.error('Error upserting location view:', error);
+    }
+}
+
+function convertLocationToSupabaseFormat(location: Partial<Location>): any {
+    const data: any = {};
+    if (location.name !== undefined) data.name = location.name;
+    if (location.region !== undefined) data.region = location.region;
+    if (location.province !== undefined) data.province = location.province;
+    if (location.commune !== undefined) data.commune = location.commune;
+    if (location.address !== undefined) data.address = location.address;
+    if (location.googleMapsLink !== undefined) data.google_maps_link = location.googleMapsLink;
+    if (location.contacts !== undefined) data.contacts = location.contacts;
+    if (location.activities !== undefined) data.activities = location.activities;
+    if (location.quickNote !== undefined) data.quick_note = location.quickNote;
+    if (location.coordinates !== undefined) data.coordinates = location.coordinates;
+    if (location.beds !== undefined) data.beds = location.beds;
+    if (location.bathrooms !== undefined) data.bathrooms = location.bathrooms;
+    if (location.hasTents !== undefined) data.has_tents = location.hasTents;
+    if (location.hasRefectory !== undefined) data.has_refectory = location.hasRefectory;
+    if (location.hasRoverService !== undefined) data.has_rover_service = location.hasRoverService;
+    if (location.hasChurch !== undefined) data.has_church = location.hasChurch;
+    if (location.hasGreenSpace !== undefined) data.has_green_space = location.hasGreenSpace;
+    if (location.hasEquippedKitchen !== undefined) data.has_equipped_kitchen = location.hasEquippedKitchen;
+    if (location.hasPoles !== undefined) data.has_poles = location.hasPoles;
+    if (location.hasPastures !== undefined) data.has_pastures = location.hasPastures;
+    if (location.hasInsects !== undefined) data.has_insects = location.hasInsects;
+    if (location.hasDiseases !== undefined) data.has_diseases = location.hasDiseases;
+    if (location.hasLittleShade !== undefined) data.has_little_shade = location.hasLittleShade;
+    if (location.hasVeryBusyArea !== undefined) data.has_very_busy_area = location.hasVeryBusyArea;
+    if (location.otherAttention !== undefined) data.other_attention = location.otherAttention;
+    if (location.otherLogistics !== undefined) data.other_logistics = location.otherLogistics;
+    if (location.roverServiceDescription !== undefined) data.rover_service_description = location.roverServiceDescription;
+    if (location.restrictions !== undefined) data.restrictions = location.restrictions;
+    if (location.availabilityStatus !== undefined) data.availability_status = location.availabilityStatus;
+    if (location.otherRestrictions !== undefined) data.other_restrictions = location.otherRestrictions;
+    if (location.website !== undefined) data.website = location.website;
+    if (location.email !== undefined) data.email = location.email;
+    if (location.description !== undefined) data.description = location.description;
+    if (location.pricing !== undefined) data.pricing = location.pricing;
+    return data;
 }
 
 function mapSupabaseLocationToLocation(data: any): Location {

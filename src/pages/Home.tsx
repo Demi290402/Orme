@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Search, Filter, Plus, X, Check, Clock, Tent, BedDouble, Star } from 'lucide-react';
-import { getLocations, getUser } from '@/lib/data';
+import { Search, Filter, Plus, X, Check, Clock, Tent, BedDouble, Star, Bus } from 'lucide-react';
+import { getLocations, getUser, getUserLocationViews, getAllLocationHistory } from '@/lib/data';
 import { Location, User as UserType } from '@/types';
 import LocationCard from '@/components/LocationCard';
+import TransportModal from '@/components/TransportModal';
 import { Link } from 'react-router-dom';
 import { cn, getStalenessInfo } from '@/lib/utils';
 import { addPointsWithStats } from '@/lib/gamification';
@@ -44,11 +45,30 @@ export default function Home() {
     const [minRating, setMinRating] = useState(0);
     const [selectedPrices, setSelectedPrices] = useState<number[]>([]);
     const [currentUser, setCurrentUser] = useState<UserType | null>(null);
+    const [locationViews, setLocationViews] = useState<Record<string, string>>({});
+    const [histories, setHistories] = useState<any[]>([]);
+    const [showTransportModal, setShowTransportModal] = useState(false);
 
     useEffect(() => {
         getLocations().then(setLocations).catch(console.error);
         getUser().then(setCurrentUser).catch(console.error);
+        getUserLocationViews().then(setLocationViews).catch(console.error);
+        getAllLocationHistory().then(setHistories).catch(console.error);
     }, []);
+
+    const getUnreadCount = (locationId: string) => {
+        if (!currentUser) return 0;
+        const lastViewedAt = locationViews[locationId];
+        const locHistories = histories.filter(h => h.location_id === locationId);
+        
+        return locHistories.filter(h => {
+            if (h.user_id === currentUser.id) return false;
+            
+            const editTime = new Date(h.created_at).getTime();
+            const viewTime = lastViewedAt ? new Date(lastViewedAt).getTime() : 0;
+            return editTime > viewTime;
+        }).length;
+    };
 
     const toggleSelection = (list: any[], item: any, setList: (l: any[]) => void) => {
         if (list.includes(item)) {
@@ -439,7 +459,11 @@ export default function Home() {
             {/* Results Grid */}
             <div className="grid gap-4 md:grid-cols-2">
                 {(currentUser ? filteredLocations : filteredLocations.slice(0, 5)).map((location) => (
-                    <LocationCard key={location.id} location={location} />
+                    <LocationCard 
+                        key={location.id} 
+                        location={location} 
+                        unreadModificationsCount={getUnreadCount(location.id)} 
+                    />
                 ))}
 
                 {/* Guest Invitation Message */}
@@ -488,6 +512,25 @@ export default function Home() {
                     </div>
                 )}
             </div>
+
+            {/* Floating Action Button (FAB) for Transport Directory */}
+            {currentUser && (
+                <button
+                    onClick={() => setShowTransportModal(true)}
+                    className="fixed bottom-20 md:bottom-6 right-6 z-40 bg-scout-green hover:bg-scout-green-dark text-white p-4 rounded-full shadow-2xl hover:scale-[1.05] active:scale-95 transition-all duration-200 border-2 border-white dark:border-gray-800 flex items-center justify-center cursor-pointer group"
+                    title="Anagrafica Trasporti Privati"
+                >
+                    <Bus size={24} className="group-hover:rotate-12 transition-transform duration-200" />
+                    <span className="max-w-0 overflow-hidden group-hover:max-w-xs group-hover:ml-2 text-xs font-black uppercase transition-all duration-350 tracking-wider">
+                        Trasporti
+                    </span>
+                </button>
+            )}
+
+            {/* Transport Directory Modal */}
+            {showTransportModal && (
+                <TransportModal onClose={() => setShowTransportModal(false)} />
+            )}
         </div>
     );
 }

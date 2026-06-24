@@ -6,6 +6,7 @@ import { getStalenessInfo } from '@/lib/utils';
 
 interface LocationCardProps {
     location: Location;
+    unreadModificationsCount?: number;
 }
 
 const availabilityConfig = {
@@ -23,14 +24,19 @@ const availabilityConfig = {
     },
 };
 
-export default function LocationCard({ location }: LocationCardProps) {
+export default function LocationCard({ location, unreadModificationsCount }: LocationCardProps) {
     const staleness = getStalenessInfo(location.lastUpdatedAt);
     const status = location.availabilityStatus || 'available';
     const avail = status !== 'available' ? availabilityConfig[status as 'maintenance' | 'closed'] : null;
 
     return (
-        <Link to={`/location/${location.id}`} className="block">
-            <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border overflow-hidden hover:shadow-md dark:shadow-none transition-shadow active:scale-[0.98] transition-transform ${avail ? 'border-amber-300 dark:border-amber-700' : 'border-gray-100 dark:border-gray-700'}`}>
+        <Link to={`/location/${location.id}`} className="block relative">
+            <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border overflow-hidden hover:shadow-md dark:shadow-none transition-shadow active:scale-[0.98] transition-transform ${avail ? 'border-amber-300 dark:border-amber-700' : 'border-gray-100 dark:border-gray-700'} relative`}>
+                {unreadModificationsCount !== undefined && unreadModificationsCount > 0 && (
+                    <div className="absolute top-3 right-3 bg-red-500 text-white text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full border-2 border-white dark:border-gray-800 shadow-lg z-20 animate-pulse" title={`${unreadModificationsCount} modifiche non lette`}>
+                        {unreadModificationsCount}
+                    </div>
+                )}
                 {/* Availability Banner */}
                 {avail && (
                     <div className={`flex items-center justify-center gap-1.5 py-1.5 px-3 ${avail.banner}`}>

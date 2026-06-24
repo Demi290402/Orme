@@ -227,6 +227,9 @@ export default function Register() {
     const [scoutZone, setScoutZone] = useState('');
     const [groupName, setGroupName] = useState('');
 
+    const [formazione, setFormazione] = useState<{ corso: string; anno: string; mese: string }[]>([]);
+    const [hasNominaCapo, setHasNominaCapo] = useState(false);
+
     const [gruppi, setGruppi] = useState<GruppoScout[]>([]);
     const [loadingGruppi, setLoadingGruppi] = useState(true);
 
@@ -325,6 +328,12 @@ export default function Register() {
                 scoutZone,
                 groupName,
                 groupId: String(gruppo.id), // numeric id as string
+                formazione: formazione.map(f => ({
+                    corso: f.corso,
+                    anno: parseInt(f.anno),
+                    mese: f.mese ? parseInt(f.mese) : undefined
+                })).filter(f => !isNaN(f.anno)),
+                hasNominaCapo,
             });
             alert('Registrazione completata! Controlla la tua email per confermare l\'account prima di accedere.');
             navigate('/login');
@@ -431,6 +440,82 @@ export default function Register() {
                                 />
                             </>
                         )}
+                    </div>
+
+                    {/* Storico Formazione Capi */}
+                    <div className="p-4 bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600 rounded-2xl space-y-4">
+                        <h3 className="text-xs font-bold text-scout-brown dark:text-amber-400 uppercase tracking-wider">Iter di Formazione Capi</h3>
+                        <p className="text-[11px] text-gray-400 dark:text-gray-400">Aggiungi i campi di formazione metodologica vissuti e indica se hai ricevuto la Nomina a Capo.</p>
+                        
+                        <label className="flex items-center gap-2 cursor-pointer bg-white dark:bg-gray-800 p-2.5 rounded-xl border border-gray-200 dark:border-gray-600">
+                            <input
+                                type="checkbox"
+                                checked={hasNominaCapo}
+                                onChange={e => setHasNominaCapo(e.target.checked)}
+                                className="w-5 h-5 text-scout-green rounded focus:ring-scout-green"
+                            />
+                            <span className="text-sm font-bold dark:text-gray-200">Nomina a Capo</span>
+                        </label>
+
+                        <div className="space-y-2">
+                            {formazione.map((f, idx) => (
+                                <div key={idx} className="flex gap-2 items-center bg-white dark:bg-gray-800 p-2.5 rounded-xl border border-gray-200 dark:border-gray-600">
+                                    <select
+                                        value={f.corso}
+                                        onChange={e => {
+                                            const newFormazione = [...formazione];
+                                            newFormazione[idx].corso = e.target.value;
+                                            setFormazione(newFormazione);
+                                        }}
+                                        className="flex-1 p-2 bg-gray-55 dark:bg-gray-700 border border-gray-100 dark:border-gray-700 rounded-lg text-xs outline-none focus:ring-1 focus:ring-scout-green dark:text-white"
+                                    >
+                                        {['CFT', 'CFM LC', 'CFM EG', 'CFM RS', 'CFA', 'Campo Bibbia', 'CAM LC', 'CAM EG', 'CAM RS'].map(c => (
+                                            <option key={c} value={c}>{c}</option>
+                                        ))}
+                                    </select>
+                                    <input
+                                        type="number"
+                                        placeholder="Anno*"
+                                        value={f.anno}
+                                        onChange={e => {
+                                            const newFormazione = [...formazione];
+                                            newFormazione[idx].anno = e.target.value;
+                                            setFormazione(newFormazione);
+                                        }}
+                                        required
+                                        className="w-20 p-2 bg-gray-55 dark:bg-gray-700 border border-gray-100 dark:border-gray-700 rounded-lg text-xs outline-none focus:ring-1 focus:ring-scout-green dark:text-white"
+                                    />
+                                    <select
+                                        value={f.mese}
+                                        onChange={e => {
+                                            const newFormazione = [...formazione];
+                                            newFormazione[idx].mese = e.target.value;
+                                            setFormazione(newFormazione);
+                                        }}
+                                        className="w-24 p-2 bg-gray-55 dark:bg-gray-700 border border-gray-100 dark:border-gray-700 rounded-lg text-xs outline-none focus:ring-1 focus:ring-scout-green dark:text-white"
+                                    >
+                                        <option value="">Mese</option>
+                                        {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                                            <option key={m} value={m}>{new Date(2000, m - 1).toLocaleString('it-IT', { month: 'long' })}</option>
+                                        ))}
+                                    </select>
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormazione(formazione.filter((_, i) => i !== idx))}
+                                        className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                    >
+                                        <span className="text-xs">Rimuovi</span>
+                                    </button>
+                                </div>
+                            ))}
+                            <button
+                                type="button"
+                                onClick={() => setFormazione([...formazione, { corso: 'CFT', anno: '', mese: '' }])}
+                                className="w-full bg-scout-green/10 text-scout-green font-bold text-xs py-2 rounded-xl hover:bg-scout-green/20 transition-all border border-dashed border-scout-green/30"
+                            >
+                                + Aggiungi Corso di Formazione
+                            </button>
+                        </div>
                     </div>
 
                     {/* Email */}

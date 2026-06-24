@@ -194,8 +194,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                 'verbale_saved',
                 `📋 Verbale N. ${v.numero} — ${v.titolo || 'Riunione di CoCa'}`,
                 `${currentUser.nickname || currentUser.firstName} ha salvato il verbale del ${dateStr}.`,
-                { verbaleId: v.id, numero: v.numero },
-                currentUser.id
+                { verbaleId: v.id, numero: v.numero }
             );
             setNotifyStatus(s => ({ ...s, inApp: 'done' }));
         } catch (e) {
@@ -220,7 +219,6 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                 },
                 body: JSON.stringify({
                     groupId: currentUser.groupId,
-                    excludeUserId: currentUser.id,
                     subject: `${isNewVerbale ? '🆕' : '🔄'} Verbale ${actionLabel}: N. ${v.numero} — ${v.titolo || 'Riunione di CoCa'}`,
                     body: `${currentUser.nickname || currentUser.firstName} ha ${actionLabel} il verbale del ${
                         v.data ? new Date(v.data).toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric' }) : ''

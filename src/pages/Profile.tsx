@@ -54,7 +54,9 @@ export default function Profile() {
         scoutCode: '',
         region: '',
         scoutZone: '',
-        groupName: ''
+        groupName: '',
+        formazione: [] as any[],
+        hasNominaCapo: false
     });
 
     useEffect(() => {
@@ -72,7 +74,9 @@ export default function Profile() {
                     scoutCode: currentUser.scoutCode || '',
                     region: currentUser.region || '',
                     scoutZone: currentUser.scoutZone || '',
-                    groupName: currentUser.groupName || ''
+                    groupName: currentUser.groupName || '',
+                    formazione: currentUser.formazione || [],
+                    hasNominaCapo: currentUser.hasNominaCapo || false
                 });
             } catch (error) {
                 console.error('Error loading profile data:', error);
@@ -258,6 +262,87 @@ export default function Profile() {
                                 </div>
                                 <p className="text-[9px] text-gray-400 dark:text-gray-500">Il cambio gruppo non sposta i dati già inseriti.</p>
                             </div>
+
+                            {/* Storico Formazione Capi */}
+                            <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-xl space-y-3 dark:border dark:border-gray-700">
+                                <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Iter di Formazione</p>
+                                
+                                <label className="flex items-center gap-2 cursor-pointer bg-white dark:bg-gray-800 p-2 rounded-lg border border-gray-200 dark:border-gray-700">
+                                    <input
+                                        type="checkbox"
+                                        checked={editForm.hasNominaCapo}
+                                        onChange={e => setEditForm((prev: any) => ({ ...prev, hasNominaCapo: e.target.checked }))}
+                                        className="w-4 h-4 text-scout-green rounded focus:ring-scout-green"
+                                    />
+                                    <span className="text-xs font-bold dark:text-gray-300">Nomina a Capo</span>
+                                </label>
+
+                                <div className="space-y-2">
+                                    {(editForm.formazione || []).map((f, idx) => (
+                                        <div key={idx} className="flex gap-1.5 items-center bg-white dark:bg-gray-800 p-2 rounded-lg border border-gray-200 dark:border-gray-700">
+                                            <select
+                                                value={f.corso}
+                                                onChange={e => {
+                                                    const newForm = [...editForm.formazione];
+                                                    newForm[idx].corso = e.target.value;
+                                                    setEditForm((prev: any) => ({ ...prev, formazione: newForm }));
+                                                }}
+                                                className="flex-1 p-1 bg-gray-55 dark:bg-gray-700 border border-gray-150 rounded text-xs dark:text-white"
+                                            >
+                                                {['CFT', 'CFM LC', 'CFM EG', 'CFM RS', 'CFA', 'Campo Bibbia', 'CAM LC', 'CAM EG', 'CAM RS'].map(c => (
+                                                    <option key={c} value={c}>{c}</option>
+                                                ))}
+                                            </select>
+                                            <input
+                                                type="number"
+                                                placeholder="Anno"
+                                                value={f.anno}
+                                                onChange={e => {
+                                                    const newForm = [...editForm.formazione];
+                                                    newForm[idx].anno = e.target.value;
+                                                    setEditForm((prev: any) => ({ ...prev, formazione: newForm }));
+                                                }}
+                                                required
+                                                className="w-16 p-1 bg-gray-55 dark:bg-gray-700 border border-gray-150 rounded text-xs dark:text-white"
+                                            />
+                                            <select
+                                                value={f.mese || ''}
+                                                onChange={e => {
+                                                    const newForm = [...editForm.formazione];
+                                                    newForm[idx].mese = e.target.value ? parseInt(e.target.value) : undefined;
+                                                    setEditForm((prev: any) => ({ ...prev, formazione: newForm }));
+                                                }}
+                                                className="w-16 p-1 bg-gray-55 dark:bg-gray-700 border border-gray-150 rounded text-xs dark:text-white"
+                                            >
+                                                <option value="">Mese</option>
+                                                {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                                                    <option key={m} value={m}>{m}</option>
+                                                ))}
+                                            </select>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const newForm = editForm.formazione.filter((_, i) => i !== idx);
+                                                    setEditForm((prev: any) => ({ ...prev, formazione: newForm }));
+                                                }}
+                                                className="p-1 text-red-500 hover:bg-red-50 rounded"
+                                            >
+                                                <span className="text-[10px]">X</span>
+                                            </button>
+                                        </div>
+                                    ))}
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const newForm = [...(editForm.formazione || []), { corso: 'CFT', anno: new Date().getFullYear().toString(), mese: '' }];
+                                            setEditForm((prev: any) => ({ ...prev, formazione: newForm }));
+                                        }}
+                                        className="w-full bg-scout-green/10 text-scout-green font-bold text-[10px] py-1.5 rounded-lg hover:bg-scout-green/20 transition-all border border-dashed border-scout-green/30"
+                                    >
+                                        + Aggiungi Corso
+                                    </button>
+                                </div>
+                            </div>
                         </div>
 
                         <button
@@ -406,6 +491,41 @@ export default function Profile() {
                     <span className="text-xl font-bold text-gray-900 dark:text-white">{user.contributionsApproved}</span>
                     <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider text-center">Approvati</span>
                 </div>
+            </div>
+
+            {/* Sezione Formazione */}
+            <div className="mx-6 mb-8 bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+                <h3 className="text-lg font-bold mb-4 flex items-center justify-between text-scout-brown dark:text-amber-500">
+                    <span className="flex items-center gap-2">
+                        <Award className="text-scout-green dark:text-emerald-500" />
+                        Iter di Formazione Capi
+                    </span>
+                    {user.hasNominaCapo && (
+                        <span className="bg-scout-green text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow-sm">
+                            Nomina a Capo ⚜️
+                        </span>
+                    )}
+                </h3>
+                
+                {user.formazione && user.formazione.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {user.formazione.map((f, idx) => (
+                            <div key={idx} className="bg-gray-55 dark:bg-gray-900/60 p-3 rounded-xl border border-gray-100 dark:border-gray-750 flex items-center justify-between">
+                                <div>
+                                    <h4 className="font-bold text-sm text-gray-800 dark:text-gray-200">{f.corso}</h4>
+                                    <p className="text-xs text-gray-400">
+                                        Concluso nel {f.mese ? `${new Date(2000, f.mese - 1).toLocaleString('it-IT', { month: 'long' })} ` : ''}{f.anno}
+                                    </p>
+                                </div>
+                                <span className="text-lg">🎓</span>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-sm text-gray-400 dark:text-gray-500 italic text-center py-4">
+                        Nessun corso di formazione registrato nel profilo.
+                    </p>
+                )}
             </div>
 
             {/* Badges Section */}

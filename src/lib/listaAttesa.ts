@@ -1,11 +1,18 @@
 import { supabase } from './supabase';
 import { ListaAttesa, ImpostazioniIscrizione } from '@/types';
 import { getUser } from './data';
+import { isOnline, getCachedData, setCachedData, enqueueOfflineWrite } from './offline';
 
 /**
  * Recupera tutti gli iscritti in lista d'attesa associati al gruppo dell'utente corrente.
  */
 export async function getListaAttesa(): Promise<ListaAttesa[]> {
+    const cacheKey = 'lista_attesa';
+    if (!isOnline()) {
+        const cached = getCachedData<any[]>(cacheKey);
+        if (cached) return cached.map(mapDbRowToListaAttesa);
+        return [];
+    }
     try {
         const currentUser = await getUser();
         if (!currentUser.groupId) return [];
@@ -18,9 +25,12 @@ export async function getListaAttesa(): Promise<ListaAttesa[]> {
             .order('created_at', { ascending: true });
 
         if (error) throw error;
+        setCachedData(cacheKey, data);
         return (data || []).map(mapDbRowToListaAttesa);
     } catch (error) {
         console.error("Errore nel recupero della lista d'attesa:", error);
+        const cached = getCachedData<any[]>(cacheKey);
+        if (cached) return cached.map(mapDbRowToListaAttesa);
         return [];
     }
 }
@@ -35,24 +45,35 @@ export async function addIscritto(
         const currentUser = await getUser();
         if (!currentUser.groupId) throw new Error('Utente non associato a un gruppo scout');
 
+        const insertData = {
+            group_id: currentUser.groupId,
+            nome_genitore: iscritto.nomeGenitore.trim(),
+            telefono_genitore: iscritto.telefonoGenitore.trim(),
+            nome_ragazzo: iscritto.nomeRagazzo.trim(),
+            cognome_ragazzo: iscritto.cognomeRagazzo.trim(),
+            data_nascita: iscritto.dataNascita,
+            classe: iscritto.classe,
+            data_iscrizione: iscritto.dataIscrizione,
+            note: (iscritto.note || '').trim()
+        };
+
+        if (!isOnline()) {
+            const id = crypto.randomUUID();
+            enqueueOfflineWrite('insert', 'lista_attesa', { ...insertData, id });
+            return mapDbRowToListaAttesa({ ...insertData, id, created_at: new Date().toISOString() });
+        }
+
         const { data, error } = await supabase
             .from('lista_attesa')
-            .insert({
-                group_id: currentUser.groupId,
-                nome_genitore: iscritto.nomeGenitore.trim(),
-                telefono_genitore: iscritto.telefonoGenitore.trim(),
-                nome_ragazzo: iscritto.nomeRagazzo.trim(),
-                cognome_ragazzo: iscritto.cognomeRagazzo.trim(),
-                data_nascita: iscritto.dataNascita,
-                classe: iscritto.classe,
-                data_iscrizione: iscritto.dataIscrizione,
-                note: (iscritto.note || '').trim(),
-                stato: 'In attesa'
-            })
+            .insert(insertData)
             .select()
             .single();
 
         if (error) throw error;
+        
+        // Refresh local cache
+        await getListaAttesa();
+        
         return mapDbRowToListaAttesa(data);
     } catch (error) {
         console.error("Errore nell'aggiunta dell'iscritto:", error);
@@ -80,9 +101,20 @@ export async function addIscrittiBatch(
             data_nascita: iscritto.dataNascita,
             classe: iscritto.classe,
             data_iscrizione: iscritto.dataIscrizione,
-            note: (iscritto.note || '').trim(),
-            stato: 'In attesa'
+            note: (iscritto.note || '').trim()
         }));
+
+        if (!isOnline()) {
+            rowsToInsert.forEach(row => {
+                const id = crypto.randomUUID();
+                enqueueOfflineWrite('insert', 'lista_attesa', { ...row, id });
+            });
+            // Update local cache manually
+            const currentCache = getCachedData<any[]>('lista_attesa') || [];
+            const newRows = rowsToInsert.map(row => ({ ...row, id: crypto.randomUUID(), created_at: new Date().toISOString() }));
+            setCachedData('lista_attesa', [...newRows, ...currentCache]);
+            return newRows.map(mapDbRowToListaAttesa);
+        }
 
         const { data, error } = await supabase
             .from('lista_attesa')
@@ -90,6 +122,10 @@ export async function addIscrittiBatch(
             .select();
 
         if (error) throw error;
+        
+        // Refresh local cache
+        await getListaAttesa();
+        
         return (data || []).map(mapDbRowToListaAttesa);
     } catch (error) {
         console.error("Errore nell'inserimento batch degli iscritti:", error);
@@ -105,20 +141,26 @@ export async function addIscrittoPubblico(
     iscritto: Omit<ListaAttesa, 'id' | 'groupId' | 'createdAt'>
 ): Promise<boolean> {
     try {
+        const insertData = {
+            group_id: groupId,
+            nome_genitore: iscritto.nomeGenitore.trim(),
+            telefono_genitore: iscritto.telefonoGenitore.trim(),
+            nome_ragazzo: iscritto.nomeRagazzo.trim(),
+            cognome_ragazzo: iscritto.cognomeRagazzo.trim(),
+            data_nascita: iscritto.dataNascita,
+            classe: iscritto.classe,
+            data_iscrizione: iscritto.dataIscrizione || new Date().toISOString().split('T')[0],
+            note: (iscritto.note || '').trim()
+        };
+
+        if (!isOnline()) {
+            enqueueOfflineWrite('insert', 'lista_attesa', { ...insertData, id: crypto.randomUUID() });
+            return true;
+        }
+
         const { error } = await supabase
             .from('lista_attesa')
-            .insert({
-                group_id: groupId,
-                nome_genitore: iscritto.nomeGenitore.trim(),
-                telefono_genitore: iscritto.telefonoGenitore.trim(),
-                nome_ragazzo: iscritto.nomeRagazzo.trim(),
-                cognome_ragazzo: iscritto.cognomeRagazzo.trim(),
-                data_nascita: iscritto.dataNascita,
-                classe: iscritto.classe,
-                data_iscrizione: iscritto.dataIscrizione || new Date().toISOString().split('T')[0],
-                note: (iscritto.note || '').trim(),
-                stato: 'In attesa'
-            });
+            .insert(insertData);
 
         if (error) throw error;
         return true;
@@ -133,23 +175,34 @@ export async function addIscrittoPubblico(
  */
 export async function updateIscritto(iscritto: ListaAttesa): Promise<ListaAttesa | null> {
     try {
+        const updateData = {
+            nome_genitore: iscritto.nomeGenitore.trim(),
+            telefono_genitore: iscritto.telefonoGenitore.trim(),
+            nome_ragazzo: iscritto.nomeRagazzo.trim(),
+            cognome_ragazzo: iscritto.cognomeRagazzo.trim(),
+            data_nascita: iscritto.dataNascita,
+            classe: iscritto.classe,
+            data_iscrizione: iscritto.dataIscrizione,
+            note: (iscritto.note || '').trim()
+        };
+
+        if (!isOnline()) {
+            enqueueOfflineWrite('update', 'lista_attesa', updateData, { id: iscritto.id });
+            return iscritto;
+        }
+
         const { data, error } = await supabase
             .from('lista_attesa')
-            .update({
-                nome_genitore: iscritto.nomeGenitore.trim(),
-                telefono_genitore: iscritto.telefonoGenitore.trim(),
-                nome_ragazzo: iscritto.nomeRagazzo.trim(),
-                cognome_ragazzo: iscritto.cognomeRagazzo.trim(),
-                data_nascita: iscritto.dataNascita,
-                classe: iscritto.classe,
-                data_iscrizione: iscritto.dataIscrizione,
-                note: (iscritto.note || '').trim()
-            })
+            .update(updateData)
             .eq('id', iscritto.id)
             .select()
             .single();
 
         if (error) throw error;
+        
+        // Refresh local cache
+        await getListaAttesa();
+        
         return mapDbRowToListaAttesa(data);
     } catch (error) {
         console.error("Errore nell'aggiornamento dell'iscritto:", error);
@@ -162,12 +215,21 @@ export async function updateIscritto(iscritto: ListaAttesa): Promise<ListaAttesa
  */
 export async function deleteIscritto(id: string): Promise<boolean> {
     try {
+        if (!isOnline()) {
+            enqueueOfflineWrite('delete', 'lista_attesa', null, { id });
+            return true;
+        }
+
         const { error } = await supabase
             .from('lista_attesa')
             .delete()
             .eq('id', id);
 
         if (error) throw error;
+        
+        // Refresh local cache
+        await getListaAttesa();
+        
         return true;
     } catch (error) {
         console.error("Errore nell'eliminazione dell'iscritto:", error);
@@ -199,6 +261,12 @@ function mapDbRowToListaAttesa(row: any): ListaAttesa {
  * Se non esistono nel database o la tabella non è pronta, restituisce null.
  */
 export async function getImpostazioniIscrizione(groupId: string): Promise<ImpostazioniIscrizione | null> {
+    const cacheKey = `impostazioni_iscrizione_${groupId}`;
+    if (!isOnline()) {
+        const cached = getCachedData<any>(cacheKey);
+        if (cached) return mapDbRowToImpostazioni(cached);
+        return null;
+    }
     try {
         const { data, error } = await supabase
             .from('impostazioni_iscrizione')
@@ -208,14 +276,17 @@ export async function getImpostazioniIscrizione(groupId: string): Promise<Impost
 
         if (error) {
             console.warn("Tabella impostazioni_iscrizione non trovata o errore di caricamento. Fallback al default.", error);
-            return null;
+            const cached = getCachedData<any>(cacheKey);
+            return cached ? mapDbRowToImpostazioni(cached) : null;
         }
         if (!data) return null;
 
+        setCachedData(cacheKey, data);
         return mapDbRowToImpostazioni(data);
     } catch (error) {
         console.error("Errore nel recupero delle impostazioni iscrizione:", error);
-        return null;
+        const cached = getCachedData<any>(cacheKey);
+        return cached ? mapDbRowToImpostazioni(cached) : null;
     }
 }
 
@@ -229,23 +300,32 @@ export async function saveImpostazioniIscrizione(
         const currentUser = await getUser();
         if (!currentUser.groupId) throw new Error('Utente non associato a un gruppo scout');
 
+        const upsertData = {
+            group_id: currentUser.groupId,
+            form_title: settings.formTitle.trim(),
+            welcome_title: settings.welcomeTitle.trim(),
+            description_text: settings.descriptionText.trim(),
+            footer_text: settings.footerText.trim(),
+            banner_url: settings.bannerUrl.trim(),
+            success_title: settings.successTitle.trim(),
+            success_message: settings.successMessage.trim(),
+            disclaimer_text: settings.disclaimerText.trim()
+        };
+
+        if (!isOnline()) {
+            enqueueOfflineWrite('upsert', 'impostazioni_iscrizione', upsertData, { group_id: currentUser.groupId });
+            return mapDbRowToImpostazioni({ ...upsertData, created_at: new Date().toISOString() });
+        }
+
         const { data, error } = await supabase
             .from('impostazioni_iscrizione')
-            .upsert({
-                group_id: currentUser.groupId,
-                form_title: settings.formTitle.trim(),
-                welcome_title: settings.welcomeTitle.trim(),
-                description_text: settings.descriptionText.trim(),
-                footer_text: settings.footerText.trim(),
-                banner_url: settings.bannerUrl.trim(),
-                success_title: settings.successTitle.trim(),
-                success_message: settings.successMessage.trim(),
-                disclaimer_text: settings.disclaimerText.trim()
-            })
+            .upsert(upsertData)
             .select()
             .single();
 
         if (error) throw error;
+        
+        setCachedData(`impostazioni_iscrizione_${currentUser.groupId}`, data);
         return mapDbRowToImpostazioni(data);
     } catch (error) {
         console.error("Errore nel salvataggio delle impostazioni iscrizione:", error);
@@ -267,4 +347,3 @@ function mapDbRowToImpostazioni(row: any): ImpostazioniIscrizione {
         createdAt: row.created_at
     };
 }
-

@@ -1054,8 +1054,7 @@ export default function ListaAttesa() {
     data_nascita: row[5],      // Modifica l'indice
     classe: row[6],           // Modifica l'indice
     data_iscrizione: new Date().toISOString().split('T')[0],
-    note: row[7] || '',        // Modifica l'indice (lascia vuoto se non c'è una colonna note)
-    stato: 'In attesa'
+    note: row[7] || ''        // Modifica l'indice (lascia vuoto se non c'è una colonna note)
   };
   
   var options = {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ChevronLeft, Save, MapPin } from 'lucide-react';
-import { addLocation, getLocations } from '@/lib/data';
+import { addLocation, getLocations, updateLocation } from '@/lib/data';
 import RichTextEditor from '@/components/RichTextEditor';
 // import { addPoints } from '@/lib/gamification'; // Handled in addLocation now
 
@@ -229,10 +229,10 @@ export default function AddLocation() {
 
         try {
             if (isEditMode && id) {
-                const { createProposal } = await import('@/lib/proposals');
-                await createProposal('update', id, formData.name, locationData as any);
-                alert("Attendere approvazione di 2 capi per visualizzare le modifiche apportate");
-                navigate('/');
+                const detailsSummary = prompt("Descrivi brevemente cosa hai modificato (es. Aggiornati contatti, Aggiunti posti letto):") || "Aggiornate informazioni generali";
+                await updateLocation(id, locationData as any, detailsSummary);
+                alert("Modifiche salvate con successo!");
+                navigate(`/location/${id}`);
             } else {
                 // Add Location directly
                 await addLocation(locationData);

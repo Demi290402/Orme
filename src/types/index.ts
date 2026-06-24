@@ -38,6 +38,18 @@ export interface User {
     scoutZone?: string;
     groupName?: string;
     groupId?: string;
+    
+    // Storico Formazione
+    formazione?: CorsoFormazione[];
+    hasNominaCapo?: boolean;
+}
+
+export type TipoCorso = 'CFT' | 'CFM LC' | 'CFM EG' | 'CFM RS' | 'CFA' | 'Campo Bibbia' | 'CAM LC' | 'CAM EG' | 'CAM RS';
+
+export interface CorsoFormazione {
+    corso: TipoCorso;
+    anno: number;
+    mese?: number; // facoltativo
 }
 
 export interface MembroCoCa {
@@ -331,5 +343,23 @@ export interface ImpostazioniIscrizione {
     successTitle: string;
     successMessage: string;
     disclaimerText: string;
+    createdAt?: string;
+}
+
+export interface ServizioTrasporto {
+    id: string;
+    groupId: string;
+    companyName: string;
+    contactName?: string;
+    phone?: string;
+    email?: string;
+    departureRegion: string;
+    departureProvince?: string;
+    departureCommune: string;
+    departureAddress?: string;
+    capacity: number;
+    pricePerPerson?: number;
+    basePrice?: number;
+    notes?: string;
     createdAt?: string;
 }

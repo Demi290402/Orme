@@ -10,7 +10,7 @@ import Leaderboard from '@/pages/Leaderboard';
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
 import Guide from '@/pages/Guide';
-import Proposals from '@/pages/Proposals';
+// Removed Proposals import
 import VerbaliList from '@/pages/Verbali/VerbaliList';
 import VerbaleEditor from '@/pages/Verbali/VerbaleEditor';
 import MembriCoCa from '@/pages/Verbali/MembriCoCa';
@@ -46,7 +46,7 @@ function App() {
           <Route path="/edit/:id" element={<ProtectedRoute><Layout><AddLocation /></Layout></ProtectedRoute>} />
           <Route path="/guide" element={<ProtectedRoute><Layout><Guide /></Layout></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Layout><Profile /></Layout></ProtectedRoute>} />
-          <Route path="/proposals" element={<ProtectedRoute><Layout><Proposals /></Layout></ProtectedRoute>} />
+          // Removed proposals route
           <Route path="/calendario" element={<ProtectedRoute><Layout><Calendario /></Layout></ProtectedRoute>} />
           <Route path="/inventario" element={<ProtectedRoute><Layout><Inventario /></Layout></ProtectedRoute>} />
           <Route path="/bilancio" element={<ProtectedRoute><Layout><Bilancio /></Layout></ProtectedRoute>} />

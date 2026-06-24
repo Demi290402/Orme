@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Phone, MessageCircle, Map, ArrowLeft, BedDouble, Tent, Coffee, ShieldAlert, Edit, Euro, Wrench, Ban, Star, Footprints, MessageSquare, X, Droplets, Flame, Wind, ShieldCheck, Users } from 'lucide-react';
-import { getLocations, getUser, getReviews, saveReview } from '@/lib/data';
+import { Phone, MessageCircle, Map, ArrowLeft, BedDouble, Tent, Coffee, ShieldAlert, Edit, Euro, Wrench, Ban, Star, Footprints, MessageSquare, X, Droplets, Flame, Wind, ShieldCheck, Users, ChevronLeft, ChevronRight } from 'lucide-react';
+import { getLocations, getUser, getReviews, saveReview, deleteLocation, getLocationHistory, upsertLocationView, getUserLocationViews } from '@/lib/data';
 import { Location, LocationReview } from '@/types';
 import { getStalenessInfo, cn } from '@/lib/utils';
 import { addPointsWithStats } from '@/lib/gamification';
@@ -205,6 +205,20 @@ export default function LocationDetail() {
     const [showReviewModal, setShowReviewModal] = useState(false);
     const [loading, setLoading] = useState(true);
 
+    const [historyList, setHistoryList] = useState<any[]>([]);
+    const [oldLastViewedAt, setOldLastViewedAt] = useState<string | null>(null);
+    const [bannerOpen, setBannerOpen] = useState(true);
+    const [bannerMinimized, setBannerMinimized] = useState(false);
+    const [bannerMaximized, setBannerMaximized] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(window.innerWidth < 768 ? 5 : 10);
+
+    useEffect(() => {
+        const handleResize = () => setPageSize(window.innerWidth < 768 ? 5 : 10);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     useEffect(() => {
         const loadData = async () => {
             try {
@@ -214,6 +228,18 @@ export default function LocationDetail() {
                     setLocation(found);
                     const revs = await getReviews(found.id);
                     setReviews(revs);
+
+                    // Fetch history logs
+                    const history = await getLocationHistory(found.id);
+                    setHistoryList(history);
+
+                    // Fetch views map
+                    const views = await getUserLocationViews();
+                    const lastViewed = views[found.id];
+                    setOldLastViewedAt(lastViewed || null);
+
+                    // Track current view read state
+                    await upsertLocationView(found.id);
                 }
                 const user = await getUser();
                 setCurrentUser(user);
@@ -248,6 +274,121 @@ export default function LocationDetail() {
 
     const updatedByText = updaterInfo ? `da ${updaterInfo.nickname}${updaterInfo.groupName ? ` - ${updaterInfo.groupName}` : ''}` : '';
 
+    const totalPages = Math.ceil(historyList.length / pageSize);
+    const paginatedHistory = historyList.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+    const renderBannerContent = (isModal: boolean) => (
+        <div className={cn(
+            "bg-white dark:bg-gray-800 rounded-3xl border border-gray-150 dark:border-gray-700 shadow-lg p-6 space-y-4",
+            isModal ? "w-full max-w-2xl max-h-[90vh] overflow-y-auto" : ""
+        )}>
+            <div className="flex justify-between items-center pb-2 border-b border-gray-100 dark:border-gray-700">
+                <div className="flex items-center gap-2">
+                    <Footprints className="text-scout-green animate-pulse" size={18} />
+                    <h3 className="font-extrabold text-sm text-gray-900 dark:text-white uppercase tracking-wider">Cronologia Modifiche</h3>
+                    {oldLastViewedAt && historyList.some(h => h.user_id !== currentUser?.id && new Date(h.created_at).getTime() > new Date(oldLastViewedAt).getTime()) && (
+                        <span className="bg-red-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full animate-bounce">NUOVE</span>
+                    )}
+                </div>
+                <div className="flex items-center gap-2">
+                    {!isModal && (
+                        <>
+                            <button 
+                                onClick={() => setBannerMinimized(true)} 
+                                className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-500 dark:text-gray-400 font-bold w-7 h-7 flex items-center justify-center text-lg"
+                                title="Riduci a icona"
+                            >
+                                -
+                            </button>
+                            <button 
+                                onClick={() => setBannerMaximized(true)} 
+                                className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-500 dark:text-gray-400"
+                                title="Schermo intero"
+                            >
+                                <svg className="w-4.5 h-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+                            </button>
+                        </>
+                    )}
+                    {isModal && (
+                        <button 
+                            onClick={() => setBannerMaximized(false)} 
+                            className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-500 dark:text-gray-400"
+                            title="Riduci a finestra"
+                        >
+                            <svg className="w-4.5 h-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M10 14l-7 7"/></svg>
+                        </button>
+                    )}
+                    <button 
+                        onClick={() => {
+                            setBannerOpen(false);
+                            setBannerMaximized(false);
+                        }} 
+                        className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-500 dark:text-gray-400"
+                        title="Chiudi"
+                    >
+                        <X size={16} />
+                    </button>
+                </div>
+            </div>
+
+            {historyList.length === 0 ? (
+                <p className="text-xs text-gray-500 italic py-2">Nessuna modifica registrata per questo luogo.</p>
+            ) : (
+                <div className="space-y-3 py-2">
+                    {paginatedHistory.map((item) => {
+                        const isNew = oldLastViewedAt && item.user_id !== currentUser?.id && new Date(item.created_at).getTime() > new Date(oldLastViewedAt).getTime();
+                        return (
+                            <div key={item.id} className={cn(
+                                "p-3.5 rounded-2xl border text-xs transition-all relative",
+                                isNew 
+                                    ? "bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-350 dark:border-emerald-800" 
+                                    : "bg-gray-50/50 dark:bg-gray-900/40 border-gray-100 dark:border-gray-750"
+                            )}>
+                                {isNew && (
+                                    <div className="absolute top-3.5 right-3.5 w-2 h-2 bg-emerald-500 rounded-full animate-pulse" title="Modifica non letta" />
+                                )}
+                                <div className="flex justify-between items-center mb-1.5">
+                                    <span className="font-extrabold text-scout-green-dark dark:text-emerald-400">
+                                        {item.author_name || 'Autore sconosciuto'}
+                                    </span>
+                                    <span className="text-[10px] text-gray-400 font-semibold">
+                                        {new Date(item.created_at).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                </div>
+                                <p className="text-gray-700 dark:text-gray-300 leading-relaxed font-medium">
+                                    {item.details}
+                                </p>
+                            </div>
+                        );
+                    })}
+
+                    {/* Pagination Controls */}
+                    {totalPages > 1 && (
+                        <div className="flex justify-between items-center pt-2 mt-4">
+                            <button
+                                disabled={currentPage === 1}
+                                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                className="p-2 rounded-xl border border-gray-200 dark:border-gray-750 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:hover:bg-transparent transition-all cursor-pointer dark:text-white"
+                            >
+                                <ChevronLeft size={16} />
+                            </button>
+                            <span className="text-xs font-bold text-gray-550">
+                                Pagina {currentPage} di {totalPages}
+                            </span>
+                            <button
+                                disabled={currentPage === totalPages}
+                                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                className="p-2 rounded-xl border border-gray-200 dark:border-gray-750 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:hover:bg-transparent transition-all cursor-pointer dark:text-white"
+                            >
+                                <ChevronRight size={16} />
+                            </button>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+
     return (
         <div className="space-y-6 pb-20">
             {/* Header */}
@@ -269,6 +410,28 @@ export default function LocationDetail() {
             )}>
                 Aggiornato: {new Date(location.lastUpdatedAt).toLocaleDateString('it-IT', { month: 'short', year: 'numeric' })} {updatedByText}
             </div>
+
+            {/* Modification History Banner */}
+            {bannerOpen && !bannerMinimized && !bannerMaximized && renderBannerContent(false)}
+
+            {/* Maximized Overlay */}
+            {bannerOpen && bannerMaximized && (
+                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+                    {renderBannerContent(true)}
+                </div>
+            )}
+
+            {/* Minimized Floating Indicator */}
+            {bannerOpen && bannerMinimized && (
+                <button
+                    onClick={() => setBannerMinimized(false)}
+                    className="fixed bottom-6 right-6 z-[90] bg-scout-green text-white px-5 py-3 rounded-full shadow-2xl flex items-center gap-2 hover:scale-[1.05] active:scale-95 transition-all text-xs font-black animate-bounce border-2 border-white dark:border-gray-800 cursor-pointer"
+                    title="Vedi cronologia modifiche"
+                >
+                    <Footprints size={16} />
+                    <span>Modifiche ({historyList.length})</span>
+                </button>
+            )}
 
             {/* Ratings Summary & Spider Chart */}
             <div className="bg-white dark:bg-gray-800 rounded-[2rem] p-6 shadow-sm border border-gray-100 dark:border-gray-700">
@@ -527,13 +690,17 @@ export default function LocationDetail() {
 
                     <button
                         onClick={async () => {
-                            if (confirm("Conferma di voler eliminare questo luogo? La richiesta sarà inviata agli altri capi.")) {
-                                const { createProposal } = await import('@/lib/proposals');
-                                await createProposal('delete', location.id, location.name);
-                                alert("Richiesta di eliminazione inviata!");
+                            if (confirm("Conferma di voler eliminare definitivamente questo luogo?")) {
+                                const success = await deleteLocation(location.id);
+                                if (success) {
+                                    alert("Luogo eliminato con successo!");
+                                    navigate('/');
+                                } else {
+                                    alert("Errore durante l'eliminazione.");
+                                }
                             }
                         }}
-                        className="w-full text-red-500 font-black py-3 rounded-2xl flex items-center justify-center gap-2 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all text-xs uppercase tracking-widest"
+                        className="w-full text-red-550 font-black py-3 rounded-2xl flex items-center justify-center gap-2 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all text-xs uppercase tracking-widest"
                     >
                         <ShieldAlert size={18} />
                         Elimina Luogo
