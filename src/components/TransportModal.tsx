@@ -43,7 +43,9 @@ export default function TransportModal({ onClose }: TransportModalProps) {
     const [departureAddress, setDepartureAddress] = useState('');
     const [capacity, setCapacity] = useState<number>(50);
     const [pricePerPerson, setPricePerPerson] = useState<number | ''>('');
-    const [basePrice, setBasePrice] = useState<number | ''>('');
+    const [basePrice, setBasePrice] = useState<number | ''>(''); // Preventivo
+    const [km, setKm] = useState<number | ''>('');
+    const [numeroPersone, setNumeroPersone] = useState<number | ''>('');
     const [notes, setNotes] = useState('');
 
     const fetchServizi = async () => {
@@ -75,6 +77,8 @@ export default function TransportModal({ onClose }: TransportModalProps) {
         setCapacity(50);
         setPricePerPerson('');
         setBasePrice('');
+        setKm('');
+        setNumeroPersone('');
         setNotes('');
         setShowForm(true);
     };
@@ -92,6 +96,8 @@ export default function TransportModal({ onClose }: TransportModalProps) {
         setCapacity(item.capacity);
         setPricePerPerson(item.pricePerPerson !== undefined ? item.pricePerPerson : '');
         setBasePrice(item.basePrice !== undefined ? item.basePrice : '');
+        setKm(item.km !== undefined ? item.km : '');
+        setNumeroPersone(item.numeroPersone !== undefined ? item.numeroPersone : '');
         setNotes(item.notes || '');
         setShowForm(true);
     };
@@ -101,6 +107,13 @@ export default function TransportModal({ onClose }: TransportModalProps) {
         if (!companyName || !departureRegion || !departureCommune || !capacity) {
             alert('Compila i campi obbligatori (Nome Ditta, Regione, Comune, Posti)');
             return;
+        }
+
+        if (basePrice !== '') {
+            if (km === '' || numeroPersone === '') {
+                alert('Se inserisci un preventivo totale, devi obbligatoriamente specificare anche il chilometraggio (km) e il numero di persone.');
+                return;
+            }
         }
 
         const payload = {
@@ -115,6 +128,8 @@ export default function TransportModal({ onClose }: TransportModalProps) {
             capacity: Number(capacity),
             pricePerPerson: pricePerPerson !== '' ? Number(pricePerPerson) : undefined,
             basePrice: basePrice !== '' ? Number(basePrice) : undefined,
+            km: km !== '' ? Number(km) : undefined,
+            numeroPersone: numeroPersone !== '' ? Number(numeroPersone) : undefined,
             notes
         };
 
@@ -157,8 +172,9 @@ export default function TransportModal({ onClose }: TransportModalProps) {
         if (maxPrice !== '') {
             const max = Number(maxPrice);
             const pPerson = item.pricePerPerson || 0;
-            const bPrice = item.basePrice || 0;
-            matchesPrice = (pPerson > 0 && pPerson <= max) || (bPrice > 0 && bPrice <= max);
+            const calculatedPPerson = (item.basePrice && item.numeroPersone) ? (item.basePrice / item.numeroPersone) : 0;
+            
+            matchesPrice = (pPerson > 0 && pPerson <= max) || (calculatedPPerson > 0 && calculatedPPerson <= max);
         }
 
         return matchesSearch && matchesRegion && matchesCapacity && matchesPrice;
@@ -277,9 +293,9 @@ export default function TransportModal({ onClose }: TransportModalProps) {
                                 </div>
                             </div>
 
-                            <div className="space-y-3 pt-2">
+                            <div className="space-y-4 pt-2">
                                 <h4 className="text-[11px] font-black text-scout-green-dark dark:text-emerald-400 uppercase tracking-widest border-l-2 border-scout-green pl-2">Capacità e Tariffe</h4>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 tracking-wider">Capacità (Posti Max) *</label>
                                         <input
@@ -289,21 +305,47 @@ export default function TransportModal({ onClose }: TransportModalProps) {
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 tracking-wider">Prezzo a Persona (€)</label>
+                                        <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 tracking-wider">Prezzo a Persona per Tratta (€)</label>
                                         <input
                                             type="number" value={pricePerPerson} onChange={e => setPricePerPerson(e.target.value !== '' ? Number(e.target.value) : '')}
                                             placeholder="Es: 15" min={0}
                                             className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 focus:ring-2 focus:ring-scout-green/30 focus:border-scout-green focus:outline-none transition-all"
                                         />
                                     </div>
-                                    <div>
-                                        <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 tracking-wider">Prezzo Base Corsa (€)</label>
-                                        <input
-                                            type="number" value={basePrice} onChange={e => setBasePrice(e.target.value !== '' ? Number(e.target.value) : '')}
-                                            placeholder="Es: 450" min={0}
-                                            className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 focus:ring-2 focus:ring-scout-green/30 focus:border-scout-green focus:outline-none transition-all"
-                                        />
+                                </div>
+                                <div className="bg-gray-50/50 dark:bg-gray-950/20 p-4 rounded-xl border border-gray-200/80 dark:border-gray-800/80 space-y-3">
+                                    <span className="block text-[10px] font-black text-scout-green-dark dark:text-emerald-400 uppercase tracking-widest leading-none">Preventivo e Dettagli Corsa</span>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 tracking-wider">Preventivo (€)</label>
+                                            <input
+                                                type="number" value={basePrice} onChange={e => setBasePrice(e.target.value !== '' ? Number(e.target.value) : '')}
+                                                placeholder="Es: 2000" min={0}
+                                                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 focus:ring-2 focus:ring-scout-green/30 focus:border-scout-green focus:outline-none transition-all"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 tracking-wider">Chilometraggio (km)</label>
+                                            <input
+                                                type="number" value={km} onChange={e => setKm(e.target.value !== '' ? Number(e.target.value) : '')}
+                                                placeholder="Es: 350" min={0}
+                                                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 focus:ring-2 focus:ring-scout-green/30 focus:border-scout-green focus:outline-none transition-all"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 tracking-wider">Numero Persone</label>
+                                            <input
+                                                type="number" value={numeroPersone} onChange={e => setNumeroPersone(e.target.value !== '' ? Number(e.target.value) : '')}
+                                                placeholder="Es: 50" min={1}
+                                                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 focus:ring-2 focus:ring-scout-green/30 focus:border-scout-green focus:outline-none transition-all"
+                                            />
+                                        </div>
                                     </div>
+                                    {basePrice !== '' && km !== '' && numeroPersone !== '' && (
+                                        <div className="text-[10px] text-gray-500 dark:text-gray-400 font-semibold italic flex items-center gap-1 mt-1">
+                                            <span>Prezzo calcolato a persona: <strong>{((Number(basePrice)) / Number(numeroPersone)).toFixed(2)}€</strong> (preventivo totale di {basePrice}€ per {numeroPersone} persone su {km} km)</span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -446,11 +488,30 @@ export default function TransportModal({ onClose }: TransportModalProps) {
                                                 </div>
                                                 <div className="flex items-start gap-2.5">
                                                     <Euro size={15} className="text-scout-green dark:text-emerald-500 shrink-0 mt-0.5" />
-                                                    <div className="font-semibold text-gray-600 dark:text-gray-400">
-                                                        {item.pricePerPerson ? <span><strong className="text-gray-850 dark:text-white font-extrabold">{item.pricePerPerson}€</strong> a persona</span> : null}
-                                                        {item.pricePerPerson && item.basePrice ? <span className="mx-2 text-gray-300 dark:text-gray-700">|</span> : null}
-                                                        {item.basePrice ? <span><strong className="text-gray-850 dark:text-white font-extrabold">{item.basePrice}€</strong> base corsa</span> : null}
-                                                        {!item.pricePerPerson && !item.basePrice ? <span className="text-gray-400 dark:text-gray-500 italic">Contattare per tariffe</span> : null}
+                                                    <div className="font-semibold text-gray-600 dark:text-gray-400 flex-1">
+                                                        <div className="flex flex-col gap-1.5 border-l-2 border-scout-green/20 dark:border-emerald-500/20 pl-2.5 my-0.5">
+                                                            {item.pricePerPerson ? (
+                                                                <div className="text-xs">
+                                                                    Tratta standard: <span className="font-extrabold text-gray-900 dark:text-white">{item.pricePerPerson}€ a persona</span>
+                                                                </div>
+                                                            ) : null}
+                                                            {item.basePrice ? (
+                                                                <div className="text-xs space-y-1">
+                                                                    <div>
+                                                                        Preventivo ditta: <span className="font-extrabold text-gray-900 dark:text-white">{item.basePrice}€ totali</span>
+                                                                        <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium"> ({item.km} km, {item.numeroPersone} persone)</span>
+                                                                    </div>
+                                                                    {item.numeroPersone && (
+                                                                        <div className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">
+                                                                            Costo stimato: <span className="font-extrabold text-scout-green-dark dark:text-emerald-400">{(item.basePrice / item.numeroPersone).toFixed(2)}€ a persona</span>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            ) : null}
+                                                            {!item.pricePerPerson && !item.basePrice ? (
+                                                                <span className="text-gray-400 dark:text-gray-500 italic text-xs">Contattare per tariffe e preventivo</span>
+                                                            ) : null}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>

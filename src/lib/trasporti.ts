@@ -18,6 +18,8 @@ function mapRow(row: any): ServizioTrasporto {
         capacity: Number(row.capacity) || 50,
         pricePerPerson: row.price_per_person ? Number(row.price_per_person) : undefined,
         basePrice: row.base_price ? Number(row.base_price) : undefined,
+        km: row.km ? Number(row.km) : undefined,
+        numeroPersone: row.numero_persone ? Number(row.numero_persone) : undefined,
         notes: row.notes || '',
         createdAt: row.created_at,
     };
@@ -36,6 +38,8 @@ function mapToSupabase(servizio: Partial<ServizioTrasporto>): any {
     if (servizio.capacity !== undefined) row.capacity = servizio.capacity;
     if (servizio.pricePerPerson !== undefined) row.price_per_person = servizio.pricePerPerson;
     if (servizio.basePrice !== undefined) row.base_price = servizio.basePrice;
+    if (servizio.km !== undefined) row.km = servizio.km;
+    if (servizio.numeroPersone !== undefined) row.numero_persone = servizio.numeroPersone;
     if (servizio.notes !== undefined) row.notes = servizio.notes;
     return row;
 }

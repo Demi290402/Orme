@@ -359,7 +359,9 @@ export interface ServizioTrasporto {
     departureAddress?: string;
     capacity: number;
     pricePerPerson?: number;
-    basePrice?: number;
+    basePrice?: number; // Preventivo
+    km?: number;
+    numeroPersone?: number;
     notes?: string;
     createdAt?: string;
 }
