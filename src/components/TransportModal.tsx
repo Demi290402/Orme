@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { 
-    X, Search, Phone, Mail, MessageCircle, Trash2, Edit, Plus, MapPin, Users, Euro, Bus 
+    X, Search, Phone, Mail, MessageCircle, Trash2, Edit, Plus, MapPin, Users, Euro, Bus, Filter 
 } from 'lucide-react';
 import { 
     getServiziTrasporto, addServizioTrasporto, updateServizioTrasporto, deleteServizioTrasporto 
 } from '@/lib/trasporti';
 import { ServizioTrasporto } from '@/types';
+import { cn } from '@/lib/utils';
 
 const ITALIAN_REGIONS = [
     "Abruzzo", "Basilicata", "Calabria", "Campania", "Emilia-Romagna",
@@ -27,6 +28,7 @@ export default function TransportModal({ onClose }: TransportModalProps) {
     const [selectedRegion, setSelectedRegion] = useState('Tutti');
     const [minCapacity, setMinCapacity] = useState<number | ''>('');
     const [maxPrice, setMaxPrice] = useState<number | ''>('');
+    const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
     // Form states
     const [showForm, setShowForm] = useState(false);
@@ -164,243 +166,263 @@ export default function TransportModal({ onClose }: TransportModalProps) {
 
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[80] flex items-center justify-center p-4" onClick={onClose}>
-            <div className="bg-white dark:bg-gray-900 rounded-[2.5rem] w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6 md:p-8 space-y-6 shadow-2xl relative border border-gray-100 dark:border-gray-800 text-gray-900 dark:text-gray-100 flex flex-col" onClick={e => e.stopPropagation()}>
-                {/* Header */}
-                <div className="flex justify-between items-center pb-4 border-b border-gray-100 dark:border-gray-800 shrink-0">
+            <div className="bg-white dark:bg-gray-900 rounded-[2rem] w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl relative border border-gray-100 dark:border-gray-800 text-gray-900 dark:text-gray-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                {/* Header - Fixed at top */}
+                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 p-6 md:p-8 pb-4 border-b border-gray-100 dark:border-gray-850 shrink-0">
                     <div className="flex items-center gap-3">
-                        <div className="bg-scout-green/10 dark:bg-emerald-950/30 p-2.5 rounded-2xl text-scout-green dark:text-emerald-400">
+                        <div className="bg-scout-green/10 dark:bg-emerald-950/30 p-2.5 rounded-2xl text-scout-green dark:text-emerald-400 shrink-0">
                             <Bus size={26} />
                         </div>
                         <div>
-                            <h2 className="text-xl md:text-2xl font-black tracking-tight">Rubrica Trasporti Privati</h2>
+                            <h2 className="text-lg md:text-xl font-black tracking-tight text-gray-900 dark:text-white">Rubrica Trasporti Privati</h2>
                             <p className="text-xs text-gray-500 dark:text-gray-400">Ricerca e contatta le ditte di pullman/bus consigliate dal gruppo scout.</p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 self-end sm:self-center">
                         {!showForm && (
                             <button
                                 onClick={openCreateForm}
-                                className="bg-scout-green hover:bg-scout-green-dark text-white px-3 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all shadow-md active:scale-95 cursor-pointer"
+                                className="bg-scout-green hover:bg-scout-green-dark text-white px-4 py-2.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all shadow-md active:scale-95 cursor-pointer shrink-0"
                             >
                                 <Plus size={14} />
                                 Aggiungi ditta
                             </button>
                         )}
-                        <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full text-gray-400 transition-colors">
+                        <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full text-gray-400 dark:text-gray-500 transition-colors cursor-pointer shrink-0">
                             <X size={20} />
                         </button>
                     </div>
                 </div>
 
-                {showForm ? (
-                    /* CRUD Form */
-                    <form onSubmit={handleSubmit} className="space-y-5 animate-in slide-in-from-bottom-4 duration-200">
-                        <h3 className="font-extrabold text-base border-b pb-2 text-scout-green-dark dark:text-emerald-400">
-                            {editingItem ? 'Modifica Servizio Trasporto' : 'Registra Nuovo Servizio Trasporto'}
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Nome Ditta/Compagnia *</label>
-                                <input
-                                    type="text" required value={companyName} onChange={e => setCompanyName(e.target.value)}
-                                    placeholder="Es: Autolinee Rossi Srl"
-                                    className="w-full px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs"
-                                />
+                {/* Modal Body - Scrollable content area */}
+                <div className="flex-1 overflow-y-auto p-6 md:p-8 pt-4 min-h-0">
+                    {showForm ? (
+                        /* CRUD Form */
+                        <form onSubmit={handleSubmit} className="space-y-6 animate-in slide-in-from-bottom-4 duration-200">
+                            <h3 className="font-extrabold text-base border-b border-gray-100 dark:border-gray-800 pb-2 text-scout-green-dark dark:text-emerald-400">
+                                {editingItem ? 'Modifica Servizio Trasporto' : 'Registra Nuovo Servizio Trasporto'}
+                            </h3>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 tracking-wider">Nome Ditta/Compagnia *</label>
+                                    <input
+                                        type="text" required value={companyName} onChange={e => setCompanyName(e.target.value)}
+                                        placeholder="Es: Autolinee Rossi Srl"
+                                        className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 focus:ring-2 focus:ring-scout-green/30 focus:border-scout-green focus:outline-none transition-all"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 tracking-wider">Referente / Contatto</label>
+                                    <input
+                                        type="text" value={contactName} onChange={e => setContactName(e.target.value)}
+                                        placeholder="Es: Sig. Giovanni Rossi"
+                                        className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 focus:ring-2 focus:ring-scout-green/30 focus:border-scout-green focus:outline-none transition-all"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 tracking-wider">Telefono</label>
+                                    <input
+                                        type="tel" value={phone} onChange={e => setPhone(e.target.value)}
+                                        placeholder="Es: +39 0123456789"
+                                        className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 focus:ring-2 focus:ring-scout-green/30 focus:border-scout-green focus:outline-none transition-all"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 tracking-wider">Email</label>
+                                    <input
+                                        type="email" value={email} onChange={e => setEmail(e.target.value)}
+                                        placeholder="Es: info@autolineerossi.it"
+                                        className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 focus:ring-2 focus:ring-scout-green/30 focus:border-scout-green focus:outline-none transition-all"
+                                    />
+                                </div>
                             </div>
-                            <div>
-                                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Referente / Contatto</label>
-                                <input
-                                    type="text" value={contactName} onChange={e => setContactName(e.target.value)}
-                                    placeholder="Es: Sig. Giovanni Rossi"
-                                    className="w-full px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Telefono</label>
-                                <input
-                                    type="tel" value={phone} onChange={e => setPhone(e.target.value)}
-                                    placeholder="Es: +39 0123456789"
-                                    className="w-full px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Email</label>
-                                <input
-                                    type="email" value={email} onChange={e => setEmail(e.target.value)}
-                                    placeholder="Es: info@autolineerossi.it"
-                                    className="w-full px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs"
-                                />
-                            </div>
-                        </div>
 
-                        <div className="space-y-3">
-                            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Punto di Partenza / Sede</h4>
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                <div className="md:col-span-2">
-                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Regione Partenza *</label>
-                                    <select
-                                        value={departureRegion} onChange={e => setDepartureRegion(e.target.value)}
-                                        className="w-full px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs"
+                            <div className="space-y-3 pt-2">
+                                <h4 className="text-[11px] font-black text-scout-green-dark dark:text-emerald-400 uppercase tracking-widest border-l-2 border-scout-green pl-2">Punto di Partenza / Sede</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                    <div className="md:col-span-2">
+                                        <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 tracking-wider">Regione Partenza *</label>
+                                        <select
+                                            value={departureRegion} onChange={e => setDepartureRegion(e.target.value)}
+                                            className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-xs text-gray-900 dark:text-white focus:ring-2 focus:ring-scout-green/30 focus:border-scout-green focus:outline-none transition-all"
+                                        >
+                                            {ITALIAN_REGIONS.map(r => <option key={r} value={r} className="bg-white dark:bg-gray-900">{r}</option>)}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 tracking-wider">Provincia</label>
+                                        <input
+                                            type="text" value={departureProvince} onChange={e => setDepartureProvince(e.target.value)}
+                                            placeholder="Es: MI" maxLength={2}
+                                            className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 focus:ring-2 focus:ring-scout-green/30 focus:border-scout-green focus:outline-none transition-all uppercase"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 tracking-wider">Comune *</label>
+                                        <input
+                                            type="text" required value={departureCommune} onChange={e => setDepartureCommune(e.target.value)}
+                                            placeholder="Es: Milano"
+                                            className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 focus:ring-2 focus:ring-scout-green/30 focus:border-scout-green focus:outline-none transition-all"
+                                        />
+                                    </div>
+                                    <div className="md:col-span-4">
+                                        <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 tracking-wider">Indirizzo Partenza / Sede Ditta</label>
+                                        <input
+                                            type="text" value={departureAddress} onChange={e => setDepartureAddress(e.target.value)}
+                                            placeholder="Es: Via Roma 15"
+                                            className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 focus:ring-2 focus:ring-scout-green/30 focus:border-scout-green focus:outline-none transition-all"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-3 pt-2">
+                                <h4 className="text-[11px] font-black text-scout-green-dark dark:text-emerald-400 uppercase tracking-widest border-l-2 border-scout-green pl-2">Capacità e Tariffe</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 tracking-wider">Capacità (Posti Max) *</label>
+                                        <input
+                                            type="number" required value={capacity} onChange={e => setCapacity(Number(e.target.value))}
+                                            placeholder="Es: 54" min={1}
+                                            className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-xs font-bold text-gray-900 dark:text-white focus:ring-2 focus:ring-scout-green/30 focus:border-scout-green focus:outline-none transition-all"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 tracking-wider">Prezzo a Persona (€)</label>
+                                        <input
+                                            type="number" value={pricePerPerson} onChange={e => setPricePerPerson(e.target.value !== '' ? Number(e.target.value) : '')}
+                                            placeholder="Es: 15" min={0}
+                                            className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 focus:ring-2 focus:ring-scout-green/30 focus:border-scout-green focus:outline-none transition-all"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 tracking-wider">Prezzo Base Corsa (€)</label>
+                                        <input
+                                            type="number" value={basePrice} onChange={e => setBasePrice(e.target.value !== '' ? Number(e.target.value) : '')}
+                                            placeholder="Es: 450" min={0}
+                                            className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 focus:ring-2 focus:ring-scout-green/30 focus:border-scout-green focus:outline-none transition-all"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 tracking-wider">Note e Info Aggiuntive</label>
+                                <textarea
+                                    value={notes} onChange={e => setNotes(e.target.value)}
+                                    placeholder="Fornire dettagli su disponibilità, se hanno sconti per scout, tipologie bus (due piani, minibus, ecc.)"
+                                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 focus:ring-2 focus:ring-scout-green/30 focus:border-scout-green focus:outline-none transition-all min-h-[80px]"
+                                />
+                            </div>
+
+                            <div className="flex gap-2 justify-end pt-3 border-t border-gray-100 dark:border-gray-800/80">
+                                <button
+                                    type="button" onClick={() => setShowForm(false)}
+                                    className="px-4 py-2 border border-gray-200 dark:border-gray-850 rounded-xl text-xs font-bold text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-850 dark:text-gray-400 cursor-pointer transition-colors"
+                                >
+                                    Annulla
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="bg-scout-green hover:bg-scout-green-dark text-white px-5 py-2 rounded-xl text-xs font-black shadow-md active:scale-95 cursor-pointer transition-all"
+                                >
+                                    Salva
+                                </button>
+                            </div>
+                        </form>
+                    ) : (
+                        /* Directory List */
+                        <div className="space-y-6">
+                            {/* Filters Card - Gestalt Common Region */}
+                            <div className="bg-gray-50/80 dark:bg-gray-850/60 p-4 md:p-5 rounded-2xl border border-gray-150 dark:border-gray-800 space-y-4 shadow-sm backdrop-blur-xs">
+                                <div className="flex items-center gap-3">
+                                    <div className="relative flex-1">
+                                        <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
+                                        <input
+                                            type="text" placeholder="Cerca per ditta, comune di partenza, note..."
+                                            value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+                                            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-scout-green/30 focus:border-scout-green placeholder:text-gray-400 dark:placeholder:text-gray-600 transition-all"
+                                        />
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                                        className={cn(
+                                            "px-4 py-2.5 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0",
+                                            showAdvancedFilters 
+                                                ? "bg-scout-green/10 border-scout-green text-scout-green dark:text-emerald-400 dark:bg-emerald-950/20" 
+                                                : "bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-450 hover:bg-gray-50 dark:hover:bg-gray-900"
+                                        )}
                                     >
-                                        {ITALIAN_REGIONS.map(r => <option key={r} value={r}>{r}</option>)}
-                                    </select>
+                                        <Filter size={14} />
+                                        <span>Filtri</span>
+                                    </button>
                                 </div>
-                                <div>
-                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Provincia</label>
-                                    <input
-                                        type="text" value={departureProvince} onChange={e => setDepartureProvince(e.target.value)}
-                                        placeholder="Es: MI" maxLength={2}
-                                        className="w-full px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs uppercase"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Comune *</label>
-                                    <input
-                                        type="text" required value={departureCommune} onChange={e => setDepartureCommune(e.target.value)}
-                                        placeholder="Es: Milano"
-                                        className="w-full px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs"
-                                    />
-                                </div>
-                                <div className="md:col-span-4">
-                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Indirizzo Partenza / Sede Ditta</label>
-                                    <input
-                                        type="text" value={departureAddress} onChange={e => setDepartureAddress(e.target.value)}
-                                        placeholder="Es: Via Roma 15"
-                                        className="w-full px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs"
-                                    />
-                                </div>
+                                
+                                {showAdvancedFilters && (
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-gray-200 dark:border-gray-800/80 animate-in slide-in-from-top-2 duration-150">
+                                        <div>
+                                            <label className="block text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase mb-1.5 tracking-wider">Filtra per Regione Partenza</label>
+                                            <select
+                                                value={selectedRegion} onChange={e => setSelectedRegion(e.target.value)}
+                                                className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-scout-green/30 focus:border-scout-green transition-all"
+                                            >
+                                                <option value="Tutti" className="bg-white dark:bg-gray-950">Tutte le Regioni</option>
+                                                {ITALIAN_REGIONS.map(r => <option key={r} value={r} className="bg-white dark:bg-gray-950">{r}</option>)}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase mb-1.5 tracking-wider">Posti Minimi</label>
+                                            <input
+                                                type="number" value={minCapacity} onChange={e => setMinCapacity(e.target.value !== '' ? Number(e.target.value) : '')}
+                                                placeholder="Es: 40" min={1}
+                                                className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-xs font-bold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-scout-green/30 focus:border-scout-green transition-all"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase mb-1.5 tracking-wider">Prezzo Max Corsa / Persona (€)</label>
+                                            <input
+                                                type="number" value={maxPrice} onChange={e => setMaxPrice(e.target.value !== '' ? Number(e.target.value) : '')}
+                                                placeholder="Es: 500" min={0}
+                                                className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-xs font-bold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-scout-green/30 focus:border-scout-green transition-all"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
                             </div>
-                        </div>
 
-                        <div className="space-y-3">
-                            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Capacità e Tariffe</h4>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div>
-                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Capacità (Posti Max) *</label>
-                                    <input
-                                        type="number" required value={capacity} onChange={e => setCapacity(Number(e.target.value))}
-                                        placeholder="Es: 54" min={1}
-                                        className="w-full px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs font-bold"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Prezzo a Persona (€)</label>
-                                    <input
-                                        type="number" value={pricePerPerson} onChange={e => setPricePerPerson(e.target.value !== '' ? Number(e.target.value) : '')}
-                                        placeholder="Es: 15" min={0}
-                                        className="w-full px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Prezzo Base Corsa (€)</label>
-                                    <input
-                                        type="number" value={basePrice} onChange={e => setBasePrice(e.target.value !== '' ? Number(e.target.value) : '')}
-                                        placeholder="Es: 450" min={0}
-                                        className="w-full px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Note e Info Aggiuntive</label>
-                            <textarea
-                                value={notes} onChange={e => setNotes(e.target.value)}
-                                placeholder="Fornire dettagli su disponibilità, se hanno sconti per scout, tipologie bus (due piani, minibus, ecc.)"
-                                className="w-full px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs min-h-[80px]"
-                            />
-                        </div>
-
-                        <div className="flex gap-2 justify-end pt-3 border-t">
-                            <button
-                                type="button" onClick={() => setShowForm(false)}
-                                className="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-bold text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
-                            >
-                                Annulla
-                            </button>
-                            <button
-                                type="submit"
-                                className="bg-scout-green hover:bg-scout-green-dark text-white px-5 py-2 rounded-xl text-xs font-black shadow-md cursor-pointer"
-                            >
-                                Salva
-                            </button>
-                        </div>
-                    </form>
-                ) : (
-                    /* Directory List */
-                    <div className="flex-1 flex flex-col space-y-4 overflow-hidden min-h-0">
-                        {/* Filters */}
-                        <div className="bg-gray-50 dark:bg-gray-850 p-4 rounded-3xl border border-gray-100 dark:border-gray-800 space-y-3 shrink-0">
-                            <div className="relative">
-                                <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                                <input
-                                    type="text" placeholder="Cerca per ditta, comune di partenza, note..."
-                                    value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-250 dark:border-gray-750 bg-white dark:bg-gray-800 text-xs focus:outline-none focus:ring-2 focus:ring-scout-green"
-                                />
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                <div>
-                                    <label className="block text-[9px] font-bold text-gray-400 uppercase mb-1">Filtra per Regione Partenza</label>
-                                    <select
-                                        value={selectedRegion} onChange={e => setSelectedRegion(e.target.value)}
-                                        className="w-full px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-750 bg-white dark:bg-gray-800 text-xs"
-                                    >
-                                        <option value="Tutti">Tutte le Regioni</option>
-                                        {ITALIAN_REGIONS.map(r => <option key={r} value={r}>{r}</option>)}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-[9px] font-bold text-gray-400 uppercase mb-1">Posti Minimi</label>
-                                    <input
-                                        type="number" value={minCapacity} onChange={e => setMinCapacity(e.target.value !== '' ? Number(e.target.value) : '')}
-                                        placeholder="Es: 40" min={1}
-                                        className="w-full px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-750 bg-white dark:bg-gray-800 text-xs font-bold"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-[9px] font-bold text-gray-400 uppercase mb-1">Prezzo Max Corsa / Persona (€)</label>
-                                    <input
-                                        type="number" value={maxPrice} onChange={e => setMaxPrice(e.target.value !== '' ? Number(e.target.value) : '')}
-                                        placeholder="Es: 500" min={0}
-                                        className="w-full px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-750 bg-white dark:bg-gray-800 text-xs font-bold"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* List Area */}
-                        <div className="flex-1 overflow-y-auto space-y-4 pr-1 min-h-[300px]">
+                            {/* List Cards Area */}
                             {loading ? (
-                                <div className="text-center text-gray-500 font-bold py-10 animate-pulse text-xs">
+                                <div className="text-center text-gray-500 dark:text-gray-400 font-bold py-12 animate-pulse text-xs">
                                     Caricamento ditte trasporti...
                                 </div>
                             ) : filteredServizi.length === 0 ? (
-                                <div className="text-center text-gray-500 font-medium py-10 text-xs">
+                                <div className="text-center text-gray-500 dark:text-gray-400 font-medium py-12 text-xs border border-dashed border-gray-200 dark:border-gray-800 rounded-2xl bg-gray-50/20 dark:bg-gray-900/10">
                                     Nessuna ditta di trasporti trovata con i filtri correnti.
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {filteredServizi.map((item) => (
-                                        <div key={item.id} className="bg-white dark:bg-gray-850 p-5 rounded-3xl border border-gray-100 dark:border-gray-800/80 shadow-xs space-y-4 hover:shadow-md transition-shadow relative">
+                                        <div key={item.id} className="bg-gray-50/30 dark:bg-gray-850/40 hover:bg-gray-50/70 dark:hover:bg-gray-850/70 p-5 rounded-2xl border border-gray-150 dark:border-gray-800/80 shadow-xs hover:shadow-md transition-all duration-200 space-y-4 relative group">
                                             <div className="flex justify-between items-start gap-4">
                                                 <div className="space-y-1">
-                                                    <h4 className="font-extrabold text-sm text-scout-green-dark dark:text-emerald-400">{item.companyName}</h4>
+                                                    <h4 className="font-extrabold text-sm text-scout-green-dark dark:text-emerald-400 group-hover:text-scout-green dark:group-hover:text-emerald-300 transition-colors">{item.companyName}</h4>
                                                     {item.contactName && (
-                                                        <span className="block text-[10px] text-gray-400 font-semibold uppercase">Ref: {item.contactName}</span>
+                                                        <span className="block text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider">Referente: {item.contactName}</span>
                                                     )}
                                                 </div>
                                                 <div className="flex items-center gap-1">
                                                     <button
                                                         onClick={() => openEditForm(item)}
-                                                        className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-scout-green rounded-full transition-colors cursor-pointer"
+                                                        className="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-400 hover:text-scout-green dark:hover:text-emerald-400 rounded-full transition-colors cursor-pointer"
                                                         title="Modifica"
                                                     >
                                                         <Edit size={14} />
                                                     </button>
                                                     <button
                                                         onClick={() => handleDelete(item.id)}
-                                                        className="p-1.5 hover:bg-red-50 dark:hover:bg-red-950/30 text-red-500 hover:text-red-700 rounded-full transition-colors cursor-pointer"
+                                                        className="p-1.5 hover:bg-red-50 dark:hover:bg-red-950/30 text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded-full transition-colors cursor-pointer"
                                                         title="Elimina"
                                                     >
                                                         <Trash2 size={14} />
@@ -408,48 +430,50 @@ export default function TransportModal({ onClose }: TransportModalProps) {
                                                 </div>
                                             </div>
 
-                                            <div className="space-y-2 text-xs text-gray-650 dark:text-gray-300">
-                                                <div className="flex items-start gap-2">
-                                                    <MapPin size={14} className="text-gray-400 shrink-0 mt-0.5" />
+                                            <div className="space-y-2.5 text-xs text-gray-700 dark:text-gray-300">
+                                                <div className="flex items-start gap-2.5">
+                                                    <MapPin size={15} className="text-scout-green dark:text-emerald-500 shrink-0 mt-0.5" />
                                                     <div>
-                                                        <span className="font-bold">{item.departureCommune} ({item.departureProvince || 'EE'}), {item.departureRegion}</span>
+                                                        <span className="font-bold text-gray-850 dark:text-gray-200">{item.departureCommune} ({item.departureProvince || 'EE'}), {item.departureRegion}</span>
                                                         {item.departureAddress && <span className="block text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">{item.departureAddress}</span>}
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-2">
-                                                    <Users size={14} className="text-gray-400 shrink-0" />
-                                                    <span className="font-bold">Capacità: {item.capacity} posti max</span>
+                                                <div className="flex items-center gap-2.5">
+                                                    <Users size={15} className="text-scout-green dark:text-emerald-500 shrink-0" />
+                                                    <span className="font-semibold text-gray-600 dark:text-gray-400">
+                                                        Capacità: <strong className="text-gray-850 dark:text-white font-extrabold">{item.capacity} posti max</strong>
+                                                    </span>
                                                 </div>
-                                                <div className="flex items-start gap-2">
-                                                    <Euro size={14} className="text-gray-400 shrink-0 mt-0.5" />
-                                                    <div className="font-semibold">
-                                                        {item.pricePerPerson ? <span>{item.pricePerPerson}€ a persona</span> : null}
-                                                        {item.pricePerPerson && item.basePrice ? <span className="mx-1 text-gray-300">|</span> : null}
-                                                        {item.basePrice ? <span>{item.basePrice}€ base corsa</span> : null}
-                                                        {!item.pricePerPerson && !item.basePrice ? <span className="text-gray-400 italic">Contattare per tariffe</span> : null}
+                                                <div className="flex items-start gap-2.5">
+                                                    <Euro size={15} className="text-scout-green dark:text-emerald-500 shrink-0 mt-0.5" />
+                                                    <div className="font-semibold text-gray-600 dark:text-gray-400">
+                                                        {item.pricePerPerson ? <span><strong className="text-gray-850 dark:text-white font-extrabold">{item.pricePerPerson}€</strong> a persona</span> : null}
+                                                        {item.pricePerPerson && item.basePrice ? <span className="mx-2 text-gray-300 dark:text-gray-700">|</span> : null}
+                                                        {item.basePrice ? <span><strong className="text-gray-850 dark:text-white font-extrabold">{item.basePrice}€</strong> base corsa</span> : null}
+                                                        {!item.pricePerPerson && !item.basePrice ? <span className="text-gray-400 dark:text-gray-500 italic">Contattare per tariffe</span> : null}
                                                     </div>
                                                 </div>
                                             </div>
 
                                             {item.notes && (
-                                                <p className="text-[10px] text-gray-500 dark:text-gray-400 italic bg-gray-50/50 dark:bg-gray-900/40 p-2.5 rounded-xl border border-gray-100 dark:border-gray-750">
+                                                <p className="text-[11px] text-gray-650 dark:text-gray-400 italic bg-white/60 dark:bg-gray-900/40 p-3 rounded-xl border border-gray-150 dark:border-gray-800 border-l-2 border-l-scout-green dark:border-l-emerald-500 font-medium">
                                                     "{item.notes}"
                                                 </p>
                                             )}
 
-                                            {/* Action contact strip */}
-                                            <div className="grid grid-cols-3 gap-2 border-t pt-3">
+                                            {/* Action contact strip - Similarity & Scannability */}
+                                            <div className="grid grid-cols-3 gap-2 border-t border-gray-100 dark:border-gray-800/80 pt-3">
                                                 {item.phone ? (
                                                     <a
                                                         href={`tel:${item.phone}`}
-                                                        className="flex items-center justify-center gap-1 py-1.5 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-750 rounded-lg text-[10px] font-bold transition-all text-gray-700 dark:text-gray-200"
+                                                        className="flex items-center justify-center gap-1.5 py-2 bg-blue-50/50 hover:bg-blue-100/60 dark:bg-blue-950/20 dark:hover:bg-blue-950/45 text-blue-600 dark:text-blue-400 rounded-xl text-[10px] font-black transition-all"
                                                     >
-                                                        <Phone size={12} className="text-scout-green" />
+                                                        <Phone size={12} className="shrink-0" />
                                                         Chiama
                                                     </a>
                                                 ) : (
-                                                    <span className="opacity-30 flex items-center justify-center gap-1 py-1.5 bg-gray-50 dark:bg-gray-800 text-[10px] font-bold rounded-lg text-gray-400 cursor-not-allowed">
-                                                        <Phone size={12} />
+                                                    <span className="flex items-center justify-center gap-1.5 py-2 bg-gray-100 dark:bg-gray-800/20 text-[10px] font-bold rounded-xl text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50">
+                                                        <Phone size={12} className="shrink-0" />
                                                         Chiama
                                                     </span>
                                                 )}
@@ -457,14 +481,14 @@ export default function TransportModal({ onClose }: TransportModalProps) {
                                                 {item.phone ? (
                                                     <a
                                                         href={`https://wa.me/${item.phone}`} target="_blank" rel="noreferrer"
-                                                        className="flex items-center justify-center gap-1 py-1.5 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-750 rounded-lg text-[10px] font-bold transition-all text-gray-700 dark:text-gray-200"
+                                                        className="flex items-center justify-center gap-1.5 py-2 bg-emerald-50/50 hover:bg-emerald-100/60 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/45 text-emerald-600 dark:text-emerald-400 rounded-xl text-[10px] font-black transition-all"
                                                     >
-                                                        <MessageCircle size={12} className="text-green-500" />
+                                                        <MessageCircle size={12} className="shrink-0" />
                                                         WhatsApp
                                                     </a>
                                                 ) : (
-                                                    <span className="opacity-30 flex items-center justify-center gap-1 py-1.5 bg-gray-50 dark:bg-gray-800 text-[10px] font-bold rounded-lg text-gray-400 cursor-not-allowed">
-                                                        <MessageCircle size={12} />
+                                                    <span className="flex items-center justify-center gap-1.5 py-2 bg-gray-100 dark:bg-gray-800/20 text-[10px] font-bold rounded-xl text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50">
+                                                        <MessageCircle size={12} className="shrink-0" />
                                                         WhatsApp
                                                     </span>
                                                 )}
@@ -472,14 +496,14 @@ export default function TransportModal({ onClose }: TransportModalProps) {
                                                 {item.email ? (
                                                     <a
                                                         href={`mailto:${item.email}`}
-                                                        className="flex items-center justify-center gap-1 py-1.5 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-750 rounded-lg text-[10px] font-bold transition-all text-gray-700 dark:text-gray-200"
+                                                        className="flex items-center justify-center gap-1.5 py-2 bg-purple-50/50 hover:bg-purple-100/60 dark:bg-purple-950/20 dark:hover:bg-purple-950/45 text-purple-600 dark:text-purple-400 rounded-xl text-[10px] font-black transition-all"
                                                     >
-                                                        <Mail size={12} className="text-blue-500" />
+                                                        <Mail size={12} className="shrink-0" />
                                                         Email
                                                     </a>
                                                 ) : (
-                                                    <span className="opacity-30 flex items-center justify-center gap-1 py-1.5 bg-gray-50 dark:bg-gray-800 text-[10px] font-bold rounded-lg text-gray-400 cursor-not-allowed">
-                                                        <Mail size={12} />
+                                                    <span className="flex items-center justify-center gap-1.5 py-2 bg-gray-100 dark:bg-gray-800/20 text-[10px] font-bold rounded-xl text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50">
+                                                        <Mail size={12} className="shrink-0" />
                                                         Email
                                                     </span>
                                                 )}
@@ -489,8 +513,8 @@ export default function TransportModal({ onClose }: TransportModalProps) {
                                 </div>
                             )}
                         </div>
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
         </div>
     );

@@ -17,6 +17,14 @@
   --color-scout-beige-light: #F5F5F5;
   /* Background grigio chiarissimo invece del beige */
 
+  /* Intermediate grays for fine-grained contrast control */
+  --color-gray-150: #ebedf0;
+  --color-gray-205: #e1e3e7;
+  --color-gray-250: #dadde2;
+  --color-gray-705: #3f4958;
+  --color-gray-750: #2b3544;
+  --color-gray-850: #182030;
+
   --font-sans: 'Roboto', Inter, sans-serif;
 }
 
