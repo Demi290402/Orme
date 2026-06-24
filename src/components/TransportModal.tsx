@@ -283,7 +283,7 @@ export default function TransportModal({ onClose }: TransportModalProps) {
                                         />
                                     </div>
                                     <div className="md:col-span-4">
-                                        <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 tracking-wider">Indirizzo Partenza / Sede Ditta</label>
+                                        <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 tracking-wider">Indirizzo di Partenza</label>
                                         <input
                                             type="text" value={departureAddress} onChange={e => setDepartureAddress(e.target.value)}
                                             placeholder="Es: Via Roma 15"
