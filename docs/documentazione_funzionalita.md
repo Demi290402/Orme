@@ -7,11 +7,11 @@
 ## Visione di Prodotto
 
 Nei gruppi scout, la gestione logistica e documentale risente spesso di tre problemi principali:
-1. **Perdita della memoria storica**: Le informazioni sui luoghi di campo o sull'inventario si disperdono con il normale avvicendamento dei capi nelle branche.
+1. **Perdita della memoria storica**: Le informazioni sui luoghi di campo, sull'inventario o sulla formazione dei capi si disperdono con il normale avvicendamento dei ruoli nelle branche.
 2. **Frammentazione dei dati**: Bilanci, liste d'attesa e contatti dei genitori sono distribuiti su file Excel personali, fogli di carta o chat, con rischi legati alla privacy (GDPR) e all'efficienza.
 3. **Mancanza di collaborazione**: La burocrazia interna (es. redazione dei verbali o inventario) grava su pochi capi per via di strumenti poco accessibili.
 
-Orme centralizza queste informazioni in un unico portale protetto e collaborativo, accessibile sia da smartphone che da PC, applicando logiche di **gamification** per stimolare la cooperazione tra i capi.
+Orme centralizza queste informazioni in un unico portale protetto e collaborativo, accessibile sia da smartphone che da PC, applicando logiche di **gamification** per stimolare la cooperazione tra i capi, e garantendo un **funzionamento offline reale** per l'uso sul campo.
 
 ---
 
@@ -20,7 +20,7 @@ Orme centralizza queste informazioni in un unico portale protetto e collaborativ
 Il cuore storico di Orme è il catalogo dei luoghi per le attività scout (terreni di campeggio, case vacanze di branco, bivacchi).
 
 ### Obiettivo Metodologico
-Consentire ai capi di capitalizzare le esperienze dei campi passati, evitando di dover ripartire da zero ogni anno nella ricerca dei luoghi.
+Consentire ai capi di capitalizzare le esperienze dei campi passati, evitando di dover ripartire da zero ogni anno nella ricerca dei luoghi e prevenendo la ripetizione involontaria dello stesso posto negli anni successivi.
 
 ### Funzionalità nel Dettaglio
 * **Database Condiviso**: Una lista ricercabile e filtrabile di terreni e accantonamenti.
@@ -36,26 +36,32 @@ Consentire ai capi di capitalizzare le esperienze dei campi passati, evitando di
   * **Suolo**: Pendenza e rocciosità del terreno (fondamentale per piantare i picchetti).
   * **Servizi**: Stato dei bagni/cucine.
   * **Isolamento**: Distanza da strade asfaltate o centri abitati per garantire l'avventura scout.
-* **Flusso di Proposta e Approvazione (Proposals)**:
-  * Qualsiasi capo può proporre l'aggiunta o la modifica di un luogo.
-  * Per mantenere l'accuratezza dei dati, le proposte non vengono pubblicate immediatamente ma entrano in una coda di validazione.
-  * I capi con ruolo di moderatore (es. i Capigruppo) approvano la proposta, che diventa così visibile a tutti.
+* **Modifiche Istantanee e Registro Storico (Tracciabilità)**:
+  * Al fine di incentivare la massima flessibilità e immediatezza operativa, ogni modifica o inserimento apportato da un capo è **istantaneo** e subito visibile a tutti. Non c'è alcun collo di bottiglia dovuto ad approvazioni preventive.
+  * Per garantire la trasparenza e l'accuratezza delle informazioni, ad ogni modifica viene registrata una riga nella cronologia storica del luogo, specificando autore (totem o nickname), orario e descrizione dei campi modificati.
+  * Un **badge rosso pulsante** sulla scheda in Home avvisa l'utente se un luogo ha subito modifiche dall'ultima volta che lo ha visualizzato, assicurando che nessuna novità logistica vada persa.
 
 ---
 
 ## Modulo 2: Gamification e Leaderboard
 
-Per incentivare i capi a inserire dati e mantenere aggiornato il catalogo dei luoghi, Orme implementa un sistema di gamification.
+Per incentivare i capi a inserire dati e mantenere aggiornato il catalogo dei luoghi e l'inventario del magazzino, Orme implementa un sistema di gamification.
 
 ### Logica Incentivante
-Ogni inserimento o aggiornamento genera un punteggio che permette al capo di scalare una classifica di zona o di gruppo e di sbloccare distintivi (Badge) virtuali.
+Ogni inserimento o aggiornamento genera un punteggio che permette al capo di scalare una classifica di gruppo e di sbloccare distintivi (Badge) virtuali sul proprio profilo.
 
 ### Assegnazione Punti
-* **Inserimento Luogo Base**: +10 Punti.
-* **Coordinate GPS precise**: +3 Punti (indispensabile per trovare i terreni nel bosco).
-* **Fascia di prezzo o costo indicativo**: +5 Punti.
-* **Sito Web o Link Maps**: +2 Punti.
-* **Scrittura Recensione**: +5 Punti.
+* **Aggiunta Nuovo Luogo**: +10 Punti.
+* **Aggiunta Sito Web**: +2 Punti.
+* **Aggiunta Indirizzo/Maps/GPS**: +3 Punti.
+* **Inserimento Prezzi e Tariffe**: +5 Punti.
+* **Aggiunta Evento a Calendario**: +3 Punti.
+* **Ricerca nei Luoghi (1 al giorno)**: +1 Punto.
+* **Lettura di un Verbale (una tantum)**: +5 Punti.
+* **Aggiunta Memoria Storica/Recensione**: +5 Punti.
+* **Lasciare un'Orma (Recensione Luogo)**: +10 Punti.
+* **Controllo/Aggiornamento Attrezzi (Magazzino)**: +2 Punti.
+* **Censimento Rapido di un Luogo (Audit Magazzino)**: +15 Punti.
 
 ### Livelli e Badge
 * I capi avanzano di livello (es. *Piede Tenero*, *Esploratore*, *Pioniere*, *Trappeur*, *Guida delle Orme*).
@@ -68,17 +74,14 @@ Ogni inserimento o aggiornamento genera un punteggio che permette al capo di sca
 Il flusso di iscrizione dei bambini che vogliono entrare negli scout è una delle attività più delicate a livello di pubbliche relazioni e di conformità alla privacy.
 
 ### Il Problema Risolto
-Evitare la duplicazione delle richieste inviate su canali diversi e calcolare in modo equo i tempi di attesa basati sulla data di richiesta originale.
+Evitare la duplicazione delle richieste inviate su canali diversi, prevenire la perdita di foglietti cartacei o file locali disconnessi, e monitorare in modo equo i tempi di attesa basati sulla data di richiesta originale.
 
-### Flusso Operativo
-1. **Personalizzazione del Form Pubblico**: I Capigruppo configurano una pagina pubblica associata al proprio gruppo. Possono caricarvi il banner grafico del gruppo, inserire un testo di benvenuto, spiegare la politica di accoglienza e impostare un disclaimer sulla privacy.
+### Flusso Operativo Semplificato
+1. **Personalizzazione del Form Pubblico**: I Capigruppo configurano una pagina pubblica associata al proprio gruppo, caricando il banner grafico, inserendo un testo di benvenuto, spiegando la politica di accoglienza e impostando un disclaimer sulla privacy GDPR.
 2. **Raccolta Richieste**: I genitori compilano il modulo via web (utilizzando un link o scansionando un QR Code distribuito dal gruppo). Non è richiesta alcuna registrazione per il genitore.
-3. **Deduplicazione Automatica (Data Quality)**: Se un genitore preme più volte il tasto di invio o carica due volte la richiesta per lo stesso figlio, il sistema confronta i campi chiave (Nome, Cognome, Data Nascita, Classe, Telefono Genitore) e ignora automaticamente il doppione, notificando l'avvenuta protezione dei dati.
-4. **Importazione di Storici (Excel/CSV)**: Per i gruppi che passano a Orme da vecchi archivi, è presente un tool di importazione con mappatura flessibile delle colonne e pulizia istantanea dei duplicati sia interni al file che rispetto al database.
-5. **Calcolo Dinamico dei Dati**: La dashboard dei capi mostra automaticamente:
-   * L'età esatta del bambino calcolata sulla data odierna.
-   * La classe frequentata (utile per capire in quale Branca inserirlo: L/C, E/G, R/S).
-   * I giorni trascorsi in lista d'attesa (per gestire le priorità cronologiche).
+3. **Deduplicazione Automatica (Data Quality)**: Se un genitore carica due volte la richiesta per lo stesso figlio, il sistema confronta i campi chiave (Nome, Cognome, Data Nascita, Classe, Telefono Genitore) e ignora automaticamente il duplicato.
+4. **Anagrafica Centralizzata e Consultabile**: Rimosso ogni flusso di workflow decisionale (accettazione/rifiuto). La lista d'attesa funge da semplice registro centralizzato e ordinato degli interessati, dove i capi possono ordinare o filtrare per branca di destinazione (L/C, E/G, R/S) e visualizzare l'età calcolata e i giorni trascorsi in attesa.
+5. **Importazione di Storici (Excel/CSV)**: Per i gruppi che passano a Orme da vecchi archivi, è presente un tool di importazione con mappatura flessibile delle colonne e pulizia istantanea dei duplicati sia interni al file che rispetto al database.
 
 ---
 
@@ -87,12 +90,13 @@ Evitare la duplicazione delle richieste inviate su canali diversi e calcolare in
 Le tende di squadriglia, i teloni, i pali, le casse di cambusa e i generatori sono beni di valore che rischiano di andare perduti o di degradarsi per mancanza di manutenzione.
 
 ### Funzionalità Principali
-* **Registro Consistenza**: Lista degli articoli con indicazione dello stato (Nuovo, Usato, Da riparare, Danneggiato).
-* **Assegnazione Locazione**: Identificazione del punto esatto di stoccaggio (es. *Scaffale A della sede*, *Fondo del Container*).
+* **Registro Consistenza**: Lista degli articoli con indicazione dello stato (Nuovo, Usato, Da riparare, Inutilizzabile).
+* **Assegnazione Locazione**: Identificazione del punto esatto di stoccaggio (es. *Sede - Ripostiglio 1*, *Container*).
 * **Gestione Prestiti alle Branche**: 
   * Tracciamento di quale branca ha prelevato determinati materiali (es. *Reparto per l'Uscita di Pasqua*).
   * Data di prelievo e data prevista di rientro.
   * Storico delle riparazioni per tracciare la durata e l'usura dei materiali nel tempo.
+* **Censimento Rapido (Audit)**: Permette ai capi di catalogare i materiali direttamente durante i sopralluoghi nei luoghi di campo.
 
 ---
 
@@ -127,6 +131,30 @@ La Comunità Capi (CoCa) si riunisce periodicamente per prendere decisioni metod
 4. **Deliberazioni e Incarichi**: 
    * Possibilità di evidenziare decisioni formali prese dall'assemblea.
    * Assegnazione di compiti specifici (Action Items) ai singoli capi con scadenze temporali.
-5. **Firma e Approvazione**: I presenti possono "firmare" digitalmente confermando la lettura del verbale.
-6. **Esportazione in PDF A4**: Generazione automatica di un documento pronto per la stampa o l'archiviazione formale, impaginato professionalmente.
+5. **Esportazione in PDF A4**: Generazione automatica di un documento pronto per la stampa o l'archiviazione formale, impaginato professionalmente.
+6. **Notifiche Automatiche**: Alla pubblicazione, viene inviata una notifica in-app e una notifica e-mail automatica a tutti i membri del gruppo. Per garantire la massima trasparenza e conferma visiva, le notifiche vengono recapitate anche all'autore stesso del verbale.
 7. **Statistiche di Presenza**: Grafici che mostrano l'andamento delle presenze dei capi ai consigli nel corso dell'anno scout, per monitorare la partecipazione e la salute metodologica del gruppo.
+
+---
+
+## Modulo 7: Rubrica e Preventivi Trasporti Privati
+
+La logica degli spostamenti per campi e uscite di gruppo richiede contatti frequenti con ditte di autobus e pullman privati.
+
+### Funzionalità Chiave
+* **Rubrica Ditte Pullman**: Accessibile tramite il **pulsante fluttuante blu** in Home. Raccoglie contatti, regione di partenza e capacità di passeggeri delle ditte provate dal gruppo.
+* **Calcolo Quota Stimata**: Permette di inserire l'importo totale del **Preventivo**, associandolo obbligatoriamente al **Chilometraggio (km)** e al **Numero di Persone**.
+* **Visualizzazione Chiara**: Calcola in tempo reale la quota stimata a persona per ciascuna ditta nella rubrica, semplificando la stima dei costi del viaggio e la pianificazione del bilancio dell'uscita.
+* **Filtro Intelligente**: Consente di filtrare la ditta inserendo il budget massimo riferito alla *quota a persona* (es. ditte che costano meno di 30€ a ragazzo) invece che al prezzo totale, rendendo la ricerca incredibilmente efficiente.
+
+---
+
+## Modulo 8: Funzionamento Offline Reale (PWA)
+
+I campi scout e le uscite si svolgono spesso in zone montane o boschive prive di copertura internet. Orme risponde a questa problematica con un funzionamento offline reale a 360 gradi.
+
+### Logica Operativa
+* **Cache di Lettura locale**: Tutti i moduli principali (Luoghi, Inventario, Calendario, Verbali, Lista d'Attesa, Trasporti) vengono memorizzati nella memoria locale dello smartphone (`localStorage`) in fase di navigazione online. Se la connessione cade, l'app continua a mostrare i dati storici salvati.
+* **Coda Scritture Offline (`offline_write_queue`)**: Qualsiasi inserimento o modifica effettuato offline (es. aggiornamento dello stato di una tenda o aggiunta di una spesa nel bosco) viene registrato localmente e applicato istantaneamente alla cache locale. La UI dell'utente si aggiorna subito come se fosse online.
+* **Sincronizzazione in Background**: Non appena lo smartphone si riconnette a Internet, l'app avvia in background una sincronizzazione automatica delle transazioni accumulate, inviandole a Supabase in ordine cronologico.
+* **Indicatore di Rete**: Un indicatore visivo nell'header mostra se l'app è Offline (con il numero di modifiche pendenti) o in fase di sincronizzazione. In caso di fallimento persistente, un pulsante rosso consente all'utente di tentare manualmente l'invio con un click.

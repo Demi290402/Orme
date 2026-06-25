@@ -5,176 +5,158 @@ Benvenuto in **Orme**, la piattaforma collaborativa progettata per semplificare 
 ---
 
 ## Indice
-1. [Accesso e Registrazione](#1-accesso-e-registrazione)
-2. [Mappatura Luoghi e Ricerca Campi](#2-mappatura-luoghi-e-ricerca-campi)
-3. [Gamification e Leaderboard](#3-gamification-e-leaderboard)
-4. [Calendario di Gruppo](#4-calendario-di-gruppo)
-5. [Gestione Inventario e Attrezzature](#5-gestione-inventario-e-attrezzature)
-6. [Bilancio e Cassa di Branca](#6-bilancio-e-cassa-di-branca)
-7. [Lista d'Attesa e Iscrizioni Pubbliche](#7-lista-dattesa-e-iscrizioni-pubbliche)
-8. [Verbali di Comunità Capi](#8-verbali-di-comunità-capi)
+1. [Accesso, Registrazione e Profilo](#1-accesso-registrazione-e-profilo)
+2. [Mappatura Luoghi, Modifiche e Storico](#2-mappatura-luoghi-modifiche-e-storico)
+3. [Funzionamento Offline e Indicatore di Rete](#3-funzionamento-offline-e-indicatore-di-rete)
+4. [Gamification e Leaderboard](#4-gamification-e-leaderboard)
+5. [Calendario di Gruppo](#5-calendario-di-gruppo)
+6. [Gestione Inventario e Attrezzature](#6-gestione-inventario-e-attrezzature)
+7. [Bilancio e Cassa di Branca](#7-bilancio-e-cassa-di-branca)
+8. [Rubrica Trasporti e Calcolo Quote](#8-rubrica-trasporti-e-calcolo-quote)
+9. [Lista d'Attesa e Iscrizioni Pubbliche](#9-lista-dattesa-e-iscrizioni-pubbliche)
+10. [Verbali di Comunità Capi](#10-verbali-di-comunità-capi)
 
 ---
 
-## 1. Accesso e Registrazione
+## 1. Accesso, Registrazione e Profilo
 
 Per poter utilizzare Orme, devi essere registrato e associato al tuo Gruppo Scout.
 
-### Registrazione di un nuovo utente
+### Registrazione di un nuovo utente e Formazione Capi
 1. Accedi alla pagina di registrazione.
 2. Inserisci i tuoi dati personali: **Nome**, **Cognome**, **Email** e **Password**.
-3. Scegli un **Nickname** (verrà mostrato nelle classifiche e nelle recensioni dei luoghi).
-4. Seleziona la tua **Regione**, la **Zona Scout** e il tuo **Gruppo Scout** di appartenenza dal menu a tendina.
-   * *Nota*: Se il tuo gruppo non è presente nell'elenco, contatta un amministratore o usa l'opzione di inserimento per aggiungerlo.
-5. Clicca su **Registrati**.
+3. Scegli un **Nickname** (verrà mostrato nelle classifiche e nelle modifiche dei luoghi).
+4. Seleziona la tua **Regione**, la **Zona Scout** e il tuo **Gruppo Scout** di appartenenza.
+5. **Storico Formazione Capi**: Compila lo storico dei tuoi campi di formazione vissuti (es. CFT, CFM LC, CFM EG, CFM RS, CFA, Campo Bibbia, CAM LC, CAM EG, CAM RS) inserendo l'anno di conclusione (obbligatorio) e il mese (opzionale). Puoi anche spuntare la casella **"Nomina a Capo"** se hai ricevuto il brevetto.
+   * *Nota di Privacy*: Queste informazioni sulla formazione sono riservate ad uso interno e saranno visibili esclusivamente ai capi appartenenti alla tua stessa Comunità Capi.
+6. Clicca su **Registrati**.
 
-### Primo Accesso
-Effettua il login con la tua email e password. Una volta entrato, sarai indirizzato alla dashboard principale (Home).
-
----
-
-## 2. Mappatura Luoghi e Ricerca Campi
-
-Trovare il terreno ideale per un campo estivo di Reparto o la casa per le Vacanze di Branco/Cerchio è una delle sfide più grandi. Il modulo **Luoghi** raccoglie l'esperienza cumulativa del tuo gruppo e della zona.
-
-### Ricerca di un Luogo
-1. Nella pagina principale, usa la **barra di ricerca** per filtrare per nome del luogo, comune o provincia.
-2. Clicca sul pulsante **Filtri** per raffinare la ricerca:
-   * **Tipologia**: Solo terreni (tende) o solo case (accantonamenti/posti letto).
-   * **Servizi**: Presenza di acqua potabile, attacco elettrico, legna per costruzioni, possibilità di fare fuochi a terra, presenza di spazi coperti (refettorio).
-   * **Caratteristiche ambientali**: Presenza di pascoli, bosco, altitudine, ecc.
-3. Seleziona un luogo per vederne la scheda di dettaglio.
-
-### Visualizzazione Dettaglio
-All'interno della scheda di un luogo troverai:
-* Indirizzo esatto e pulsante per aprire direttamente il navigatore su **Google Maps**.
-* Contatti dei proprietari o gestori (telefono, email, sito web).
-* Scheda tecnica: numero di posti letto, bagni, disponibilità di pali e legna.
-* **Valutazione e Recensioni**: Voti da 1 a 5 espressi in "orme" su aspetti cruciali (Ombra, Acqua, Legna, Fuochi, Sicurezza, Isolamento).
-
-### Aggiungere un Nuovo Luogo
-1. Clicca su **Aggiungi Luogo** (o sull'icona `+` nella sezione luoghi).
-2. Compila la scheda con quante più informazioni possibili:
-   * Nome, Regione, Provincia, Comune e Indirizzo.
-   * Coordinate GPS (fondamentali per i terreni isolati).
-   * Dettagli logistici e contatti.
-3. Clicca su **Salva Luogo**. L'inserimento ti farà guadagnare punti nella Leaderboard!
-
-### Recensire o Modificare un Luogo
-* **Recensione**: Se sei stato in quel luogo per un campo o un'attività, lascia una recensione dettagliata cliccando su "Scrivi Recensione". Assegna un punteggio ai singoli elementi (es. quanta legna c'è o se il suolo è in pendenza) e scrivi un commento metodologico (es. *"Ottimo per un Reparto di 30 persone, ma attenzione alla pendenza del terreno"*).
-* **Proposta di Modifica**: Se noti che un numero di telefono è cambiato o che i posti letto sono aumentati, clicca su **Modifica**. La tua modifica verrà inviata come proposta e approvata dai capi autorizzati.
+### Gestione Profilo
+Accedendo alla sezione **Profilo**, puoi visualizzare la tua scheda personale con tutti i livelli di formazione caricati e l'avanzamento dei tuoi punti. Cliccando su **Modifica Profilo**, puoi aggiornare in qualsiasi momento la tua formazione scout o caricare una nuova foto.
 
 ---
 
-## 3. Gamification e Leaderboard
+## 2. Mappatura Luoghi, Modifiche e Storico
+
+Il modulo **Luoghi** raccoglie l'esperienza cumulativa del tuo gruppo e della zona per le uscite e i campi.
+
+### Ricerca e Filtro Luoghi
+1. Nella Home, usa la **barra di ricerca** per filtrare per nome del luogo, comune o provincia.
+2. Clicca su **Filtri** per raffinare la ricerca:
+   * **Branca Consigliata** (L/C, E/G, R/S, CoCa, Gruppo)
+   * **Servizi**: Acqua potabile, energia elettrica, riscaldamento, spazio tende, bagni, cucina, posti letto.
+3. Seleziona un luogo per vederne la scheda tecnica (contatti, coordinate GPS, mappa e recensioni).
+
+### Aggiungere un Luogo o Apportare Modifiche Istantanee
+* **Aggiungi**: Clicca su **"+"** in Home, compila i dati e salva. L'inserimento è istantaneo e visibile a tutti.
+* **Modifica**: Se noti dati obsoleti (es. numero del custode cambiato), clicca su **Modifica** nella scheda del luogo e aggiorna i campi. Le modifiche sono **istantanee** per velocizzare il lavoro di tutti. Il sistema ti chiederà di inserire una brevissima descrizione delle variazioni per registrarla nella cronologia.
+
+### Registro Storico delle Modifiche e Badge Novità
+* **Badge rosso**: Se un altro capo ha modificato un luogo dall'ultima volta che lo hai aperto, vedrai un pallino rosso con il numero delle novità sulla card del luogo in Home.
+* **Banner Storico**: All'interno del dettaglio del luogo, un banner ti mostra chi ha modificato cosa. Questo banner è altamente interattivo:
+  * È **paginato** (mostra al massimo 5 righe su mobile e 10 su PC per risparmiare spazio).
+  * Può essere **ridotto a icona** (diventa un piccolo pulsante fluttuante in basso a destra) o **ingrandito a schermo intero** per una lettura comoda.
+  * Le novità che non hai ancora letto avranno la dicitura verde **"NUOVA"**.
+
+---
+
+## 3. Funzionamento Offline e Indicatore di Rete
+
+Orme funziona anche nei boschi o in montagna dove non c'è internet.
+
+### Come funziona
+* **Consultazione**: Tutte le informazioni caricate quando eri online restano salvate sul telefono e sono accessibili anche senza rete.
+* **Inserimento dati**: Puoi inserire spese, aggiornare l'inventario o modificare luoghi anche offline. L'app salverà i dati sul telefono e aggiornerà subito la tua interfaccia.
+* **Sincronizzazione**: Non appena il telefono tornerà online, l'app invierà le modifiche accumulate al database in background.
+* **Indicatore di stato (Header)**:
+  * **Icona segnale arancione**: Sei offline. Mostra il numero di modifiche in attesa di sincronizzazione.
+  * **Icona rotante**: Sincronizzazione in corso.
+  * **Pulsante rosso "Riprova"**: Se la risincronizzazione fallisce, puoi forzare manualmente l'invio cliccando sul pulsante rosso.
+
+---
+
+## 4. Gamification e Leaderboard
 
 Orme premia la collaborazione attiva. Più contribuisci a inserire luoghi e recensioni, più punti accumula il tuo profilo.
 
-* **Punti**: Ottieni punti per ogni luogo inserito (+10 punti), recensione lasciata (+5 punti), aggiunta di coordinate precise (+3 punti), indicazione dei prezzi (+5 punti) e inserimento sito web (+2 punti).
-* **Livelli**: Sali di livello (da *Piede Tenero* a *Esploratore Esperto*) in base al punteggio accumulato.
-* **Badge**: Sblocca distintivi speciali visibili sul tuo profilo per traguardi significativi (es. "Mastro dei Campi" per aver inserito 10 luoghi).
+* **Punti**: Ottieni punti per ogni luogo inserito (+10), recensione lasciata (+10), sito web (+2), coordinate precise (+3), prezzi (+5), eventi calendario (+3), controlli inventario (+2) e audit (+15).
+* **Livelli**: Sali di livello (da *Piede Tenero* a *Guida delle Orme*) in base al punteggio accumulato.
+* **Badge**: Sblocca distintivi speciali visibili sul tuo profilo per traguardi significativi (es. "Geografo" per chi inserisce coordinate precise).
 
 ---
 
-## 4. Calendario di Gruppo
+## 5. Calendario di Gruppo
 
 Il modulo **Calendario** permette di pianificare le attività e i passaggi logistici evitando sovrapposizioni tra le branche.
 
 1. Seleziona **Calendario** dal menu di navigazione.
-2. Puoi visualizzare gli eventi in formato mensile, settimanale o come lista di scadenze.
-3. **Creare un evento**: Clicca su un giorno vuoto o su "Nuovo Evento". Inserisci titolo, branca coinvolta (es. Reparto, Branco, CoCa), luogo, ora di inizio/fine e una descrizione logistica (es. materiale da portare).
-4. **Notifiche**: Gli eventi importanti generano notifiche per i capi della branca di riferimento.
+2. Visualizza gli eventi in formato mensile, settimanale o come lista di scadenze.
+3. **Creare un evento**: Clicca su "Nuovo Evento". Inserisci titolo, branca coinvolta (es. Reparto, Branco, CoCa), luogo, ora di inizio/fine e descrizione.
+4. Tutti gli staff vedono gli eventi inseriti per coordinare l'uso dei materiali e delle sedi.
 
 ---
 
-## 5. Gestione Inventario e Attrezzature
+## 6. Gestione Inventario e Attrezzature
 
-Il materiale di gruppo (tende di squadriglia, cambusa, pali, corde, lanterne, bombole) tende a disperdersi o rovinarsi se non tracciato. Il modulo **Inventario** risolve questo problema.
+Il materiale di gruppo (tende, cambusa, pali, corde, lanterne, bombole) può essere tracciato nel modulo **Inventario** per evitare che si perda.
 
 ### Registrare un Materiale
 1. Vai alla sezione **Inventario**.
-2. Clicca su **Aggiungi Articolo**.
-3. Inserisci:
-   * **Nome dell'articolo** (es. *Tenda Jumbo 8 posti*).
-   * **Categoria** (es. *Tende*, *Cucina*, *Pionieristica*, *Altro*).
-   * **Quantità totale** e **Stato di conservazione** (Ottimo, Buono, Da riparare, Inutilizzabile).
-   * **Collocazione** (es. *Sede - Ripostiglio 1*, *Container*).
-4. Clicca su **Salva**.
+2. Clicca su **Aggiungi Articolo** e inserisci nome, categoria (Tende, Cucina, Pionieristica, Altro), quantità, stato di conservazione (Ottimo, Buono, Da riparare, Inutilizzabile) e collocazione in magazzino.
+3. Clicca su **Salva**.
 
 ### Carico/Scarico e Prestiti
-* Quando una Branca preleva del materiale per un'uscita, seleziona l'articolo e clicca su **Preleva/Prestito**.
-* Indica la quantità prelevata, la branca richiedente e la data prevista di rientro.
-* Al rientro, effettua lo scarico segnando l'avvenuta restituzione ed eventualmente annotando danni (es. *"Paleria piegata - da riparare"*).
+* Clicca su **Preleva/Prestito** per registrare quale branca preleva un materiale (es. *Tende Jumbo per il Reparto*).
+* Indica la data prevista di rientro. Al rientro, conferma la restituzione e segna eventuali danni da riparare.
 
 ---
 
-## 6. Bilancio e Cassa di Branca
+## 7. Bilancio e Cassa di Branca
 
-La contabilità scout deve essere trasparente e ordinata. Questo modulo permette a ciascun tesoriere di branca (e ai capigruppo) di tenere traccia di entrate e uscite.
+Il modulo **Bilancio** permette a ciascun tesoriere di branca (e ai capigruppo) di registrare entrate e uscite in modo trasparente.
 
-### Registrare una Transazione
 1. Entra in **Bilancio**.
 2. Scegli la **Branca** di riferimento (L/C, E/G, R/S, CoCa, Cassa di Gruppo).
-3. Clicca su **Nuova Transazione**.
-4. Compila i campi richiesti:
-   * **Tipo**: Entrata (es. quote campo, autofinanziamento) o Uscita (es. spesa cambusa, acquisto materiali).
-   * **Importo** in euro.
-   * **Categoria** (es. *Quote*, *Alimentari*, *Materiale tecnico*, *Trasporti*, *Affitto/Sede*).
-   * **Data** della transazione.
-   * **Note** esplicative (es. *"Spesa cambusa Uscita di Primavera 2026"*).
-5. Clicca su **Salva**.
-
-### Monitoraggio
-* Nella dashboard del Bilancio puoi vedere il saldo attuale della Branca e grafici riassuntivi sull'andamento delle spese suddivise per categoria.
-* È possibile esportare il registro di cassa in formato Excel/CSV per la presentazione in sede di Assemblea di Gruppo.
+3. Clicca su **Nuova Transazione** e inserisci il tipo (Entrata/Uscita), l'importo, la categoria (Cambusa, Trasporti, Materiale, Sede, ecc.) e la causale.
+4. Puoi visualizzare grafici riassuntivi ed esportare il registro di cassa in formato Excel per i bilanci di fine anno.
 
 ---
 
-## 7. Lista d'Attesa e Iscrizioni Pubbliche
+## 8. Rubrica Trasporti e Calcolo Quote
 
-La gestione delle richieste di iscrizione dei bambini è automatizzata tramite un modulo pubblico condivisibile con i genitori e un pannello di gestione capi.
+Pianificare i viaggi di branca o di gruppo con pullman privati è semplice grazie al modulo Trasporti.
 
-### Configurazione del Form Pubblico
+1. Clicca sul **pulsante fluttuante blu con l'icona del bus** in basso a destra nella Home.
+2. Visualizza la rubrica delle ditte di trasporti testate. Puoi filtrarle per regione, posti o tariffe.
+3. **Preventivo e Calcolo Quota**: Quando inserisci o modifichi una ditta, inserendo il costo del **Preventivo**, dovrai indicare obbligatoriamente il **Chilometraggio (km)** e il **Numero di Persone**.
+4. L'app calcolerà in tempo reale la quota stimata per persona (es. *15,50 € a persona*), mostrandola chiaramente nella card della ditta.
+5. Puoi filtrare l'elenco impostando un budget massimo *per persona* per trovare subito il pullman più conveniente per la tua tratta.
+
+---
+
+## 9. Lista d'Attesa e Iscrizioni Pubbliche
+
+La gestione delle richieste di iscrizione dei bambini è centralizzata e protetta, nel rispetto del GDPR.
+
+### Personalizzazione del Form
 1. Vai su **Lista d'Attesa** e clicca su **Personalizza Form**.
-2. Personalizza il form che vedranno i genitori:
-   * **Titolo del modulo** e **Titolo di Benvenuto**.
-   * **Immagine di Copertina / Banner**: Carica un file immagine (Base64) che rappresenti il tuo gruppo (es. logo o foto di gruppo).
-   * **Testo Descrizione**: Spiega i tempi, le priorità di inserimento e le modalità del gruppo.
-   * **Privacy Disclaimer**: Testo sul trattamento dei dati.
-3. Clicca su **Salva Impostazioni**.
+2. Configura il modulo per i genitori caricando una foto di copertina, inserendo testi di benvenuto e spiegazioni, e salvando. Le impostazioni sono subito online.
+3. Clicca su **Automazioni & Condivisione** per copiare il link pubblico o scaricare il **QR Code** da distribuire.
 
-### Condivisione
-* Clicca su **Automazioni & Condivisione** per copiare il link pubblico da inviare ai genitori o scaricare il **QR Code** da stampare ed esporre in parrocchia/sede.
-
-### Come funziona l'inserimento
-* Il genitore compila il form inserendo i propri contatti (Nome, Telefono) e i dati del figlio/figlia (Nome, Cognome, Data di nascita, Classe frequentata).
-* All'invio, il ragazzo viene inserito istantaneamente nella **Lista d'Attesa** visibile ai capi. L'età e i giorni trascorsi in lista vengono calcolati in tempo reale dal sistema.
-
-### Importazione di massa da Excel/CSV
-Se possiedi già un vecchio file Excel o Google Sheet con le iscrizioni:
-1. Nella pagina Lista d'Attesa, clicca su **Carica da File Excel / CSV**.
-2. Seleziona il file dal tuo computer.
-3. Associa le colonne del tuo file ai campi richiesti dal sistema (Nome ragazzo, data nascita, telefono genitore, ecc.) tramite i menu a tendina.
-4. Clicca su **Conferma Importazione**. Il sistema rileverà e ignorerà automaticamente i duplicati (record con gli stessi identici dati già inseriti) e ti mostrerà il riepilogo finale.
+### Gestione Iscritti (Niente Stati o Workflow)
+* Quando un genitore compila il form, il bambino appare subito nella lista d'attesa dei capi, ordinato cronologicamente. Il sistema calcola automaticamente l'età e la classe.
+* Non ci sono pulsanti di accettazione o rifiuto: la lista funge da pura anagrafica consultabile centralizzata per evitare fogli volanti o file word smarriti.
+* Puoi inserire note libere o rimuovere un nominativo se inserito per errore.
+* È possibile effettuare l'importazione di massa da file Excel pulendo i duplicati all'istante.
 
 ---
 
-## 8. Verbali di Comunità Capi
+## 10. Verbali di Comunità Capi
 
-La redazione dei verbali delle riunioni di CoCa è fondamentale per tenere traccia delle decisioni prese.
+La redazione dei verbali delle riunioni di CoCa permette di tenere traccia delle decisioni prese.
 
-### Creare un Verbale
 1. Naviga in **Verbali** e seleziona **Scrivi Nuovo Verbale**.
-2. Compila le informazioni generali:
-   * **Titolo** (es. *Consiglio di CoCa del 28/05/2026*).
-   * **Data** e **Luogo**.
-   * **Segretario** (redattore) e **Presidente/Moderatore**.
-3. **Presenze**: Seleziona i capi presenti, assenti giustificati o assenti non giustificati dall'elenco dei membri della CoCa.
-4. **Ordine del Giorno (OdG)**: Aggiungi i punti di discussione.
-5. **Contenuto**: Usa l'editor di testo per redigere la sintesi del dibattito. Puoi evidenziare le **Deliberazioni** (decisioni formali prese a voto o consenso) e assegnare **Incarichi/Azioni** specificando chi deve fare cosa ed entro quando.
-6. Clicca su **Salva Verbale**.
-
-### Firme ed Esportazione PDF
-* I verbali salvati possono essere firmati digitalmente (tramite sigla/spunta dei membri presenti).
-* Cliccando su **Esporta PDF**, il sistema genera un documento formale A4 impaginato secondo i criteri della Comunità Capi, pronto per essere stampato o archiviato in cloud.
-* Nella sezione **Statistiche**, i capigruppo possono monitorare le percentuali di presenza medie dei capi alle riunioni nel corso dell'anno.
+2. Inserisci data, luogo, segretario e presidente, presenze dei capi e ordine del giorno.
+3. Usa l'editor per redigere la sintesi, evidenziando le deliberazioni o gli incarichi con data di scadenza.
+4. Salva il verbale. Il sistema invierà una notifica e-mail e in-app automatica a tutta la CoCa (compreso l'autore).
+5. È possibile firmare il verbale ed esportarlo in un documento formale A4 PDF per la stampa o l'archivio.

@@ -6,7 +6,7 @@ Questa documentazione descrive le scelte tecnologiche, la struttura del database
 
 ## Stack Tecnologico
 
-L'applicazione è sviluppata con un'architettura moderna di tipo **Serverless Single Page Application (SPA)**:
+L'applicazione è sviluppata con un'architettura moderna di tipo **Serverless Single Page Application (SPA)** con supporto PWA (Progressive Web App) per l'installazione e il funzionamento offline reale:
 
 * **Frontend**:
   * **React 19**: Libreria di base per l'interfaccia utente.
@@ -16,6 +16,7 @@ L'applicazione è sviluppata con un'architettura moderna di tipo **Serverless Si
   * **Lucide React**: Set di icone vettoriali coerenti e leggere.
   * **XLSX (SheetJS)**: Libreria client per la lettura e l'esportazione di file Excel/CSV.
   * **jspdf / html2pdf.js / pdfmake**: Librerie utilizzate per la generazione dinamica dei PDF dei verbali direttamente sul client.
+  * **Workbox & Vite PWA Plugin**: Generazione del Service Worker per il caching degli asset statici in locale.
 
 * **Backend / Database**:
   * **Supabase (PostgreSQL)**: Database relazionale, gestione dell'autenticazione degli utenti e storage dei file.
@@ -25,10 +26,10 @@ L'applicazione è sviluppata con un'architettura moderna di tipo **Serverless Si
 
 ## Architettura del Database (Schema Supabase)
 
-I dati sono strutturati su tabelle PostgreSQL ospitate su Supabase. Di seguito si descrivono le principali entità dello schema.
+I dati sono strutturati su tabelle PostgreSQL ospitate su Supabase. Di seguito si descrivono le entità dello schema aggiornate.
 
 ### 1. Tabella `users`
-Contiene i profili utente dei capi scout. È collegata alla tabella di autenticazione nativa di Supabase (`auth.users`).
+Contiene i profili utente dei capi scout. È collegata alla tabella di autenticazione nativa di Supabase (`auth.users`). In fase di registrazione/modifica del profilo è possibile tracciare lo storico dei corsi di formazione scout.
 
 ```sql
 CREATE TABLE users (
@@ -56,12 +57,14 @@ CREATE TABLE users (
     website_info_added INTEGER DEFAULT 0,
     verbali_read INTEGER DEFAULT 0,
     locations_searched INTEGER DEFAULT 0,
+    formazione JSONB DEFAULT '[]', -- Contiene array di oggetti: { corso, anno, mese }
+    has_nomina_capo BOOLEAN DEFAULT FALSE, -- Flag per la nomina formale a Capo
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
 ```
 
 ### 2. Tabella `locations`
-Registra le case e i terreni mappati.
+Registra i terreni e gli accantonamenti mappati. Le modifiche sono istantanee e salvate direttamente qui.
 
 ```sql
 CREATE TABLE locations (
@@ -109,31 +112,34 @@ CREATE TABLE locations (
 );
 ```
 
-### 3. Tabella `location_reviews`
-Conserva le recensioni dei capi sui singoli luoghi.
+### 3. Tabella `location_history`
+Traccia la cronologia storica delle modifiche apportate alle schede dei luoghi per la massima trasparenza e auditing.
 
 ```sql
-CREATE TABLE location_reviews (
+CREATE TABLE location_history (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     location_id UUID REFERENCES locations(id) ON DELETE CASCADE,
-    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    ombra INTEGER CHECK (ombra BETWEEN 1 AND 5),
-    acqua_potabile INTEGER CHECK (acqua_potabile BETWEEN 1 AND 5),
-    legna INTEGER CHECK (legna BETWEEN 1 AND 5),
-    fuochi INTEGER CHECK (fuochi BETWEEN 1 AND 5),
-    suolo INTEGER CHECK (suolo BETWEEN 1 AND 5),
-    servizi INTEGER CHECK (servizi BETWEEN 1 AND 5),
-    prezzo INTEGER CHECK (prezzo BETWEEN 1 AND 5),
-    sicurezza INTEGER CHECK (sicurezza BETWEEN 1 AND 5),
-    isolamento INTEGER CHECK (isolamento BETWEEN 1 AND 5),
-    commento TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
-    UNIQUE(location_id, user_id)
+    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    user_nickname TEXT, -- Copia del nickname al momento della modifica
+    action_description TEXT NOT NULL, -- Riassunto testuale delle variazioni apportate
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
 ```
 
-### 4. Tabella `lista_attesa`
-Gestisce l'anagrafica dei bambini iscritti in lista d'attesa.
+### 4. Tabella `user_location_views`
+Memorizza l'orario in cui ciascun utente visualizza per l'ultima volta una scheda. Utilizzata per calcolare la presenza di aggiornamenti non ancora letti.
+
+```sql
+CREATE TABLE user_location_views (
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    location_id UUID REFERENCES locations(id) ON DELETE CASCADE,
+    last_viewed_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+    PRIMARY KEY (user_id, location_id)
+);
+```
+
+### 5. Tabella `lista_attesa`
+Gestisce l'anagrafica centralizzata dei bambini in lista d'attesa. Rimosso ogni riferimento a stati di workflow.
 
 ```sql
 CREATE TABLE lista_attesa (
@@ -147,13 +153,12 @@ CREATE TABLE lista_attesa (
     classe TEXT NOT NULL,
     data_iscrizione DATE NOT NULL DEFAULT CURRENT_DATE,
     note TEXT,
-    stato TEXT NOT NULL DEFAULT 'In attesa', -- 'In attesa', 'Accettato', 'Rifiutato'
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
 ```
 
-### 5. Tabella `impostazioni_iscrizione`
-Salva i testi di personalizzazione e la stringa in Base64 dell'immagine di copertina del form pubblico.
+### 6. Tabella `impostazioni_iscrizione`
+Salva i testi di personalizzazione e l'immagine di copertina del form pubblico.
 
 ```sql
 CREATE TABLE impostazioni_iscrizione (
@@ -162,10 +167,34 @@ CREATE TABLE impostazioni_iscrizione (
     welcome_title TEXT NOT NULL,
     description_text TEXT NOT NULL,
     footer_text TEXT NOT NULL,
-    banner_url TEXT NOT NULL, -- Immagine del banner codificata in Base64
+    banner_url TEXT NOT NULL, -- Immagine del banner codificata in Base64 o URL
     success_title TEXT NOT NULL,
     success_message TEXT NOT NULL,
     disclaimer_text TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+```
+
+### 7. Tabella `servizi_trasporto`
+Contiene la rubrica delle ditte bus e pullman con i preventivi e i passeggeri per il calcolo automatico della quota individuale.
+
+```sql
+CREATE TABLE servizi_trasporto (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    group_id TEXT NOT NULL,
+    company_name TEXT NOT NULL,
+    contact_name TEXT,
+    phone TEXT,
+    email TEXT,
+    departure_region TEXT NOT NULL,
+    departure_commune TEXT NOT NULL,
+    departure_address TEXT,
+    capacity INTEGER NOT NULL DEFAULT 50,
+    price_per_person NUMERIC,
+    base_price NUMERIC, -- Preventivo totale fornito dalla ditta
+    km NUMERIC, -- Lunghezza chilometrica della tratta
+    numero_persone INTEGER, -- Numero di partecipanti previsto per la tratta
+    notes TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
 ```
@@ -174,67 +203,64 @@ CREATE TABLE impostazioni_iscrizione (
 
 ## Sicurezza e RLS (Row Level Security)
 
-Per garantire che i dati sensibili di un gruppo scout (es. contatti dei genitori, verbali interni, bilanci) non siano accessibili o modificabili da capi di altri gruppi, Supabase applica le politiche **RLS** basate sulla colonna `group_id`.
+Per garantire che i dati sensibili di un gruppo scout non siano accessibili o modificabili da membri estranei, Supabase applica le politiche **RLS** basate sulla colonna `group_id`.
 
-### Esempio 1: Isolamento del gruppo sulla lista d'attesa
+### 1. Tabella `lista_attesa`
 ```sql
 ALTER TABLE lista_attesa ENABLE ROW LEVEL SECURITY;
 
--- Consente lettura, modifica ed eliminazione solo se l'utente appartiene allo stesso gruppo scout
+-- Consente lettura, modifica ed eliminazione solo se l'utente appartiene allo stesso gruppo
 CREATE POLICY "Group isolation on lista_attesa" ON lista_attesa
     FOR ALL USING (group_id = (SELECT group_id FROM users WHERE id = auth.uid()));
 
--- Consente l'inserimento pubblico a chiunque (necessario per consentire ai genitori non registrati di compilare il form d'iscrizione)
+-- Consente l'inserimento pubblico (necessario per consentire ai genitori non autenticati di iscrivere i figli)
 CREATE POLICY "Public insert on lista_attesa" ON lista_attesa
     FOR INSERT WITH CHECK (true);
 ```
 
-### Esempio 2: Isolamento del gruppo per l'inventario e il bilancio
-Tutte le query di inserimento e selezione per materiali e transazioni filtrano implicitamente su `group_id = currentUser.groupId`. In questo modo si realizza una logica di multi-tenancy robusta direttamente a livello database.
+### 2. Gestione Robusta delle Impostazioni Iscrizione (Risoluzione conflitti Upsert)
+Nelle operazioni di salvataggio via client, l'utilizzo di `upsert` in Supabase è soggetto a fallimenti a causa del comportamento delle policy `FOR ALL` combinate. Per risolvere questo problema, le politiche sono separate in base all'operazione:
+```sql
+ALTER TABLE impostazioni_iscrizione ENABLE ROW LEVEL SECURITY;
 
----
+-- Chiunque (anche non loggato) deve poter leggere il form
+CREATE POLICY "Anyone can read impostazioni_iscrizione" ON impostazioni_iscrizione
+    FOR SELECT USING (true);
 
-## Struttura del Codice Frontend
+-- Solo i capi loggati appartenenti al rispettivo gruppo possono inserire, modificare o eliminare
+CREATE POLICY "Capi insert impostazioni_iscrizione" ON impostazioni_iscrizione
+    FOR INSERT TO authenticated WITH CHECK (group_id = (SELECT group_id FROM users WHERE id = auth.uid()));
 
-I file sorgente del frontend sono organizzati all'interno della cartella `src/`:
+CREATE POLICY "Capi update impostazioni_iscrizione" ON impostazioni_iscrizione
+    FOR UPDATE TO authenticated USING (group_id = (SELECT group_id FROM users WHERE id = auth.uid())) WITH CHECK (group_id = (SELECT group_id FROM users WHERE id = auth.uid()));
 
+CREATE POLICY "Capi delete impostazioni_iscrizione" ON impostazioni_iscrizione
+    FOR DELETE TO authenticated USING (group_id = (SELECT group_id FROM users WHERE id = auth.uid()));
 ```
-src/
-├── components/          # Componenti condivisibili (Layout, Barra di Navigazione, ProtectedRoute)
-├── context/             # React Context (Gestione del tema Dark Mode)
-├── lib/                 # Logica di comunicazione con Supabase (API client)
-│   ├── data.ts          # Gestione utenti e luoghi
-│   ├── listaAttesa.ts   # Gestione liste d'attesa e impostazioni form
-│   ├── supabase.ts      # Inizializzazione client Supabase
-│   └── verbali.ts       # Gestione verbali e membri
-├── pages/               # Pagine dell'applicazione
-│   ├── ListaAttesa/     # Interfaccia capi per la lista d'attesa
-│   ├── Public/          # Form di iscrizione pubblico per i genitori
-│   ├── Verbali/         # Creazione, modifica, visualizzazione e statistiche dei verbali
-│   ├── Bilancio.tsx     # Gestione entrate/uscite e cassa
-│   ├── Inventario.tsx   # Gestione attrezzature e prestiti
-│   ├── Calendario.tsx   # Gestione eventi
-│   ├── Home.tsx         # Dashboard e ricerca luoghi
-│   └── Profile.tsx      # Visualizzazione profilo e gamification
-├── types/               # Interfacce di definizione TypeScript (index.ts)
-├── App.tsx              # Router dell'applicazione e rotte
-├── index.css            # Stili globali e configurazione Tailwind CSS v4.0
-└── main.tsx             # Entry point di React
+
+### 3. Nuove tabelle di supporto
+Per `location_history`, `user_location_views` e `servizi_trasporto` si applica la medesima logica di isolamento del gruppo:
+```sql
+-- Esempio per servizi_trasporto
+ALTER TABLE servizi_trasporto ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Group isolation on servizi_trasporto" ON servizi_trasporto
+    FOR ALL USING (group_id = (SELECT group_id FROM users WHERE id = auth.uid()));
 ```
 
 ---
 
-## Gestione dell'Importazione Excel (Deduplicazione in Batch)
+## Architettura del Funzionamento Offline
 
-Durante l'importazione di file `.xlsx` o `.csv` contenenti iscritti in lista d'attesa, l'applicazione attua una procedura di bonifica e caricamento in singola transazione (batch):
+Il modulo di funzionamento offline è governato da `src/lib/offline.ts` ed è integrato trasversalmente a tutti i servizi dati dell'applicazione:
 
-1. **Lettura file**: La libreria `XLSX` converte il foglio di calcolo in formato JSON.
-2. **Mappatura**: L'utente associa le colonne del foglio di calcolo ai campi database.
-3. **Normalizzazione e Validazione**:
-   * Si normalizzano i dati testuali eliminando gli spazi bianchi iniziali e finali.
-   * Le date di nascita e iscrizione vengono ripulite (anche se espresse in numeri seriali di Excel).
-   * Vengono scartate le righe interamente vuote.
-4. **Deduplicazione Client-Side**:
-   * **Rimozione doppioni nel file**: Viene fatto un confronto incrociato campo per campo su tutte le righe del file.
-   * **Rimozione rispetto al DB**: Si effettua una comparazione case-insensitive tra le righe del file e l'elenco `lista` già presente in memoria.
-5. **Caricamento Batch**: I record unici rimanenti vengono passati ad `addIscrittiBatch(iscritti)`, che esegue un **singolo inserimento batch PostgreSQL** anziché eseguire chiamate asincrone singole ripetute. Questo previene rate-limiting e cadute di connessione.
+1. **Rilevamento della connessione**:
+   * Utilizza `navigator.onLine` accoppiato a listener per gli eventi `'online'` e `'offline'` su `window`.
+2. **Caching Locale**:
+   * Qualsiasi chiamata in SELECT (es. recupero luoghi o inventario) salva i dati scaricati da Supabase in `localStorage` sotto chiavi specifiche (es. `impostazioni_iscrizione_${groupId}`).
+   * In assenza di connessione, le funzioni di recupero intercettano lo stato offline e caricano i dati direttamente dalla cache locale senza generare errori o crash.
+3. **Gestione Scritture Offline (`offline_write_queue`)**:
+   * Le scritture (insert, update, delete) effettuate offline non vengono perse, ma memorizzate in una coda locale (`offline_write_queue` in `localStorage`).
+   * Tali modifiche vengono applicate temporaneamente alla cache di lettura locale per garantire che l'interfaccia utente rifletta immediatamente le variazioni effettuate dal capo (es. una spesa inserita in cambusa).
+4. **Sincronizzazione Automatica**:
+   * Al ripristino della rete (evento `'online'`), l'applicazione scorre la coda locale, esegue le query su Supabase in ordine cronologico e svuota la coda.
+   * Se una transazione fallisce a causa di un errore persistente, lo stato viene evidenziato nell'header e l'utente può forzare manualmente la risincronizzazione tramite click sul pulsante "Riprova".
