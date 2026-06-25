@@ -317,16 +317,37 @@ export async function saveImpostazioniIscrizione(
             return mapDbRowToImpostazioni({ ...upsertData, created_at: new Date().toISOString() });
         }
 
-        const { data, error } = await supabase
+        // Controlla se le impostazioni esistono già per questo gruppo
+        const { data: existing, error: selectError } = await supabase
             .from('impostazioni_iscrizione')
-            .upsert(upsertData)
-            .select()
-            .single();
+            .select('*')
+            .eq('group_id', currentUser.groupId)
+            .maybeSingle();
 
-        if (error) throw error;
-        
-        setCachedData(`impostazioni_iscrizione_${currentUser.groupId}`, data);
-        return mapDbRowToImpostazioni(data);
+        if (selectError) throw selectError;
+
+        let result;
+        if (existing) {
+            const { data, error: updateError } = await supabase
+                .from('impostazioni_iscrizione')
+                .update(upsertData)
+                .eq('group_id', currentUser.groupId)
+                .select()
+                .single();
+            if (updateError) throw updateError;
+            result = data;
+        } else {
+            const { data, error: insertError } = await supabase
+                .from('impostazioni_iscrizione')
+                .insert(upsertData)
+                .select()
+                .single();
+            if (insertError) throw insertError;
+            result = data;
+        }
+
+        setCachedData(`impostazioni_iscrizione_${currentUser.groupId}`, result);
+        return mapDbRowToImpostazioni(result);
     } catch (error) {
         console.error("Errore nel salvataggio delle impostazioni iscrizione:", error);
         return null;
