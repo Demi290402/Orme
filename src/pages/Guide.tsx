@@ -3,19 +3,20 @@ import {
     BookOpen,
     Trophy,
     Smartphone,
-    CheckCircle2,
     PlusCircle,
-    Edit3,
     Zap,
-    Info,
-    ChevronRight,
     Clock,
     Footprints,
-    ShieldCheck,
     Users,
     Archive,
     Wrench,
-    ClipboardCheck
+    ClipboardCheck,
+    Calendar,
+    Bus,
+    FileText,
+    Search,
+    ListOrdered,
+    ShieldCheck
 } from 'lucide-react';
 import { User } from '@/types';
 import { getAllUsers } from '@/lib/data';
@@ -35,8 +36,6 @@ export default function Guide() {
         { action: 'Aggiunta sito web', points: 2, icon: <Zap size={18} className="text-scout-blue" /> },
         { action: 'Aggiunta Indirizzo/Maps/GPS', points: 3, icon: <Zap size={18} className="text-scout-blue" /> },
         { action: 'Inserimento prezzi e tariffe', points: 5, icon: <Zap size={18} className="text-scout-blue" /> },
-        { action: 'Approvazione modifica (Capi)', points: 5, icon: <CheckCircle2 size={18} className="text-scout-green" /> },
-        { action: 'Proposta approvata', points: 10, icon: <Edit3 size={18} className="text-scout-brown" /> },
         { action: 'Aggiunta evento a calendario', points: 3, icon: <Trophy size={18} className="text-scout-green" /> },
         { action: 'Ricerca nei luoghi (1 al giorno)', points: 1, icon: <Footprints size={18} className="text-scout-blue" /> },
         { action: 'Lettura di un verbale (una tantum)', points: 5, icon: <BookOpen size={18} className="text-scout-brown" /> },
@@ -61,34 +60,156 @@ export default function Guide() {
             </div>
 
             {/* 1. Come usare l'app */}
-            <section className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
-                <h2 className="text-xl font-bold text-scout-brown dark:text-amber-500 mb-4 flex items-center gap-2">
+            <section className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 animate-in slide-in-from-top-4 duration-200">
+                <h2 className="text-xl font-bold text-scout-brown dark:text-amber-500 mb-2 flex items-center gap-2">
                     <BookOpen /> Come usare l'app
                 </h2>
-                <div className="space-y-4 text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-                    <p>
-                        Orme è progettata per essere rapida e utile durante la programmazione dei campi.
-                    </p>
-                    <ul className="space-y-3">
-                        <li className="flex gap-3">
-                            <div className="bg-scout-green/10 dark:bg-emerald-900/30 p-1.5 h-fit rounded-lg">
-                                <ChevronRight size={14} className="text-scout-green" />
-                            </div>
-                            <span><strong>Cerca:</strong> Usa la barra di ricerca in home per trovare luoghi per nome, comune o attività. Puoi anche filtrare per specifiche attività scout.</span>
-                        </li>
-                        <li className="flex gap-3">
-                            <div className="bg-scout-green/10 dark:bg-emerald-900/30 p-1.5 h-fit rounded-lg">
-                                <ChevronRight size={14} className="text-scout-green" />
-                            </div>
-                            <span><strong>Aggiungi:</strong> Se conosci un posto non presente, clicca sul "+" in home. Più dettagli metti, più punti guadagni!</span>
-                        </li>
-                        <li className="flex gap-3">
-                            <div className="bg-scout-green/10 dark:bg-emerald-900/30 p-1.5 h-fit rounded-lg">
-                                <ChevronRight size={14} className="text-scout-green" />
-                            </div>
-                            <span><strong>Modifica:</strong> Se vedi informazioni sbagliate, proponi una modifica. La tua proposta verrà salvata appena 2 capi la approvano.</span>
-                        </li>
-                    </ul>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 font-medium">
+                    Orme è lo strumento collaborativo progettato per semplificare la gestione logistica, organizzativa e storica del nostro gruppo scout. Di seguito una panoramica dettagliata di tutte le funzionalità disponibili:
+                </p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* 1. Ricerca e Filtro Luoghi */}
+                    <div className="bg-gray-50/50 dark:bg-gray-900/50 p-5 rounded-xl border border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row gap-4 shadow-xs hover:shadow-md transition-all duration-200">
+                        <div className="bg-scout-green/10 dark:bg-emerald-950/30 text-scout-green dark:text-emerald-400 p-3 rounded-xl shrink-0 w-fit h-fit">
+                            <Search size={22} />
+                        </div>
+                        <div className="space-y-2">
+                            <h3 className="font-bold text-gray-900 dark:text-gray-100 text-sm uppercase tracking-wider">Cerca & Filtra Luoghi</h3>
+                            <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                                Trova accantonamenti, basi scout e terreni per il campeggio. Puoi effettuare ricerche testuali (nome del posto, città) e applicare filtri avanzati per:
+                            </p>
+                            <ul className="text-[11px] text-gray-500 dark:text-gray-400 list-disc pl-4 space-y-1">
+                                <li><strong>Branca consigliata</strong> (L/C, E/G, R/S, CoCa, Gruppo)</li>
+                                <li><strong>Servizi inclusi</strong> (acqua potabile, energia elettrica, riscaldamento, spazio tende, bagni, cucina, posti letto)</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    {/* 2. Inserimento e Modifica Istantanea */}
+                    <div className="bg-gray-50/50 dark:bg-gray-900/50 p-5 rounded-xl border border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row gap-4 shadow-xs hover:shadow-md transition-all duration-200">
+                        <div className="bg-scout-green/10 dark:bg-emerald-950/30 text-scout-green dark:text-emerald-400 p-3 rounded-xl shrink-0 w-fit h-fit">
+                            <PlusCircle size={22} />
+                        </div>
+                        <div className="space-y-2">
+                            <h3 className="font-bold text-gray-900 dark:text-gray-100 text-sm uppercase tracking-wider">Inserimento & Modifiche al Volo</h3>
+                            <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                                Collabora per tenere aggiornato il nostro archivio comune. Se scopri un nuovo posto o se noti che un contatto o una tariffa sono cambiati:
+                            </p>
+                            <ul className="text-[11px] text-gray-500 dark:text-gray-400 list-disc pl-4 space-y-1">
+                                <li>Registra un nuovo luogo con il pulsante <strong>"+"</strong> in Home</li>
+                                <li>Modifica istantaneamente qualsiasi informazione obsoleta direttamente dalla scheda del luogo</li>
+                                <li>Ottieni punti in classifica per ogni dato inserito o corretto</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    {/* 3. Storico Modifiche & Tracciabilità */}
+                    <div className="bg-gray-50/50 dark:bg-gray-900/50 p-5 rounded-xl border border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row gap-4 shadow-xs hover:shadow-md transition-all duration-200">
+                        <div className="bg-scout-green/10 dark:bg-emerald-950/30 text-scout-green dark:text-emerald-400 p-3 rounded-xl shrink-0 w-fit h-fit">
+                            <Clock size={22} />
+                        </div>
+                        <div className="space-y-2">
+                            <h3 className="font-bold text-gray-900 dark:text-gray-100 text-sm uppercase tracking-wider">Storico Modifiche & Novità</h3>
+                            <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                                Mantieni sotto controllo la freschezza e l'affidabilità dei dati. L'app offre un sistema di tracciamento completo delle modifiche:
+                            </p>
+                            <ul className="text-[11px] text-gray-500 dark:text-gray-400 list-disc pl-4 space-y-1">
+                                <li><strong>Stato dei dati</strong> (verde, giallo, arancione, rosso) per vedere a colpo d'occhio l'ultimo aggiornamento</li>
+                                <li><strong>Badge rosso pulsante</strong> sulle schede in Home per segnalare modifiche che non hai ancora letto</li>
+                                <li><strong>Registro storico</strong> nel dettaglio del luogo per scorrere la cronologia di chi ha modificato cosa</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    {/* 4. Gestione Verbali */}
+                    <div className="bg-gray-50/50 dark:bg-gray-900/50 p-5 rounded-xl border border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row gap-4 shadow-xs hover:shadow-md transition-all duration-200">
+                        <div className="bg-scout-green/10 dark:bg-emerald-950/30 text-scout-green dark:text-emerald-400 p-3 rounded-xl shrink-0 w-fit h-fit">
+                            <FileText size={22} />
+                        </div>
+                        <div className="space-y-2">
+                            <h3 className="font-bold text-gray-900 dark:text-gray-100 text-sm uppercase tracking-wider">Gestione Verbali di CoCa</h3>
+                            <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                                Digitalizza e archivia la memoria scritta delle riunioni di staff e di Comunità Capi:
+                            </p>
+                            <ul className="text-[11px] text-gray-500 dark:text-gray-400 list-disc pl-4 space-y-1">
+                                <li>Scrivi verbali direttamente nell'editor integrato dell'app</li>
+                                <li><strong>Notifiche automatiche</strong> istantanee via email e in-app a tutti i capi (compreso l'autore) alla pubblicazione</li>
+                                <li><strong>Esporta in PDF o Word (DOCX)</strong> per la stampa o l'archivio esterno</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    {/* 5. Inventario di Gruppo */}
+                    <div className="bg-gray-50/50 dark:bg-gray-900/50 p-5 rounded-xl border border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row gap-4 shadow-xs hover:shadow-md transition-all duration-200">
+                        <div className="bg-scout-green/10 dark:bg-emerald-950/30 text-scout-green dark:text-emerald-400 p-3 rounded-xl shrink-0 w-fit h-fit">
+                            <Wrench size={22} />
+                        </div>
+                        <div className="space-y-2">
+                            <h3 className="font-bold text-gray-900 dark:text-gray-100 text-sm uppercase tracking-wider">Inventario & Magazzino</h3>
+                            <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                                Tieni sempre sotto controllo lo stato dei materiali di gruppo per evitare imprevisti prima di un'uscita:
+                            </p>
+                            <ul className="text-[11px] text-gray-500 dark:text-gray-400 list-disc pl-4 space-y-1">
+                                <li>Suddivisione dell'inventario (tende, pali, cucine, attrezzi vari) per branca proprietaria</li>
+                                <li>Aggiornamento rapido dello <strong>stato di conservazione</strong> (ottimo, buono, usurato, da riparare) e delle quantità</li>
+                                <li>Censimenti rapidi (Audit) per associare i materiali a specifici luoghi</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    {/* 6. Calendario Attività */}
+                    <div className="bg-gray-50/50 dark:bg-gray-900/50 p-5 rounded-xl border border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row gap-4 shadow-xs hover:shadow-md transition-all duration-200">
+                        <div className="bg-scout-green/10 dark:bg-emerald-950/30 text-scout-green dark:text-emerald-400 p-3 rounded-xl shrink-0 w-fit h-fit">
+                            <Calendar size={22} />
+                        </div>
+                        <div className="space-y-2">
+                            <h3 className="font-bold text-gray-900 dark:text-gray-100 text-sm uppercase tracking-wider">Calendario Condiviso</h3>
+                            <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                                Coordinazione temporale per tutto il gruppo e per le singole branche:
+                            </p>
+                            <ul className="text-[11px] text-gray-500 dark:text-gray-400 list-disc pl-4 space-y-1">
+                                <li>Inserimento di uscite di branca, campi, riunioni di CoCa e scadenze burocratiche</li>
+                                <li>Visualizzazione mensile integrata per evitare sovrapposizioni di date e coordinare l'uso dei materiali comuni</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    {/* 7. Rubrica Trasporti & Preventivi */}
+                    <div className="bg-gray-50/50 dark:bg-gray-900/50 p-5 rounded-xl border border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row gap-4 shadow-xs hover:shadow-md transition-all duration-200">
+                        <div className="bg-scout-green/10 dark:bg-emerald-950/30 text-scout-green dark:text-emerald-400 p-3 rounded-xl shrink-0 w-fit h-fit">
+                            <Bus size={22} />
+                        </div>
+                        <div className="space-y-2">
+                            <h3 className="font-bold text-gray-900 dark:text-gray-100 text-sm uppercase tracking-wider">Rubrica Trasporti & Preventivi</h3>
+                            <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                                Gestisci i contatti delle ditte di pullman/autolinee e pianifica i viaggi in modo efficiente:
+                            </p>
+                            <ul className="text-[11px] text-gray-500 dark:text-gray-400 list-disc pl-4 space-y-1">
+                                <li>Accedi all'elenco dei trasportatori tramite il <strong>pulsante fluttuante blu</strong> in basso a destra in Home</li>
+                                <li>Calcola in automatico i chilometri di percorrenza e la <strong>quota stimata per persona</strong> inserendo il preventivo e il numero di partecipanti</li>
+                                <li>Filtra per località di partenza, capacità posti e tariffe</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    {/* 8. Lista d'Attesa Iscrizioni */}
+                    <div className="bg-gray-50/50 dark:bg-gray-900/50 p-5 rounded-xl border border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row gap-4 shadow-xs hover:shadow-md transition-all duration-200">
+                        <div className="bg-scout-green/10 dark:bg-emerald-950/30 text-scout-green dark:text-emerald-400 p-3 rounded-xl shrink-0 w-fit h-fit">
+                            <ListOrdered size={22} />
+                        </div>
+                        <div className="space-y-2">
+                            <h3 className="font-bold text-gray-900 dark:text-gray-100 text-sm uppercase tracking-wider">Lista d'Attesa Iscrizioni</h3>
+                            <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                                Un unico punto di raccolta per monitorare le richieste di iscrizione al gruppo:
+                            </p>
+                            <ul className="text-[11px] text-gray-500 dark:text-gray-400 list-disc pl-4 space-y-1">
+                                <li>Inserisci e consulta i dati anagrafici e i contatti dei bambini e ragazzi in attesa</li>
+                                <li>Ordina e filtra per branca di destinazione (L/C, E/G, R/S) e data di inserimento</li>
+                                <li>Evita la perdita di fogli cartacei o file locali sparsi, mantenendo l'archivio al sicuro e centralizzato</li>
+                            </ul>
+                        </div>
+                    </div>
                 </div>
             </section>
 
@@ -133,13 +254,6 @@ export default function Guide() {
                             <span className="font-bold text-scout-green dark:text-emerald-500">+{rule.points} pt</span>
                         </div>
                     ))}
-                </div>
-
-                <div className="mt-6 p-4 bg-orange-50 dark:bg-orange-950/20 rounded-xl border border-orange-100 dark:border-orange-900/50 flex gap-3">
-                    <Info className="text-orange-600 dark:text-orange-500 shrink-0" size={20} />
-                    <p className="text-xs text-orange-800 dark:text-orange-300 leading-normal">
-                        <strong>Penalità:</strong> Se una tua proposta viene rigettata da 2 capi perché ritenuta palesemente errata o dannosa, ti verranno detratti <strong>15 punti</strong>.
-                    </p>
                 </div>
             </section>
 
@@ -203,42 +317,45 @@ export default function Guide() {
                 </p>
             </section>
 
-            {/* 6. Chi Siamo */}
+            {/* 6. L'origine delle nostre Orme */}
             <section className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 mt-12">
                 <div className="text-center mb-8">
-                    <h2 className="text-2xl font-bold text-scout-green dark:text-emerald-500 mb-2">Chi Siamo</h2>
+                    <h2 className="text-2xl font-bold text-scout-green dark:text-emerald-500 mb-2">L'origine delle nostre Orme</h2>
                     <p className="text-gray-500 dark:text-gray-400 italic">"Lasciare tracce utili, aggiornate e facili da seguire."</p>
                 </div>
 
                 <div className="space-y-6">
                     <div className="bg-gray-50 dark:bg-gray-900 p-5 rounded-2xl border border-gray-100 dark:border-gray-800">
                         <h3 className="font-bold text-lg mb-3 text-scout-brown dark:text-amber-500 flex items-center gap-2">
-                            <Footprints size={20} /> Il Problema
+                            <Footprints size={20} /> Il Problema a Monte
                         </h3>
-                        <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
-                            Le informazioni sui luoghi per i campi sono sparse ovunque: file Drive dimenticati,
-                            vecchie chat WhatsApp, appunti personali o "sentito dire". Spesso arriviamo in un posto
-                            e scopriamo che l'acqua non è più potabile o il numero del custode è cambiato.
+                        <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed mb-3">
+                            Gestire le attività di una Comunità Capi e di un intero gruppo scout comporta sfide logistiche e organizzative quotidiane. Troppo spesso ci si scontra con inefficienze che rubano tempo prezioso al nostro servizio educativo:
                         </p>
+                        <ul className="text-xs text-gray-650 dark:text-gray-450 list-disc pl-5 space-y-2">
+                            <li><strong>Inventario attrezzi disperso:</strong> La mancanza di un database aggiornato e centralizzato per il magazzino (tende di reparto, paleria, cucine, bombole gas) rischia di farci scoprire solo a ridosso del campo la mancanza di materiali fondamentali.</li>
+                            <li><strong>Contatti e strutture difficili da reperire:</strong> I recapiti dei proprietari dei terreni o dei custodi delle case vacanza sono spesso frammentati tra vecchie chat WhatsApp, quaderni personali o file Drive dimenticati, rendendo ostica la prenotazione.</li>
+                            <li><strong>Monitoraggio nuove iscrizioni:</strong> Le richieste di inserimento dei bambini e ragazzi rischiano di andare perse su fogli cartacei o file Word sparsi nei computer dei singoli capi, ostacolando una corretta gestione della lista d'attesa.</li>
+                            <li><strong>Storico dei luoghi non tracciato:</strong> Senza una memoria storica, è difficile sapere dove le branche sono state negli anni passati, con il rischio di ripetere la stessa meta per due anni consecutivi o perdere i feedback preziosi di chi ci è già stato.</li>
+                            <li><strong>Gestione del bilancio e dei preventivi:</strong> Calcolare i costi dei trasporti stradali, confrontare preventivi e stimare le quote a persona per i ragazzi senza uno strumento dedicato genera incertezza ed errori di bilancio.</li>
+                        </ul>
                     </div>
 
                     <div className="bg-scout-green/5 dark:bg-emerald-950/20 p-5 rounded-2xl border border-scout-green/10 dark:border-emerald-900/30">
                         <h3 className="font-bold text-lg mb-3 text-scout-green dark:text-emerald-500 flex items-center gap-2">
-                            <Users size={20} /> La Soluzione: Orme
+                            <Users size={20} /> La Risposta: Orme
                         </h3>
                         <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
-                            Un database centralizzato, condiviso e aggiornato da noi, la comunità capi del Turi 1.
-                            Ogni volta che qualcuno visita un luogo, aggiorna le informazioni per chi verrà dopo.
+                            Orme nasce per rispondere a tutte queste necessità offrendo una piattaforma centralizzata e condivisa per la nostra Comunità Capi. Ogni volta che visitiamo un luogo, aggiorniamo un attrezzo o pianifichiamo una tratta, lasciamo delle "orme" stabili per chi verrà dopo. Le informazioni non sono più proprietà del singolo capo, ma diventano un patrimonio comune e sempre accessibile.
                         </p>
                     </div>
 
                     <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-200 dark:border-gray-700">
                         <h3 className="font-bold text-lg mb-3 text-scout-green-dark dark:text-emerald-400 flex items-center gap-2">
-                            <ShieldCheck size={20} /> Validazione
+                            <ShieldCheck size={20} /> Responsabilità e Tracciabilità
                         </h3>
                         <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed mb-4">
-                            Per garantire l'affidabilità, ogni modifica importante richiede l'approvazione di altri
-                            2 capi. Le informazioni verificate diventano "Orme" affidabili.
+                            Per favorire la collaborazione immediata ed evitare colli di bottiglia decisionali, ogni capo può inserire o modificare i dati in modo diretto e istantaneo. La trasparenza è però garantita dal <strong>registro storico delle modifiche</strong>: ogni variazione viene tracciata indicando l'autore, la data e i dettagli modificati, responsabilizzando ognuno a mantenere le informazioni aggiornate e veritiere.
                         </p>
                         
                         <h4 className="font-bold text-scout-green-dark dark:text-emerald-500 mb-3 mt-6 border-t border-gray-100 dark:border-gray-700 pt-4 text-sm">Hanno accesso all'app:</h4>
