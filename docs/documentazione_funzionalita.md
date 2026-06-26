@@ -142,7 +142,9 @@ La Comunità Capi (CoCa) si riunisce periodicamente per prendere decisioni metod
 La logica degli spostamenti per campi e uscite di gruppo richiede contatti frequenti con ditte di autobus e pullman privati.
 
 ### Funzionalità Chiave
-* **Rubrica Ditte Pullman**: Accessibile tramite il **pulsante fluttuante blu** in Home. Raccoglie contatti, regione di partenza e capacità di passeggeri delle ditte provate dal gruppo.
+* **Modello Ibrido Collettivo/Privato**:
+  - **Ditte Pullman (Pubblico)**: La rubrica dei contatti delle ditte (nome, telefono, email, capacità bus e comune/regione della Sede/Deposito) è pubblica e condivisa tra tutti i gruppi scout che utilizzano l'applicazione. Questo favorisce la collaborazione territoriale (es. i gruppi della stessa zona scout condividono lo stesso archivio di ditte consigliate). L'operatività territoriale è desumibile dall'indirizzo e città della sede del deposito.
+  - **Preventivi di Viaggio (Privato)**: I preventivi specifici salvati per una tratta (prezzo preventivato, chilometri, numero persone e note del preventivo) sono privati e isolati per ciascun gruppo scout. Capi di gruppi diversi che visualizzano la stessa ditta vedranno esclusivamente i preventivi registrati dal proprio gruppo.
 * **Calcolo Quota Stimata**: Permette di inserire l'importo totale del **Preventivo**, associandolo obbligatoriamente al **Chilometraggio (km)** e al **Numero di Persone**.
 * **Visualizzazione Chiara**: Calcola in tempo reale la quota stimata a persona per ciascuna ditta nella rubrica, semplificando la stima dei costi del viaggio e la pianificazione del bilancio dell'uscita.
 * **Filtro Intelligente**: Consente di filtrare la ditta inserendo il budget massimo riferito alla *quota a persona* (es. ditte che costano meno di 30€ a ragazzo) invece che al prezzo totale, rendendo la ricerca incredibilmente efficiente.

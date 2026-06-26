@@ -176,7 +176,7 @@ CREATE TABLE impostazioni_iscrizione (
 ```
 
 ### 7. Tabella `servizi_trasporto`
-Contiene la rubrica delle ditte bus e pullman con i preventivi e i passeggeri per il calcolo automatico della quota individuale.
+Contiene l'anagrafica delle ditte di pullman e bus privati (visibile a tutti i gruppi per collaborazione).
 
 ```sql
 CREATE TABLE servizi_trasporto (
@@ -191,10 +191,25 @@ CREATE TABLE servizi_trasporto (
     departure_address TEXT,
     capacity INTEGER NOT NULL DEFAULT 50,
     price_per_person NUMERIC,
-    base_price NUMERIC, -- Preventivo totale fornito dalla ditta
-    km NUMERIC, -- Lunghezza chilometrica della tratta
-    numero_persone INTEGER, -- Numero di partecipanti previsto per la tratta
-    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+```
+
+### 8. Tabella `preventivi_trasporto`
+Contiene i preventivi di viaggio specifici salvati privatamente da ciascun gruppo scout.
+
+```sql
+CREATE TABLE preventivi_trasporto (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    company_id UUID NOT NULL REFERENCES servizi_trasporto(id) ON DELETE CASCADE,
+    group_id TEXT NOT NULL,
+    departure_region TEXT NOT NULL DEFAULT 'Puglia',
+    departure_commune TEXT NOT NULL,
+    departure_address TEXT,
+    base_price NUMERIC NOT NULL, -- Preventivo totale
+    km NUMERIC NOT NULL, -- Lunghezza corsa
+    numero_persone INTEGER NOT NULL, -- Numero passeggeri
+    notes TEXT, -- Note private del preventivo
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
 ```
@@ -239,11 +254,20 @@ CREATE POLICY "Capi delete impostazioni_iscrizione" ON impostazioni_iscrizione
 ```
 
 ### 3. Nuove tabelle di supporto
-Per `location_history`, `user_location_views` e `servizi_trasporto` si applica la medesima logica di isolamento del gruppo:
+Per `location_history` e `user_location_views` si applica la medesima logica di isolamento del gruppo.
+Le ditte bus in `servizi_trasporto` sono invece pubbliche per la lettura ed editabili da tutti i capi autenticati per favorire la collaborazione, mentre i relativi preventivi in `preventivi_trasporto` sono isolati per gruppo:
+
 ```sql
--- Esempio per servizi_trasporto
+-- Ditte Trasporti Pubbliche (tutti le vedono e possono gestirle)
 ALTER TABLE servizi_trasporto ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Group isolation on servizi_trasporto" ON servizi_trasporto
+CREATE POLICY "Public select on servizi_trasporto" ON servizi_trasporto
+    FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Authenticated manage servizi_trasporto" ON servizi_trasporto
+    FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- Preventivi Privati (isolamento per gruppo scout)
+ALTER TABLE preventivi_trasporto ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Group isolation on preventivi_trasporto" ON preventivi_trasporto
     FOR ALL USING (group_id = (SELECT group_id FROM users WHERE id = auth.uid()));
 ```
 

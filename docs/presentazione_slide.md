@@ -117,8 +117,8 @@ Questo documento fornisce la struttura diapositiva per diapositiva (titoli, test
 * **Titolo**: Pronti per partire!
 * **Layout**: Elenco puntato con icone di spunta (checklist).
 * **Punti Chiave**:
-  * **Rubrica Trasporti**: Elenco bus privato accessibile via pulsante fluttuante, con preventivi e calcolo quote automatiche per ragazzo.
+  * **Rubrica Trasporti Ibrida**: Elenco ditte bus condiviso pubblicamente (per visualizzare sedi/depositi e contatti), con preventivi e calcolo delle quote per ragazzo gestiti in modo strettamente privato per ciascun gruppo.
   * **Storico Formazione Capi**: Monitoraggio interno e protetto del percorso formativo di Comunità Capi.
   * **Prossimi Passi**: Registrazione dei capi con il loro iter formativo, caricamento dei materiali in magazzino e pubblicazione del QR Code per le iscrizioni.
 * **Note del Presentatore**:
-  > *"Orme è pronto e operativo. I dati del nostro gruppo sono isolati e protetti. Invitiamo tutti i capi a registrarsi stasera stessa per completare i profili con i dati di formazione capi, iniziare a popolare l'inventario e ad usare la rubrica dei trasporti per i preventivi delle prossime uscite. Grazie a tutti!"*
+  > *"Orme è pronto e operativo. I dati del nostro gruppo sono protetti. Invitiamo tutti i capi a registrarsi stasera stessa per completare i profili con i dati di formazione, iniziare a popolare l'inventario e ad utilizzare la rubrica trasporti condivisa per raccogliere preventivi e calcolare quote per le prossime uscite in modo del tutto autonomo e privato per gruppo. Grazie a tutti!"*

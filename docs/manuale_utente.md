@@ -124,13 +124,13 @@ Il modulo **Bilancio** permette a ciascun tesoriere di branca (e ai capigruppo) 
 
 ## 8. Rubrica Trasporti e Calcolo Quote
 
-Pianificare i viaggi di branca o di gruppo con pullman privati è semplice grazie al modulo Trasporti.
+Pianificare i viaggi di branca o di gruppo con pullman privati è semplice grazie al modulo Trasporti Collaborativo.
 
 1. Clicca sul **pulsante fluttuante blu con l'icona del bus** in basso a destra nella Home.
-2. Visualizza la rubrica delle ditte di trasporti testate. Puoi filtrarle per regione, posti o tariffe.
-3. **Preventivo e Calcolo Quota**: Quando inserisci o modifichi una ditta, inserendo il costo del **Preventivo**, dovrai indicare obbligatoriamente il **Chilometraggio (km)** e il **Numero di Persone**.
-4. L'app calcolerà in tempo reale la quota stimata per persona (es. *15,50 € a persona*), mostrandola chiaramente nella card della ditta.
-5. Puoi filtrare l'elenco impostando un budget massimo *per persona* per trovare subito il pullman più conveniente per la tua tratta.
+2. **Ditte Condivise (Pubblico)**: Visualizza la rubrica delle ditte di trasporti testate. Poiché l'anagrafica delle ditte è **pubblica**, vedrai anche i vettori inseriti da altri gruppi scout della tua zona. Puoi controllare la città della loro **Sede / Deposito** per valutare se possono operare comodamente nel tuo paese di partenza. Puoi anche filtrarle per regione o posti.
+3. **I Miei Preventivi (Privato)**: I preventivi di viaggio che inserisci sono **esclusivi e privati per il tuo gruppo scout**. Nessun altro gruppo vedrà i tuoi prezzi o note private del preventivo.
+4. **Calcolo Quota**: Quando inserisci o modifichi una ditta, inserendo il costo del **Preventivo** (prezzo totale ditta), dovrai indicare obbligatoriamente il **Chilometraggio (km)** e il **Numero di Persone** (passeggeri). L'app salverà questi dati privatamente per il tuo gruppo e calcolerà in tempo reale la quota stimata per persona (es. *15,50 € a persona*), mostrandola sulla card.
+5. Puoi filtrare l'elenco impostando un budget massimo *per persona* per trovare subito il pullman più conveniente per la tua tratta. Se svuoti il campo preventivo, il preventivo privato per quella ditta verrà eliminato mantenedo comunque la ditta visibile a tutti.
 
 ---
 
