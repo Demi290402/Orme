@@ -94,10 +94,10 @@ export default function TransportModal({ onClose }: TransportModalProps) {
         setDepartureCommune(item.departureCommune);
         setDepartureAddress(item.departureAddress || '');
         setCapacity(item.capacity);
-        setPricePerPerson(item.pricePerPerson !== undefined ? item.pricePerPerson : '');
-        setBasePrice(item.basePrice !== undefined ? item.basePrice : '');
-        setKm(item.km !== undefined ? item.km : '');
-        setNumeroPersone(item.numeroPersone !== undefined ? item.numeroPersone : '');
+        setPricePerPerson(item.pricePerPerson !== undefined && item.pricePerPerson !== null ? item.pricePerPerson : '');
+        setBasePrice(item.basePrice !== undefined && item.basePrice !== null ? item.basePrice : '');
+        setKm(item.km !== undefined && item.km !== null ? item.km : '');
+        setNumeroPersone(item.numeroPersone !== undefined && item.numeroPersone !== null ? item.numeroPersone : '');
         setNotes(item.notes || '');
         setShowForm(true);
     };
@@ -126,10 +126,10 @@ export default function TransportModal({ onClose }: TransportModalProps) {
             departureCommune,
             departureAddress,
             capacity: Number(capacity),
-            pricePerPerson: pricePerPerson !== '' ? Number(pricePerPerson) : undefined,
-            basePrice: basePrice !== '' ? Number(basePrice) : undefined,
-            km: km !== '' ? Number(km) : undefined,
-            numeroPersone: numeroPersone !== '' ? Number(numeroPersone) : undefined,
+            pricePerPerson: pricePerPerson !== '' ? Number(pricePerPerson) : null,
+            basePrice: basePrice !== '' ? Number(basePrice) : null,
+            km: km !== '' ? Number(km) : null,
+            numeroPersone: numeroPersone !== '' ? Number(numeroPersone) : null,
             notes
         };
 

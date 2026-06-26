@@ -358,10 +358,10 @@ export interface ServizioTrasporto {
     departureCommune: string;
     departureAddress?: string;
     capacity: number;
-    pricePerPerson?: number;
-    basePrice?: number; // Preventivo
-    km?: number;
-    numeroPersone?: number;
+    pricePerPerson?: number | null;
+    basePrice?: number | null; // Preventivo
+    km?: number | null;
+    numeroPersone?: number | null;
     notes?: string;
     createdAt?: string;
 }
