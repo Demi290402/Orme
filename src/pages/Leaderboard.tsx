@@ -128,52 +128,50 @@ export default function Leaderboard() {
                                 </h2>
                                 <p className="text-scout-green dark:text-emerald-500 font-medium">@{selectedUser.nickname}</p>
 
-                                {selectedUser.scoutCode && (
                                 {/* New Profile Details */}
-                                    <div className="mt-4 w-full">
-                                        {/* Scout Code */}
-                                        {selectedUser.scoutCode && (
-                                            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/50 px-3 py-1 rounded-full border border-gray-100 dark:border-gray-700">
-                                                Codice Socio: {selectedUser.scoutCode}
-                                            </div>
-                                        )}
-                                        {/* Group & Zone */}
-                                        <div className="flex justify-center gap-4 mt-2 text-sm text-gray-600 dark:text-gray-300">
-                                            {selectedUser.groupName && (
-                                                <span className="px-2 py-1 bg-scout-green/10 dark:bg-emerald-900/30 rounded-full">Gruppo: {selectedUser.groupName}</span>
-                                            )}
-                                            {selectedUser.scoutZone && (
-                                                <span className="px-2 py-1 bg-scout-brown/10 dark:bg-amber-900/30 rounded-full">Zona: {selectedUser.scoutZone}</span>
-                                            )}
+                                <div className="mt-4 w-full space-y-3">
+                                    {/* Scout Code */}
+                                    {selectedUser.scoutCode && (
+                                        <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/50 px-3 py-1 rounded-full border border-gray-100 dark:border-gray-700 text-center">
+                                            Codice Socio: {selectedUser.scoutCode}
                                         </div>
-                                        {/* Training Path */}
-                                        {selectedUser.formazione && selectedUser.formazione.length > 0 && (
-                                            <div className="mt-4">
-                                                <h3 className="text-sm font-medium text-gray-800 dark:text-gray-200">Iter di Formazione</h3>
-                                                <ul className="flex flex-wrap gap-2 mt-2">
-                                                    {selectedUser.formazione.map((course: any, idx: number) => (
-                                                        <li key={idx} className="px-2 py-1 bg-emerald-100 dark:bg-emerald-800/30 rounded-full text-xs text-emerald-800 dark:text-emerald-200">{course}</li>
-                                                    ))}
-                                                </ul>
-                                            </div>
+                                    )}
+                                    {/* Group & Zone */}
+                                    <div className="flex justify-center gap-2 flex-wrap text-sm text-gray-600 dark:text-gray-300">
+                                        {selectedUser.groupName && (
+                                            <span className="px-2 py-1 bg-scout-green/10 dark:bg-emerald-900/30 rounded-full text-xs">Gruppo: {selectedUser.groupName}</span>
                                         )}
-                                        {/* Badges */}
-                                        {selectedUser.badges && selectedUser.badges.length > 0 && (
-                                            <div className="mt-4">
-                                                <h3 className="text-sm font-medium text-gray-800 dark:text-gray-200">Badge Ottenuti</h3>
-                                                <div className="grid grid-cols-3 gap-2 mt-2">
-                                                    {selectedUser.badges.map((badge: any, idx: number) => (
-                                                        <div key={idx} className="flex flex-col items-center p-2 bg-gray-100 dark:bg-gray-700/30 rounded-lg">
-                                                            {badge.icon && (
-                                                                <span className="text-xl">{badge.icon}</span>
-                                                            )}
-                                                            <span className="text-xs mt-1 text-gray-800 dark:text-gray-200">{badge.name}</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
+                                        {selectedUser.scoutZone && (
+                                            <span className="px-2 py-1 bg-scout-brown/10 dark:bg-amber-900/30 rounded-full text-xs">Zona: {selectedUser.scoutZone}</span>
                                         )}
                                     </div>
+                                    {/* Training Path */}
+                                    {selectedUser.formazione && selectedUser.formazione.length > 0 && (
+                                        <div className="mt-2">
+                                            <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Iter di Formazione</h3>
+                                            <ul className="flex flex-wrap gap-2">
+                                                {selectedUser.formazione.map((course: any, idx: number) => (
+                                                    <li key={idx} className="px-2 py-1 bg-emerald-100 dark:bg-emerald-800/30 rounded-full text-xs text-emerald-800 dark:text-emerald-200">{course}</li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
+                                    {/* Badges */}
+                                    {selectedUser.badges && selectedUser.badges.length > 0 && (
+                                        <div className="mt-2">
+                                            <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Badge Ottenuti</h3>
+                                            <div className="grid grid-cols-3 gap-2">
+                                                {selectedUser.badges.map((badge: any, idx: number) => (
+                                                    <div key={idx} className="flex flex-col items-center p-2 bg-gray-100 dark:bg-gray-700/30 rounded-lg">
+                                                        {badge.icon && <span className="text-xl">{badge.icon}</span>}
+                                                        <span className="text-xs mt-1 text-center text-gray-800 dark:text-gray-200">{badge.name}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
