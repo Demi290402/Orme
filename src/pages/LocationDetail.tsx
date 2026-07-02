@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Phone, MessageCircle, Map, ArrowLeft, BedDouble, Tent, Coffee, ShieldAlert, Edit, Euro, Wrench, Ban, Star, Footprints, MessageSquare, X, Droplets, Flame, Wind, ShieldCheck, Users, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Phone, MessageCircle, Map, ArrowLeft, BedDouble, Tent, Coffee, ShieldAlert, Edit, Euro, Wrench, Ban, Star, Footprints, MessageSquare, X, Droplets, Flame, Wind, ShieldCheck, Users, ChevronLeft, ChevronRight, Globe } from 'lucide-react';
 import { getLocations, getUser, getReviews, saveReview, deleteLocation, getLocationHistory, upsertLocationView, getUserLocationViews } from '@/lib/data';
 import { Location, LocationReview } from '@/types';
 import { getStalenessInfo, cn } from '@/lib/utils';
@@ -272,6 +272,14 @@ export default function LocationDetail() {
     const phone = location.contacts.find(c => c.type === 'phone')?.value;
     const whatsapp = location.contacts.find(c => c.type === 'whatsapp')?.value || phone;
 
+    const websiteUrl = location.website 
+        ? (location.website.startsWith('http://') || location.website.startsWith('https://') 
+            ? location.website 
+            : `https://${location.website}`)
+        : undefined;
+
+    const actionButtonsCount = [phone, whatsapp, websiteUrl, true].filter(Boolean).length;
+
     const updatedByText = updaterInfo ? `da ${updaterInfo.nickname}${updaterInfo.groupName ? ` - ${updaterInfo.groupName}` : ''}` : '';
 
     const totalPages = Math.ceil(historyList.length / pageSize);
@@ -518,7 +526,13 @@ export default function LocationDetail() {
             )}
 
             {/* Action Buttons */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className={cn(
+                "grid gap-3",
+                actionButtonsCount === 1 && "grid-cols-1",
+                actionButtonsCount === 2 && "grid-cols-2",
+                actionButtonsCount === 3 && "grid-cols-3",
+                actionButtonsCount >= 4 && "grid-cols-4"
+            )}>
                 {phone && (
                     <button 
                         onClick={() => currentUser ? window.open(`tel:${phone}`) : navigate('/login')}
@@ -536,6 +550,16 @@ export default function LocationDetail() {
                         <MessageCircle className={cn("text-green-500 mb-1", !currentUser && "blur-[2px]")} size={24} />
                         <span className="text-[10px] font-black uppercase dark:text-gray-300">{currentUser ? 'WhatsApp' : 'Accedi'}</span>
                     </button>
+                )}
+                {websiteUrl && (
+                    <a
+                        href={websiteUrl}
+                        target="_blank" rel="noreferrer"
+                        className="flex flex-col items-center justify-center bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-95 transition-all text-center"
+                    >
+                        <Globe className="text-scout-blue mb-1" size={24} />
+                        <span className="text-[10px] font-black uppercase dark:text-gray-300">Sito Web</span>
+                    </a>
                 )}
                 <a
                     href={location.coordinates
