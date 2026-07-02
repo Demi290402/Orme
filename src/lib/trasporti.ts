@@ -37,6 +37,12 @@ function mapRow(row: any): ServizioTrasporto {
         numeroPersone: row.numero_persone ? Number(row.numero_persone) : undefined,
         notes: row.notes || '',
         createdAt: row.created_at,
+        prezziStorici: row.prezzi_storici ? row.prezzi_storici.map((h: any) => ({
+            id: h.id,
+            companyId: h.company_id || h.companyId,
+            pricePerPerson: Number(h.price_per_person || h.pricePerPerson),
+            createdAt: h.created_at || h.createdAt
+        })) : []
     };
 }
 
@@ -64,17 +70,42 @@ export async function getServiziTrasporto(): Promise<ServizioTrasporto[]> {
 
         if (quotesError) throw quotesError;
 
-        // Merge companies and quotes
+        // Fetch shared price history for all companies ordered by created_at desc
+        const { data: history, error: historyError } = await supabase
+            .from('storico_prezzi_trasporto')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        // Map price history to companies (group by company_id, maximum 5 entries per company)
+        const historyMap = new Map<string, any[]>();
+        if (!historyError && history) {
+            for (const h of history) {
+                const arr = historyMap.get(h.company_id) || [];
+                if (arr.length < 5) {
+                    arr.push({
+                        id: h.id,
+                        company_id: h.company_id,
+                        price_per_person: Number(h.price_per_person),
+                        created_at: h.created_at
+                    });
+                    historyMap.set(h.company_id, arr);
+                }
+            }
+        }
+
+        // Merge companies, quotes and price history
         const quotesMap = new Map<string, any>((quotes || []).map(q => [q.company_id, q]));
 
         const mergedData = (companies || []).map(c => {
             const q = quotesMap.get(c.id);
+            const h = historyMap.get(c.id) || [];
             return {
                 ...c,
                 base_price: q ? q.base_price : undefined,
                 km: q ? q.km : undefined,
                 numero_persone: q ? q.numero_persone : undefined,
-                notes: q ? q.notes : c.notes // Use quote notes if present, fallback to company notes
+                notes: q ? q.notes : c.notes,
+                prezzi_storici: h
             };
         });
 
@@ -124,13 +155,34 @@ export async function addServizioTrasporto(servizio: Omit<ServizioTrasporto, 'id
             notes: servizio.notes
         } : null;
 
+        // 3. Prepare price history entry if applicable
+        let historyPrice: number | null = null;
+        if (servizio.pricePerPerson !== undefined && servizio.pricePerPerson !== null) {
+            historyPrice = Number(servizio.pricePerPerson);
+        } else if (hasQuote && servizio.numeroPersone && Number(servizio.numeroPersone) > 0) {
+            historyPrice = Number(servizio.basePrice) / Number(servizio.numeroPersone);
+        }
+
+        const historyId = crypto.randomUUID();
+        const historyData = historyPrice !== null ? {
+            id: historyId,
+            company_id: sId,
+            price_per_person: historyPrice
+        } : null;
+
         if (!isOnline()) {
             const combinedOfflineRow = {
                 ...companyData,
                 base_price: hasQuote ? servizio.basePrice : undefined,
                 km: hasQuote ? servizio.km : undefined,
                 numero_persone: hasQuote ? servizio.numeroPersone : undefined,
-                notes: servizio.notes
+                notes: servizio.notes,
+                prezzi_storici: historyData ? [{
+                    id: historyId,
+                    company_id: sId,
+                    price_per_person: historyPrice,
+                    created_at: new Date().toISOString()
+                }] : []
             };
 
             // Update main read cache manually
@@ -141,6 +193,9 @@ export async function addServizioTrasporto(servizio: Omit<ServizioTrasporto, 'id
             enqueueOfflineWriteDirect('insert', 'servizi_trasporto', companyData);
             if (hasQuote && quoteData) {
                 enqueueOfflineWriteDirect('insert', 'preventivi_trasporto', quoteData);
+            }
+            if (historyData) {
+                enqueueOfflineWriteDirect('insert', 'storico_prezzi_trasporto', historyData);
             }
 
             return mapRow({ ...combinedOfflineRow, created_at: new Date().toISOString() });
@@ -166,13 +221,26 @@ export async function addServizioTrasporto(servizio: Omit<ServizioTrasporto, 'id
             insertedQuote = qData;
         }
 
+        if (historyData) {
+            const { error: historyError } = await supabase
+                .from('storico_prezzi_trasporto')
+                .insert(historyData);
+            if (historyError) console.error('Error inserting price history:', historyError);
+        }
+
         await getServiziTrasporto(); // refresh cache
         return mapRow({
             ...insertedCompany,
             base_price: insertedQuote ? insertedQuote.base_price : undefined,
             km: insertedQuote ? insertedQuote.km : undefined,
             numero_persone: insertedQuote ? insertedQuote.numero_persone : undefined,
-            notes: insertedQuote ? insertedQuote.notes : insertedCompany.notes
+            notes: insertedQuote ? insertedQuote.notes : insertedCompany.notes,
+            prezzi_storici: historyData ? [{
+                id: historyId,
+                company_id: sId,
+                price_per_person: historyPrice,
+                created_at: new Date().toISOString()
+            }] : []
         });
     } catch (err) {
         console.error('addServizioTrasporto error:', err);
@@ -202,6 +270,21 @@ export async function updateServizioTrasporto(id: string, servizio: Partial<Serv
         const isQuoteDeleted = servizio.basePrice === null;
         const hasQuoteUpdate = !isQuoteDeleted && (servizio.basePrice !== undefined || servizio.km !== undefined || servizio.numeroPersone !== undefined || servizio.notes !== undefined);
 
+        // 3. Prepare price history entry if applicable
+        let newHistoryPrice: number | null = null;
+        if (servizio.pricePerPerson !== undefined && servizio.pricePerPerson !== null) {
+            newHistoryPrice = Number(servizio.pricePerPerson);
+        } else if (hasQuoteUpdate && servizio.basePrice && servizio.numeroPersone && Number(servizio.numeroPersone) > 0) {
+            newHistoryPrice = Number(servizio.basePrice) / Number(servizio.numeroPersone);
+        }
+
+        const historyId = crypto.randomUUID();
+        const historyData = newHistoryPrice !== null ? {
+            id: historyId,
+            company_id: id,
+            price_per_person: newHistoryPrice
+        } : null;
+
         if (!isOnline()) {
             // Update cache manually
             const cached = getCachedData<any[]>('servizi_trasporto') || [];
@@ -212,6 +295,18 @@ export async function updateServizioTrasporto(id: string, servizio: Partial<Serv
                         delete result.base_price;
                         delete result.km;
                         delete result.numero_persone;
+                    }
+                    if (historyData) {
+                        const existingHist = result.prezzi_storici || [];
+                        result.prezzi_storici = [
+                            {
+                                id: historyId,
+                                company_id: id,
+                                price_per_person: newHistoryPrice,
+                                created_at: new Date().toISOString()
+                            },
+                            ...existingHist
+                        ].slice(0, 5);
                     }
                     return result;
                 }
@@ -238,6 +333,9 @@ export async function updateServizioTrasporto(id: string, servizio: Partial<Serv
                     notes: servizio.notes
                 };
                 enqueueOfflineWriteDirect('upsert', 'preventivi_trasporto', upsertQuoteData);
+            }
+            if (historyData) {
+                enqueueOfflineWriteDirect('insert', 'storico_prezzi_trasporto', historyData);
             }
 
             const found = updated.find(s => s.id === id);
@@ -324,6 +422,13 @@ export async function updateServizioTrasporto(id: string, servizio: Partial<Serv
             updatedQuote = data;
         }
 
+        if (historyData) {
+            const { error: historyError } = await supabase
+                .from('storico_prezzi_trasporto')
+                .insert(historyData);
+            if (historyError) console.error('Error inserting price history:', historyError);
+        }
+
         await getServiziTrasporto(); // refresh cache
         return mapRow({
             ...updatedCompany,
@@ -361,5 +466,54 @@ export async function deleteServizioTrasporto(id: string): Promise<boolean> {
     } catch (err) {
         console.error('deleteServizioTrasporto error:', err);
         return false;
+    }
+}
+
+export async function addQuickPrice(companyId: string, pricePerPerson: number): Promise<void> {
+    try {
+        const historyId = crypto.randomUUID();
+        const historyData = {
+            id: historyId,
+            company_id: companyId,
+            price_per_person: Number(pricePerPerson)
+        };
+
+        if (!isOnline()) {
+            // Update cache manually
+            const cached = getCachedData<any[]>('servizi_trasporto') || [];
+            const updated = cached.map(item => {
+                if (item.id === companyId) {
+                    const existingHist = item.prezzi_storici || [];
+                    return {
+                        ...item,
+                        prezzi_storici: [
+                            {
+                                id: historyId,
+                                company_id: companyId,
+                                price_per_person: Number(pricePerPerson),
+                                created_at: new Date().toISOString()
+                            },
+                            ...existingHist
+                        ].slice(0, 5)
+                    };
+                }
+                return item;
+            });
+            setCachedData('servizi_trasporto', updated);
+
+            // Queue operation
+            enqueueOfflineWriteDirect('insert', 'storico_prezzi_trasporto', historyData);
+            return;
+        }
+
+        const { error } = await supabase
+            .from('storico_prezzi_trasporto')
+            .insert(historyData);
+
+        if (error) throw error;
+        await getServiziTrasporto(); // refresh cache
+    } catch (err) {
+        console.error('addQuickPrice error:', err);
+        throw err;
     }
 }

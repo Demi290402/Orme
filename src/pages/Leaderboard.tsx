@@ -129,26 +129,51 @@ export default function Leaderboard() {
                                 <p className="text-scout-green dark:text-emerald-500 font-medium">@{selectedUser.nickname}</p>
 
                                 {selectedUser.scoutCode && (
-                                    <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/50 px-3 py-1 rounded-full border border-gray-100 dark:border-gray-700">
-                                        Codice Socio: {selectedUser.scoutCode}
+                                {/* New Profile Details */}
+                                    <div className="mt-4 w-full">
+                                        {/* Scout Code */}
+                                        {selectedUser.scoutCode && (
+                                            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/50 px-3 py-1 rounded-full border border-gray-100 dark:border-gray-700">
+                                                Codice Socio: {selectedUser.scoutCode}
+                                            </div>
+                                        )}
+                                        {/* Group & Zone */}
+                                        <div className="flex justify-center gap-4 mt-2 text-sm text-gray-600 dark:text-gray-300">
+                                            {selectedUser.groupName && (
+                                                <span className="px-2 py-1 bg-scout-green/10 dark:bg-emerald-900/30 rounded-full">Gruppo: {selectedUser.groupName}</span>
+                                            )}
+                                            {selectedUser.scoutZone && (
+                                                <span className="px-2 py-1 bg-scout-brown/10 dark:bg-amber-900/30 rounded-full">Zona: {selectedUser.scoutZone}</span>
+                                            )}
+                                        </div>
+                                        {/* Training Path */}
+                                        {selectedUser.formazione && selectedUser.formazione.length > 0 && (
+                                            <div className="mt-4">
+                                                <h3 className="text-sm font-medium text-gray-800 dark:text-gray-200">Iter di Formazione</h3>
+                                                <ul className="flex flex-wrap gap-2 mt-2">
+                                                    {selectedUser.formazione.map((course: any, idx: number) => (
+                                                        <li key={idx} className="px-2 py-1 bg-emerald-100 dark:bg-emerald-800/30 rounded-full text-xs text-emerald-800 dark:text-emerald-200">{course}</li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        )}
+                                        {/* Badges */}
+                                        {selectedUser.badges && selectedUser.badges.length > 0 && (
+                                            <div className="mt-4">
+                                                <h3 className="text-sm font-medium text-gray-800 dark:text-gray-200">Badge Ottenuti</h3>
+                                                <div className="grid grid-cols-3 gap-2 mt-2">
+                                                    {selectedUser.badges.map((badge: any, idx: number) => (
+                                                        <div key={idx} className="flex flex-col items-center p-2 bg-gray-100 dark:bg-gray-700/30 rounded-lg">
+                                                            {badge.icon && (
+                                                                <span className="text-xl">{badge.icon}</span>
+                                                            )}
+                                                            <span className="text-xs mt-1 text-gray-800 dark:text-gray-200">{badge.name}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
-                                )}
-                            </div>
-
-                            <div className="grid grid-cols-3 gap-2 text-center">
-                                <div className="bg-green-50 dark:bg-green-900/20 p-2 rounded-xl border border-green-100 dark:border-green-900/30">
-                                    <span className="block text-xl font-bold text-scout-green dark:text-green-400">{selectedUser.locationsAdded}</span>
-                                    <span className="text-[10px] text-green-800 dark:text-green-500 font-medium opacity-80 uppercase tracking-tight">Aggiunti</span>
-                                </div>
-                                <div className="bg-orange-50 dark:bg-orange-900/20 p-2 rounded-xl border border-orange-100 dark:border-orange-900/30">
-                                    <span className="block text-xl font-bold text-scout-brown dark:text-orange-400">{selectedUser.validationsGiven}</span>
-                                    <span className="text-[10px] text-orange-800 dark:text-orange-500 font-medium opacity-80 uppercase tracking-tight">Modificati</span>
-                                </div>
-                                <div className="bg-blue-50 dark:bg-blue-900/20 p-2 rounded-xl border border-blue-100 dark:border-blue-900/30">
-                                    <span className="block text-xl font-bold text-scout-blue dark:text-blue-400">{selectedUser.contributionsApproved}</span>
-                                    <span className="text-[10px] text-blue-800 dark:text-blue-500 font-medium opacity-80 uppercase tracking-tight">Approvati</span>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>

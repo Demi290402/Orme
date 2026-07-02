@@ -346,6 +346,13 @@ export interface ImpostazioniIscrizione {
     createdAt?: string;
 }
 
+export interface PrezzoStoricoTrasporto {
+    id: string;
+    companyId: string;
+    pricePerPerson: number;
+    createdAt: string;
+}
+
 export interface ServizioTrasporto {
     id: string;
     groupId: string;
@@ -364,4 +371,5 @@ export interface ServizioTrasporto {
     numeroPersone?: number | null;
     notes?: string;
     createdAt?: string;
+    prezziStorici?: PrezzoStoricoTrasporto[];
 }

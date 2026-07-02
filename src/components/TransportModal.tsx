@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { 
-    X, Search, Phone, Mail, MessageCircle, Trash2, Edit, Plus, MapPin, Users, Euro, Bus, Filter 
+    X, Search, Phone, Mail, MessageCircle, Trash2, Edit, Plus, MapPin, Users, Euro, Bus, Filter, ArrowLeft, Check, Copy, Calendar, Globe
 } from 'lucide-react';
 import { 
-    getServiziTrasporto, addServizioTrasporto, updateServizioTrasporto, deleteServizioTrasporto 
+    getServiziTrasporto, addServizioTrasporto, updateServizioTrasporto, deleteServizioTrasporto, addQuickPrice
 } from '@/lib/trasporti';
 import { ServizioTrasporto } from '@/types';
 import { cn } from '@/lib/utils';
@@ -43,6 +43,8 @@ export default function TransportModal({ onClose }: TransportModalProps) {
     const [departureAddress, setDepartureAddress] = useState('');
     const [capacity, setCapacity] = useState<number>(50);
     const [pricePerPerson, setPricePerPerson] = useState<number | ''>('');
+    const [selectedCompany, setSelectedCompany] = useState<ServizioTrasporto | null>(null);
+    const [quickPrice, setQuickPrice] = useState<number | ''>('');
     const [basePrice, setBasePrice] = useState<number | ''>(''); // Preventivo
     const [km, setKm] = useState<number | ''>('');
     const [numeroPersone, setNumeroPersone] = useState<number | ''>('');
@@ -434,7 +436,7 @@ export default function TransportModal({ onClose }: TransportModalProps) {
                                 )}
                             </div>
 
-                            {/* List Cards Area */}
+{/* List Cards Area */}
                             {loading ? (
                                 <div className="text-center text-gray-500 dark:text-gray-400 font-bold py-12 animate-pulse text-xs">
                                     Caricamento ditte trasporti...
@@ -443,10 +445,77 @@ export default function TransportModal({ onClose }: TransportModalProps) {
                                 <div className="text-center text-gray-500 dark:text-gray-400 font-medium py-12 text-xs border border-dashed border-gray-200 dark:border-gray-800 rounded-2xl bg-gray-50/20 dark:bg-gray-900/10">
                                     Nessuna ditta di trasporti trovata con i filtri correnti.
                                 </div>
+                            ) : selectedCompany ? (
+                                <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-800 space-y-6">
+                                    <button onClick={() => setSelectedCompany(null)} className="text-xs font-bold text-scout-green flex items-center gap-1 hover:underline">
+                                        &larr; Torna alla lista
+                                    </button>
+                                    <h2 className="text-xl font-black text-gray-900 dark:text-white">{selectedCompany.companyName}</h2>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-4">
+                                            <h3 className="text-xs font-bold uppercase text-gray-500 dark:text-gray-400">Contatti</h3>
+                                            <p className="text-sm">Telefono: {selectedCompany.phone || 'N/D'}</p>
+                                            <p className="text-sm">Email: {selectedCompany.email || 'N/D'}</p>
+                                        </div>
+                                        <div className="space-y-4">
+                                            <h3 className="text-xs font-bold uppercase text-gray-500 dark:text-gray-400">Sede</h3>
+                                            <p className="text-sm">{selectedCompany.departureAddress}, {selectedCompany.departureCommune} ({selectedCompany.departureProvince})</p>
+                                        </div>
+{/* Tariffe and Quick Add */}
+<div className="space-y-4">
+  <h3 className="text-xs font-bold uppercase text-gray-500 dark:text-gray-400">Tariffe</h3>
+  {selectedCompany.pricePerPerson && (
+    <p className="text-sm">Prezzo a persona: {selectedCompany.pricePerPerson}€</p>
+  )}
+  {selectedCompany.basePrice && selectedCompany.numeroPersone && (
+    <p className="text-sm">
+      Preventivo totale: {selectedCompany.basePrice}€ ({selectedCompany.numeroPersone} persone, {selectedCompany.km} km)
+      <br />
+      <span className="text-xs text-gray-500">Calcolato a persona: {(selectedCompany.basePrice / selectedCompany.numeroPersone).toFixed(2)}€</span>
+    </p>
+  )}
+  {/* Quick Add Price */}
+  <div className="flex items-center gap-2">
+    <input
+      type="number"
+      min={0}
+      placeholder="Prezzo rapido"
+      value={quickPrice}
+      onChange={e => setQuickPrice(e.target.value !== '' ? Number(e.target.value) : '')}
+      className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-xs text-gray-900 dark:text-white focus:ring-2 focus:ring-scout-green/30 focus:border-scout-green"
+    />
+    <button
+      onClick={async () => {
+        if (quickPrice !== '' && selectedCompany.id) {
+          await addQuickPrice(selectedCompany.id, Number(quickPrice));
+          setQuickPrice('');
+        }
+      }}
+      className="bg-scout-green hover:bg-scout-green-dark text-white px-3 py-1 rounded-xl text-xs font-bold"
+    >
+      Aggiungi prezzo rapido
+    </button>
+  </div>
+  {/* Price History */}
+  {selectedCompany.prezzi_storici && selectedCompany.prezzi_storici.length > 0 && (
+    <div className="mt-2">
+      <h4 className="text-xs font-bold uppercase text-gray-500 dark:text-gray-400">Storico prezzi (ultimi 5)</h4>
+      <ul className="list-disc list-inside text-sm">
+        {selectedCompany.prezzi_storici.map((h) => (
+          <li key={h.id}>
+            {h.pricePerPerson ?? h.price_per_person}€ – {new Date(h.createdAt ?? h.created_at).toLocaleDateString()}
+          </li>
+        ))}
+      </ul>
+    </div>
+  )}
+</div>
+                                    </div>
+                                </div>
                             ) : (
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {filteredServizi.map((item) => (
-                                        <div key={item.id} className="bg-gray-50/30 dark:bg-gray-850/40 hover:bg-gray-50/70 dark:hover:bg-gray-850/70 p-5 rounded-2xl border border-gray-150 dark:border-gray-800/80 shadow-xs hover:shadow-md transition-all duration-200 space-y-4 relative group">
+                                        <div key={item.id} className="bg-gray-50/30 dark:bg-gray-850/40 hover:bg-gray-50/70 dark:hover:bg-gray-850/70 p-5 rounded-2xl border border-gray-150 dark:border-gray-800/80 shadow-xs hover:shadow-md transition-all duration-200 space-y-4 relative group cursor-pointer" onClick={() => setSelectedCompany(item)}>
                                             <div className="flex justify-between items-start gap-4">
                                                 <div className="space-y-1">
                                                     <h4 className="font-extrabold text-sm text-scout-green-dark dark:text-emerald-400 group-hover:text-scout-green dark:group-hover:text-emerald-300 transition-colors">{item.companyName}</h4>
@@ -456,14 +525,14 @@ export default function TransportModal({ onClose }: TransportModalProps) {
                                                 </div>
                                                 <div className="flex items-center gap-1">
                                                     <button
-                                                        onClick={() => openEditForm(item)}
+                                                        onClick={(e) => { e.stopPropagation(); openEditForm(item); }}
                                                         className="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-400 hover:text-scout-green dark:hover:text-emerald-400 rounded-full transition-colors cursor-pointer"
                                                         title="Modifica"
                                                     >
                                                         <Edit size={14} />
                                                     </button>
                                                     <button
-                                                        onClick={() => handleDelete(item.id)}
+                                                        onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }}
                                                         className="p-1.5 hover:bg-red-50 dark:hover:bg-red-950/30 text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded-full transition-colors cursor-pointer"
                                                         title="Elimina"
                                                     >
