@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from '@/context/ThemeContext';
 import Layout from '@/components/Layout';
@@ -27,6 +28,15 @@ import ListaAttesa from '@/pages/ListaAttesa/ListaAttesa';
 import IscrizionePubblica from '@/pages/Public/IscrizionePubblica';
 
 function App() {
+  useEffect(() => {
+    // Check and trigger scheduled auto exports on app mount
+    import('@/lib/autoExport')
+      .then(({ checkAndRunAutoExport }) => {
+        checkAndRunAutoExport();
+      })
+      .catch(err => console.error('Errore avvio auto-export:', err));
+  }, []);
+
   return (
     <ThemeProvider>
       <UpdateManager />

@@ -134,6 +134,7 @@ export default function Settings() {
     });
     const [exportPath, setExportPath] = useState('');
     const [showAutoExport, setShowAutoExport] = useState(false);
+    const [formatoExport, setFormatoExport] = useState<'json' | 'xlsx'>('xlsx');
 
     // Delete account
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -154,6 +155,7 @@ export default function Settings() {
                 if (prefs.exportOptions) setExportOptions(prefs.exportOptions);
                 if (prefs.autoExportConfigs) setAutoExportConfigs(prefs.autoExportConfigs);
                 if (prefs.exportPath) setExportPath(prefs.exportPath);
+                if (prefs.formatoExport) setFormatoExport(prefs.formatoExport);
             } catch { /* ignore */ }
         }
     }, []);
@@ -169,10 +171,78 @@ export default function Settings() {
             const handle = await (window as any).showDirectoryPicker();
             setExportPath(handle.name);
             savePrefs({ exportPath: handle.name });
+
+            // Store handle to IndexedDB
+            const { storeFolderHandle } = await import('@/lib/autoExport');
+            await storeFolderHandle(handle);
         } catch {
             // User cancelled or API not supported
             setExportPath('Download del browser');
             savePrefs({ exportPath: 'Download del browser' });
+        }
+    };
+
+    const [isDownloading, setIsDownloading] = useState(false);
+
+    const handleManualDownload = async () => {
+        setIsDownloading(true);
+        try {
+            const dataBundle: Record<string, any> = {};
+
+            if (exportOptions.luoghi) {
+                const { getLocations } = await import('@/lib/data');
+                dataBundle.luoghi = await getLocations();
+            }
+            if (exportOptions.verbali) {
+                const { getVerbali } = await import('@/lib/verbali');
+                dataBundle.verbali = await getVerbali();
+            }
+            if (exportOptions.storico) {
+                const { getAllLocationHistory } = await import('@/lib/data');
+                dataBundle.storico = await getAllLocationHistory();
+            }
+            if (exportOptions.classifica) {
+                const { getAllUsers } = await import('@/lib/data');
+                const users = await getAllUsers();
+                dataBundle.classifica = users.sort((a, b) => b.points - a.points);
+            }
+            if (exportOptions.lista_attesa) {
+                const { getListaAttesa } = await import('@/lib/listaAttesa');
+                dataBundle.lista_attesa = await getListaAttesa();
+            }
+            if (exportOptions.trasporti) {
+                const { getServiziTrasporto } = await import('@/lib/trasporti');
+                dataBundle.trasporti = await getServiziTrasporto();
+            }
+
+            const { triggerFileDownload, flattenResource } = await import('@/lib/autoExport');
+            const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '_');
+            const fileExt = formatoExport === 'xlsx' ? 'xlsx' : 'json';
+            const filename = `orme_download_dati_${dateStr}.${fileExt}`;
+
+            if (formatoExport === 'json') {
+                const content = {
+                    exported_at: new Date().toISOString(),
+                    version: '1.0',
+                    ...dataBundle
+                };
+                triggerFileDownload(filename, content, 'json');
+            } else {
+                const XLSX = await import('xlsx');
+                const wb = XLSX.utils.book_new();
+                Object.entries(dataBundle).forEach(([key, rawList]) => {
+                    const sheetRows = flattenResource(key, rawList);
+                    const ws = XLSX.utils.json_to_sheet(sheetRows);
+                    const sheetName = key.slice(0, 30).toUpperCase();
+                    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+                });
+                triggerFileDownload(filename, wb, 'xlsx');
+            }
+        } catch (error) {
+            console.error('Download error:', error);
+            alert('Errore durante l\'esportazione dei dati.');
+        } finally {
+            setIsDownloading(false);
         }
     };
 
@@ -306,7 +376,7 @@ export default function Settings() {
                         </div>
                         <div>
                             <p className="text-sm font-bold text-gray-900 dark:text-white">Download Dati</p>
-                            <p className="text-[11px] text-gray-400 mt-0.5">Scegli cosa vuoi scaricare in formato JSON</p>
+                            <p className="text-[11px] text-gray-400 mt-0.5">Scegli cosa vuoi scaricare e in quale formato</p>
                         </div>
                     </div>
 
@@ -314,6 +384,7 @@ export default function Settings() {
                         {DOWNLOAD_OPTIONS.map(opt => (
                             <button
                                 key={opt.key}
+                                type="button"
                                 onClick={() => setExportOptions(prev => ({ ...prev, [opt.key]: !prev[opt.key] }))}
                                 className={cn(
                                     'flex items-center gap-2 p-3 rounded-xl border-2 text-xs font-bold transition-all text-left',
@@ -329,13 +400,50 @@ export default function Settings() {
                         ))}
                     </div>
 
+                    <div className="space-y-2 pt-2 border-t border-gray-100 dark:border-gray-800/40">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Formato Esportazione</label>
+                        <div className="grid grid-cols-2 gap-2">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setFormatoExport('xlsx');
+                                    savePrefs({ formatoExport: 'xlsx' });
+                                }}
+                                className={cn(
+                                    'py-2 px-4 rounded-xl border text-xs font-bold text-center transition-all',
+                                    formatoExport === 'xlsx'
+                                        ? 'border-scout-green bg-scout-green/10 text-scout-green'
+                                        : 'border-gray-200 dark:border-gray-700 text-gray-450 dark:text-gray-400'
+                                )}
+                            >
+                                Excel (XLSX)
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setFormatoExport('json');
+                                    savePrefs({ formatoExport: 'json' });
+                                }}
+                                className={cn(
+                                    'py-2 px-4 rounded-xl border text-xs font-bold text-center transition-all',
+                                    formatoExport === 'json'
+                                        ? 'border-scout-green bg-scout-green/10 text-scout-green'
+                                        : 'border-gray-200 dark:border-gray-700 text-gray-450 dark:text-gray-400'
+                                )}
+                            >
+                                JSON
+                            </button>
+                        </div>
+                    </div>
+
                     <button
-                        disabled={!Object.values(exportOptions).some(Boolean)}
-                        onClick={() => alert('Download avviato! Il file JSON verrà scaricato nella cartella Download.')}
+                        type="button"
+                        disabled={!Object.values(exportOptions).some(Boolean) || isDownloading}
+                        onClick={handleManualDownload}
                         className="w-full bg-scout-blue text-white font-black py-3 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed text-sm"
                     >
                         <Download size={18} />
-                        Scarica Dati Selezionati
+                        {isDownloading ? 'Generazione...' : 'Scarica Dati Selezionati'}
                     </button>
                 </div>
             </SettingsSection>
@@ -440,7 +548,14 @@ export default function Settings() {
                         </div>
 
                         <button
-                            onClick={() => savePrefs({ autoExport, autoExportConfigs, exportPath })}
+                            onClick={async () => {
+                                savePrefs({ autoExport, autoExportConfigs, exportPath, formatoExport });
+                                alert('Configurazione salvata con successo!');
+                                if (autoExport) {
+                                    const { checkAndRunAutoExport } = await import('@/lib/autoExport');
+                                    await checkAndRunAutoExport(true); // force run immediately
+                                }
+                            }}
                             className="w-full bg-scout-green text-white font-black py-3 rounded-xl flex items-center justify-center gap-2 text-sm active:scale-95 transition-all shadow-md"
                             type="button"
                         >
