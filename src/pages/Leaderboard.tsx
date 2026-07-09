@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { getLevelInfo } from '@/lib/gamification';
-import { Trophy, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { getLevelInfo, BADGES } from '@/lib/gamification';
+import { Trophy, X, ChevronLeft, ChevronRight, Award } from 'lucide-react';
 import { cn, getDefaultCover } from '@/lib/utils';
 import { User } from '@/types';
 import { getAllUsers } from '@/lib/data';
@@ -121,56 +121,91 @@ export default function Leaderboard() {
                         </div>
 
                         <div className="px-6 pb-6 -mt-12 relative">
-                            <div className="flex flex-col items-center mb-6">
-                                <UserAvatar user={selectedUser} size="lg" className="mb-3 border-4 border-white dark:border-gray-800 bg-white dark:bg-gray-800" />
-                                <h2 className="text-2xl font-bold text-gray-900 dark:text-white text-center leading-tight">
+                            <div className="flex flex-col items-center mb-4">
+                                <UserAvatar user={selectedUser} size="lg" className="mb-3 border-4 border-white dark:border-gray-800 bg-white dark:bg-gray-800 animate-in zoom-in duration-300" />
+                                <h2 className="text-xl font-black text-gray-900 dark:text-white text-center leading-tight">
                                     {selectedUser.firstName} {selectedUser.lastName}
                                 </h2>
-                                <p className="text-scout-green dark:text-emerald-500 font-medium">@{selectedUser.nickname}</p>
-
-                                {/* New Profile Details */}
-                                <div className="mt-4 w-full space-y-3">
-                                    {/* Scout Code */}
-                                    {selectedUser.scoutCode && (
-                                        <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/50 px-3 py-1 rounded-full border border-gray-100 dark:border-gray-700 text-center">
-                                            Codice Socio: {selectedUser.scoutCode}
-                                        </div>
+                                <p className="text-xs text-scout-green dark:text-emerald-500 font-bold">@{selectedUser.nickname}</p>
+                                
+                                <p className="text-[11px] font-bold text-gray-400 dark:text-gray-500 mt-1.5 flex items-center justify-center gap-1.5">
+                                    <span>{selectedUser.groupName || 'Gruppo non impostato'}</span>
+                                    {selectedUser.scoutZone && (
+                                        <>
+                                            <span className="text-gray-300 dark:text-gray-650">•</span>
+                                            <span>Zona {selectedUser.scoutZone}</span>
+                                        </>
                                     )}
-                                    {/* Group & Zone */}
-                                    <div className="flex justify-center gap-2 flex-wrap text-sm text-gray-600 dark:text-gray-300">
-                                        {selectedUser.groupName && (
-                                            <span className="px-2 py-1 bg-scout-green/10 dark:bg-emerald-900/30 rounded-full text-xs">Gruppo: {selectedUser.groupName}</span>
-                                        )}
-                                        {selectedUser.scoutZone && (
-                                            <span className="px-2 py-1 bg-scout-brown/10 dark:bg-amber-900/30 rounded-full text-xs">Zona: {selectedUser.scoutZone}</span>
+                                </p>
+
+                                {selectedUser.scoutCode && (
+                                    <div className="mt-2 text-[10px] font-mono text-gray-500 dark:text-gray-400 bg-gray-55 dark:bg-gray-900/40 px-2.5 py-0.5 rounded-full border border-gray-100 dark:border-gray-700/60">
+                                        Socio: {selectedUser.scoutCode}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Iter Formazione */}
+                            {((selectedUser.formazione && selectedUser.formazione.length > 0) || selectedUser.hasNominaCapo) && (
+                                <div className="bg-gray-50 dark:bg-gray-900/30 p-3 rounded-2xl border border-gray-100 dark:border-gray-700/50 mb-4 w-full">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <h4 className="text-[10px] font-black uppercase tracking-wider text-scout-brown dark:text-amber-500 flex items-center gap-1">
+                                            <Award size={12} className="text-scout-green shrink-0" />
+                                            Iter Formativo
+                                        </h4>
+                                        {selectedUser.hasNominaCapo && (
+                                            <span className="bg-scout-green text-white text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full">
+                                                Nomina Capo ⚜️
+                                            </span>
                                         )}
                                     </div>
-                                    {/* Training Path */}
-                                    {selectedUser.formazione && selectedUser.formazione.length > 0 && (
-                                        <div className="mt-2">
-                                            <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Iter di Formazione</h3>
-                                            <ul className="flex flex-wrap gap-2">
-                                                {selectedUser.formazione.map((course: any, idx: number) => (
-                                                    <li key={idx} className="px-2 py-1 bg-emerald-100 dark:bg-emerald-800/30 rounded-full text-xs text-emerald-800 dark:text-emerald-200">{course}</li>
-                                                ))}
-                                            </ul>
+                                    {selectedUser.formazione && selectedUser.formazione.length > 0 ? (
+                                        <div className="space-y-1 max-h-20 overflow-y-auto pr-1">
+                                            {selectedUser.formazione.map((f, idx) => (
+                                                <div key={idx} className="flex justify-between items-center text-[10px] leading-tight">
+                                                    <span className="font-bold text-gray-700 dark:text-gray-300">{f.corso}</span>
+                                                    <span className="text-gray-450 dark:text-gray-500 shrink-0 ml-2">
+                                                        {f.anno}
+                                                    </span>
+                                                </div>
+                                            ))}
                                         </div>
-                                    )}
-                                    {/* Badges */}
-                                    {selectedUser.badges && selectedUser.badges.length > 0 && (
-                                        <div className="mt-2">
-                                            <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Badge Ottenuti</h3>
-                                            <div className="grid grid-cols-3 gap-2">
-                                                {selectedUser.badges.map((badge: any, idx: number) => (
-                                                    <div key={idx} className="flex flex-col items-center p-2 bg-gray-100 dark:bg-gray-700/30 rounded-lg">
-                                                        {badge.icon && <span className="text-xl">{badge.icon}</span>}
-                                                        <span className="text-xs mt-1 text-center text-gray-800 dark:text-gray-200">{badge.name}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
+                                    ) : (
+                                        <p className="text-[9px] text-gray-400 dark:text-gray-500 italic">Nessun corso registrato</p>
                                     )}
                                 </div>
+                            )}
+
+                            {/* Badges */}
+                            <div className="w-full">
+                                <h4 className="text-[10px] font-black uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2.5 flex items-center gap-1.5">
+                                    <Trophy size={12} className="text-yellow-500 shrink-0" />
+                                    Badge Ottenuti ({selectedUser.badges?.length || 0})
+                                </h4>
+                                {selectedUser.badges && selectedUser.badges.length > 0 ? (
+                                    <div className="grid grid-cols-4 gap-2 max-h-32 overflow-y-auto pr-1">
+                                        {selectedUser.badges.map(key => {
+                                            const badge = BADGES[key];
+                                            if (!badge) return null;
+                                            return (
+                                                <div
+                                                    key={key}
+                                                    className="flex flex-col items-center p-1.5 bg-gray-50 dark:bg-gray-900/20 rounded-xl border border-gray-100 dark:border-gray-700/50 hover:border-yellow-200 transition-colors"
+                                                    title={`${badge.name}: ${badge.description}`}
+                                                >
+                                                    <span className="text-xl mb-0.5">{badge.icon}</span>
+                                                    <span className="text-[7.5px] font-black text-gray-600 dark:text-gray-450 text-center leading-tight truncate w-full">
+                                                        {badge.name}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
+                                    <p className="text-[10px] text-gray-400 dark:text-gray-500 italic text-center py-4 bg-gray-50 dark:bg-gray-900/10 rounded-xl border border-dashed border-gray-100 dark:border-gray-750">
+                                        Nessun badge sbloccato
+                                    </p>
+                                )}
                             </div>
                         </div>
                     </div>

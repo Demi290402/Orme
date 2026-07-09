@@ -4,12 +4,13 @@ import {
     ChevronLeft, Sun, Moon, Bell, BellOff, User, Trash2,
     Download, RefreshCw, FolderOpen, Check,
     Shield, ChevronRight, MapPin, FileText, Users, BarChart2,
-    Archive, Trophy, Zap
+    Archive, Trophy, Zap, Bus, Clock
 } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
 import { getUser, deleteUserProfile } from '@/lib/data';
 import { cn } from '@/lib/utils';
 import { User as UserType } from '@/types';
+import { playNotificationSound } from '@/lib/notifications';
 
 // ─── Types ───────────────────────────────────────────
 type Cadenza = 'giornaliera' | 'settimanale' | 'mensile' | 'trimestrale' | 'semestrale' | 'annuale';
@@ -30,10 +31,14 @@ const EXPORT_OPTIONS = [
     { key: 'presenze', label: 'Dashboard Presenze', icon: BarChart2, color: 'text-amber-500' },
     { key: 'storico', label: 'Storico Attività', icon: Archive, color: 'text-orange-500' },
     { key: 'classifica', label: 'Classifica', icon: Trophy, color: 'text-yellow-500' },
+    { key: 'lista_attesa', label: 'Lista di Attesa', icon: Clock, color: 'text-red-500' },
+    { key: 'trasporti', label: 'Trasporti Privati', icon: Bus, color: 'text-emerald-500' },
 ];
 
 const NOTIFICATION_TYPES = [
     { key: 'proposte', label: 'Proposte di modifica', description: 'Quando un capo propone di aggiornare un luogo' },
+    { key: 'modifiche_luoghi', label: 'Modifiche luoghi approvate', description: 'Notifiche quando le tue proposte vengono approvate' },
+    { key: 'lista_attesa', label: 'Aggiornamenti lista di attesa', description: 'Notifiche per nuovi inserimenti o modifiche in lista d\'attesa' },
     { key: 'verbali', label: 'Nuovi verbali', description: 'Quando viene aggiunto un nuovo verbale alla CoCa' },
     { key: 'aggiornamenti', label: 'Aggiornamenti app', description: 'Nuove funzionalità e manutenzione programmata' },
 ];
@@ -107,15 +112,25 @@ export default function Settings() {
 
     // Notification settings
     const [notifiche, setNotifiche] = useState(true);
+    const [suonoNotifica, setSuonoNotifica] = useState('default');
     const [notifTypes, setNotifTypes] = useState<Record<string, boolean>>({
-        proposte: true, verbali: true, aggiornamenti: false
+        proposte: true, modifiche_luoghi: true, lista_attesa: true, verbali: true, aggiornamenti: false
     });
 
     // Auto-export settings
     const [autoExport, setAutoExport] = useState(false);
-    const [cadenza, setCadenza] = useState<Cadenza>('mensile');
     const [exportOptions, setExportOptions] = useState<Record<string, boolean>>({
-        luoghi: true, verbali: true, membri: false, presenze: false, storico: false, classifica: false
+        luoghi: true, verbali: true, membri: false, presenze: false, storico: false, classifica: false, lista_attesa: false, trasporti: false
+    });
+    const [autoExportConfigs, setAutoExportConfigs] = useState<Record<string, { enabled: boolean; cadenza: Cadenza }>>({
+        luoghi: { enabled: true, cadenza: 'mensile' },
+        verbali: { enabled: true, cadenza: 'mensile' },
+        membri: { enabled: false, cadenza: 'mensile' },
+        presenze: { enabled: false, cadenza: 'mensile' },
+        storico: { enabled: false, cadenza: 'mensile' },
+        classifica: { enabled: false, cadenza: 'mensile' },
+        lista_attesa: { enabled: false, cadenza: 'mensile' },
+        trasporti: { enabled: false, cadenza: 'mensile' }
     });
     const [exportPath, setExportPath] = useState('');
     const [showAutoExport, setShowAutoExport] = useState(false);
@@ -133,10 +148,11 @@ export default function Settings() {
             try {
                 const prefs = JSON.parse(saved);
                 if (prefs.notifiche !== undefined) setNotifiche(prefs.notifiche);
+                if (prefs.suonoNotifica) setSuonoNotifica(prefs.suonoNotifica);
                 if (prefs.notifTypes) setNotifTypes(prefs.notifTypes);
                 if (prefs.autoExport !== undefined) setAutoExport(prefs.autoExport);
-                if (prefs.cadenza) setCadenza(prefs.cadenza);
                 if (prefs.exportOptions) setExportOptions(prefs.exportOptions);
+                if (prefs.autoExportConfigs) setAutoExportConfigs(prefs.autoExportConfigs);
                 if (prefs.exportPath) setExportPath(prefs.exportPath);
             } catch { /* ignore */ }
         }
@@ -217,27 +233,66 @@ export default function Settings() {
                     label="Notifiche Push"
                     subtitle={notifiche ? 'Le notifiche sono attive' : 'Le notifiche sono disattivate'}
                     color="text-purple-500"
-                    right={<Toggle value={notifiche} onChange={v => { setNotifiche(v); savePrefs({ notifiche: v }); }} />}
+                    right={<Toggle value={notifiche} onChange={v => {
+                        setNotifiche(v);
+                        savePrefs({ notifiche: v });
+                        if (v && 'Notification' in window) {
+                            Notification.requestPermission().then(permission => {
+                                if (permission !== 'granted') {
+                                    alert('Per ricevere le notifiche push reali, abilita i permessi di notifica del browser.');
+                                }
+                            });
+                        }
+                    }} />}
                 />
                 {notifiche && (
-                    <div className="px-4 py-3 space-y-3 bg-gray-50/50 dark:bg-gray-900/30">
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Tipi di notifica</p>
-                        {NOTIFICATION_TYPES.map(n => (
-                            <div key={n.key} className="flex items-center justify-between gap-3">
-                                <div className="flex-1">
-                                    <p className="text-xs font-bold text-gray-700 dark:text-gray-300">{n.label}</p>
-                                    <p className="text-[10px] text-gray-400">{n.description}</p>
+                    <div className="px-4 py-4 space-y-4 bg-gray-50/50 dark:bg-gray-900/30">
+                        <div className="space-y-3">
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Tipi di notifica</p>
+                            {NOTIFICATION_TYPES.map(n => (
+                                <div key={n.key} className="flex items-center justify-between gap-3">
+                                    <div className="flex-1">
+                                        <p className="text-xs font-bold text-gray-700 dark:text-gray-300">{n.label}</p>
+                                        <p className="text-[10px] text-gray-400">{n.description}</p>
+                                    </div>
+                                    <Toggle
+                                        value={notifTypes[n.key] ?? false}
+                                        onChange={v => {
+                                            const updated = { ...notifTypes, [n.key]: v };
+                                            setNotifTypes(updated);
+                                            savePrefs({ notifTypes: updated });
+                                        }}
+                                    />
                                 </div>
-                                <Toggle
-                                    value={notifTypes[n.key] ?? false}
-                                    onChange={v => {
-                                        const updated = { ...notifTypes, [n.key]: v };
-                                        setNotifTypes(updated);
-                                        savePrefs({ notifTypes: updated });
+                            ))}
+                        </div>
+
+                        <div className="space-y-2 pt-3 border-t border-gray-100 dark:border-gray-800/40">
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Suono di notifica</p>
+                            <div className="flex gap-2">
+                                <select
+                                    value={suonoNotifica}
+                                    onChange={e => {
+                                        setSuonoNotifica(e.target.value);
+                                        savePrefs({ suonoNotifica: e.target.value });
                                     }}
-                                />
+                                    className="flex-1 px-3 py-2 rounded-xl border border-gray-205 dark:border-gray-800 bg-white dark:bg-gray-950 text-xs font-bold text-gray-850 dark:text-gray-200 outline-none focus:ring-1 focus:ring-purple-500"
+                                >
+                                    <option value="default">Default Beep</option>
+                                    <option value="scout_horn">Corno Scout (Bitonale)</option>
+                                    <option value="campfire">Fuoco da Campo (Crepitio)</option>
+                                    <option value="nature_birds">Canto degli Uccelli</option>
+                                    <option value="guitar_chord">Accordo di Chitarra</option>
+                                </select>
+                                <button
+                                    onClick={() => playNotificationSound(suonoNotifica)}
+                                    type="button"
+                                    className="bg-purple-100 dark:bg-purple-900/30 text-purple-650 dark:text-purple-400 px-4 py-2 rounded-xl text-xs font-black hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors active:scale-95 shrink-0"
+                                >
+                                    Prova
+                                </button>
                             </div>
-                        ))}
+                        </div>
                     </div>
                 )}
             </SettingsSection>
@@ -290,7 +345,7 @@ export default function Settings() {
                 <SettingsRow
                     icon={Zap}
                     label="Estrazione Automatica"
-                    subtitle={autoExport ? `Cadenza: ${CADENZE.find(c => c.value === cadenza)?.label}` : 'Disattivata'}
+                    subtitle={autoExport ? 'Attiva (cadenze indipendenti)' : 'Disattivata'}
                     color="text-emerald-500"
                     right={
                         <div className="flex items-center gap-2">
@@ -300,7 +355,7 @@ export default function Settings() {
                                 savePrefs({ autoExport: v });
                             }} />
                             {autoExport && (
-                                <button onClick={() => setShowAutoExport(p => !p)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                                <button onClick={() => setShowAutoExport(p => !p)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors" type="button">
                                     <ChevronRight size={14} className={cn('text-gray-400 transition-transform', showAutoExport && 'rotate-90')} />
                                 </button>
                             )}
@@ -309,59 +364,11 @@ export default function Settings() {
                 />
 
                 {autoExport && showAutoExport && (
-                    <div className="px-4 py-4 space-y-5 bg-gray-50/50 dark:bg-gray-900/30">
-                        {/* Cadenza */}
-                        <div className="space-y-2">
-                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Cadenza</p>
-                            <div className="grid grid-cols-2 gap-2">
-                                {CADENZE.map(c => (
-                                    <button
-                                        key={c.value}
-                                        onClick={() => { setCadenza(c.value); savePrefs({ cadenza: c.value }); }}
-                                        className={cn(
-                                            'py-2.5 px-3 rounded-xl border-2 text-xs font-bold transition-all',
-                                            cadenza === c.value
-                                                ? 'border-scout-green bg-scout-green/10 text-scout-green-dark dark:text-emerald-400'
-                                                : 'border-gray-100 dark:border-gray-700 text-gray-500 dark:text-gray-400'
-                                        )}
-                                    >
-                                        {c.label}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Cosa estrarre */}
-                        <div className="space-y-2">
-                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Cosa includere</p>
-                            <div className="grid grid-cols-2 gap-2">
-                                {EXPORT_OPTIONS.map(opt => (
-                                    <button
-                                        key={opt.key}
-                                        onClick={() => {
-                                            const updated = { ...exportOptions, [opt.key]: !exportOptions[opt.key] };
-                                            setExportOptions(updated);
-                                            savePrefs({ exportOptions: updated });
-                                        }}
-                                        className={cn(
-                                            'flex items-center gap-2 p-3 rounded-xl border-2 text-xs font-bold transition-all text-left',
-                                            exportOptions[opt.key]
-                                                ? 'border-scout-green bg-scout-green/5 dark:bg-scout-green/10 text-gray-900 dark:text-white'
-                                                : 'border-gray-100 dark:border-gray-700 text-gray-400 dark:text-gray-500'
-                                        )}
-                                    >
-                                        <opt.icon size={14} className={exportOptions[opt.key] ? opt.color : 'text-gray-300 dark:text-gray-600'} />
-                                        {opt.label}
-                                        {exportOptions[opt.key] && <Check size={12} className="ml-auto text-scout-green shrink-0" />}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
+                    <div className="px-4 py-4 space-y-5 bg-gray-50/50 dark:bg-gray-900/30 animate-in slide-in-from-top-2 duration-200">
                         {/* Cartella di destinazione */}
                         <div className="space-y-2">
                             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1">
-                                Destinazione <span className="text-red-400">*</span>
+                                Cartella Destinazione <span className="text-red-400">*</span>
                             </p>
                             <button
                                 onClick={handlePickFolder}
@@ -371,19 +378,72 @@ export default function Settings() {
                                         ? 'border-scout-green bg-scout-green/5 dark:bg-scout-green/10 text-gray-900 dark:text-white'
                                         : 'border-dashed border-gray-200 dark:border-gray-700 text-gray-400'
                                 )}
+                                type="button"
                             >
                                 <FolderOpen size={16} className={exportPath ? 'text-scout-green' : 'text-gray-300'} />
                                 <span className="flex-1 truncate">{exportPath || 'Scegli cartella di destinazione...'}</span>
                                 {exportPath && <Check size={14} className="text-scout-green shrink-0" />}
                             </button>
-                            <p className="text-[10px] text-gray-400 dark:text-gray-500">
+                            <p className="text-[10px] text-gray-400 dark:text-gray-500 leading-normal">
                                 La cartella deve essere selezionata tramite il browser. Se non disponibile, i file saranno salvati nella cartella Download.
                             </p>
                         </div>
 
+                        {/* Cadenze Indipendenti per Ciascuna Opzione */}
+                        <div className="space-y-3">
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Programmazione Risorse</p>
+                            <div className="space-y-2">
+                                {EXPORT_OPTIONS.map(opt => {
+                                    const config = autoExportConfigs[opt.key] || { enabled: false, cadenza: 'mensile' };
+                                    return (
+                                        <div key={opt.key} className="bg-white dark:bg-gray-900 p-3.5 rounded-2xl border border-gray-100 dark:border-gray-800 space-y-3">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <opt.icon size={15} className={opt.color} />
+                                                    <span className="text-xs font-bold text-gray-900 dark:text-white">{opt.label}</span>
+                                                </div>
+                                                <Toggle
+                                                    value={config.enabled}
+                                                    onChange={v => {
+                                                        const updated = {
+                                                            ...autoExportConfigs,
+                                                            [opt.key]: { ...config, enabled: v }
+                                                        };
+                                                        setAutoExportConfigs(updated);
+                                                        savePrefs({ autoExportConfigs: updated });
+                                                    }}
+                                                />
+                                            </div>
+                                            
+                                            {config.enabled && (
+                                                <div className="flex items-center justify-between gap-4 pt-2 border-t border-gray-50 dark:border-gray-800/40">
+                                                    <span className="text-[10px] font-semibold text-gray-400">Frequenza:</span>
+                                                    <select
+                                                        value={config.cadenza}
+                                                        onChange={e => {
+                                                            const updated = {
+                                                                ...autoExportConfigs,
+                                                                [opt.key]: { ...config, cadenza: e.target.value as Cadenza }
+                                                            };
+                                                            setAutoExportConfigs(updated);
+                                                            savePrefs({ autoExportConfigs: updated });
+                                                        }}
+                                                        className="px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-[10px] font-bold text-gray-700 dark:text-gray-300 outline-none focus:ring-1 focus:ring-scout-green"
+                                                    >
+                                                        {CADENZE.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                                                    </select>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
                         <button
-                            onClick={() => savePrefs({ autoExport, cadenza, exportOptions, exportPath })}
-                            className="w-full bg-scout-green text-white font-black py-3 rounded-xl flex items-center justify-center gap-2 text-sm active:scale-95 transition-all"
+                            onClick={() => savePrefs({ autoExport, autoExportConfigs, exportPath })}
+                            className="w-full bg-scout-green text-white font-black py-3 rounded-xl flex items-center justify-center gap-2 text-sm active:scale-95 transition-all shadow-md"
+                            type="button"
                         >
                             <RefreshCw size={16} />
                             Salva Configurazione

@@ -706,7 +706,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                             else if (membri.length > 0) next[idx].branca = membri[0].nome;
                                                             setVerbale(v => ({ ...v, ritorni: next }));
                                                         }}
-                                                        className="p-2 border border-gray-200 rounded-xl text-[10px] font-bold uppercase tracking-wider outline-none focus:ring-1 focus:ring-scout-green"
+                                                        className="p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-[10px] font-bold uppercase tracking-wider outline-none focus:ring-1 focus:ring-scout-green text-gray-800 dark:text-white"
                                                     >
                                                         <option value="Branca">Branca</option>
                                                         <option value="Membro">Membro</option>
@@ -720,7 +720,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                                 next[idx].branca = e.target.value;
                                                                 setVerbale(v => ({ ...v, ritorni: next }));
                                                             }}
-                                                            className="flex-1 p-2 border border-gray-200 rounded-xl text-xs outline-none focus:ring-1 focus:ring-scout-green font-bold"
+                                                            className="flex-1 p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs outline-none focus:ring-1 focus:ring-scout-green font-bold text-gray-800 dark:text-white"
                                                         >
                                                             {membri.length === 0 && <option>Nessun membro</option>}
                                                             {membri.map(m => (
@@ -735,7 +735,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                                 next[idx].branca = e.target.value;
                                                                 setVerbale(v => ({ ...v, ritorni: next }));
                                                             }}
-                                                            className="flex-1 p-2 border border-gray-200 rounded-xl text-xs outline-none focus:ring-1 focus:ring-scout-green font-bold"
+                                                            className="flex-1 p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs outline-none focus:ring-1 focus:ring-scout-green font-bold text-gray-800 dark:text-white"
                                                         >
                                                             <option value="L/C">L/C</option>
                                                             <option value="E/G">E/G</option>
@@ -962,7 +962,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                                 next[idx] = { ...next[idx], quando: e.target.value };
                                                                 setVerbale(v => ({ ...v, postiAzione: next }));
                                                             }}
-                                                            className="w-full bg-white dark:bg-gray-800 p-2.5 border border-gray-100 dark:border-gray-700 rounded-xl text-xs outline-none focus:ring-1 focus:ring-orange-200"
+                                                            className="w-full bg-white dark:bg-gray-800 p-2.5 border border-gray-100 dark:border-gray-700 rounded-xl text-xs outline-none focus:ring-1 focus:ring-orange-200 text-gray-800 dark:text-gray-105"
                                                         />
                                                     </div>
                                                     <button 
@@ -1054,7 +1054,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                             next[idx].dataInizio = e.target.value;
                                                             setVerbale(v => ({ ...v, dateImportanti: next }));
                                                         }}
-                                                        className="w-full bg-white dark:bg-gray-800 p-2.5 border border-gray-100 dark:border-gray-700 rounded-xl text-xs outline-none focus:ring-1 focus:ring-scout-blue"
+                                                        className="w-full bg-white dark:bg-gray-800 p-2.5 border border-gray-100 dark:border-gray-700 rounded-xl text-xs outline-none focus:ring-1 focus:ring-scout-blue text-gray-800 dark:text-gray-100"
                                                     />
                                                 </div>
                                                 <div className="col-span-6 md:col-span-5 space-y-1 relative">
@@ -1151,7 +1151,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                             next[idx].dataInizio = e.target.value;
                                                             setVerbale(v => ({ ...v, prossimiImpegni: next }));
                                                         }}
-                                                        className="w-full bg-white dark:bg-gray-800 p-2.5 border border-gray-100 dark:border-gray-700 rounded-xl text-xs outline-none focus:ring-1 focus:ring-scout-purple"
+                                                        className="w-full bg-white dark:bg-gray-800 p-2.5 border border-gray-100 dark:border-gray-700 rounded-xl text-xs outline-none focus:ring-1 focus:ring-scout-purple text-gray-800 dark:text-gray-100"
                                                     />
                                                 </div>
                                                 <div className="col-span-6 md:col-span-4 space-y-1 relative">

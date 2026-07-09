@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { 
-    X, Search, Phone, Mail, MessageCircle, Trash2, Edit, Plus, MapPin, Users, Euro, Bus, Filter, ArrowLeft, Check, Copy, Calendar, Globe
+    X, Search, Phone, Mail, MessageCircle, Trash2, Edit, Plus, MapPin, Users, Euro, Bus, Filter, ChevronLeft 
 } from 'lucide-react';
 import { 
-    getServiziTrasporto, addServizioTrasporto, updateServizioTrasporto, deleteServizioTrasporto, addQuickPrice
+    getServiziTrasporto, addServizioTrasporto, updateServizioTrasporto, deleteServizioTrasporto, addQuickPrice 
 } from '@/lib/trasporti';
 import { ServizioTrasporto } from '@/types';
 import { cn } from '@/lib/utils';
@@ -43,12 +43,39 @@ export default function TransportModal({ onClose }: TransportModalProps) {
     const [departureAddress, setDepartureAddress] = useState('');
     const [capacity, setCapacity] = useState<number>(50);
     const [pricePerPerson, setPricePerPerson] = useState<number | ''>('');
-    const [selectedCompany, setSelectedCompany] = useState<ServizioTrasporto | null>(null);
-    const [quickPrice, setQuickPrice] = useState<number | ''>('');
     const [basePrice, setBasePrice] = useState<number | ''>(''); // Preventivo
     const [km, setKm] = useState<number | ''>('');
     const [numeroPersone, setNumeroPersone] = useState<number | ''>('');
     const [notes, setNotes] = useState('');
+
+    // Detail profile states
+    const [selectedDitta, setSelectedDitta] = useState<ServizioTrasporto | null>(null);
+    const [quickPrice, setQuickPrice] = useState<number | ''>('');
+    const [quickPriceSaving, setQuickPriceSaving] = useState(false);
+
+    const handleSaveQuickPrice = async (companyId: string) => {
+        if (quickPrice === '' || Number(quickPrice) <= 0) {
+            alert('Inserisci un prezzo a persona valido');
+            return;
+        }
+        setQuickPriceSaving(true);
+        try {
+            await addQuickPrice(companyId, Number(quickPrice));
+            setQuickPrice('');
+            // Refresh data
+            const data = await getServiziTrasporto();
+            setServizi(data);
+            const updated = data.find(item => item.id === companyId);
+            if (updated) {
+                setSelectedDitta(updated);
+            }
+        } catch (err) {
+            console.error('Errore nel salvare il prezzo:', err);
+            alert('Impossibile salvare il prezzo. Riprova.');
+        } finally {
+            setQuickPriceSaving(false);
+        }
+    };
 
     const fetchServizi = async () => {
         setLoading(true);
@@ -375,6 +402,210 @@ export default function TransportModal({ onClose }: TransportModalProps) {
                                 </button>
                             </div>
                         </form>
+                    ) : selectedDitta ? (
+                        /* Profilo Ditta Detail View */
+                        <div className="space-y-6 animate-in slide-in-from-right-4 duration-200">
+                             {/* Back button and title */}
+                             <div className="flex items-center gap-3 border-b border-gray-100 dark:border-gray-800 pb-4">
+                                 <button 
+                                     onClick={() => setSelectedDitta(null)}
+                                     className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                     type="button"
+                                 >
+                                     <ChevronLeft size={20} />
+                                 </button>
+                                 <div>
+                                     <h3 className="font-extrabold text-base text-scout-green-dark dark:text-emerald-400">
+                                         {selectedDitta.companyName}
+                                     </h3>
+                                     <p className="text-xs text-gray-500 dark:text-gray-400">Profilo completo ditta di trasporti</p>
+                                 </div>
+                             </div>
+
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                 {/* Left: General Info & Actions */}
+                                 <div className="space-y-4">
+                                     <div className="bg-gray-50 dark:bg-gray-850 p-5 rounded-2xl border border-gray-100 dark:border-gray-800 space-y-4">
+                                         <h4 className="text-[10px] font-black uppercase tracking-wider text-gray-405 dark:text-gray-500 border-l-2 border-scout-green pl-2 leading-none">Contatti e Sede</h4>
+                                         
+                                         <div className="space-y-3">
+                                             <div className="flex items-start gap-2.5 text-xs">
+                                                 <MapPin size={16} className="text-scout-green dark:text-emerald-500 shrink-0 mt-0.5" />
+                                                 <div>
+                                                     <p className="font-bold text-gray-905 dark:text-white">{selectedDitta.departureCommune} ({selectedDitta.departureProvince || 'EE'}), {selectedDitta.departureRegion}</p>
+                                                     {selectedDitta.departureAddress && <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">{selectedDitta.departureAddress}</p>}
+                                                 </div>
+                                             </div>
+                                             <div className="flex items-center gap-2.5 text-xs">
+                                                 <Users size={16} className="text-scout-green dark:text-emerald-500 shrink-0" />
+                                                 <p className="font-semibold text-gray-600 dark:text-gray-400">Capacità bus consigliato: <strong className="text-gray-900 dark:text-white font-extrabold">{selectedDitta.capacity} posti max</strong></p>
+                                             </div>
+                                             {selectedDitta.contactName && (
+                                                 <div className="flex items-center gap-2.5 text-xs border-t border-gray-100 dark:border-gray-800/60 pt-3">
+                                                     <span className="text-[10px] font-bold text-gray-400 uppercase">Referente ditta:</span>
+                                                     <span className="font-bold text-gray-800 dark:text-gray-200">{selectedDitta.contactName}</span>
+                                                 </div>
+                                             )}
+                                         </div>
+                                     </div>
+
+                                     {/* Large Premium Contact Buttons */}
+                                     <div className="space-y-2">
+                                         {selectedDitta.phone && (
+                                             <div className="grid grid-cols-2 gap-2">
+                                                 <a
+                                                     href={`tel:${selectedDitta.phone}`}
+                                                     className="flex items-center justify-center gap-2 py-3 bg-blue-50/50 hover:bg-blue-100/60 dark:bg-blue-950/20 dark:hover:bg-blue-950/45 text-blue-600 dark:text-blue-400 rounded-xl text-xs font-black transition-all border border-blue-100 dark:border-blue-900/30 text-center shadow-sm"
+                                                 >
+                                                     <Phone size={14} className="shrink-0" />
+                                                     Chiama Ora
+                                                 </a>
+                                                 <a
+                                                     href={`https://wa.me/${selectedDitta.phone}`} target="_blank" rel="noreferrer"
+                                                     className="flex items-center justify-center gap-2 py-3 bg-emerald-50/50 hover:bg-emerald-100/60 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/45 text-emerald-600 dark:text-emerald-400 rounded-xl text-xs font-black transition-all border border-emerald-100 dark:border-emerald-900/30 text-center shadow-sm"
+                                                 >
+                                                     <MessageCircle size={14} className="shrink-0" />
+                                                     WhatsApp
+                                                 </a>
+                                             </div>
+                                         )}
+                                         {selectedDitta.email && (
+                                             <a
+                                                 href={`mailto:${selectedDitta.email}`}
+                                                 className="flex items-center justify-center gap-2 py-3 bg-purple-50/50 hover:bg-purple-100/60 dark:bg-purple-950/20 dark:hover:bg-purple-950/45 text-purple-600 dark:text-purple-400 rounded-xl text-xs font-black transition-all border border-purple-100 dark:border-purple-900/30 text-center w-full shadow-sm"
+                                             >
+                                                 <Mail size={14} className="shrink-0" />
+                                                 Invia Email di Richiesta
+                                             </a>
+                                         )}
+                                     </div>
+
+                                     {selectedDitta.notes && (
+                                         <div className="bg-gray-50/50 dark:bg-gray-850/50 p-4 rounded-xl border border-gray-150 dark:border-gray-800 border-l-2 border-l-scout-green dark:border-l-emerald-500">
+                                             <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Informazioni Aggiuntive</p>
+                                             <p className="text-xs text-gray-650 dark:text-gray-450 italic font-medium">"{selectedDitta.notes}"</p>
+                                         </div>
+                                     )}
+                                 </div>
+
+                                 {/* Right: Pricing & Quotes */}
+                                 <div className="space-y-4">
+                                     {/* Private Quote Section */}
+                                     <div className="bg-gray-50 dark:bg-gray-850 p-5 rounded-2xl border border-gray-100 dark:border-gray-800 space-y-4">
+                                         <div className="flex items-center justify-between">
+                                             <h4 className="text-[10px] font-black uppercase tracking-wider text-gray-400 dark:text-gray-500 border-l-2 border-scout-brown pl-2 leading-none">Preventivo del tuo Gruppo</h4>
+                                             {selectedDitta.basePrice && (
+                                                 <button
+                                                     onClick={() => { setSelectedDitta(null); openEditForm(selectedDitta); }}
+                                                     className="text-[10px] font-black text-scout-blue hover:underline"
+                                                 >
+                                                     Modifica
+                                                 </button>
+                                             )}
+                                         </div>
+
+                                         {selectedDitta.basePrice ? (
+                                             <div className="space-y-3">
+                                                 <div className="flex justify-between items-center text-xs">
+                                                     <span className="text-gray-500">Preventivo Totale:</span>
+                                                     <span className="font-extrabold text-gray-905 dark:text-white text-sm">{selectedDitta.basePrice} €</span>
+                                                 </div>
+                                                 <div className="flex justify-between items-center text-xs border-t border-gray-100 dark:border-gray-800/40 pt-2">
+                                                     <span className="text-gray-500">Distanza / Chilometri:</span>
+                                                     <span className="font-bold text-gray-800 dark:text-gray-200">{selectedDitta.km} km</span>
+                                                 </div>
+                                                 <div className="flex justify-between items-center text-xs border-t border-gray-100 dark:border-gray-800/40 pt-2">
+                                                     <span className="text-gray-500">Partecipanti:</span>
+                                                     <span className="font-bold text-gray-800 dark:text-gray-200">{selectedDitta.numeroPersone} persone</span>
+                                                 </div>
+                                                 <div className="flex justify-between items-center text-xs bg-scout-green/5 dark:bg-emerald-950/20 px-3 py-2.5 rounded-xl border border-scout-green/10">
+                                                     <span className="font-bold text-scout-green-dark dark:text-emerald-400">Prezzo a persona stimato:</span>
+                                                     <span className="font-extrabold text-scout-green dark:text-emerald-300 text-sm">
+                                                         {selectedDitta.numeroPersone && (selectedDitta.basePrice / selectedDitta.numeroPersone).toFixed(2)} €
+                                                     </span>
+                                                 </div>
+                                             </div>
+                                         ) : (
+                                             <div className="space-y-3 text-center py-4">
+                                                 <p className="text-xs text-gray-400 dark:text-gray-550 italic">Nessun preventivo registrato da questo gruppo.</p>
+                                                 <button
+                                                     onClick={() => { setSelectedDitta(null); openEditForm(selectedDitta); }}
+                                                     className="bg-scout-brown hover:bg-scout-brown/90 text-white px-4 py-2 rounded-xl text-xs font-black shadow-md transition-all active:scale-95 cursor-pointer inline-flex items-center gap-1.5"
+                                                 >
+                                                     <Plus size={12} />
+                                                     Aggiungi Preventivo
+                                                 </button>
+                                             </div>
+                                         )}
+                                     </div>
+
+                                     {/* Shared Price Estimations & Timeline */}
+                                     <div className="bg-gray-50 dark:bg-gray-850 p-5 rounded-2xl border border-gray-100 dark:border-gray-800 space-y-4">
+                                         <h4 className="text-[10px] font-black uppercase tracking-wider text-gray-400 dark:text-gray-500 border-l-2 border-yellow-500 pl-2 leading-none">Andamento Storico Prezzi (Globale)</h4>
+                                         
+                                         {(() => {
+                                             const prezziStorici = selectedDitta.prezziStorici || [];
+                                             const average = prezziStorici.length > 0 
+                                                 ? (prezziStorici.reduce((acc, curr) => acc + curr.pricePerPerson, 0) / prezziStorici.length)
+                                                 : null;
+                                             
+                                             return (
+                                                 <div className="space-y-4">
+                                                     {average ? (
+                                                         <div className="bg-yellow-500/5 dark:bg-yellow-500/10 p-3 rounded-xl border border-yellow-500/25 flex justify-between items-center text-xs">
+                                                             <span className="font-bold text-yellow-600 dark:text-yellow-400">Media indicativa tariffa:</span>
+                                                             <span className="font-extrabold text-yellow-500 text-sm">{average.toFixed(2)} € <span className="text-[10px] font-normal text-gray-400">/ pers</span></span>
+                                                         </div>
+                                                     ) : (
+                                                         <p className="text-[11px] text-gray-450 dark:text-gray-500 italic">Nessuna tariffa registrata nello storico.</p>
+                                                     )}
+
+                                                     {prezziStorici.length > 0 && (
+                                                         <div className="space-y-1.5">
+                                                             <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wide">Ultimi 5 preventivi registrati:</p>
+                                                             <div className="space-y-1 max-h-24 overflow-y-auto pr-1">
+                                                                 {prezziStorici.map((p, idx) => (
+                                                                     <div key={p.id || idx} className="flex justify-between items-center text-[10px] bg-white dark:bg-gray-900 px-3 py-1.5 rounded-xl border border-gray-100 dark:border-gray-800">
+                                                                         <span className="font-bold text-gray-800 dark:text-gray-250">{p.pricePerPerson.toFixed(2)} € / persona</span>
+                                                                         <span className="text-gray-400">{new Date(p.createdAt).toLocaleDateString('it-IT')}</span>
+                                                                     </div>
+                                                                 ))}
+                                                             </div>
+                                                         </div>
+                                                     )}
+
+                                                     {/* Quick Add Form */}
+                                                     <div className="bg-white dark:bg-gray-900/60 p-4 rounded-xl border border-gray-100 dark:border-gray-700/60 space-y-2">
+                                                         <p className="text-[9px] font-bold text-gray-700 dark:text-gray-300">Hai ricevuto un preventivo di recente?</p>
+                                                         <div className="flex gap-2">
+                                                             <div className="relative flex-1">
+                                                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-bold">€</span>
+                                                                 <input
+                                                                     type="number"
+                                                                     placeholder="Prezzo a persona..."
+                                                                     value={quickPrice}
+                                                                     onChange={e => setQuickPrice(e.target.value !== '' ? Number(e.target.value) : '')}
+                                                                     className="w-full pl-7 pr-3 py-1.5 border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-950 rounded-xl text-xs outline-none focus:ring-1 focus:ring-scout-green font-bold text-gray-850 dark:text-gray-200"
+                                                                 />
+                                                             </div>
+                                                             <button
+                                                                 onClick={() => handleSaveQuickPrice(selectedDitta.id)}
+                                                                 disabled={quickPriceSaving}
+                                                                 className="bg-scout-green hover:bg-scout-green-dark text-white px-3 py-1.5 rounded-xl text-xs font-black transition-all active:scale-95 shadow-sm"
+                                                                 type="button"
+                                                             >
+                                                                 {quickPriceSaving ? 'Salvataggio...' : 'Aggiungi'}
+                                                             </button>
+                                                         </div>
+                                                         <p className="text-[8px] text-gray-400 leading-normal">Inserendo il prezzo a persona aiuterai gli altri gruppi scout a calcolare stime di spesa.</p>
+                                                     </div>
+                                                 </div>
+                                             );
+                                         })()}
+                                     </div>
+                                 </div>
+                             </div>
+                        </div>
                     ) : (
                         /* Directory List */
                         <div className="space-y-6">
@@ -396,7 +627,7 @@ export default function TransportModal({ onClose }: TransportModalProps) {
                                             "px-4 py-2.5 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0",
                                             showAdvancedFilters 
                                                 ? "bg-scout-green/10 border-scout-green text-scout-green dark:text-emerald-400 dark:bg-emerald-950/20" 
-                                                : "bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-450 hover:bg-gray-50 dark:hover:bg-gray-900"
+                                                : "bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-455 hover:bg-gray-50 dark:hover:bg-gray-900"
                                         )}
                                     >
                                         <Filter size={14} />
@@ -435,8 +666,8 @@ export default function TransportModal({ onClose }: TransportModalProps) {
                                     </div>
                                 )}
                             </div>
-
-{/* List Cards Area */}
+ 
+                            {/* List Cards Area */}
                             {loading ? (
                                 <div className="text-center text-gray-500 dark:text-gray-400 font-bold py-12 animate-pulse text-xs">
                                     Caricamento ditte trasporti...
@@ -445,77 +676,14 @@ export default function TransportModal({ onClose }: TransportModalProps) {
                                 <div className="text-center text-gray-500 dark:text-gray-400 font-medium py-12 text-xs border border-dashed border-gray-200 dark:border-gray-800 rounded-2xl bg-gray-50/20 dark:bg-gray-900/10">
                                     Nessuna ditta di trasporti trovata con i filtri correnti.
                                 </div>
-                            ) : selectedCompany ? (
-                                <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-800 space-y-6">
-                                    <button onClick={() => setSelectedCompany(null)} className="text-xs font-bold text-scout-green flex items-center gap-1 hover:underline">
-                                        &larr; Torna alla lista
-                                    </button>
-                                    <h2 className="text-xl font-black text-gray-900 dark:text-white">{selectedCompany.companyName}</h2>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="space-y-4">
-                                            <h3 className="text-xs font-bold uppercase text-gray-500 dark:text-gray-400">Contatti</h3>
-                                            <p className="text-sm">Telefono: {selectedCompany.phone || 'N/D'}</p>
-                                            <p className="text-sm">Email: {selectedCompany.email || 'N/D'}</p>
-                                        </div>
-                                        <div className="space-y-4">
-                                            <h3 className="text-xs font-bold uppercase text-gray-500 dark:text-gray-400">Sede</h3>
-                                            <p className="text-sm">{selectedCompany.departureAddress}, {selectedCompany.departureCommune} ({selectedCompany.departureProvince})</p>
-                                        </div>
-{/* Tariffe and Quick Add */}
-<div className="space-y-4">
-  <h3 className="text-xs font-bold uppercase text-gray-500 dark:text-gray-400">Tariffe</h3>
-  {selectedCompany.pricePerPerson && (
-    <p className="text-sm">Prezzo a persona: {selectedCompany.pricePerPerson}€</p>
-  )}
-  {selectedCompany.basePrice && selectedCompany.numeroPersone && (
-    <p className="text-sm">
-      Preventivo totale: {selectedCompany.basePrice}€ ({selectedCompany.numeroPersone} persone, {selectedCompany.km} km)
-      <br />
-      <span className="text-xs text-gray-500">Calcolato a persona: {(selectedCompany.basePrice / selectedCompany.numeroPersone).toFixed(2)}€</span>
-    </p>
-  )}
-  {/* Quick Add Price */}
-  <div className="flex items-center gap-2">
-    <input
-      type="number"
-      min={0}
-      placeholder="Prezzo rapido"
-      value={quickPrice}
-      onChange={e => setQuickPrice(e.target.value !== '' ? Number(e.target.value) : '')}
-      className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-xs text-gray-900 dark:text-white focus:ring-2 focus:ring-scout-green/30 focus:border-scout-green"
-    />
-    <button
-      onClick={async () => {
-        if (quickPrice !== '' && selectedCompany.id) {
-          await addQuickPrice(selectedCompany.id, Number(quickPrice));
-          setQuickPrice('');
-        }
-      }}
-      className="bg-scout-green hover:bg-scout-green-dark text-white px-3 py-1 rounded-xl text-xs font-bold"
-    >
-      Aggiungi prezzo rapido
-    </button>
-  </div>
-  {/* Price History */}
-  {selectedCompany.prezzi_storici && selectedCompany.prezzi_storici.length > 0 && (
-    <div className="mt-2">
-      <h4 className="text-xs font-bold uppercase text-gray-500 dark:text-gray-400">Storico prezzi (ultimi 5)</h4>
-      <ul className="list-disc list-inside text-sm">
-        {selectedCompany.prezzi_storici.map((h) => (
-          <li key={h.id}>
-            {h.pricePerPerson ?? h.price_per_person}€ – {new Date(h.createdAt ?? h.created_at).toLocaleDateString()}
-          </li>
-        ))}
-      </ul>
-    </div>
-  )}
-</div>
-                                    </div>
-                                </div>
                             ) : (
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {filteredServizi.map((item) => (
-                                        <div key={item.id} className="bg-gray-50/30 dark:bg-gray-850/40 hover:bg-gray-50/70 dark:hover:bg-gray-850/70 p-5 rounded-2xl border border-gray-150 dark:border-gray-800/80 shadow-xs hover:shadow-md transition-all duration-200 space-y-4 relative group cursor-pointer" onClick={() => setSelectedCompany(item)}>
+                                        <div 
+                                            key={item.id} 
+                                            onClick={() => setSelectedDitta(item)}
+                                            className="bg-gray-50/30 dark:bg-gray-850/40 hover:bg-gray-50/70 dark:hover:bg-gray-850/70 p-5 rounded-2xl border border-gray-150 dark:border-gray-800/80 shadow-xs hover:shadow-md transition-all duration-200 space-y-4 relative group cursor-pointer active:scale-[0.99]"
+                                        >
                                             <div className="flex justify-between items-start gap-4">
                                                 <div className="space-y-1">
                                                     <h4 className="font-extrabold text-sm text-scout-green-dark dark:text-emerald-400 group-hover:text-scout-green dark:group-hover:text-emerald-300 transition-colors">{item.companyName}</h4>
@@ -540,7 +708,7 @@ export default function TransportModal({ onClose }: TransportModalProps) {
                                                     </button>
                                                 </div>
                                             </div>
-
+ 
                                             <div className="space-y-2.5 text-xs text-gray-700 dark:text-gray-300">
                                                 <div className="flex items-start gap-2.5">
                                                     <MapPin size={15} className="text-scout-green dark:text-emerald-500 shrink-0 mt-0.5" />
@@ -584,18 +752,19 @@ export default function TransportModal({ onClose }: TransportModalProps) {
                                                     </div>
                                                 </div>
                                             </div>
-
+ 
                                             {item.notes && (
                                                 <p className="text-[11px] text-gray-650 dark:text-gray-400 italic bg-white/60 dark:bg-gray-900/40 p-3 rounded-xl border border-gray-150 dark:border-gray-800 border-l-2 border-l-scout-green dark:border-l-emerald-500 font-medium">
                                                     "{item.notes}"
                                                 </p>
                                             )}
-
+ 
                                             {/* Action contact strip - Similarity & Scannability */}
                                             <div className="grid grid-cols-3 gap-2 border-t border-gray-100 dark:border-gray-800/80 pt-3">
                                                 {item.phone ? (
                                                     <a
                                                         href={`tel:${item.phone}`}
+                                                        onClick={e => e.stopPropagation()}
                                                         className="flex items-center justify-center gap-1.5 py-2 bg-blue-50/50 hover:bg-blue-100/60 dark:bg-blue-950/20 dark:hover:bg-blue-950/45 text-blue-600 dark:text-blue-400 rounded-xl text-[10px] font-black transition-all"
                                                     >
                                                         <Phone size={12} className="shrink-0" />
@@ -607,10 +776,11 @@ export default function TransportModal({ onClose }: TransportModalProps) {
                                                         Chiama
                                                     </span>
                                                 )}
-
+ 
                                                 {item.phone ? (
                                                     <a
                                                         href={`https://wa.me/${item.phone}`} target="_blank" rel="noreferrer"
+                                                        onClick={e => e.stopPropagation()}
                                                         className="flex items-center justify-center gap-1.5 py-2 bg-emerald-50/50 hover:bg-emerald-100/60 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/45 text-emerald-600 dark:text-emerald-400 rounded-xl text-[10px] font-black transition-all"
                                                     >
                                                         <MessageCircle size={12} className="shrink-0" />
@@ -622,10 +792,11 @@ export default function TransportModal({ onClose }: TransportModalProps) {
                                                         WhatsApp
                                                     </span>
                                                 )}
-
+ 
                                                 {item.email ? (
                                                     <a
                                                         href={`mailto:${item.email}`}
+                                                        onClick={e => e.stopPropagation()}
                                                         className="flex items-center justify-center gap-1.5 py-2 bg-purple-50/50 hover:bg-purple-100/60 dark:bg-purple-950/20 dark:hover:bg-purple-950/45 text-purple-600 dark:text-purple-400 rounded-xl text-[10px] font-black transition-all"
                                                     >
                                                         <Mail size={12} className="shrink-0" />

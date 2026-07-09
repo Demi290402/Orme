@@ -113,3 +113,127 @@ export async function createNotificationsForGroup(
     const { error } = await supabase.from('notifications').insert(rows);
     if (error) console.error('createNotificationsForGroup error:', error);
 }
+
+/** Synthesize and play a notification chime using native Web Audio API */
+export function playNotificationSound(tone: string) {
+    try {
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        if (!AudioContextClass) return;
+        const ctx = new AudioContextClass();
+        const now = ctx.currentTime;
+
+        if (tone === 'scout_horn') {
+            // Horn tone: 392Hz (G4) and 440Hz (A4)
+            const osc1 = ctx.createOscillator();
+            const osc2 = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+            
+            osc1.type = 'sawtooth';
+            osc2.type = 'triangle';
+            
+            osc1.frequency.setValueAtTime(392, now);
+            osc2.frequency.setValueAtTime(440, now);
+            
+            gainNode.gain.setValueAtTime(0, now);
+            gainNode.gain.linearRampToValueAtTime(0.2, now + 0.05);
+            gainNode.gain.setValueAtTime(0.2, now + 0.35);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+            
+            osc1.connect(gainNode);
+            osc2.connect(gainNode);
+            gainNode.connect(ctx.destination);
+            
+            osc1.start(now);
+            osc2.start(now);
+            osc1.stop(now + 0.6);
+            osc2.stop(now + 0.6);
+        } else if (tone === 'campfire') {
+            // Campfire crackle: white noise with quick envelope spikes
+            const bufferSize = ctx.sampleRate * 0.5;
+            const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 2 - 1;
+            }
+            
+            const noise = ctx.createBufferSource();
+            noise.buffer = buffer;
+            
+            const filter = ctx.createBiquadFilter();
+            filter.type = 'bandpass';
+            filter.frequency.value = 1000;
+            
+            const gainNode = ctx.createGain();
+            gainNode.gain.setValueAtTime(0.04, now);
+            
+            noise.connect(filter);
+            filter.connect(gainNode);
+            gainNode.connect(ctx.destination);
+            
+            noise.start(now);
+            noise.stop(now + 0.5);
+        } else if (tone === 'nature_birds') {
+            // High-pitched frequency sweeps
+            const osc = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+            
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(2000, now);
+            osc.frequency.exponentialRampToValueAtTime(3000, now + 0.1);
+            osc.frequency.setValueAtTime(2500, now + 0.12);
+            osc.frequency.exponentialRampToValueAtTime(3500, now + 0.22);
+            
+            gainNode.gain.setValueAtTime(0, now);
+            gainNode.gain.linearRampToValueAtTime(0.15, now + 0.02);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.28);
+            
+            osc.connect(gainNode);
+            gainNode.connect(ctx.destination);
+            
+            osc.start(now);
+            osc.stop(now + 0.28);
+        } else if (tone === 'guitar_chord') {
+            // Guitar arpeggio chord: C major (C4, E4, G4, C5) staggered start
+            const freqs = [261.63, 329.63, 392.00, 523.25];
+            freqs.forEach((freq, idx) => {
+                const osc = ctx.createOscillator();
+                const gainNode = ctx.createGain();
+                
+                osc.type = 'triangle';
+                osc.frequency.value = freq;
+                
+                const noteStart = now + (idx * 0.05);
+                gainNode.gain.setValueAtTime(0, now);
+                gainNode.gain.setValueAtTime(0, noteStart);
+                gainNode.gain.linearRampToValueAtTime(0.12, noteStart + 0.02);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, noteStart + 0.7);
+                
+                osc.connect(gainNode);
+                gainNode.connect(ctx.destination);
+                
+                osc.start(noteStart);
+                osc.stop(noteStart + 0.7);
+            });
+        } else {
+            // Default beep
+            const osc = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+            
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, now);
+            
+            gainNode.gain.setValueAtTime(0, now);
+            gainNode.gain.linearRampToValueAtTime(0.15, now + 0.05);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+            
+            osc.connect(gainNode);
+            gainNode.connect(ctx.destination);
+            
+            osc.start(now);
+            osc.stop(now + 0.25);
+        }
+    } catch (e) {
+        console.error("Web Audio failed:", e);
+    }
+}
+

@@ -6,9 +6,23 @@ import {
     markAsRead,
     markAllAsRead,
     AppNotification,
+    playNotificationSound,
 } from '@/lib/notifications';
 import { getUser } from '@/lib/data';
 import { cn } from '@/lib/utils';
+
+const showNativeNotification = (title: string, body: string) => {
+    if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+            new Notification(title, {
+                body: body,
+                icon: '/manifest-icon-192.png'
+            });
+        } catch (e) {
+            console.error("Failed to show native notification:", e);
+        }
+    }
+};
 
 function formatRelativeTime(dateStr: string): string {
     const diff = Date.now() - new Date(dateStr).getTime();
@@ -75,6 +89,27 @@ export default function NotificationBell() {
                                 createdAt: row.created_at,
                             };
                             setNotifications(prev => [newNotif, ...prev.slice(0, 49)]);
+
+                            try {
+                                const settings = JSON.parse(localStorage.getItem('orme_settings') || '{}');
+                                const isPushEnabled = settings.notifiche !== false;
+                                const notifTypes = settings.notifTypes || {};
+                                
+                                let preferenceKey = 'generic';
+                                if (row.type === 'verbale_saved') preferenceKey = 'verbali';
+                                else if (row.type === 'location_added' || row.type === 'proposal') preferenceKey = 'modifiche_luoghi';
+                                else if (row.type === 'lista_attesa') preferenceKey = 'lista_attesa';
+
+                                const isTypeEnabled = notifTypes[preferenceKey] !== false;
+
+                                if (isPushEnabled && isTypeEnabled) {
+                                    const tone = settings.notifTone || 'default';
+                                    playNotificationSound(tone);
+                                    showNativeNotification(row.title, row.body);
+                                }
+                            } catch (e) {
+                                console.error('Error triggering local notification feedback:', e);
+                            }
                         }
                     )
                     .on(

@@ -112,8 +112,8 @@ export default function RichTextEditor({ value, onChange, minHeight = '150px', p
                 </select>
 
                 {/* Text color */}
-                <label className="relative w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white hover:shadow-sm cursor-pointer transition-all" title="Colore testo">
-                    <span className="text-xs font-black text-gray-700 select-none">A</span>
+                <label className="relative w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white dark:hover:bg-gray-650 hover:shadow-sm cursor-pointer transition-all text-gray-700 dark:text-gray-200" title="Colore testo">
+                    <span className="text-xs font-black select-none">A</span>
                     <input
                         type="color"
                         defaultValue="#000000"
@@ -123,7 +123,7 @@ export default function RichTextEditor({ value, onChange, minHeight = '150px', p
                 </label>
 
                 {/* Highlight / background color */}
-                <label className="relative w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white hover:shadow-sm cursor-pointer transition-all" title="Evidenziatore">
+                <label className="relative w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white dark:hover:bg-gray-650 hover:shadow-sm cursor-pointer transition-all text-gray-700 dark:text-gray-200" title="Evidenziatore">
                     <span className="text-xs font-black select-none" style={{ color: '#b45309' }}>H</span>
                     <input
                         type="color"
