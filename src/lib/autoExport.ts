@@ -82,7 +82,7 @@ export function flattenResource(key: string, rawData: any[]): any[] {
                 OraInizio: v.oraInizio || '',
                 OraFine: v.oraFine || '',
                 Titolo: v.titolo || '',
-                ODG: (v.ordineDelGiorno || []).map((o: any) => o.titolo).join('\n'),
+                ODG: (v.odg || []).map((o: any) => o.titolo).join('\n'),
                 Varie: v.varie || ''
             }));
             
@@ -90,7 +90,7 @@ export function flattenResource(key: string, rawData: any[]): any[] {
             return rawData.map((m: any) => ({
                 Nome: m.nome,
                 Branca: m.branca,
-                Ruolo: m.ruolo || '',
+                Ruolo: (m.ruoli || []).join(', '),
                 Stato: m.attivo ? 'Attivo' : 'Inattivo'
             }));
             
@@ -99,8 +99,8 @@ export function flattenResource(key: string, rawData: any[]): any[] {
             const presenzeRows: any[] = [];
             rawData.forEach((v: any) => {
                 const dataStr = v.data ? new Date(v.data).toLocaleDateString('it-IT') : '';
-                const presenti = (v.presentiIds || []).length;
-                const assenti = (v.assentiIds || []).length;
+                const presenti = (v.presenti || []).length;
+                const assenti = (v.assenti || []).length;
                 presenzeRows.push({
                     VerbaleNumero: v.numero,
                     Data: dataStr,
@@ -131,14 +131,14 @@ export function flattenResource(key: string, rawData: any[]): any[] {
             
         case 'lista_attesa':
             return rawData.map((l: any) => ({
-                Nome: l.nome,
-                Cognome: l.cognome,
-                DataNascita: l.dataNascita ? new Date(l.dataNascita).toLocaleDateString('it-IT') : '',
-                Email: l.email || '',
-                Telefono: l.telefono || '',
-                BrancaRichiesta: l.branca || '',
-                Note: l.note || '',
-                DataRichiesta: l.createdAt ? new Date(l.createdAt).toLocaleDateString('it-IT') : ''
+                'Nome Ragazzo': l.nomeRagazzo || '',
+                'Cognome Ragazzo': l.cognomeRagazzo || '',
+                'Data Nascita': l.dataNascita ? new Date(l.dataNascita).toLocaleDateString('it-IT') : '',
+                'Classe Scolastica': l.classe || '',
+                'Genitore Referente': l.nomeGenitore || '',
+                'Telefono Genitore': l.telefonoGenitore || '',
+                'Note': l.note || '',
+                'Data Iscrizione': l.dataIscrizione ? new Date(l.dataIscrizione).toLocaleDateString('it-IT') : (l.createdAt ? new Date(l.createdAt).toLocaleDateString('it-IT') : '')
             }));
             
         case 'trasporti':
@@ -151,7 +151,11 @@ export function flattenResource(key: string, rawData: any[]): any[] {
                 ComuneSede: t.departureCommune,
                 Indirizzo: t.departureAddress || '',
                 CapacitaBus: t.capacity || 50,
-                PrezzoPersonaIndicativo: t.pricePerPerson || ''
+                PrezzoPersonaIndicativo: t.pricePerPerson || '',
+                PrezzoBasePreventivo: t.basePrice || '',
+                KmPreventivo: t.km || '',
+                PasseggeriPreventivo: t.numeroPersone || '',
+                NotePreventivo: t.notes || ''
             }));
             
         default:
