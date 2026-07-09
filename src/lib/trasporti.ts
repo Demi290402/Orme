@@ -116,6 +116,27 @@ export async function getServiziTrasporto(): Promise<ServizioTrasporto[]> {
 export async function addServizioTrasporto(servizio: Omit<ServizioTrasporto, 'id' | 'groupId'>): Promise<ServizioTrasporto | null> {
     try {
         const user = await getUser();
+        
+        // Check for duplicate company name
+        const checkName = servizio.companyName.trim();
+        if (isOnline()) {
+            const { data: existing } = await supabase
+                .from('servizi_trasporto')
+                .select('id')
+                .ilike('company_name', checkName)
+                .maybeSingle();
+            
+            if (existing) {
+                throw new Error('Esiste già una ditta di trasporti registrata con questo nome.');
+            }
+        } else {
+            const cached = getCachedData<any[]>('servizi_trasporto') || [];
+            const isDuplicate = cached.some(co => co.company_name.trim().toLowerCase() === checkName.toLowerCase());
+            if (isDuplicate) {
+                throw new Error('Esiste già una ditta di trasporti registrata con questo nome.');
+            }
+        }
+
         const sId = crypto.randomUUID();
         
         // 1. Prepare company data

@@ -239,9 +239,9 @@ export default function AddLocation() {
                 // Points are now handled in addLocation
                 navigate('/');
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Submission error:', error);
-            alert('Errore durante il salvataggio. Riprova.');
+            alert(error.message || 'Errore durante il salvataggio. Riprova.');
             setIsSubmitting(false);
         }
     };

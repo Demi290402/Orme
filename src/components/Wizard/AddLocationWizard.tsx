@@ -100,9 +100,9 @@ export default function AddLocationWizard() {
             await addLocation(locationData);
             // addPoints is now handled inside addLocation with granular rules
             navigate('/');
-        } catch (error) {
+        } catch (error: any) {
             console.error('Submission error:', error);
-            alert('Errore durante il salvataggio. Riprova.');
+            alert(error.message || 'Errore durante il salvataggio. Riprova.');
             setIsSubmitting(false);
         }
     };

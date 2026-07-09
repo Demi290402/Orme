@@ -349,6 +349,27 @@ export async function getLocation(id: string): Promise<Location | null> {
 export async function addLocation(location: Omit<Location, 'id' | 'lastUpdatedAt' | 'lastUpdatedBy'>) {
     try {
         const currentUser = await getUser();
+        
+        // Check for duplicate name
+        const checkName = location.name.trim();
+        if (isOnline()) {
+            const { data: existing } = await supabase
+                .from('locations')
+                .select('id')
+                .ilike('name', checkName)
+                .maybeSingle();
+
+            if (existing) {
+                throw new Error('Esiste già un luogo registrato con questo nome.');
+            }
+        } else {
+            const cached = getCachedData<any[]>('locations') || [];
+            const isDuplicate = cached.some(loc => loc.name.trim().toLowerCase() === checkName.toLowerCase());
+            if (isDuplicate) {
+                throw new Error('Esiste già un luogo registrato con questo nome.');
+            }
+        }
+
         const locationId = crypto.randomUUID();
 
         const insertData = {

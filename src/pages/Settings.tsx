@@ -35,12 +35,12 @@ const EXPORT_OPTIONS = [
     { key: 'trasporti', label: 'Trasporti Privati', icon: Bus, color: 'text-emerald-500' },
 ];
 
+const DOWNLOAD_OPTIONS = EXPORT_OPTIONS.filter(opt => opt.key !== 'membri' && opt.key !== 'presenze');
+
 const NOTIFICATION_TYPES = [
-    { key: 'proposte', label: 'Proposte di modifica', description: 'Quando un capo propone di aggiornare un luogo' },
-    { key: 'modifiche_luoghi', label: 'Modifiche luoghi approvate', description: 'Notifiche quando le tue proposte vengono approvate' },
+    { key: 'aggiornamento_luoghi', label: 'Aggiornamento luoghi', description: 'Quando qualcuno apporta modifiche a un luogo censito' },
     { key: 'lista_attesa', label: 'Aggiornamenti lista di attesa', description: 'Notifiche per nuovi inserimenti o modifiche in lista d\'attesa' },
     { key: 'verbali', label: 'Nuovi verbali', description: 'Quando viene aggiunto un nuovo verbale alla CoCa' },
-    { key: 'aggiornamenti', label: 'Aggiornamenti app', description: 'Nuove funzionalità e manutenzione programmata' },
 ];
 
 // ─── Toggle Component ─────────────────────────────────
@@ -114,7 +114,7 @@ export default function Settings() {
     const [notifiche, setNotifiche] = useState(true);
     const [suonoNotifica, setSuonoNotifica] = useState('default');
     const [notifTypes, setNotifTypes] = useState<Record<string, boolean>>({
-        proposte: true, modifiche_luoghi: true, lista_attesa: true, verbali: true, aggiornamenti: false
+        aggiornamento_luoghi: true, lista_attesa: true, verbali: true
     });
 
     // Auto-export settings
@@ -311,7 +311,7 @@ export default function Settings() {
                     </div>
 
                     <div className="grid grid-cols-2 gap-2">
-                        {EXPORT_OPTIONS.map(opt => (
+                        {DOWNLOAD_OPTIONS.map(opt => (
                             <button
                                 key={opt.key}
                                 onClick={() => setExportOptions(prev => ({ ...prev, [opt.key]: !prev[opt.key] }))}
@@ -415,25 +415,24 @@ export default function Settings() {
                                                 />
                                             </div>
                                             
-                                            {config.enabled && (
-                                                <div className="flex items-center justify-between gap-4 pt-2 border-t border-gray-50 dark:border-gray-800/40">
-                                                    <span className="text-[10px] font-semibold text-gray-400">Frequenza:</span>
-                                                    <select
-                                                        value={config.cadenza}
-                                                        onChange={e => {
-                                                            const updated = {
-                                                                ...autoExportConfigs,
-                                                                [opt.key]: { ...config, cadenza: e.target.value as Cadenza }
-                                                            };
-                                                            setAutoExportConfigs(updated);
-                                                            savePrefs({ autoExportConfigs: updated });
-                                                        }}
-                                                        className="px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-[10px] font-bold text-gray-700 dark:text-gray-300 outline-none focus:ring-1 focus:ring-scout-green"
-                                                    >
-                                                        {CADENZE.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                                                    </select>
-                                                </div>
-                                            )}
+                                            <div className="flex items-center justify-between gap-4 pt-2 border-t border-gray-50 dark:border-gray-800/40">
+                                                <span className={cn("text-[10px] font-semibold transition-colors", config.enabled ? "text-gray-500 dark:text-gray-400" : "text-gray-300 dark:text-gray-600")}>Frequenza:</span>
+                                                <select
+                                                    disabled={!config.enabled}
+                                                    value={config.cadenza}
+                                                    onChange={e => {
+                                                        const updated = {
+                                                            ...autoExportConfigs,
+                                                            [opt.key]: { ...config, cadenza: e.target.value as Cadenza }
+                                                        };
+                                                        setAutoExportConfigs(updated);
+                                                        savePrefs({ autoExportConfigs: updated });
+                                                    }}
+                                                    className="px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-[10px] font-bold text-gray-700 dark:text-gray-300 outline-none focus:ring-1 focus:ring-scout-green disabled:opacity-50 transition-all"
+                                                >
+                                                    {CADENZE.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                                                </select>
+                                            </div>
                                         </div>
                                     );
                                 })}

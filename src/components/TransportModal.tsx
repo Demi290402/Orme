@@ -170,9 +170,9 @@ export default function TransportModal({ onClose }: TransportModalProps) {
             }
             setShowForm(false);
             fetchServizi();
-        } catch (err) {
+        } catch (err: any) {
             console.error('Errore durante il salvataggio:', err);
-            alert('Errore nel salvataggio. Riprova.');
+            alert(err.message || 'Errore nel salvataggio. Riprova.');
         }
     };
 
