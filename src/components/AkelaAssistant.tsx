@@ -241,17 +241,18 @@ export default function AkelaAssistant() {
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className={cn(
-                    "fixed bottom-20 md:bottom-6 right-6 z-[60] text-white p-4 rounded-full shadow-2xl transition-all duration-300 border-2 border-white dark:border-gray-800 flex items-center justify-center cursor-pointer scale-100 hover:scale-[1.08] active:scale-95",
+                    "fixed bottom-20 md:bottom-6 right-6 z-[60] flex items-center justify-center cursor-pointer transition-all duration-300 select-none outline-none border-none",
                     isOpen 
-                        ? "bg-red-500 hover:bg-red-650 rotate-90" 
-                        : "bg-scout-blue hover:bg-scout-blue-dark animate-bounce-subtle"
+                        ? "bg-red-500 hover:bg-red-650 text-white p-3.5 rounded-full shadow-lg border-2 border-white dark:border-gray-800 rotate-90 scale-100 hover:scale-105 active:scale-95" 
+                        : "bg-transparent shadow-none p-0 scale-100 hover:scale-110 active:scale-90 animate-wolf-float"
                 )}
                 title={isOpen ? "Chiudi Akela" : "Chiedi ad Akela"}
             >
-                {isOpen ? <X size={24} /> : (
-                    <div className="relative">
-                        <span className="text-2xl filter drop-shadow">🐺</span>
-                        <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-yellow-400 rounded-full animate-ping" />
+                {isOpen ? <X size={20} /> : (
+                    <div className="relative filter drop-shadow-md">
+                        <span className="text-5xl md:text-6xl leading-none">🐺</span>
+                        <div className="absolute top-1.5 right-1.5 w-3 h-3 bg-yellow-400 rounded-full border-2 border-white dark:border-gray-900 animate-ping" />
+                        <div className="absolute top-1.5 right-1.5 w-3 h-3 bg-yellow-400 rounded-full border-2 border-white dark:border-gray-900" />
                     </div>
                 )}
             </button>

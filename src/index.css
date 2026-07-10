@@ -26,6 +26,17 @@
   --color-gray-850: #182030;
 
   --font-sans: 'Roboto', Inter, sans-serif;
+
+  --animate-wolf-float: wolf-float 3s ease-in-out infinite;
+
+  @keyframes wolf-float {
+    0%, 100% {
+      transform: translateY(0) scale(1);
+    }
+    50% {
+      transform: translateY(-8px) scale(1.06);
+    }
+  }
 }
 
 @layer base {
