@@ -265,8 +265,8 @@ export default function AkelaAssistant() {
                     
                     <div className="fixed bottom-36 md:bottom-24 right-6 w-[340px] max-w-[90vw] h-[480px] bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border border-gray-200/50 dark:border-gray-800/50 rounded-[2rem] shadow-2xl z-50 flex flex-col overflow-hidden animate-in zoom-in-95 slide-in-from-bottom duration-200">
                         {/* Header */}
-                        <div className="bg-scout-blue text-white p-4 flex items-center gap-3 shrink-0">
-                            <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-xl shadow-inner">
+                        <div className="bg-scout-green dark:bg-scout-green-dark text-white p-4 flex items-center gap-3 shrink-0 transition-colors duration-200">
+                            <div className="w-10 h-10 rounded-full bg-white/15 flex items-center justify-center text-xl shadow-inner">
                                 🐺
                             </div>
                             <div>
@@ -276,11 +276,11 @@ export default function AkelaAssistant() {
                                         <Sparkles size={8} /> Guide
                                     </span>
                                 </h3>
-                                <p className="text-[10px] text-blue-100 font-medium">Il tuo saggio assistente di branca</p>
+                                <p className="text-[10px] text-white/80 font-bold">Il tuo saggio assistente di branca</p>
                             </div>
                             <button 
                                 onClick={() => setIsOpen(false)}
-                                className="ml-auto p-1 text-blue-100 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+                                className="ml-auto p-1 text-white/80 hover:text-white hover:bg-white/10 rounded-full transition-colors"
                             >
                                 <X size={18} />
                             </button>
@@ -356,12 +356,12 @@ export default function AkelaAssistant() {
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
                                 placeholder="Chiedi: 'Scrivi un verbale'..."
-                                className="flex-1 px-3 py-2 border border-gray-250 dark:border-gray-800 rounded-xl bg-gray-50 dark:bg-gray-950 text-xs font-bold outline-none focus:ring-1 focus:ring-scout-blue dark:text-white"
+                                className="flex-1 px-3 py-2 border border-gray-250 dark:border-gray-800 rounded-xl bg-gray-50 dark:bg-gray-950 text-xs font-bold outline-none focus:ring-1 focus:ring-scout-green dark:text-white"
                             />
                             <button 
                                 type="submit"
                                 disabled={!input.trim()}
-                                className="p-2 bg-scout-blue text-white rounded-xl hover:bg-scout-blue-dark transition-all disabled:opacity-40 disabled:scale-100 active:scale-95 flex items-center justify-center shrink-0 shadow-md shadow-blue-500/20"
+                                className="p-2 bg-scout-green dark:bg-scout-green-dark text-white rounded-xl hover:bg-scout-green-dark transition-all disabled:opacity-40 disabled:scale-100 active:scale-95 flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/20"
                             >
                                 <Send size={14} />
                             </button>
