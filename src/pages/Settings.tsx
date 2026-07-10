@@ -134,7 +134,7 @@ export default function Settings() {
     });
     const [exportPath, setExportPath] = useState('');
     const [showAutoExport, setShowAutoExport] = useState(false);
-    const [formatoExport, setFormatoExport] = useState<'json' | 'xlsx'>('xlsx');
+    const [exportFileName, setExportFileName] = useState('orme_backup_automatico');
 
     // Delete account
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -155,7 +155,7 @@ export default function Settings() {
                 if (prefs.exportOptions) setExportOptions(prefs.exportOptions);
                 if (prefs.autoExportConfigs) setAutoExportConfigs(prefs.autoExportConfigs);
                 if (prefs.exportPath) setExportPath(prefs.exportPath);
-                if (prefs.formatoExport) setFormatoExport(prefs.formatoExport);
+                if (prefs.exportFileName) setExportFileName(prefs.exportFileName);
             } catch { /* ignore */ }
         }
     }, []);
@@ -217,27 +217,17 @@ export default function Settings() {
 
             const { triggerFileDownload, flattenResource } = await import('@/lib/autoExport');
             const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '_');
-            const fileExt = formatoExport === 'xlsx' ? 'xlsx' : 'json';
-            const filename = `orme_download_dati_${dateStr}.${fileExt}`;
+            const filename = `orme_download_dati_${dateStr}.xlsx`;
 
-            if (formatoExport === 'json') {
-                const content = {
-                    exported_at: new Date().toISOString(),
-                    version: '1.0',
-                    ...dataBundle
-                };
-                triggerFileDownload(filename, content, 'json');
-            } else {
-                const XLSX = await import('xlsx');
-                const wb = XLSX.utils.book_new();
-                Object.entries(dataBundle).forEach(([key, rawList]) => {
-                    const sheetRows = flattenResource(key, rawList);
-                    const ws = XLSX.utils.json_to_sheet(sheetRows);
-                    const sheetName = key.slice(0, 30).toUpperCase();
-                    XLSX.utils.book_append_sheet(wb, ws, sheetName);
-                });
-                triggerFileDownload(filename, wb, 'xlsx');
-            }
+            const XLSX = await import('xlsx');
+            const wb = XLSX.utils.book_new();
+            Object.entries(dataBundle).forEach(([key, rawList]) => {
+                const sheetRows = flattenResource(key, rawList);
+                const ws = XLSX.utils.json_to_sheet(sheetRows);
+                const sheetName = key.slice(0, 30).toUpperCase();
+                XLSX.utils.book_append_sheet(wb, ws, sheetName);
+            });
+            triggerFileDownload(filename, wb, 'xlsx');
         } catch (error) {
             console.error('Download error:', error);
             alert('Errore durante l\'esportazione dei dati.');
@@ -376,7 +366,7 @@ export default function Settings() {
                         </div>
                         <div>
                             <p className="text-sm font-bold text-gray-900 dark:text-white">Download Dati</p>
-                            <p className="text-[11px] text-gray-400 mt-0.5">Scegli cosa vuoi scaricare e in quale formato</p>
+                            <p className="text-[11px] text-gray-400 mt-0.5">Scegli cosa vuoi scaricare in formato Excel (XLSX)</p>
                         </div>
                     </div>
 
@@ -398,42 +388,6 @@ export default function Settings() {
                                 {exportOptions[opt.key] && <Check size={12} className="ml-auto text-scout-green shrink-0" />}
                             </button>
                         ))}
-                    </div>
-
-                    <div className="space-y-2 pt-2 border-t border-gray-100 dark:border-gray-800/40">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Formato Esportazione</label>
-                        <div className="grid grid-cols-2 gap-2">
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setFormatoExport('xlsx');
-                                    savePrefs({ formatoExport: 'xlsx' });
-                                }}
-                                className={cn(
-                                    'py-2 px-4 rounded-xl border text-xs font-bold text-center transition-all',
-                                    formatoExport === 'xlsx'
-                                        ? 'border-scout-green bg-scout-green/10 text-scout-green'
-                                        : 'border-gray-200 dark:border-gray-700 text-gray-450 dark:text-gray-400'
-                                )}
-                            >
-                                Excel (XLSX)
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setFormatoExport('json');
-                                    savePrefs({ formatoExport: 'json' });
-                                }}
-                                className={cn(
-                                    'py-2 px-4 rounded-xl border text-xs font-bold text-center transition-all',
-                                    formatoExport === 'json'
-                                        ? 'border-scout-green bg-scout-green/10 text-scout-green'
-                                        : 'border-gray-200 dark:border-gray-700 text-gray-450 dark:text-gray-400'
-                                )}
-                            >
-                                JSON
-                            </button>
-                        </div>
                     </div>
 
                     <button
@@ -473,6 +427,26 @@ export default function Settings() {
 
                 {autoExport && showAutoExport && (
                     <div className="px-4 py-4 space-y-5 bg-gray-50/50 dark:bg-gray-900/30 animate-in slide-in-from-top-2 duration-200">
+                        {/* Nome del file personalizzato */}
+                        <div className="space-y-2">
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1">
+                                Prefisso Nome File
+                            </p>
+                            <input
+                                type="text"
+                                value={exportFileName}
+                                onChange={e => {
+                                    setExportFileName(e.target.value);
+                                    savePrefs({ exportFileName: e.target.value });
+                                }}
+                                placeholder="Esempio: orme_backup_automatico"
+                                className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-sm font-bold text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-scout-green"
+                            />
+                            <p className="text-[10px] text-gray-400 dark:text-gray-500 leading-normal">
+                                Il file verrà salvato come <span className="font-mono">{exportFileName || 'orme_backup_automatico'}_[data].xlsx</span>
+                            </p>
+                        </div>
+
                         {/* Cartella di destinazione */}
                         <div className="space-y-2">
                             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1">
@@ -549,7 +523,7 @@ export default function Settings() {
 
                         <button
                             onClick={async () => {
-                                savePrefs({ autoExport, autoExportConfigs, exportPath, formatoExport });
+                                savePrefs({ autoExport, autoExportConfigs, exportPath, exportFileName });
                                 alert('Configurazione salvata con successo!');
                                 if (autoExport) {
                                     const { checkAndRunAutoExport } = await import('@/lib/autoExport');

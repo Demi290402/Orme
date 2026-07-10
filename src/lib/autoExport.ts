@@ -239,7 +239,6 @@ export async function checkAndRunAutoExport(force: boolean = false): Promise<voi
         if (!prefs.autoExport) return;
 
         const configs = prefs.autoExportConfigs || {};
-        const formato = prefs.formatoExport || 'xlsx';
         const now = Date.now();
 
         // Map configs to look at due resources
@@ -311,29 +310,20 @@ export async function checkAndRunAutoExport(force: boolean = false): Promise<voi
         // Try getting the folder handle from IndexedDB
         const folderHandle = await getFolderHandle();
         const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '_');
-        const fileExt = formato === 'xlsx' ? 'xlsx' : 'json';
-        const filename = `orme_backup_automatico_${dateStr}.${fileExt}`;
+        const prefix = (prefs.exportFileName || 'orme_backup_automatico').trim();
+        const filename = `${prefix}_${dateStr}.xlsx`;
+        const formato = 'xlsx';
 
-        let contentToWrite: any = null;
-
-        if (formato === 'json') {
-            contentToWrite = {
-                exported_at: new Date().toISOString(),
-                version: '1.0',
-                ...dataBundle
-            };
-        } else {
-            // Construct XLSX Workbook
-            const wb = XLSX.utils.book_new();
-            Object.entries(dataBundle).forEach(([key, rawList]) => {
-                const sheetRows = flattenResource(key, rawList);
-                const ws = XLSX.utils.json_to_sheet(sheetRows);
-                // Sheet names limited to 31 chars in Excel
-                const sheetName = key.slice(0, 30).toUpperCase();
-                XLSX.utils.book_append_sheet(wb, ws, sheetName);
-            });
-            contentToWrite = wb;
-        }
+        // Construct XLSX Workbook
+        const wb = XLSX.utils.book_new();
+        Object.entries(dataBundle).forEach(([key, rawList]) => {
+            const sheetRows = flattenResource(key, rawList);
+            const ws = XLSX.utils.json_to_sheet(sheetRows);
+            // Sheet names limited to 31 chars in Excel
+            const sheetName = key.slice(0, 30).toUpperCase();
+            XLSX.utils.book_append_sheet(wb, ws, sheetName);
+        });
+        const contentToWrite = wb;
 
         let writtenSuccessfully = false;
         if (folderHandle) {
