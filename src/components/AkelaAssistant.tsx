@@ -55,12 +55,12 @@ export default function AkelaAssistant() {
             };
         }
 
-        // 2. Censimento / Luoghi
+        // 2. Luoghi
         if (has(['luogh', 'camp', 'post', 'struttur', 'censi'])) {
             if (has(['aggiung', 'inser', 'mapp', 'nuov'])) {
                 return {
                     intent: 'nuovo_luogo',
-                    reply: 'Molto bene! Espandiamo la mappa del nostro censimento. Ti porto alla pagina per aggiungere un luogo. 📍',
+                    reply: 'Molto bene! Espandiamo la mappa dei nostri Luoghi. Ti porto alla pagina per aggiungere un luogo. 📍',
                     path: '/add'
                 };
             }
@@ -197,7 +197,7 @@ export default function AkelaAssistant() {
         let replyText = '';
         switch (topic) {
             case 'campi':
-                replyText = '📍 **SENTIERO CAMPI (Censimento)**: In questa sezione trovi la mappa e l\'elenco di tutti i campi scout e le case censiti. Puoi cercare filtrando per posti letto, bagni o servizi. Per aggiungere un campo che conosci, usa il tasto "+" nella Home!';
+                replyText = '📍 **SENTIERO CAMPI (Luoghi)**: In questa sezione trovi la mappa e l\'elenco di tutti i campi scout e le case censiti. Puoi cercare filtrando per posti letto, bagni o servizi. Per aggiungere un campo che conosci, usa il tasto "+" nella Home!';
                 break;
             case 'verbali':
                 replyText = '📝 **SENTIERO VERBALI & PRESENZE**: La sezione verbali ti permette di redigere e firmare i verbali di CoCa. Puoi inserire l\'ordine del giorno, le varie e tenere traccia delle presenze dello staff. Le presenze aggiornano le statistiche complessive!';
@@ -318,7 +318,7 @@ export default function AkelaAssistant() {
                                 onClick={() => triggerTutorialTopic('campi', '📍 Sentiero Campi')} 
                                 className="px-2.5 py-1.5 bg-scout-green/5 dark:bg-scout-green/10 border border-scout-green/20 text-scout-green rounded-full text-[10px] font-black hover:bg-scout-green/10 transition-colors"
                             >
-                                📍 Censimento
+                                📍 Luoghi
                             </button>
                             <button 
                                 onClick={() => triggerTutorialTopic('verbali', '📝 Sentiero Verbali')} 
