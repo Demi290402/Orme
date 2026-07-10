@@ -14,13 +14,17 @@ export default function AkelaAssistant() {
     const navigate = useNavigate();
     const [isOpen, setIsOpen] = useState(false);
     const [input, setInput] = useState('');
-    const [messages, setMessages] = useState<Message[]>([
-        {
-            id: 'welcome',
-            sender: 'akela',
-            text: 'Ciao! Sono Akela, il vecchio lupo saggio di Orme. 🐺 Dimmi dove vuoi andare o chiedimi aiuto per imparare ad usare l\'app! Cosa vuoi esplorare oggi?'
+    const [userName, setUserName] = useState(() => localStorage.getItem('akela_user_name') || '');
+    const [customDict, setCustomDict] = useState<Record<string, string>>(() => {
+        try {
+            return JSON.parse(localStorage.getItem('akela_custom_dict') || '{}');
+        } catch {
+            return {};
         }
-    ]);
+    });
+    const [pendingLearning, setPendingLearning] = useState<{ term: string; definition: string } | null>(null);
+
+    const [messages, setMessages] = useState<Message[]>([]);
     const [isTyping, setIsTyping] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -31,6 +35,18 @@ export default function AkelaAssistant() {
         }
     }, [messages, isOpen]);
 
+    // Dynamic greeting based on userName
+    useEffect(() => {
+        const nameGreeting = userName ? `Ciao, ${userName}! ` : 'Ciao! ';
+        setMessages([
+            {
+                id: 'welcome',
+                sender: 'akela',
+                text: `${nameGreeting}Sono Akela, il vecchio lupo saggio di Orme. 🐺 Dimmi dove vuoi andare o chiedimi aiuto per imparare ad usare l'app! Cosa vuoi esplorare oggi?`
+            }
+        ]);
+    }, [userName]);
+
     // NLP Intent Parser
     const parseIntent = (text: string): { intent: string; reply: string; path?: string } => {
         const clean = text.toLowerCase()
@@ -38,6 +54,67 @@ export default function AkelaAssistant() {
             .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g,""); // strip punctuation
 
         const has = (keywords: string[]) => keywords.some(k => clean.includes(k));
+
+        // Name Learning Check
+        const nameMatch = clean.match(/(?:mi chiamo|chiamami|il mio nome e)\s+([a-zA-Z0-9\s]+)/);
+        if (nameMatch && nameMatch[1]) {
+            const rawName = text.substring(text.toLowerCase().indexOf(nameMatch[1].toLowerCase())).trim();
+            const formattedName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
+            return {
+                intent: 'learn_name',
+                reply: `Ricevuto, fratellino! D'ora in poi ti chiamerò ${formattedName}. Felice di camminare insieme sullo stesso sentiero! 🐾`
+            };
+        }
+
+        // Custom Dictionary verified learning check
+        const learnKeywords = ['impara che', 'salva che', 'registra che'];
+        const splitKeywords = [' significa ', ' e ', ' sta per '];
+        let isLearningCmd = false;
+        let learnKeywordUsed = '';
+        
+        for (const kw of learnKeywords) {
+            if (clean.startsWith(kw)) {
+                isLearningCmd = true;
+                learnKeywordUsed = kw;
+                break;
+            }
+        }
+
+        if (isLearningCmd) {
+            const originalTextNormalized = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            let splitIndex = -1;
+            let splitKwUsed = '';
+            for (const skw of splitKeywords) {
+                const idx = originalTextNormalized.indexOf(skw);
+                if (idx !== -1) {
+                    splitIndex = idx;
+                    splitKwUsed = skw;
+                    break;
+                }
+            }
+
+            if (splitIndex !== -1) {
+                const startIndex = learnKeywordUsed.length;
+                const rawTerm = text.substring(startIndex, splitIndex).trim();
+                const rawDef = text.substring(splitIndex + splitKwUsed.length).trim();
+                
+                if (rawTerm && rawDef) {
+                    const cleanTerm = rawTerm.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g,"").trim();
+                    const protectedWords = ['coca', 'akela', 'legge', 'promessa', 'bp', 'baden powell', 'lupetti', 'esploratori', 'rover', 'scout', 'orme', 'verbali', 'luoghi', 'classifica', 'lista d\'attesa', 'trasporti'];
+                    if (protectedWords.some(pw => cleanTerm === pw || cleanTerm.includes(pw))) {
+                        return {
+                            intent: 'learning_rejected',
+                            reply: `Fratellino, il termine "${rawTerm}" è un pilastro fondamentale dello scautismo e dell'applicazione. Non posso alterarne il significato! 🌲`
+                        };
+                    }
+
+                    return {
+                        intent: 'learning_pending',
+                        reply: `Capito! Vuoi che impari che "${rawTerm}" significa "${rawDef}"?`
+                    };
+                }
+            }
+        }
 
         // 1. Nuovo Verbale / Verbali Editor
         if (has(['verb', 'riun', 'coca', 'scriv', 'compil', 'ritorn', 'staff'])) {
@@ -151,6 +228,77 @@ export default function AkelaAssistant() {
             };
         }
 
+        // Static Scout Dictionary matching
+        if (has(['coca', 'co.ca.'])) {
+            return {
+                intent: 'dict_coca',
+                reply: 'CoCa sta per **Comunità Capi**. È l\'organo che unisce tutti i capi e gli assistenti ecclesiastici adulti (maggiori di 21 anni) di un Gruppo Scout. Si occupa della redazione del Progetto Educativo e della gestione dei singoli branchi, reparti e clan. ⚜️'
+            };
+        }
+        if (has(['chi e akela', 'storia di akela', 'morte di akela', 'muore akela'])) {
+            if (has(['muore', 'morte', 'quando'])) {
+                return {
+                    intent: 'dict_akela_morte',
+                    reply: 'Akela, il vecchio e saggio lupo solitario del Libro della Giungla, muore nel racconto "I Cani Rossi" (Red Dog). Cade eroicamente difendendo il Branco dei lupi dall\'attacco dei dhole d\'Oriente. Muore cantando il suo ultimo canto di caccia accanto a Mowgli sulla Rupe della Pace. 🐺'
+                };
+            }
+            return {
+                intent: 'dict_akela',
+                reply: 'Akela è il Grande Lupo Solitario che guida il Branco della Rupe di Seeonee nei racconti del Libro della Giungla di Kipling. Rappresenta la sapienza, l\'autorità benevola e la fedeltà alla Legge del Branco. Nelle branca Lupetti, è il capobranco dei capi scout.'
+            };
+        }
+        if (has(['raccont', 'libro della giungla', 'giungla', 'kipling'])) {
+            return {
+                intent: 'dict_racconti',
+                reply: 'I racconti di Mowgli tratti dal Libro della Giungla di Rudyard Kipling costituiscono l\'Ambiente Fantastico della branca Lupetti (L/C). Attraverso le storie di Mowgli, Baloo, Bagheera, Akela e Kaa, i bambini apprendono i valori fondamentali come il rispetto, la condivisione e l\'obbedienza alla Legge del Branco. 📖'
+            };
+        }
+        if (has(['legge'])) {
+            return {
+                intent: 'dict_legge',
+                reply: 'La Legge Scout (composta da 10 articoli) è la guida morale di ogni scout. Per i Lupetti e le Coccinelle la Legge recita:\n1. Il Lupetto pensa altrimenti / Il Lupetto ascolta il Vecchio Lupo;\n2. Il Lupetto non ascolta se stesso / Il Lupetto è sempre pulito e ordinato.\nPer la branca E/G e R/S, B-P scrisse la Legge Scout universale (es: "La Guida e lo Scout sono di parola", "si rendono utili e aiutano gli altri"). ⚜️'
+            };
+        }
+        if (has(['promessa'])) {
+            return {
+                intent: 'dict_promessa',
+                reply: 'La Promessa Scout è l\'atto con cui si sceglie consapevolmente di entrare nella fratellanza scout. Si recita così:\n"Con l\'aiuto di Dio prometto sul mio onore di fare del mio meglio:\n- Per compiere il mio dovere verso Dio e verso il mio Paese;\n- Per aiutare gli altri in ogni circostanza;\n- Per osservare la Legge scout." ⚜️'
+            };
+        }
+        if (has(['bp', 'baden powell', 'fondatore'])) {
+            return {
+                intent: 'dict_bp',
+                reply: 'Sir Robert Baden-Powell (chiamato affettuosamente B.-P.) è il fondatore dello Scautismo e del Guidismo. Nato a Londra il 22 febbraio 1857, era un generale dell\'esercito britannico. Ha fondato lo scautismo nel 1907 con il primo campo sperimentale sull\'isola di Brownsea. 🌍'
+            };
+        }
+        if (has(['lupett', 'coccinell', ' lc '])) {
+            return {
+                intent: 'dict_lc',
+                reply: 'La branca L/C (Lupetti e Coccinelle) accoglie i bambini e le bambine dagli 8 agli 11/12 anni. Il loro cammino si basa sul gioco, sulla gioia e sull\'Ambiente Fantastico (la Giungla per i Lupetti, il Bosco per le Coccinelle). 🐺🍀'
+            };
+        }
+        if (has(['esplorator', 'guid', ' eg '])) {
+            return {
+                intent: 'dict_eg',
+                reply: 'La branca E/G (Esploratori e Guide) accoglie ragazzi e ragazze dagli 11/12 ai 16 anni riuniti in Squadriglie e Reparto. La loro esperienza si basa sull\'Avventura, l\'Impresa e la vita all\'aperto (Campismo, Pionierismo e Topografia). ⛺🧭'
+            };
+        }
+        if (has(['rover', 'scolt', ' rs '])) {
+            return {
+                intent: 'dict_rs',
+                reply: 'La branca R/S (Rover e Scolte) accoglie giovani dai 16/17 ai 20/21 anni (Noviziato e Clan). I loro tre pilastri sono Strada (scoperta di sé e fatica), Comunità (condivisione) e Servizio (aiuto gratuito al prossimo). 🥾🎒'
+            };
+        }
+
+        // Custom User Dictionary Match
+        const customKey = Object.keys(customDict).find(key => clean.includes(key));
+        if (customKey) {
+            return {
+                intent: 'custom_dict_match',
+                reply: `Ecco cosa ho imparato su "${customKey}":\n"${customDict[customKey]}" 📝`
+            };
+        }
+
         // Fallback
         return {
             intent: 'fallback',
@@ -174,6 +322,58 @@ export default function AkelaAssistant() {
         // Process response
         setTimeout(() => {
             const parsed = parseIntent(textToSend);
+            
+            // Name Learning Hook
+            if (parsed.intent === 'learn_name') {
+                const cleanText = textToSend.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g,"");
+                const nameMatch = cleanText.match(/(?:mi chiamo|chiamami|il mio nome e)\s+([a-zA-Z0-9\s]+)/);
+                if (nameMatch && nameMatch[1]) {
+                    const rawName = textToSend.substring(textToSend.toLowerCase().indexOf(nameMatch[1].toLowerCase())).trim();
+                    const formattedName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
+                    localStorage.setItem('akela_user_name', formattedName);
+                    setUserName(formattedName);
+                }
+            }
+
+            // Custom Learning Hook
+            if (parsed.intent === 'learning_pending') {
+                const cleanText = textToSend.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                const learnKeywords = ['impara che', 'salva che', 'registra che'];
+                const splitKeywords = [' significa ', ' e ', ' sta per '];
+                
+                let learnKeywordUsed = '';
+                for (const kw of learnKeywords) {
+                    if (cleanText.startsWith(kw)) {
+                        learnKeywordUsed = kw;
+                        break;
+                    }
+                }
+
+                let splitIndex = -1;
+                let splitKwUsed = '';
+                for (const skw of splitKeywords) {
+                    const idx = cleanText.indexOf(skw);
+                    if (idx !== -1) {
+                        splitIndex = idx;
+                        splitKwUsed = skw;
+                        break;
+                    }
+                }
+
+                if (splitIndex !== -1) {
+                    const startIndex = learnKeywordUsed.length;
+                    const rawTerm = textToSend.substring(startIndex, splitIndex).trim();
+                    const rawDef = textToSend.substring(splitIndex + splitKwUsed.length).trim();
+                    
+                    setPendingLearning({
+                        term: rawTerm,
+                        definition: rawDef
+                    });
+                }
+            } else {
+                setPendingLearning(null);
+            }
+
             const akelaMsg: Message = {
                 id: crypto.randomUUID(),
                 sender: 'akela',
@@ -345,6 +545,46 @@ export default function AkelaAssistant() {
                                 📋 Lista Attesa
                             </button>
                         </div>
+
+                        {/* Learning Confirmation Overlay */}
+                        {pendingLearning && (
+                            <div className="p-3 bg-scout-green/10 dark:bg-emerald-950/20 border-t border-gray-150 dark:border-gray-800 flex flex-col gap-2 shrink-0 animate-in fade-in duration-200">
+                                <p className="text-[10px] text-gray-700 dark:text-gray-300 font-bold leading-normal">
+                                    Vuoi insegnarmi che <span className="text-scout-green-dark dark:text-scout-green-light">"{pendingLearning.term}"</span> significa <span className="font-medium italic">"{pendingLearning.definition}"</span>?
+                                </p>
+                                <div className="flex gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const updatedDict = {
+                                                ...customDict,
+                                                [pendingLearning.term.toLowerCase().trim()]: pendingLearning.definition
+                                            };
+                                            setCustomDict(updatedDict);
+                                            localStorage.setItem('akela_custom_dict', JSON.stringify(updatedDict));
+                                            
+                                            const confirmationMsg: Message = {
+                                                id: crypto.randomUUID(),
+                                                sender: 'akela',
+                                                text: `Ho imparato! Ho aggiunto "${pendingLearning.term}" alla mia mappa dei termini. 🐾`
+                                            };
+                                            setMessages(prev => [...prev, confirmationMsg]);
+                                            setPendingLearning(null);
+                                        }}
+                                        className="flex-1 py-1.5 bg-scout-green dark:bg-scout-green-dark text-white text-[10px] font-black rounded-lg hover:opacity-90 active:scale-95 transition-all text-center cursor-pointer"
+                                    >
+                                        Conferma
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setPendingLearning(null)}
+                                        className="px-3 py-1.5 bg-gray-150 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-[10px] font-black rounded-lg hover:bg-gray-205 dark:hover:bg-gray-705 active:scale-95 transition-all cursor-pointer"
+                                    >
+                                        Annulla
+                                    </button>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Input Area */}
                         <form 
