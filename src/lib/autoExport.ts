@@ -273,73 +273,64 @@ export async function checkAndRunAutoExport(force: boolean = false): Promise<voi
 
         console.log('Avvio estrazione automatica per risorse:', keysToRun);
 
-        // Fetch data
-        const dataBundle: Record<string, any> = {};
-        
-        if (keysToRun.includes('luoghi')) {
-            dataBundle.luoghi = await getLocations();
-        }
-        if (keysToRun.includes('verbali')) {
-            const { getVerbali } = await import('./verbali');
-            dataBundle.verbali = await getVerbali();
-        }
-        if (keysToRun.includes('membri')) {
-            const { getMembriCoCa } = await import('./verbali');
-            dataBundle.membri = await getMembriCoCa();
-        }
-        if (keysToRun.includes('presenze')) {
-            const { getVerbali } = await import('./verbali');
-            dataBundle.presenze = await getVerbali(); // Verbali contains attendance info
-        }
-        if (keysToRun.includes('storico')) {
-            dataBundle.storico = await getAllLocationHistory();
-        }
-        if (keysToRun.includes('classifica')) {
-            const users = await getAllUsers();
-            dataBundle.classifica = users.sort((a, b) => b.points - a.points);
-        }
-        if (keysToRun.includes('lista_attesa')) {
-            const { getListaAttesa } = await import('./listaAttesa');
-            dataBundle.lista_attesa = await getListaAttesa();
-        }
-        if (keysToRun.includes('trasporti')) {
-            const { getServiziTrasporto } = await import('./trasporti');
-            dataBundle.trasporti = await getServiziTrasporto();
-        }
-
         // Try getting the folder handle from IndexedDB
         const folderHandle = await getFolderHandle();
         const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '_');
-        const prefix = (prefs.exportFileName || 'orme_backup_automatico').trim();
-        const filename = `${prefix}_${dateStr}.xlsx`;
         const formato = 'xlsx';
 
-        // Construct XLSX Workbook
-        const wb = XLSX.utils.book_new();
-        Object.entries(dataBundle).forEach(([key, rawList]) => {
-            const sheetRows = flattenResource(key, rawList);
+        for (const key of keysToRun) {
+            let data: any = null;
+            if (key === 'luoghi') {
+                data = await getLocations();
+            } else if (key === 'verbali') {
+                const { getVerbali } = await import('./verbali');
+                data = await getVerbali();
+            } else if (key === 'membri') {
+                const { getMembriCoCa } = await import('./verbali');
+                data = await getMembriCoCa();
+            } else if (key === 'presenze') {
+                const { getVerbali } = await import('./verbali');
+                data = await getVerbali(); // Verbali contains attendance info
+            } else if (key === 'storico') {
+                data = await getAllLocationHistory();
+            } else if (key === 'classifica') {
+                const users = await getAllUsers();
+                data = users.sort((a, b) => b.points - a.points);
+            } else if (key === 'lista_attesa') {
+                const { getListaAttesa } = await import('./listaAttesa');
+                data = await getListaAttesa();
+            } else if (key === 'trasporti') {
+                const { getServiziTrasporto } = await import('./trasporti');
+                data = await getServiziTrasporto();
+            }
+
+            if (!data) continue;
+
+            // Get custom filename prefix configured for this key
+            const resourceConfig = configs[key] || {};
+            const prefix = (resourceConfig.fileName || key).trim();
+            const filename = `${prefix}_${dateStr}.xlsx`;
+
+            // Construct XLSX Workbook
+            const wb = XLSX.utils.book_new();
+            const sheetRows = flattenResource(key, data);
             const ws = XLSX.utils.json_to_sheet(sheetRows);
-            // Sheet names limited to 31 chars in Excel
             const sheetName = key.slice(0, 30).toUpperCase();
             XLSX.utils.book_append_sheet(wb, ws, sheetName);
-        });
-        const contentToWrite = wb;
 
-        let writtenSuccessfully = false;
-        if (folderHandle) {
-            writtenSuccessfully = await writeToFolder(folderHandle, filename, contentToWrite, formato);
-        }
+            let writtenSuccessfully = false;
+            if (folderHandle) {
+                writtenSuccessfully = await writeToFolder(folderHandle, filename, wb, formato);
+            }
 
-        if (!writtenSuccessfully) {
-            // Fallback: Silent download through anchor element
-            console.log('Fallito salvataggio diretto in cartella. Eseguo download di fallback.');
-            triggerFileDownload(filename, contentToWrite, formato);
-        }
+            if (!writtenSuccessfully) {
+                console.log(`Fallito salvataggio diretto in cartella per ${key}. Eseguo download di fallback.`);
+                triggerFileDownload(filename, wb, formato);
+            }
 
-        // Mark success times in local storage
-        keysToRun.forEach(key => {
+            // Mark success times in local storage
             localStorage.setItem(`orme_last_export_${key}`, String(Date.now()));
-        });
+        }
 
     } catch (err) {
         console.error('Errore durante estrazione automatica:', err);

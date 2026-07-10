@@ -517,7 +517,7 @@ export default function Home() {
             {currentUser && (
                 <button
                     onClick={() => setShowTransportModal(true)}
-                    className="fixed bottom-20 md:bottom-6 right-6 z-40 bg-scout-green hover:bg-scout-green-dark text-white p-4 rounded-full shadow-2xl hover:scale-[1.05] active:scale-95 transition-all duration-200 border-2 border-white dark:border-gray-800 flex items-center justify-center cursor-pointer group"
+                    className="fixed bottom-36 md:bottom-24 right-6 z-40 bg-scout-green hover:bg-scout-green-dark text-white p-4 rounded-full shadow-2xl hover:scale-[1.05] active:scale-95 transition-all duration-200 border-2 border-white dark:border-gray-800 flex items-center justify-center cursor-pointer group"
                     title="Anagrafica Trasporti Privati"
                 >
                     <Bus size={24} className="group-hover:rotate-12 transition-transform duration-200" />

@@ -9,6 +9,7 @@ import { getUser } from '@/lib/data';
 import UserAvatar from '@/components/UserAvatar';
 import NotificationBell from '@/components/NotificationBell';
 import { isOnline as checkOnline, getOfflineQueue, syncOfflineQueue } from '@/lib/offline';
+import AkelaAssistant from './AkelaAssistant';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
     const location = useLocation();
@@ -311,6 +312,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     </div>
                 </div>
             )}
+            <AkelaAssistant />
         </div>
     );
 }

@@ -122,19 +122,18 @@ export default function Settings() {
     const [exportOptions, setExportOptions] = useState<Record<string, boolean>>({
         luoghi: true, verbali: true, membri: false, presenze: false, storico: false, classifica: false, lista_attesa: false, trasporti: false
     });
-    const [autoExportConfigs, setAutoExportConfigs] = useState<Record<string, { enabled: boolean; cadenza: Cadenza }>>({
-        luoghi: { enabled: true, cadenza: 'mensile' },
-        verbali: { enabled: true, cadenza: 'mensile' },
-        membri: { enabled: false, cadenza: 'mensile' },
-        presenze: { enabled: false, cadenza: 'mensile' },
-        storico: { enabled: false, cadenza: 'mensile' },
-        classifica: { enabled: false, cadenza: 'mensile' },
-        lista_attesa: { enabled: false, cadenza: 'mensile' },
-        trasporti: { enabled: false, cadenza: 'mensile' }
+    const [autoExportConfigs, setAutoExportConfigs] = useState<Record<string, { enabled: boolean; cadenza: Cadenza; fileName: string }>>({
+        luoghi: { enabled: true, cadenza: 'mensile', fileName: 'Luoghi' },
+        verbali: { enabled: true, cadenza: 'mensile', fileName: 'Verbali' },
+        membri: { enabled: false, cadenza: 'mensile', fileName: 'Membri_CoCa' },
+        presenze: { enabled: false, cadenza: 'mensile', fileName: 'Dashboard_Presenze' },
+        storico: { enabled: false, cadenza: 'mensile', fileName: 'Storico_Attivita' },
+        classifica: { enabled: false, cadenza: 'mensile', fileName: 'Classifica' },
+        lista_attesa: { enabled: false, cadenza: 'mensile', fileName: 'Lista_Attesa' },
+        trasporti: { enabled: false, cadenza: 'mensile', fileName: 'Trasporti_Privati' }
     });
     const [exportPath, setExportPath] = useState('');
     const [showAutoExport, setShowAutoExport] = useState(false);
-    const [exportFileName, setExportFileName] = useState('orme_backup_automatico');
 
     // Delete account
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -153,9 +152,30 @@ export default function Settings() {
                 if (prefs.notifTypes) setNotifTypes(prefs.notifTypes);
                 if (prefs.autoExport !== undefined) setAutoExport(prefs.autoExport);
                 if (prefs.exportOptions) setExportOptions(prefs.exportOptions);
-                if (prefs.autoExportConfigs) setAutoExportConfigs(prefs.autoExportConfigs);
                 if (prefs.exportPath) setExportPath(prefs.exportPath);
-                if (prefs.exportFileName) setExportFileName(prefs.exportFileName);
+                
+                if (prefs.autoExportConfigs) {
+                    const defaults: Record<string, { enabled: boolean; cadenza: Cadenza; fileName: string }> = {
+                        luoghi: { enabled: true, cadenza: 'mensile', fileName: 'Luoghi' },
+                        verbali: { enabled: true, cadenza: 'mensile', fileName: 'Verbali' },
+                        membri: { enabled: false, cadenza: 'mensile', fileName: 'Membri_CoCa' },
+                        presenze: { enabled: false, cadenza: 'mensile', fileName: 'Dashboard_Presenze' },
+                        storico: { enabled: false, cadenza: 'mensile', fileName: 'Storico_Attivita' },
+                        classifica: { enabled: false, cadenza: 'mensile', fileName: 'Classifica' },
+                        lista_attesa: { enabled: false, cadenza: 'mensile', fileName: 'Lista_Attesa' },
+                        trasporti: { enabled: false, cadenza: 'mensile', fileName: 'Trasporti_Privati' }
+                    };
+                    Object.entries(prefs.autoExportConfigs).forEach(([k, v]: [string, any]) => {
+                        if (defaults[k]) {
+                            defaults[k] = {
+                                enabled: v.enabled ?? defaults[k].enabled,
+                                cadenza: (v.cadenza ?? defaults[k].cadenza) as Cadenza,
+                                fileName: v.fileName ?? defaults[k].fileName
+                            };
+                        }
+                    });
+                    setAutoExportConfigs(defaults);
+                }
             } catch { /* ignore */ }
         }
     }, []);
@@ -364,9 +384,34 @@ export default function Settings() {
                         <div className="w-8 h-8 rounded-xl bg-gray-50 dark:bg-gray-700 flex items-center justify-center shrink-0">
                             <Download size={16} className="text-scout-blue" />
                         </div>
-                        <div>
-                            <p className="text-sm font-bold text-gray-900 dark:text-white">Download Dati</p>
-                            <p className="text-[11px] text-gray-400 mt-0.5">Scegli cosa vuoi scaricare in formato Excel (XLSX)</p>
+                        <div className="flex-1 flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-bold text-gray-900 dark:text-white">Download Dati</p>
+                                <p className="text-[11px] text-gray-400 mt-0.5">Scegli cosa vuoi scaricare in formato Excel (XLSX)</p>
+                            </div>
+                            <div className="flex gap-2 text-[10px] font-black text-scout-blue shrink-0">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const allTrue = Object.keys(exportOptions).reduce((acc, k) => ({ ...acc, [k]: true }), {});
+                                        setExportOptions(allTrue);
+                                    }}
+                                    className="hover:underline"
+                                >
+                                    Seleziona Tutto
+                                </button>
+                                <span className="text-gray-300">|</span>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const allFalse = Object.keys(exportOptions).reduce((acc, k) => ({ ...acc, [k]: false }), {});
+                                        setExportOptions(allFalse);
+                                    }}
+                                    className="hover:underline"
+                                >
+                                    Deseleziona
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -427,25 +472,6 @@ export default function Settings() {
 
                 {autoExport && showAutoExport && (
                     <div className="px-4 py-4 space-y-5 bg-gray-50/50 dark:bg-gray-900/30 animate-in slide-in-from-top-2 duration-200">
-                        {/* Nome del file personalizzato */}
-                        <div className="space-y-2">
-                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1">
-                                Prefisso Nome File
-                            </p>
-                            <input
-                                type="text"
-                                value={exportFileName}
-                                onChange={e => {
-                                    setExportFileName(e.target.value);
-                                    savePrefs({ exportFileName: e.target.value });
-                                }}
-                                placeholder="Esempio: orme_backup_automatico"
-                                className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-sm font-bold text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-scout-green"
-                            />
-                            <p className="text-[10px] text-gray-400 dark:text-gray-500 leading-normal">
-                                Il file verrà salvato come <span className="font-mono">{exportFileName || 'orme_backup_automatico'}_[data].xlsx</span>
-                            </p>
-                        </div>
 
                         {/* Cartella di destinazione */}
                         <div className="space-y-2">
@@ -476,7 +502,7 @@ export default function Settings() {
                             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Programmazione Risorse</p>
                             <div className="space-y-2">
                                 {EXPORT_OPTIONS.map(opt => {
-                                    const config = autoExportConfigs[opt.key] || { enabled: false, cadenza: 'mensile' };
+                                    const config = autoExportConfigs[opt.key] || { enabled: false, cadenza: 'mensile', fileName: opt.label };
                                     return (
                                         <div key={opt.key} className="bg-white dark:bg-gray-900 p-3.5 rounded-2xl border border-gray-100 dark:border-gray-800 space-y-3">
                                             <div className="flex items-center justify-between">
@@ -515,6 +541,40 @@ export default function Settings() {
                                                     {CADENZE.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                                                 </select>
                                             </div>
+
+                                            {config.enabled && (
+                                                <div className="space-y-1 pt-2 border-t border-gray-50 dark:border-gray-800/40">
+                                                    <span className="text-[10px] font-semibold text-gray-550 dark:text-gray-400">Prefisso Nome File:</span>
+                                                    <input
+                                                        type="text"
+                                                        value={config.fileName || ''}
+                                                        onChange={e => {
+                                                            const updated = {
+                                                                ...autoExportConfigs,
+                                                                [opt.key]: { ...config, fileName: e.target.value }
+                                                            };
+                                                            setAutoExportConfigs(updated);
+                                                            savePrefs({ autoExportConfigs: updated });
+                                                        }}
+                                                        placeholder="es. lista_attesa"
+                                                        className="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-[10px] font-bold text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-scout-green"
+                                                    />
+                                                </div>
+                                            )}
+
+                                            {config.enabled && (
+                                                <div className="flex items-center justify-between text-[9px] text-gray-450 dark:text-gray-400 pt-1.5 border-t border-gray-50 dark:border-gray-800/40">
+                                                    <span>Ultimo export:</span>
+                                                    <span className="font-bold">
+                                                        {(() => {
+                                                            const ts = localStorage.getItem(`orme_last_export_${opt.key}`);
+                                                            if (!ts) return 'Mai';
+                                                            const d = new Date(Number(ts));
+                                                            return d.toLocaleString('it-IT', { dateStyle: 'short', timeStyle: 'short' });
+                                                        })()}
+                                                    </span>
+                                                </div>
+                                            )}
                                         </div>
                                     );
                                 })}
@@ -523,7 +583,7 @@ export default function Settings() {
 
                         <button
                             onClick={async () => {
-                                savePrefs({ autoExport, autoExportConfigs, exportPath, exportFileName });
+                                savePrefs({ autoExport, autoExportConfigs, exportPath });
                                 alert('Configurazione salvata con successo!');
                                 if (autoExport) {
                                     const { checkAndRunAutoExport } = await import('@/lib/autoExport');
