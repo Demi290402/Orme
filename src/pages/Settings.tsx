@@ -135,6 +135,9 @@ export default function Settings() {
     const [exportPath, setExportPath] = useState('');
     const [showAutoExport, setShowAutoExport] = useState(false);
 
+    // AI Integration Settings
+    const [geminiApiKey, setGeminiApiKey] = useState(() => localStorage.getItem('akela_gemini_api_key') || '');
+
     // Delete account
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [deleteText, setDeleteText] = useState('');
@@ -293,6 +296,55 @@ export default function Settings() {
                     color={theme === 'dark' ? 'text-indigo-500' : 'text-amber-500'}
                     right={<Toggle value={theme === 'dark'} onChange={toggleTheme} />}
                 />
+            </SettingsSection>
+
+            {/* INTEGRAZIONE AI (AKELA) */}
+            <SettingsSection title="Assistente AI (Akela)">
+                <div className="p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-150 dark:border-gray-700/50 space-y-4 shadow-sm">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-scout-green/10 dark:bg-emerald-950/20 flex items-center justify-center text-2xl shrink-0">
+                            🐺
+                        </div>
+                        <div>
+                            <h4 className="font-extrabold text-sm text-gray-905 dark:text-white leading-tight">
+                                Potenzia Akela con l'Intelligenza Artificiale
+                            </h4>
+                            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+                                Inserisci una chiave API di Google Gemini per trasformare Akela in un assistente AI conversazionale evoluto. Se non inserita, funzionerà in modalità offline predefinita.
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider block">
+                            Chiave API Gemini
+                        </label>
+                        <input
+                            type="password"
+                            value={geminiApiKey}
+                            onChange={(e) => {
+                                const val = e.target.value.trim();
+                                setGeminiApiKey(val);
+                                localStorage.setItem('akela_gemini_api_key', val);
+                            }}
+                            placeholder="Incolla qui la chiave API (es: AIzaSy...)"
+                            className="w-full px-3 py-2 text-xs border border-gray-250 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-scout-green"
+                        />
+                        <div className="flex justify-between items-center mt-1 flex-wrap gap-1">
+                            <span className="text-[10px] text-gray-400">
+                                La chiave viene salvata solo sul tuo dispositivo.
+                            </span>
+                            <a
+                                href="https://aistudio.google.com/"
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-[10px] text-scout-green hover:underline font-black cursor-pointer"
+                            >
+                                Ottieni una chiave gratis →
+                            </a>
+                        </div>
+                    </div>
+                </div>
             </SettingsSection>
 
             {/* PROFILO */}
