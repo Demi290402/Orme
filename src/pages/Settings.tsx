@@ -136,7 +136,10 @@ export default function Settings() {
     const [showAutoExport, setShowAutoExport] = useState(false);
 
     // AI Integration Settings
-    const [geminiApiKey, setGeminiApiKey] = useState(() => localStorage.getItem('akela_gemini_api_key') || '');
+    const [aiProfile, setAiProfile] = useState(() => localStorage.getItem('akela_ai_profile') || 'standard');
+    const [aiProvider, setAiProvider] = useState(() => localStorage.getItem('akela_ai_provider') || 'gemini');
+    const [aiModel, setAiModel] = useState(() => localStorage.getItem('akela_ai_model') || 'gemini-2.5-flash');
+    const [apiKey, setApiKey] = useState(() => localStorage.getItem('akela_api_key') || localStorage.getItem('akela_gemini_api_key') || '');
 
     // Delete account
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -310,38 +313,191 @@ export default function Settings() {
                                 Potenzia Akela con l'Intelligenza Artificiale
                             </h4>
                             <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
-                                Inserisci una chiave API di Google Gemini per trasformare Akela in un assistente AI conversazionale evoluto. Se non inserita, funzionerà in modalità offline predefinita.
+                                Scegli il sentiero di intelligenza artificiale per Akela. Le risposte saranno basate sul modello selezionato.
                             </p>
                         </div>
                     </div>
-                    
+
+                    {/* Profilo Selection */}
                     <div className="space-y-1.5">
                         <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider block">
-                            Chiave API Gemini
+                            Sentiero di Akela
                         </label>
+                        <select
+                            value={aiProfile}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                setAiProfile(val);
+                                localStorage.setItem('akela_ai_profile', val);
+                                
+                                // Auto-configure provider and model based on selected profile
+                                if (val === 'standard') {
+                                    setAiProvider('gemini');
+                                    setAiModel('gemini-2.5-flash');
+                                    localStorage.setItem('akela_ai_provider', 'gemini');
+                                    localStorage.setItem('akela_ai_model', 'gemini-2.5-flash');
+                                } else if (val === 'chatgpt') {
+                                    setAiProvider('openai');
+                                    setAiModel('gpt-4o-mini');
+                                    localStorage.setItem('akela_ai_provider', 'openai');
+                                    localStorage.setItem('akela_ai_model', 'gpt-4o-mini');
+                                } else if (val === 'claude') {
+                                    setAiProvider('openrouter');
+                                    setAiModel('anthropic/claude-3.5-sonnet');
+                                    localStorage.setItem('akela_ai_provider', 'openrouter');
+                                    localStorage.setItem('akela_ai_model', 'anthropic/claude-3.5-sonnet');
+                                }
+                            }}
+                            className="w-full px-3 py-2 text-xs border border-gray-250 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-scout-green"
+                        >
+                            <option value="standard">🐺 Akela Standard (Consigliato & Gratis)</option>
+                            <option value="chatgpt">📝 Akela Scrittore (ChatGPT - A consumo)</option>
+                            <option value="claude">🧠 Akela Saggio (Claude - A consumo via OpenRouter)</option>
+                            <option value="custom">⚙️ Personalizzato (Sviluppatori)</option>
+                        </select>
+                        <p className="text-[10px] text-gray-400 mt-1 italic">
+                            {aiProfile === 'standard' && 'Usa il motore gratuito di Google, veloce e preciso per le risposte scout quotidiane.'}
+                            {aiProfile === 'chatgpt' && 'Usa l\'intelligenza di OpenAI GPT. Richiede una chiave API ChatGPT di tipo pay-as-you-go.'}
+                            {aiProfile === 'claude' && 'Usa il modello più profondo ed elaborato di Anthropic (Claude 3.5 Sonnet) tramite OpenRouter.'}
+                            {aiProfile === 'custom' && 'Configura manualmente provider, modello e chiave API.'}
+                        </p>
+                    </div>
+
+                    {/* Advanced Settings - Visible only if profile is custom */}
+                    {aiProfile === 'custom' && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-200/50 dark:border-gray-750/50 animate-in fade-in duration-200">
+                            <div className="space-y-1.5">
+                                <label className="text-[9px] font-black text-gray-500 uppercase tracking-wider block">
+                                    Provider AI
+                                </label>
+                                <select
+                                    value={aiProvider}
+                                    onChange={(e) => {
+                                        const val = e.target.value as 'gemini' | 'openai' | 'openrouter';
+                                        setAiProvider(val);
+                                        localStorage.setItem('akela_ai_provider', val);
+                                        // Default model for provider
+                                        const defModel = val === 'gemini' ? 'gemini-2.5-flash' : val === 'openai' ? 'gpt-4o-mini' : 'google/gemini-2.5-flash';
+                                        setAiModel(defModel);
+                                        localStorage.setItem('akela_ai_model', defModel);
+                                    }}
+                                    className="w-full px-2 py-1.5 text-xs border border-gray-250 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-scout-green"
+                                >
+                                    <option value="gemini">Google Gemini</option>
+                                    <option value="openai">OpenAI (ChatGPT)</option>
+                                    <option value="openrouter">OpenRouter (Claude, Llama...)</option>
+                                </select>
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <label className="text-[9px] font-black text-gray-500 uppercase tracking-wider block">
+                                    Modello AI
+                                </label>
+                                {aiProvider === 'gemini' && (
+                                    <select
+                                        value={aiModel}
+                                        onChange={(e) => {
+                                            setAiModel(e.target.value);
+                                            localStorage.setItem('akela_ai_model', e.target.value);
+                                        }}
+                                        className="w-full px-2 py-1.5 text-xs border border-gray-250 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white outline-none"
+                                    >
+                                        <option value="gemini-2.5-flash">gemini-2.5-flash (Gratis & Veloce)</option>
+                                        <option value="gemini-2.5-pro">gemini-2.5-pro (Avanzato)</option>
+                                    </select>
+                                )}
+                                {aiProvider === 'openai' && (
+                                    <select
+                                        value={aiModel}
+                                        onChange={(e) => {
+                                            setAiModel(e.target.value);
+                                            localStorage.setItem('akela_ai_model', e.target.value);
+                                        }}
+                                        className="w-full px-2 py-1.5 text-xs border border-gray-250 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white outline-none"
+                                    >
+                                        <option value="gpt-4o-mini">gpt-4o-mini (Consigliato)</option>
+                                        <option value="gpt-4o">gpt-4o (Completo)</option>
+                                    </select>
+                                )}
+                                {aiProvider === 'openrouter' && (
+                                    <select
+                                        value={aiModel}
+                                        onChange={(e) => {
+                                            setAiModel(e.target.value);
+                                            localStorage.setItem('akela_ai_model', e.target.value);
+                                        }}
+                                        className="w-full px-2 py-1.5 text-xs border border-gray-250 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white outline-none"
+                                    >
+                                        <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet</option>
+                                        <option value="openai/gpt-4o-mini">GPT-4o Mini</option>
+                                        <option value="google/gemini-2.5-flash">Gemini 2.5 Flash</option>
+                                        <option value="meta-llama/llama-3-8b-instruct:free">Llama 3 8B (Gratis)</option>
+                                    </select>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* API Key Input */}
+                    <div className="space-y-1.5">
+                        <div className="flex justify-between items-center">
+                            <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider block">
+                                Chiave API {aiProvider === 'gemini' ? 'Gemini' : aiProvider === 'openai' ? 'OpenAI' : 'OpenRouter'}
+                            </label>
+                        </div>
                         <input
                             type="password"
-                            value={geminiApiKey}
+                            value={apiKey}
                             onChange={(e) => {
                                 const val = e.target.value.trim();
-                                setGeminiApiKey(val);
+                                setApiKey(val);
+                                localStorage.setItem('akela_api_key', val);
+                                // Also write back to legacy key for compatibility
                                 localStorage.setItem('akela_gemini_api_key', val);
                             }}
-                            placeholder="Incolla qui la chiave API (es: AIzaSy...)"
+                            placeholder={
+                                aiProvider === 'gemini'
+                                    ? "Incolla qui la chiave API (es: AIzaSy...)"
+                                    : aiProvider === 'openai'
+                                    ? "Incolla qui la chiave API (es: sk-proj-...)"
+                                    : "Incolla qui la chiave API (es: sk-or-...)"
+                            }
                             className="w-full px-3 py-2 text-xs border border-gray-250 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-scout-green"
                         />
                         <div className="flex justify-between items-center mt-1 flex-wrap gap-1">
                             <span className="text-[10px] text-gray-400">
                                 La chiave viene salvata solo sul tuo dispositivo.
                             </span>
-                            <a
-                                href="https://aistudio.google.com/"
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-[10px] text-scout-green hover:underline font-black cursor-pointer"
-                            >
-                                Ottieni una chiave gratis →
-                            </a>
+                            {aiProvider === 'gemini' && (
+                                <a
+                                    href="https://aistudio.google.com/"
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-[10px] text-scout-green hover:underline font-black cursor-pointer animate-pulse"
+                                >
+                                    Ottieni una chiave gratis →
+                                </a>
+                            )}
+                            {aiProvider === 'openai' && (
+                                <a
+                                    href="https://platform.openai.com/api-keys"
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-[10px] text-scout-green hover:underline font-black cursor-pointer"
+                                >
+                                    Crea chiave OpenAI →
+                                </a>
+                            )}
+                            {aiProvider === 'openrouter' && (
+                                <a
+                                    href="https://openrouter.ai/keys"
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-[10px] text-scout-green hover:underline font-black cursor-pointer"
+                                >
+                                    Crea chiave OpenRouter →
+                                </a>
+                            )}
                         </div>
                     </div>
                 </div>

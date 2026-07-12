@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, Send, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { askAkela } from '@/lib/ai';
 
 interface Message {
     id: string;
@@ -319,91 +320,51 @@ export default function AkelaAssistant() {
         setInput('');
         setIsTyping(true);
 
-        const apiKey = localStorage.getItem('akela_gemini_api_key') || '';
+        const provider = (localStorage.getItem('akela_ai_provider') || 'gemini') as 'gemini' | 'openai' | 'openrouter';
+        const model = localStorage.getItem('akela_ai_model') || 'gemini-2.5-flash';
+        const apiKey = localStorage.getItem('akela_api_key') || localStorage.getItem('akela_gemini_api_key') || '';
 
-        // If API key is present, use Google Gemini AI
+        // If API key is present, use AI provider
         if (apiKey) {
             try {
-                const systemPrompt = `Sei Akela, il vecchio e saggio capobranco dei lupi di Seeonee dal Libro della Giungla.
-Parli in italiano con un tono accogliente, fraterno, incoraggiante e saggio, tipico di un vecchio capo scout. Usi termini come "fratellino", "buona caccia", "sul sentiero", ecc.
-Aiuti gli utenti a navigare nell'applicazione "Orme" e rispondi a domande sullo scautismo (CoCa, regolamenti, tradizioni, acronimi, racconti scout).
-Se l'utente esprime il desiderio di navigare in una pagina dell'applicazione, inserisci ESATTAMENTE e solo alla fine del messaggio il tag "[REDIRECT: /percorso]" (senza mostrare altre parentesi o codici all'utente) scegliendo tra:
-- /verbali/nuovo (se vuole scrivere/compilare un verbale di CoCa)
-- /verbali (se vuole vedere l'elenco dei verbali o l'archivio)
-- /add (se vuole aggiungere un nuovo luogo o censire un campo)
-- / (se vuole vedere la mappa, la home o l'elenco luoghi)
-- /leaderboard (se vuole vedere la classifica o i punti dei capi)
-- /lista-attesa (se vuole gestire le iscrizioni o la lista d'attesa)
-- /calendario (se vuole vedere le attività o eventi del gruppo)
-- /inventario (se vuole vedere il materiale o la cambusa)
-- /bilancio (se vuole vedere la cassa o le spese del gruppo)
-- /profile (se vuole vedere il proprio profilo, badge o iter formativo)
-- /settings (se vuole impostare notifiche, esportazioni automatiche o la chiave API)
-
-Se l'utente vuole insegnarti un nuovo termine (es: "impara che X significa Y"), rispondi dicendo che per insegnarti parole nuove deve temporaneamente rimuovere la chiave API dalle impostazioni per usare la modalità locale di apprendimento.
-Mantieni le risposte connesse, concise (massimo 3-4 frasi), ed evita risposte troppo lunghe o ridondanti.`;
-
-                // Map messages to Gemini API format
+                // Map conversation history
                 const history = messages.slice(-8).map(msg => ({
-                    role: msg.sender === 'user' ? 'user' : 'model',
-                    parts: [{ text: msg.text }]
+                    role: msg.sender === 'user' ? 'user' : 'model' as 'user' | 'model',
+                    text: msg.text
                 }));
-                history.push({
-                    role: 'user',
-                    parts: [{ text: textToSend }]
-                });
 
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        contents: history,
-                        systemInstruction: {
-                            parts: [{ text: systemPrompt }]
-                        },
-                        generationConfig: {
-                            temperature: 0.7,
-                            maxOutputTokens: 350
-                        }
-                    })
-                });
+                const replyText = await askAkela(history, textToSend, provider, model, apiKey);
 
-                if (response.ok) {
-                    const data = await response.json();
-                    const replyText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-                    if (replyText) {
-                        let finalReply = replyText;
-                        let pathRedirect = '';
-                        
-                        const redirectMatch = replyText.match(/\[REDIRECT:\s*(.+?)\]/);
-                        if (redirectMatch && redirectMatch[1]) {
-                            pathRedirect = redirectMatch[1].trim();
-                            finalReply = replyText.replace(/\[REDIRECT:\s*.+?\]/, '').trim();
-                        }
-
-                        const akelaMsg: Message = {
-                            id: crypto.randomUUID(),
-                            sender: 'akela',
-                            text: finalReply
-                        };
-
-                        setMessages(prev => [...prev, akelaMsg]);
-                        setIsTyping(false);
-                        setPendingLearning(null);
-
-                        if (pathRedirect) {
-                            setTimeout(() => {
-                                navigate(pathRedirect);
-                                setIsOpen(false);
-                            }, 1500);
-                        }
-                        return; // Successfully handled by Gemini
+                if (replyText) {
+                    let finalReply = replyText;
+                    let pathRedirect = '';
+                    
+                    const redirectMatch = replyText.match(/\[REDIRECT:\s*(.+?)\]/);
+                    if (redirectMatch && redirectMatch[1]) {
+                        pathRedirect = redirectMatch[1].trim();
+                        finalReply = replyText.replace(/\[REDIRECT:\s*.+?\]/, '').trim();
                     }
+
+                    const akelaMsg: Message = {
+                        id: crypto.randomUUID(),
+                        sender: 'akela',
+                        text: finalReply
+                    };
+
+                    setMessages(prev => [...prev, akelaMsg]);
+                    setIsTyping(false);
+                    setPendingLearning(null);
+
+                    if (pathRedirect) {
+                        setTimeout(() => {
+                            navigate(pathRedirect);
+                            setIsOpen(false);
+                        }, 1500);
+                    }
+                    return; // Successfully handled by AI
                 }
             } catch (err) {
-                console.error("Gemini API Error, falling back to offline parser:", err);
+                console.error("AI API Error, falling back to offline parser:", err);
             }
         }
 
