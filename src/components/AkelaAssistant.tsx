@@ -1,14 +1,31 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Send, Sparkles } from 'lucide-react';
+import { X, Send, Sparkles, AlertTriangle, RefreshCw, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { askAkela } from '@/lib/ai';
+import { matchScoutKnowledge } from '@/lib/scoutKnowledge';
 
 interface Message {
     id: string;
     sender: 'akela' | 'user';
     text: string;
     isSystem?: boolean;
+}
+
+// Window AI Types
+interface WindowAI {
+    languageModel?: {
+        capabilities: () => Promise<{ available: 'readily' | 'after-download' | 'no' }>;
+        create: (options?: { systemPrompt?: string; temperature?: number }) => Promise<{
+            prompt: (input: string) => Promise<string>;
+            destroy: () => Promise<void>;
+        }>;
+    };
+}
+
+declare global {
+    interface Window {
+        ai?: WindowAI;
+    }
 }
 
 export default function AkelaAssistant() {
@@ -24,6 +41,10 @@ export default function AkelaAssistant() {
         }
     });
     const [pendingLearning, setPendingLearning] = useState<{ term: string; definition: string } | null>(null);
+
+    // Gemini Nano status & Guide modal state
+    const [geminiStatus, setGeminiStatus] = useState<'checking' | 'readily' | 'after-download' | 'no' | 'unsupported'>('checking');
+    const [showGuide, setShowGuide] = useState(false);
 
     const [messages, setMessages] = useState<Message[]>([]);
     const [isTyping, setIsTyping] = useState(false);
@@ -47,6 +68,24 @@ export default function AkelaAssistant() {
             }
         ]);
     }, [userName]);
+
+    const checkGeminiStatus = async () => {
+        if (typeof window === 'undefined' || !window.ai || !window.ai.languageModel) {
+            setGeminiStatus('unsupported');
+            return;
+        }
+        try {
+            const caps = await window.ai.languageModel.capabilities();
+            setGeminiStatus(caps.available);
+        } catch (e) {
+            console.error("Errore capabilities window.ai:", e);
+            setGeminiStatus('no');
+        }
+    };
+
+    useEffect(() => {
+        checkGeminiStatus();
+    }, []);
 
     // NLP Intent Parser
     const parseIntent = (text: string): { intent: string; reply: string; path?: string } => {
@@ -287,7 +326,16 @@ export default function AkelaAssistant() {
             };
         }
 
-        // Static Scout Dictionary matching
+        // 14. Deep Scout Knowledge Base Matcher (B-P books, Manuals, etc.)
+        const scoutMatch = matchScoutKnowledge(text);
+        if (scoutMatch) {
+            return {
+                intent: 'scout_knowledge',
+                reply: scoutMatch.content
+            };
+        }
+
+        // Direct fallback matching for short terms
         if (has(['coca', 'co.ca.'])) {
             return {
                 intent: 'dict_coca',
@@ -304,48 +352,6 @@ export default function AkelaAssistant() {
             return {
                 intent: 'dict_akela',
                 reply: 'Akela è il Grande Lupo Solitario che guida il Branco della Rupe di Seeonee nei racconti del Libro della Giungla di Kipling. Rappresenta la sapienza, l\'autorità benevola e la fedeltà alla Legge del Branco. Nelle branca Lupetti, è il capobranco dei capi scout.'
-            };
-        }
-        if (has(['raccont', 'libro della giungla', 'giungla', 'kipling'])) {
-            return {
-                intent: 'dict_racconti',
-                reply: 'I racconti di Mowgli tratti dal Libro della Giungla di Rudyard Kipling costituiscono l\'Ambiente Fantastico della branca Lupetti (L/C). Attraverso le storie di Mowgli, Baloo, Bagheera, Akela e Kaa, i bambini apprendono i valori fondamentali come il rispetto, la condivisione e l\'obbedienza alla Legge del Branco. 📖'
-            };
-        }
-        if (has(['legge'])) {
-            return {
-                intent: 'dict_legge',
-                reply: 'La Legge Scout (composta da 10 articoli) è la guida morale di ogni scout. Per i Lupetti e le Coccinelle la Legge recita:\n1. Il Lupetto pensa altrimenti / Il Lupetto ascolta il Vecchio Lupo;\n2. Il Lupetto non ascolta se stesso / Il Lupetto è sempre pulito e ordinato.\nPer la branca E/G e R/S, B-P scrisse la Legge Scout universale (es: "La Guida e lo Scout sono di parola", "si rendono utili e aiutano gli altri"). ⚜️'
-            };
-        }
-        if (has(['promessa'])) {
-            return {
-                intent: 'dict_promessa',
-                reply: 'La Promessa Scout è l\'atto con cui si sceglie consapevolmente di entrare nella fratellanza scout. Si recita così:\n"Con l\'aiuto di Dio prometto sul mio onore di fare del mio meglio:\n- Per compiere il mio dovere verso Dio e verso il mio Paese;\n- Per aiutare gli altri in ogni circostanza;\n- Per osservare la Legge scout." ⚜️'
-            };
-        }
-        if (has(['bp', 'baden powell', 'fondatore'])) {
-            return {
-                intent: 'dict_bp',
-                reply: 'Sir Robert Baden-Powell (chiamato affettuosamente B.-P.) è il fondatore dello Scautismo e del Guidismo. Nato a Londra il 22 febbraio 1857, era un generale dell\'esercito britannico. Ha fondato lo scautismo nel 1907 con il primo campo sperimentale sull\'isola di Brownsea. 🌍'
-            };
-        }
-        if (has(['lupett', 'coccinell', ' lc '])) {
-            return {
-                intent: 'dict_lc',
-                reply: 'La branca L/C (Lupetti e Coccinelle) accoglie i bambini e le bambine dagli 8 agli 11/12 anni. Il loro cammino si basa sul gioco, sulla gioia e sull\'Ambiente Fantastico (la Giungla per i Lupetti, il Bosco per le Coccinelle). 🐺🍀'
-            };
-        }
-        if (has(['esplorator', 'guid', ' eg '])) {
-            return {
-                intent: 'dict_eg',
-                reply: 'La branca E/G (Esploratori e Guide) accoglie ragazzi e ragazze dagli 11/12 ai 16 anni riuniti in Squadriglie e Reparto. La loro esperienza si basa sull\'Avventura, l\'Impresa e la vita all\'aperto (Campismo, Pionierismo e Topografia). ⛺🧭'
-            };
-        }
-        if (has(['rover', 'scolt', ' rs '])) {
-            return {
-                intent: 'dict_rs',
-                reply: 'La branca R/S (Rover e Scolte) accoglie giovani dai 16/17 ai 20/21 anni (Noviziato e Clan). I loro tre pilastri sono Strada (scoperta di sé e fatica), Comunità (condivisione) e Servizio (aiuto gratuito al prossimo). 🥾🎒'
             };
         }
 
@@ -378,20 +384,34 @@ export default function AkelaAssistant() {
         setInput('');
         setIsTyping(true);
 
-        const provider = (localStorage.getItem('akela_ai_provider') || 'gemini') as 'gemini' | 'openai' | 'openrouter';
-        const model = localStorage.getItem('akela_ai_model') || 'gemini-2.5-flash';
-        const apiKey = localStorage.getItem('akela_api_key') || localStorage.getItem('akela_gemini_api_key') || '';
-
-        // If API key is present, use AI provider
-        if (apiKey) {
+        // If Gemini Nano is ready/readily available, run local LLM
+        if (geminiStatus === 'readily' && window.ai?.languageModel) {
             try {
-                // Map conversation history
-                const history = messages.slice(-8).map(msg => ({
-                    role: msg.sender === 'user' ? 'user' : 'model' as 'user' | 'model',
-                    text: msg.text
-                }));
+                const welcomeMsg = userName ? `L'utente si chiama ${userName}. ` : '';
+                const session = await window.ai.languageModel.create({
+                    systemPrompt: `Sei Akela, il saggio capobranco dei lupi di Seeonee dal Libro della Giungla.
+Parli in italiano con un tono accogliente, fraterno e saggio, tipico di un vecchio capo scout. Usi termini come "fratellino", "buona caccia", "sul sentiero".
+${welcomeMsg}Aiuti gli utenti a navigare nell'applicazione "Orme" e rispondi a domande sullo scautismo (CoCa, regolamenti, tradizioni, acronimi, racconti scout, libri di Baden-Powell, manuali delle branche AGESCI).
+Se l'utente esprime l'intenzione di navigare in una pagina dell'applicazione, inserisci alla fine del messaggio ESATTAMENTE e solo alla fine il tag "[REDIRECT: /percorso]" (senza mostrare altre parentesi o codici all'utente) scegliendo tra:
+- /verbali/nuovo (se vuole scrivere/compilare un verbale di CoCa)
+- /verbali (se vuole vedere l'elenco dei verbali o l'archivio)
+- /add (se vuole aggiungere un nuovo luogo o censire un campo)
+- / (se vuole vedere la mappa, la home o l'elenco luoghi)
+- /leaderboard (se vuole vedere la classifica o i punti dei capi)
+- /lista-attesa (se vuole gestire le iscrizioni o la lista d'attesa)
+- /calendario (se vuole vedere le attività o eventi del gruppo)
+- /inventario (se vuole vedere il materiale o la cambusa)
+- /bilancio (se vuole vedere la cassa o le spese del gruppo)
+- /profile (se vuole vedere il proprio profilo, badge o iter formativo)
+- /settings (se vuole impostare preferenze o esportare dati)
+- /?transport=true (se vuole aprire i Trasporti Privati o le ditte pullman)
 
-                const replyText = await askAkela(history, textToSend, provider, model, apiKey);
+Rispondi sempre in modo connesso, conciso (massimo 3-4 frasi) ed evita spiegazioni ridondanti sul redirect.`,
+                    temperature: 0.6
+                });
+
+                const replyText = await session.prompt(textToSend);
+                session.destroy();
 
                 if (replyText) {
                     let finalReply = replyText;
@@ -419,10 +439,10 @@ export default function AkelaAssistant() {
                             setIsOpen(false);
                         }, 1500);
                     }
-                    return; // Successfully handled by AI
+                    return; // Successfully handled by Gemini Nano
                 }
             } catch (err) {
-                console.error("AI API Error, falling back to offline parser:", err);
+                console.error("Gemini Nano Error, falling back to offline parser:", err);
             }
         }
 
@@ -593,6 +613,21 @@ export default function AkelaAssistant() {
                             </button>
                         </div>
 
+                        {/* Gemini Nano Status Alert Bar */}
+                        {geminiStatus !== 'readily' && (
+                            <div 
+                                onClick={() => setShowGuide(true)}
+                                className="bg-yellow-500/10 dark:bg-yellow-500/5 border-b border-yellow-500/20 px-4 py-1.5 flex items-center gap-2 cursor-pointer hover:bg-yellow-500/15 transition-all group shrink-0"
+                            >
+                                <AlertTriangle size={12} className="text-yellow-600 dark:text-yellow-400 shrink-0 animate-pulse" />
+                                <span className="text-[9px] font-black text-yellow-750 dark:text-yellow-400 flex-1 leading-tight group-hover:underline">
+                                    {geminiStatus === 'after-download' 
+                                        ? 'Chrome sta scaricando Gemini Nano localmente... Dettagli ⏳' 
+                                        : 'Attiva Gemini Nano locale per risposte AI super intelligenti! ⚡'}
+                                </span>
+                            </div>
+                        )}
+
                         {/* Messages Area */}
                         <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50/50 dark:bg-gray-950/20">
                             {messages.map(msg => (
@@ -715,6 +750,123 @@ export default function AkelaAssistant() {
                         </form>
                     </div>
                 </>
+            )}
+
+            {/* Guide Modal */}
+            {showGuide && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[70] flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+                        {/* Header */}
+                        <div className="bg-scout-green dark:bg-scout-green-dark p-4 text-white flex items-center gap-3 shrink-0">
+                            <BookOpen size={20} />
+                            <div>
+                                <h3 className="font-extrabold text-sm leading-tight">Guida Attivazione AI</h3>
+                                <p className="text-[9px] text-white/80 font-bold">Attiva Gemini Nano gratis sul tuo dispositivo</p>
+                            </div>
+                            <button 
+                                onClick={() => setShowGuide(false)}
+                                className="ml-auto p-1.5 hover:bg-white/10 rounded-full text-white transition-colors"
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 overflow-y-auto p-5 space-y-4 text-xs leading-relaxed text-gray-700 dark:text-gray-300">
+                            <div className="p-3 bg-scout-green/5 dark:bg-scout-green/10 border border-scout-green/10 rounded-xl space-y-1">
+                                <p className="font-black text-[10px] text-scout-green uppercase tracking-wide">Cos'è Gemini Nano?</p>
+                                <p className="text-[11px]">
+                                    È il modello di intelligenza artificiale locale di Google. Funziona offline, in modo privato e 100% gratuito senza API o token!
+                                </p>
+                            </div>
+
+                            <div className="space-y-3">
+                                <p className="font-black text-[10px] text-gray-400 uppercase tracking-widest">Procedura di attivazione:</p>
+                                
+                                <div className="flex gap-2.5">
+                                    <div className="w-5 h-5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 flex items-center justify-center font-black shrink-0 text-[10px]">1</div>
+                                    <div>
+                                        <p className="font-bold">Verifica il Browser</p>
+                                        <p className="text-[11px] text-gray-500 dark:text-gray-400">Assicurati di usare Google Chrome (versione 127 o superiore) o un browser Chromium compatibile.</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-2.5">
+                                    <div className="w-5 h-5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 flex items-center justify-center font-black shrink-0 text-[10px]">2</div>
+                                    <div>
+                                        <p className="font-bold">Abilita il Modello locale</p>
+                                        <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                                            Apri una scheda su <code className="bg-gray-100 dark:bg-gray-950 px-1 py-0.5 rounded font-mono text-[10px]">chrome://flags/#optimization-guide-on-device-model</code> ed impostalo su <strong className="text-scout-green">Enabled BypassPerfRequirement</strong> (o Enabled).
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-2.5">
+                                    <div className="w-5 h-5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 flex items-center justify-center font-black shrink-0 text-[10px]">3</div>
+                                    <div>
+                                        <p className="font-bold">Abilita le API Prompt</p>
+                                        <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                                            Apri una scheda su <code className="bg-gray-100 dark:bg-gray-950 px-1 py-0.5 rounded font-mono text-[10px]">chrome://flags/#prompt-api-for-gemini-nano</code> ed impostalo su <strong className="text-scout-green">Enabled</strong>.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-2.5">
+                                    <div className="w-5 h-5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 flex items-center justify-center font-black shrink-0 text-[10px]">4</div>
+                                    <div>
+                                        <p className="font-bold">Riavvia Chrome</p>
+                                        <p className="text-[11px] text-gray-500 dark:text-gray-400">Clicca sul pulsante "Relaunch" in basso a destra per riavviare il browser e applicare le modifiche.</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-2.5">
+                                    <div className="w-5 h-5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 flex items-center justify-center font-black shrink-0 text-[10px]">5</div>
+                                    <div>
+                                        <p className="font-bold">Attendi il download</p>
+                                        <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                                            Chrome scaricherà Gemini Nano in background. Puoi controllare lo stato visitando <code className="bg-gray-100 dark:bg-gray-950 px-1 py-0.5 rounded font-mono text-[10px]">chrome://components</code> e controllando che "Optimization Guide On Device Model" sia scaricato ed aggiornato.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Check Status Widget */}
+                            <div className="pt-3 border-t border-gray-100 dark:border-gray-850 flex flex-col gap-3">
+                                <div className="flex justify-between items-center bg-gray-50 dark:bg-gray-955 p-2.5 rounded-xl border border-gray-100 dark:border-gray-850">
+                                    <div>
+                                        <p className="text-[10px] font-black text-gray-400 uppercase">Stato Attuale</p>
+                                        <p className="font-black text-xs mt-0.5">
+                                            {geminiStatus === 'readily' && <span className="text-scout-green font-extrabold">🎉 Pronto ed Attivo!</span>}
+                                            {geminiStatus === 'after-download' && <span className="text-yellow-650 dark:text-yellow-400 font-extrabold">⏳ In download...</span>}
+                                            {geminiStatus === 'no' && <span className="text-red-500 font-extrabold">❌ Flag disattivate</span>}
+                                            {geminiStatus === 'unsupported' && <span className="text-red-500 font-extrabold">❌ Browser non supportato</span>}
+                                            {geminiStatus === 'checking' && <span className="text-gray-400 font-extrabold">🔄 Verifica in corso...</span>}
+                                        </p>
+                                    </div>
+                                    <button 
+                                        type="button"
+                                        onClick={checkGeminiStatus}
+                                        className="p-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-750 rounded-xl transition-all active:scale-90 flex items-center justify-center shrink-0 cursor-pointer"
+                                        title="Riprova verifica"
+                                    >
+                                        <RefreshCw size={14} className={cn(geminiStatus === 'checking' && "animate-spin")} />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-4 bg-gray-55/50 dark:bg-gray-950/40 border-t border-gray-100 dark:border-gray-800 flex gap-2 shrink-0">
+                            <button
+                                type="button"
+                                onClick={() => setShowGuide(false)}
+                                className="w-full py-2 bg-scout-green dark:bg-scout-green-dark text-white rounded-xl font-black text-center shadow-md shadow-emerald-500/10 cursor-pointer hover:opacity-90 active:scale-95 transition-all text-xs"
+                            >
+                                Ho capito, torna alla chat
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </>
     );
