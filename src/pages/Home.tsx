@@ -54,6 +54,13 @@ export default function Home() {
         getUser().then(setCurrentUser).catch(console.error);
         getUserLocationViews().then(setLocationViews).catch(console.error);
         getAllLocationHistory().then(setHistories).catch(console.error);
+
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('transport') === 'true') {
+            setShowTransportModal(true);
+            const cleanUrl = window.location.pathname;
+            window.history.replaceState({}, document.title, cleanUrl);
+        }
     }, []);
 
     const getUnreadCount = (locationId: string) => {

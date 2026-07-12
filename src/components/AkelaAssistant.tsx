@@ -117,111 +117,169 @@ export default function AkelaAssistant() {
             }
         }
 
-        // 1. Nuovo Verbale / Verbali Editor
-        if (has(['verb', 'riun', 'coca', 'scriv', 'compil', 'ritorn', 'staff'])) {
-            if (has(['nuov', 'scriv', 'compil', 'crea'])) {
-                return {
-                    intent: 'nuovo_verbale',
-                    reply: 'Certo! Ti accompagno sul sentiero per redigere un nuovo verbale di CoCa. Ti sto reindirizzando... 📝',
-                    path: '/verbali/nuovo'
-                };
-            }
+        const hasAll = (keywords: string[]) => keywords.every(k => clean.includes(k));
+
+        // 1. Nuovo Luogo / Aggiunta Luoghi (Censimento)
+        if (
+            hasAll(['collabor', 'luogh']) || 
+            hasAll(['allarg', 'luogh']) || 
+            hasAll(['espand', 'luogh']) || 
+            hasAll(['aggiung', 'luog']) || 
+            hasAll(['sarebbe bello', 'luog']) || 
+            hasAll(['nuov', 'camp']) || 
+            hasAll(['mapp', 'cas']) || 
+            hasAll(['inser', 'struttur']) || 
+            has(['aggiungere un luogo', 'censire un luogo', 'nuova base scout', 'inserire una casa'])
+        ) {
             return {
-                intent: 'lista_verbali',
-                reply: 'Ti porto subito all\'archivio di tutti i verbali di CoCa. Lì potrai rileggere le decisioni passate. 📁',
-                path: '/verbali'
+                intent: 'nuovo_luogo',
+                reply: 'Che magnifica idea! Contribuire a censire e mappare nuovi luoghi, campi scout o case è uno dei servizi più utili per facilitare il cammino di tutto il gruppo. Ti reindirizzo alla pagina di inserimento di un nuovo luogo! 📍',
+                path: '/add'
             };
         }
 
-        // 2. Luoghi
-        if (has(['luogh', 'camp', 'post', 'struttur', 'censi'])) {
-            if (has(['aggiung', 'inser', 'mapp', 'nuov'])) {
-                return {
-                    intent: 'nuovo_luogo',
-                    reply: 'Molto bene! Espandiamo la mappa dei nostri Luoghi. Ti porto alla pagina per aggiungere un luogo. 📍',
-                    path: '/add'
-                };
-            }
+        // 2. Mappa / Visualizza Luoghi (Censimento)
+        if (
+            has(['luogh', 'camp', 'cas', 'post', 'struttur', 'bas', 'censi']) && 
+            (has(['ved', 'mostr', 'cerc', 'trov', 'mapp', 'elenc', 'list', 'dove']) || clean.includes('esplor'))
+        ) {
             return {
                 intent: 'home_luoghi',
-                reply: 'Ecco la mappa e la lista completa di tutti i luoghi e campi scout censiti. 🗺️',
+                reply: 'Ecco la pista! Ti mostro la mappa e l\'elenco completo di tutti i luoghi e i campi scout censiti. Puoi cercare per regione o filtrare per servizi e disponibilità di posti letto. Buona ricerca! 🗺️',
                 path: '/'
             };
         }
 
-        // 3. Classifica / Punti
-        if (has(['classif', 'punt', 'puntegg', 'badg', 'medagl', 'leader', 'scout'])) {
+        // 3. Nuovo Verbale
+        if (
+            hasAll(['scriv', 'verb']) || 
+            hasAll(['compil', 'verb']) || 
+            hasAll(['redig', 'verb']) || 
+            hasAll(['nuov', 'verb']) || 
+            hasAll(['crea', 'verb']) || 
+            hasAll(['nuov', 'riun']) || 
+            hasAll(['scriv', 'decision']) || 
+            has(['voglio fare un verbale', 'registrare la riunione', 'nuovo verbale'])
+        ) {
+            return {
+                intent: 'nuovo_verbale',
+                reply: 'Certo! Mettere nero su bianco le scelte e le discussioni della Comunità Capi è fondamentale per la democrazia scout e la memoria del gruppo. Ti porto alla pagina per redigere un nuovo verbale! 📝',
+                path: '/verbali/nuovo'
+            };
+        }
+
+        // 4. Archivio / Lista Verbali
+        if (
+            has(['verb', 'riun', 'decision']) && 
+            (has(['archiv', 'storico', 'list', 'cerc', 'legg', 'dove son', 'vecch', 'coca', 'co.ca.']) || clean.includes('document'))
+        ) {
+            return {
+                intent: 'lista_verbali',
+                reply: 'Ecco l\'archivio storico dei verbali del gruppo. Ti porto subito alla pagina dove potrai rileggere tutti i verbali passati, fare ricerche o estrarre i PDF. 📁',
+                path: '/verbali'
+            };
+        }
+
+        // 5. Classifica / Punti
+        if (
+            has(['classif', 'punt', 'puntegg', 'badg', 'medagl', 'leader', 'scout', 'capi']) &&
+            (has(['chi e in testa', 'chi ha piu', 'quanti ho', 'vedere i', 'medaglie']) || has(['classifica', 'punteggi', 'leaderboard', 'badge']))
+        ) {
             return {
                 intent: 'classifica',
-                reply: 'Curioso di vedere chi sta compiendo più passi? Ecco la classifica dei capi e i badge sbloccati! 🏆',
+                reply: 'La pista si fa accesa! Ti reindirizzo alla classifica dei capi di Orme. Lì potrai vedere il punteggio di tutti, chi ha censito più luoghi o redatto più verbali, e i badge scout sbloccati. 🏆',
                 path: '/leaderboard'
             };
         }
 
-        // 4. Trasporti
-        if (has(['trasp', 'pullm', 'autob', 'ditt', 'viagg', 'prev', 'bus'])) {
+        // 6. Trasporti / Pullman (Redirige a Home con parametro ?transport=true)
+        if (
+            has(['trasp', 'pullm', 'autob', 'ditt', 'viagg', 'prev', 'bus', 'vettor', 'prezz']) ||
+            hasAll(['cost', 'viagg']) ||
+            hasAll(['preventiv', 'uscit'])
+        ) {
             return {
                 intent: 'trasporti',
-                reply: 'Ti accompagno alla rubrica dei Trasporti Privati. Lì puoi confrontare i vettori e calcolare preventivi per i tuoi spostamenti. 🚌',
-                path: '/settings'
+                reply: 'Ottima idea! Ti porto subito alla sezione dei Trasporti Privati. Lì puoi consultare l\'anagrafica delle ditte di pullman, confrontare le tariffe e calcolare il preventivo esatto per la prossima uscita del tuo gruppo. 🚌',
+                path: '/?transport=true'
             };
         }
 
-        // 5. Lista d'Attesa
-        if (has(['list', 'attes', 'iscr', 'ragazz', 'bambin', 'candid'])) {
+        // 7. Lista d'Attesa
+        if (
+            has(['list', 'attes', 'iscr', 'ragazz', 'bambin', 'candid']) || 
+            hasAll(['passagg', 'branc']) || 
+            hasAll(['nuov', 'entrata'])
+        ) {
             return {
                 intent: 'lista_attesa',
-                reply: 'Gestiamo le iscrizioni esterne e i passaggi di branca nella Lista d\'Attesa. Ti sto portando alla sezione dedicata. 📋',
+                reply: 'Perfetto, ti reindirizzo alla Lista d\'Attesa. Lì trovi l\'elenco dei bambini e ragazzi iscritti esternamente, le richieste dei passaggi di branca e il link pubblico da inviare alle famiglie per le iscrizioni online. 📋',
                 path: '/lista-attesa'
             };
         }
 
-        // 6. Calendario
-        if (has(['calend', 'event', 'date', 'appunt', 'uscit', 'programm'])) {
+        // 8. Calendario / Eventi
+        if (
+            has(['calend', 'event', 'date', 'appunt', 'uscit', 'programm', 'attivita']) &&
+            (has(['prossim', 'quando', 'ved', 'mostr', 'agenda']) || has(['calendario', 'uscite']))
+        ) {
             return {
                 intent: 'calendario',
-                reply: 'Ecco la pista delle attività del gruppo. Ti reindirizzo al calendario degli eventi. 📅',
+                reply: 'Ecco il sentiero delle nostre attività! Ti porto subito al calendario del gruppo, dove potrai visualizzare le prossime uscite, i pernotti e gli eventi programmati. 📅',
                 path: '/calendario'
             };
         }
 
-        // 7. Inventario
-        if (has(['invent', 'attrezz', 'material', 'tend', 'pal', 'cucin', 'cambus'])) {
+        // 9. Inventario / Materiali
+        if (
+            has(['invent', 'attrezz', 'material', 'tend', 'pal', 'cucin', 'cambus']) || 
+            hasAll(['quante', 'tend']) || 
+            hasAll(['dove', 'tende'])
+        ) {
             return {
                 intent: 'inventario',
-                reply: 'Apriamo la cambusa! Ti porto all\'inventario degli attrezzi e dei materiali di gruppo. ⛺',
+                reply: 'Apriamo le casse del materiale! Ti reindirizzo all\'Inventario di gruppo, dove teniamo traccia delle tende di reparto, dei pali, dell\'attrezzatura da cucina e di tutta la cambusa. ⛺',
                 path: '/inventario'
             };
         }
 
-        // 8. Bilancio / Cassa
-        if (has(['bilanc', 'cass', 'sold', 'movim', 'spes', 'entrat', 'patrim'])) {
+        // 10. Bilancio / Cassa
+        if (
+            has(['bilanc', 'cass', 'sold', 'movim', 'spes', 'entrat', 'patrim']) || 
+            hasAll(['quanti', 'sold']) || 
+            hasAll(['rendicont', 'finanz'])
+        ) {
             return {
                 intent: 'bilancio',
-                reply: 'Diamo un\'occhiata alla cassa di gruppo. Ti reindirizzo alla gestione del bilancio. 💰',
+                reply: 'Passiamo alla cassa del gruppo! Ti porto alla pagina del bilancio, dove potrai registrare entrate, uscite, quote delle attività e monitorare lo stato economico del gruppo scout. 💰',
                 path: '/bilancio'
             };
         }
 
-        // 9. Impostazioni
-        if (has(['impost', 'sett', 'config', 'preferenz', 'scaric', 'notif'])) {
-            return {
-                intent: 'impostazioni',
-                reply: 'Ti porto alle impostazioni dell\'applicazione, dove puoi regolare notifiche ed esportare dati. ⚙️',
-                path: '/settings'
-            };
-        }
-
-        // 10. Profilo
-        if (has(['profil', 'mio', 'me', 'avatar', 'socio'])) {
+        // 11. Profilo
+        if (
+            has(['profil', 'mio', 'me', 'avatar', 'socio', 'dati']) || 
+            hasAll(['chi', 'sono'])
+        ) {
             return {
                 intent: 'profilo',
-                reply: 'Diamo uno sguardo al tuo profilo socio, ai tuoi badge e al tuo percorso formativo! 👤',
+                reply: 'Ecco il tuo angolo personale! Ti porto al tuo profilo socio, dove potrai rivedere la tua zona scout, il tuo iter formativo capi e l\'elenco completo delle medaglie e dei badge che hai conquistato. 👤',
                 path: '/profile'
             };
         }
 
-        // 11. Guida / Aiuto / Tutorial
+        // 12. Impostazioni
+        if (
+            has(['impost', 'sett', 'config', 'preferenz', 'scaric', 'notif', 'backup', 'export'])
+        ) {
+            return {
+                intent: 'impostazioni',
+                reply: 'Apriamo la cassetta degli attrezzi! Ti porto alle impostazioni dell\'applicazione, dove potrai configurare le notifiche push, definire i backup automatici ed esportare i dati del gruppo in Excel. ⚙️',
+                path: '/settings'
+            };
+        }
+
+        // 13. Guida / Aiuto
         if (has(['guid', 'aiut', 'tutor', 'help', 'com', 'usar', 'manual'])) {
             return {
                 intent: 'guida',
