@@ -1,8 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Send, Sparkles, AlertTriangle, RefreshCw, BookOpen } from 'lucide-react';
+import { X, Send, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { matchScoutKnowledge } from '@/lib/scoutKnowledge';
+import { getLocations } from '@/lib/data';
+import { getVerbali } from '@/lib/verbali';
+import { getEventi } from '@/lib/calendario';
+import { getListaAttesa } from '@/lib/listaAttesa';
 
 interface Message {
     id: string;
@@ -42,9 +46,7 @@ export default function AkelaAssistant() {
     });
     const [pendingLearning, setPendingLearning] = useState<{ term: string; definition: string } | null>(null);
 
-    // Gemini Nano status & Guide modal state
-    const [geminiStatus, setGeminiStatus] = useState<'checking' | 'readily' | 'after-download' | 'no' | 'unsupported'>('checking');
-    const [showGuide, setShowGuide] = useState(false);
+
 
     const [messages, setMessages] = useState<Message[]>([]);
     const [isTyping, setIsTyping] = useState(false);
@@ -57,35 +59,188 @@ export default function AkelaAssistant() {
         }
     }, [messages, isOpen]);
 
-    // Dynamic greeting based on userName
+    // Dynamic random greeting based on userName
     useEffect(() => {
         const nameGreeting = userName ? `Ciao, ${userName}! ` : 'Ciao! ';
+        const greetings = [
+            `${nameGreeting}Sono Akela, il vecchio lupo saggio di Orme. 🐺 Dimmi dove vuoi andare o chiedimi aiuto per imparare ad usare l'app! Cosa vuoi esplorare oggi?`,
+            `Buona caccia, ${userName || 'fratellino'}! Sono Akela. 🐾 Il sentiero è sgombro e pronto ad essere esplorato. Come posso aiutarti oggi?`,
+            `Benvenuto alla rupe, ${userName || 'fratellino'}! Sono Akela. ⚜️ Sono qui pronto ad aiutarti con i verbali, la mappa o i trasporti. Dove ci incamminiamo?`
+        ];
+        const randomIndex = Math.floor(Math.random() * greetings.length);
         setMessages([
             {
                 id: 'welcome',
                 sender: 'akela',
-                text: `${nameGreeting}Sono Akela, il vecchio lupo saggio di Orme. 🐺 Dimmi dove vuoi andare o chiedimi aiuto per imparare ad usare l'app! Cosa vuoi esplorare oggi?`
+                text: greetings[randomIndex]
             }
         ]);
     }, [userName]);
 
-    const checkGeminiStatus = async () => {
-        if (typeof window === 'undefined' || !window.ai || !window.ai.languageModel) {
-            setGeminiStatus('unsupported');
-            return;
-        }
-        try {
-            const caps = await window.ai.languageModel.capabilities();
-            setGeminiStatus(caps.available);
-        } catch (e) {
-            console.error("Errore capabilities window.ai:", e);
-            setGeminiStatus('no');
-        }
-    };
+    const handleDatabaseSearch = async (cleanQuery: string, rawQuery: string): Promise<{ reply: string; path?: string } | null> => {
+        const clean = cleanQuery.toLowerCase();
+        const has = (keywords: string[]) => keywords.some(k => clean.includes(k));
+        
+        // Extract terms
+        const stopwords = ['cerca', 'trova', 'quando', 'abbiamo', 'abbiam', 'c\'e', 'c\'è', 'dov\'e', 'dov\'è', 'dove', 'si', 'trova', 'l\'uscita', 'l\'evento', 'l\'incontro', 'il', 'la', 'i', 'gli', 'le', 'un', 'uno', 'una', 'di', 'a', 'da', 'in', 'con', 'su', 'per', 'tra', 'fra', 'del', 'dello', 'della', 'dei', 'degli', 'delle', 'al', 'allo', 'alla', 'ai', 'agli', 'alle', 'dal', 'dallo', 'dalla', 'dai', 'dagli', 'dalle', 'nel', 'nello', 'nella', 'nei', 'negli', 'nelle', 'sul', 'sullo', 'sulla', 'sui', 'sugli', 'sulle', 'perche', 'come', 'chi', 'cosa'];
+        
+        const searchTerms = rawQuery.toLowerCase()
+            .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+            .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g,"")
+            .split(' ')
+            .filter(t => t.length > 2 && !stopwords.includes(t));
+            
+        if (searchTerms.length === 0) return null;
+        const searchTermStr = searchTerms.join(' ');
 
-    useEffect(() => {
-        checkGeminiStatus();
-    }, []);
+        // 1. CALENDAR SEARCH (Intent: quando, data, ora, giorno, calendario, evento, uscita, riunione, attivita, impegno)
+        if (has(['quando', 'data', 'ora', 'giorno', 'calendario', 'evento', 'uscita', 'riunione', 'attivita', 'impegno'])) {
+            try {
+                const eventi = await getEventi();
+                const matches = eventi.filter(e => {
+                    const titleClean = e.titolo.toLowerCase();
+                    const noteClean = (e.note || '').toLowerCase();
+                    const luogoClean = (e.luogo || '').toLowerCase();
+                    return searchTerms.some(term => titleClean.includes(term) || noteClean.includes(term) || luogoClean.includes(term));
+                });
+                
+                if (matches.length > 0) {
+                    const list = matches.slice(0, 3).map(e => 
+                        `📅 **${e.titolo}**\n🗓️ Data: ${e.dataInizio}${e.oraInizio ? ` alle ore ${e.oraInizio}` : ''}\n📍 Luogo: ${e.luogo || 'Non indicato'}\n📝 Note: ${e.note || 'Nessuna nota'}`
+                    ).join('\n\n');
+                    return {
+                        reply: `🐺 Ho fiutato la pista del calendario! Ecco cosa ho trovato:\n\n${list}\n\nSe vuoi vedere il calendario completo clicca qui. [REDIRECT: /calendario]`,
+                        path: '/calendario'
+                    };
+                } else {
+                    return {
+                        reply: `🐺 Ho cercato lungo tutto il calendario di gruppo per "${searchTermStr}", ma non ho trovato alcun evento corrispondente. Se si tratta di un'attività in programma, puoi aggiungerla tu stesso al calendario! [REDIRECT: /calendario]`,
+                        path: '/calendario'
+                    };
+                }
+            } catch (err) {
+                console.error("Errore ricerca calendario:", err);
+            }
+        }
+
+        // 2. LOCATION SEARCH (Intent: dove, rifugio, base, campo, posto, luogo, accantonamento)
+        if (has(['dove', 'posto', 'luogo', 'campo', 'struttura', 'base', 'rifugio', 'accantonamento', 'censito', 'cerca', 'trova'])) {
+            try {
+                const locations = await getLocations();
+                const matches = locations.filter(l => {
+                    const nameClean = l.name.toLowerCase();
+                    const townClean = (l.commune || '').toLowerCase();
+                    const regionClean = (l.region || '').toLowerCase();
+                    const notesClean = (l.quickNote || '').toLowerCase();
+                    return searchTerms.some(term => nameClean.includes(term) || townClean.includes(term) || regionClean.includes(term) || notesClean.includes(term));
+                });
+                
+                if (matches.length > 0) {
+                    const bestMatch = matches[0];
+                    return {
+                        reply: `🐺 Ho trovato il luogo perfetto nella nostra mappa delle Orme!\n\n📍 **${bestMatch.name}** (${bestMatch.commune || 'Comune non indicato'}, ${bestMatch.region})\n🏠 Posti letto: ${bestMatch.beds || 0} | ⛺ Posti tenda: ${bestMatch.hasTents ? 'Disponibili' : 'Non disponibili'}\n📝 Note rapide: ${bestMatch.quickNote || 'Nessuna nota'}\n\nTi porto al dettaglio del luogo... [REDIRECT: /location/${bestMatch.id}]`,
+                        path: `/location/${bestMatch.id}`
+                    };
+                } else {
+                    return {
+                        reply: `🐺 Ho cercato nella mappa delle Orme per "${searchTermStr}", ma non ho trovato nessun luogo corrispondente. Se conosci questa base scout, puoi censirla tu stesso per allargare la nostra mappa! [REDIRECT: /add]`,
+                        path: '/add'
+                    };
+                }
+            } catch (err) {
+                console.error("Errore ricerca luoghi:", err);
+            }
+        }
+
+        // 3. WAITLIST SEARCH (Intent: bambino, cognome, iscritto, lista)
+        if (has(['bambin', 'iscritto', 'iscritti', 'lista', 'attesa', 'richiesta', 'genitore', 'cognome'])) {
+            try {
+                const lista = await getListaAttesa();
+                const matches = lista.filter(item => {
+                    const nomeClean = item.nomeRagazzo.toLowerCase();
+                    const cognomeClean = item.cognomeRagazzo.toLowerCase();
+                    const genitoreClean = (item.nomeGenitore || '').toLowerCase();
+                    const noteClean = (item.note || '').toLowerCase();
+                    return searchTerms.some(term => nomeClean.includes(term) || cognomeClean.includes(term) || genitoreClean.includes(term) || noteClean.includes(term));
+                });
+                
+                if (matches.length > 0) {
+                    const list = matches.slice(0, 3).map(item =>
+                        `👦 **${item.nomeRagazzo} ${item.cognomeRagazzo}** (Classe scolastica: ${item.classe})\n📞 Genitore: ${item.nomeGenitore} (${item.telefonoGenitore})\n📝 Note: ${item.note || 'Nessuna nota'}`
+                    ).join('\n\n');
+                    return {
+                        reply: `🐺 Ho cercato nel registro della lista d'attesa! Ecco chi corrisponde a "${searchTermStr}":\n\n${list}\n\nTi reindirizzo alla gestione iscrizioni. [REDIRECT: /lista-attesa]`,
+                        path: '/lista-attesa'
+                    };
+                } else {
+                    return {
+                        reply: `🐺 Ho controllato la lista d'attesa, ma non ho trovato nessun iscritto corrispondente a "${searchTermStr}". Puoi verificare l'elenco completo o inserire una nuova richiesta di iscrizione. [REDIRECT: /lista-attesa]`,
+                        path: '/lista-attesa'
+                    };
+                }
+            } catch (err) {
+                console.error("Errore ricerca lista attesa:", err);
+            }
+        }
+
+        // 4. MINUTES SEARCH (Intent: verbale, verbali, delibera, ordine del giorno, odg)
+        if (has(['verbale', 'verbali', 'odg', 'ordine del giorno', 'delibera', 'riunione', 'coca', 'co.ca.'])) {
+            try {
+                const verbali = await getVerbali();
+                const matches = verbali.filter(v => {
+                    const odgClean = v.odg.map(o => `${o.titolo} ${o.contenuto} ${o.note || ''}`).join(' ').toLowerCase();
+                    const titleClean = v.titolo.toLowerCase();
+                    const dataClean = (v.data || '').toLowerCase();
+                    const decisioniClean = (v.postiAzione || []).map(p => p.cosa.toLowerCase()).join(' ');
+                    const noteClean = (v.varie || '').toLowerCase();
+                    return searchTerms.some(term => titleClean.includes(term) || odgClean.includes(term) || dataClean.includes(term) || decisioniClean.includes(term) || noteClean.includes(term));
+                });
+                
+                if (matches.length > 0) {
+                    const list = matches.slice(0, 3).map(v =>
+                        `📝 **Verbale del ${v.data}**: "${v.titolo}"\n📌 ODG Principale: ${v.odg[0]?.titolo || 'Nessuno'}\n📝 Note varie: ${v.varie || 'Nessuna nota'}`
+                    ).join('\n\n');
+                    return {
+                        reply: `🐺 Ho trovato questi verbali nell'archivio CoCa che corrispondono a "${searchTermStr}":\n\n${list}\n\nTi porto all'elenco dei verbali... [REDIRECT: /verbali]`,
+                        path: '/verbali'
+                    };
+                } else {
+                    return {
+                        reply: `🐺 Ho scansionato l'archivio dei verbali di CoCa, ma non ho trovato traccia di "${searchTermStr}". Puoi consultare l'elenco completo o scrivere un nuovo verbale. [REDIRECT: /verbali]`,
+                        path: '/verbali'
+                    };
+                }
+            } catch (err) {
+                console.error("Errore ricerca verbali:", err);
+            }
+        }
+
+        // 5. GLOBAL FALLBACK SEARCH (search name in locations/eventi directly)
+        try {
+            const [eventi, locations] = await Promise.all([getEventi(), getLocations()]);
+            const eventMatches = eventi.filter(e => e.titolo.toLowerCase().includes(searchTermStr));
+            const locMatches = locations.filter(l => l.name.toLowerCase().includes(searchTermStr));
+            
+            if (locMatches.length > 0) {
+                const bestMatch = locMatches[0];
+                return {
+                    reply: `🐺 Ho trovato questo luogo con lo stesso nome!\n\n📍 **${bestMatch.name}** (${bestMatch.commune || 'Comune non specificato'})\n🏠 Posti letto: ${bestMatch.beds || 0} | ⛺ Posti tenda: ${bestMatch.hasTents ? 'Sì' : 'No'}\n\nTi porto al dettaglio... [REDIRECT: /location/${bestMatch.id}]`,
+                    path: `/location/${bestMatch.id}`
+                };
+            }
+            if (eventMatches.length > 0) {
+                const bestMatch = eventMatches[0];
+                return {
+                    reply: `🐺 Ho trovato questo evento nel calendario di gruppo!\n\n📅 **${bestMatch.titolo}** (${bestMatch.dataInizio})\n📍 Luogo: ${bestMatch.luogo || 'Non indicato'}\n\nTi porto al calendario... [REDIRECT: /calendario]`,
+                    path: '/calendario'
+                };
+            }
+        } catch (e) {
+            console.error("Errore ricerca globale fallback:", e);
+        }
+
+        return null;
+    };
 
     // NLP Intent Parser
     const parseIntent = (text: string): { intent: string; reply: string; path?: string } => {
@@ -364,10 +519,17 @@ export default function AkelaAssistant() {
             };
         }
 
-        // Fallback
+        // Fallback with dynamic variations
+        const fallbacks = [
+            'Non sono sicuro di aver capito quale sentiero vuoi percorrere... 🌲 Prova a chiedermi cose come "scrivere un verbale", "vedere la classifica", "lista d\'attesa" o digita "aiuto" per il tutorial.',
+            'Fratellino, le mie vecchie zampe si sono confuse su questa pista. 🐾 Prova a riformulare la frase o chiedimi "cosa puoi fare" per vedere la mia mappa di aiuti!',
+            'Le fronde della giungla sono fitte e non riesco a scorgere la tua direzione. 🌿 Puoi chiedermi aiuto digitando "aiuto" o "funzioni" per capire come guidarti.'
+        ];
+        const randomFallback = fallbacks[Math.floor(Math.random() * fallbacks.length)];
+
         return {
             intent: 'fallback',
-            reply: 'Non sono sicuro di aver capito quale sentiero vuoi percorrere... 🌲 Prova a chiedermi cose come "scrivere un verbale", "vedere la classifica", "lista d\'attesa" o digita "aiuto" per il tutorial.'
+            reply: randomFallback
         };
     };
 
@@ -384,70 +546,30 @@ export default function AkelaAssistant() {
         setInput('');
         setIsTyping(true);
 
-        // If Gemini Nano is ready/readily available, run local LLM
-        if (geminiStatus === 'readily' && window.ai?.languageModel) {
-            try {
-                const welcomeMsg = userName ? `L'utente si chiama ${userName}. ` : '';
-                const session = await window.ai.languageModel.create({
-                    systemPrompt: `Sei Akela, il saggio capobranco dei lupi di Seeonee dal Libro della Giungla.
-Parli in italiano con un tono accogliente, fraterno e saggio, tipico di un vecchio capo scout. Usi termini come "fratellino", "buona caccia", "sul sentiero".
-${welcomeMsg}Aiuti gli utenti a navigare nell'applicazione "Orme" e rispondi a domande sullo scautismo (CoCa, regolamenti, tradizioni, acronimi, racconti scout, libri di Baden-Powell, manuali delle branche AGESCI).
-Se l'utente esprime l'intenzione di navigare in una pagina dell'applicazione, inserisci alla fine del messaggio ESATTAMENTE e solo alla fine il tag "[REDIRECT: /percorso]" (senza mostrare altre parentesi o codici all'utente) scegliendo tra:
-- /verbali/nuovo (se vuole scrivere/compilare un verbale di CoCa)
-- /verbali (se vuole vedere l'elenco dei verbali o l'archivio)
-- /add (se vuole aggiungere un nuovo luogo o censire un campo)
-- / (se vuole vedere la mappa, la home o l'elenco luoghi)
-- /leaderboard (se vuole vedere la classifica o i punti dei capi)
-- /lista-attesa (se vuole gestire le iscrizioni o la lista d'attesa)
-- /calendario (se vuole vedere le attività o eventi del gruppo)
-- /inventario (se vuole vedere il materiale o la cambusa)
-- /bilancio (se vuole vedere la cassa o le spese del gruppo)
-- /profile (se vuole vedere il proprio profilo, badge o iter formativo)
-- /settings (se vuole impostare preferenze o esportare dati)
-- /?transport=true (se vuole aprire i Trasporti Privati o le ditte pullman)
+        // 1. Asynchronously check if it matches a database query
+        const dbResult = await handleDatabaseSearch(textToSend, textToSend);
 
-Rispondi sempre in modo connesso, conciso (massimo 3-4 frasi) ed evita spiegazioni ridondanti sul redirect.`,
-                    temperature: 0.6
-                });
-
-                const replyText = await session.prompt(textToSend);
-                session.destroy();
-
-                if (replyText) {
-                    let finalReply = replyText;
-                    let pathRedirect = '';
-                    
-                    const redirectMatch = replyText.match(/\[REDIRECT:\s*(.+?)\]/);
-                    if (redirectMatch && redirectMatch[1]) {
-                        pathRedirect = redirectMatch[1].trim();
-                        finalReply = replyText.replace(/\[REDIRECT:\s*.+?\]/, '').trim();
-                    }
-
-                    const akelaMsg: Message = {
-                        id: crypto.randomUUID(),
-                        sender: 'akela',
-                        text: finalReply
-                    };
-
-                    setMessages(prev => [...prev, akelaMsg]);
-                    setIsTyping(false);
-                    setPendingLearning(null);
-
-                    if (pathRedirect) {
-                        setTimeout(() => {
-                            navigate(pathRedirect);
-                            setIsOpen(false);
-                        }, 1500);
-                    }
-                    return; // Successfully handled by Gemini Nano
-                }
-            } catch (err) {
-                console.error("Gemini Nano Error, falling back to offline parser:", err);
-            }
-        }
-
-        // Offline / Fallback Local NLP Parser
         setTimeout(() => {
+            if (dbResult) {
+                const akelaMsg: Message = {
+                    id: crypto.randomUUID(),
+                    sender: 'akela',
+                    text: dbResult.reply
+                };
+                setMessages(prev => [...prev, akelaMsg]);
+                setIsTyping(false);
+                setPendingLearning(null);
+
+                if (dbResult.path) {
+                    setTimeout(() => {
+                        navigate(dbResult.path!);
+                        setIsOpen(false);
+                    }, 1500);
+                }
+                return;
+            }
+
+            // 2. Fallback to NLP Intent Parser
             const parsed = parseIntent(textToSend);
             
             // Name Learning Hook
@@ -613,20 +735,6 @@ Rispondi sempre in modo connesso, conciso (massimo 3-4 frasi) ed evita spiegazio
                             </button>
                         </div>
 
-                        {/* Gemini Nano Status Alert Bar */}
-                        {geminiStatus !== 'readily' && (
-                            <div 
-                                onClick={() => setShowGuide(true)}
-                                className="bg-yellow-500/10 dark:bg-yellow-500/5 border-b border-yellow-500/20 px-4 py-1.5 flex items-center gap-2 cursor-pointer hover:bg-yellow-500/15 transition-all group shrink-0"
-                            >
-                                <AlertTriangle size={12} className="text-yellow-600 dark:text-yellow-400 shrink-0 animate-pulse" />
-                                <span className="text-[9px] font-black text-yellow-750 dark:text-yellow-400 flex-1 leading-tight group-hover:underline">
-                                    {geminiStatus === 'after-download' 
-                                        ? 'Chrome sta scaricando Gemini Nano localmente... Dettagli ⏳' 
-                                        : 'Attiva Gemini Nano locale per risposte AI super intelligenti! ⚡'}
-                                </span>
-                            </div>
-                        )}
 
                         {/* Messages Area */}
                         <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50/50 dark:bg-gray-950/20">
@@ -750,123 +858,6 @@ Rispondi sempre in modo connesso, conciso (massimo 3-4 frasi) ed evita spiegazio
                         </form>
                     </div>
                 </>
-            )}
-
-            {/* Guide Modal */}
-            {showGuide && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[70] flex items-center justify-center p-4 animate-in fade-in duration-200">
-                    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
-                        {/* Header */}
-                        <div className="bg-scout-green dark:bg-scout-green-dark p-4 text-white flex items-center gap-3 shrink-0">
-                            <BookOpen size={20} />
-                            <div>
-                                <h3 className="font-extrabold text-sm leading-tight">Guida Attivazione AI</h3>
-                                <p className="text-[9px] text-white/80 font-bold">Attiva Gemini Nano gratis sul tuo dispositivo</p>
-                            </div>
-                            <button 
-                                onClick={() => setShowGuide(false)}
-                                className="ml-auto p-1.5 hover:bg-white/10 rounded-full text-white transition-colors"
-                            >
-                                <X size={16} />
-                            </button>
-                        </div>
-
-                        {/* Content */}
-                        <div className="flex-1 overflow-y-auto p-5 space-y-4 text-xs leading-relaxed text-gray-700 dark:text-gray-300">
-                            <div className="p-3 bg-scout-green/5 dark:bg-scout-green/10 border border-scout-green/10 rounded-xl space-y-1">
-                                <p className="font-black text-[10px] text-scout-green uppercase tracking-wide">Cos'è Gemini Nano?</p>
-                                <p className="text-[11px]">
-                                    È il modello di intelligenza artificiale locale di Google. Funziona offline, in modo privato e 100% gratuito senza API o token!
-                                </p>
-                            </div>
-
-                            <div className="space-y-3">
-                                <p className="font-black text-[10px] text-gray-400 uppercase tracking-widest">Procedura di attivazione:</p>
-                                
-                                <div className="flex gap-2.5">
-                                    <div className="w-5 h-5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 flex items-center justify-center font-black shrink-0 text-[10px]">1</div>
-                                    <div>
-                                        <p className="font-bold">Verifica il Browser</p>
-                                        <p className="text-[11px] text-gray-500 dark:text-gray-400">Assicurati di usare Google Chrome (versione 127 o superiore) o un browser Chromium compatibile.</p>
-                                    </div>
-                                </div>
-
-                                <div className="flex gap-2.5">
-                                    <div className="w-5 h-5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 flex items-center justify-center font-black shrink-0 text-[10px]">2</div>
-                                    <div>
-                                        <p className="font-bold">Abilita il Modello locale</p>
-                                        <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                                            Apri una scheda su <code className="bg-gray-100 dark:bg-gray-950 px-1 py-0.5 rounded font-mono text-[10px]">chrome://flags/#optimization-guide-on-device-model</code> ed impostalo su <strong className="text-scout-green">Enabled BypassPerfRequirement</strong> (o Enabled).
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div className="flex gap-2.5">
-                                    <div className="w-5 h-5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 flex items-center justify-center font-black shrink-0 text-[10px]">3</div>
-                                    <div>
-                                        <p className="font-bold">Abilita le API Prompt</p>
-                                        <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                                            Apri una scheda su <code className="bg-gray-100 dark:bg-gray-950 px-1 py-0.5 rounded font-mono text-[10px]">chrome://flags/#prompt-api-for-gemini-nano</code> ed impostalo su <strong className="text-scout-green">Enabled</strong>.
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div className="flex gap-2.5">
-                                    <div className="w-5 h-5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 flex items-center justify-center font-black shrink-0 text-[10px]">4</div>
-                                    <div>
-                                        <p className="font-bold">Riavvia Chrome</p>
-                                        <p className="text-[11px] text-gray-500 dark:text-gray-400">Clicca sul pulsante "Relaunch" in basso a destra per riavviare il browser e applicare le modifiche.</p>
-                                    </div>
-                                </div>
-
-                                <div className="flex gap-2.5">
-                                    <div className="w-5 h-5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 flex items-center justify-center font-black shrink-0 text-[10px]">5</div>
-                                    <div>
-                                        <p className="font-bold">Attendi il download</p>
-                                        <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                                            Chrome scaricherà Gemini Nano in background. Puoi controllare lo stato visitando <code className="bg-gray-100 dark:bg-gray-950 px-1 py-0.5 rounded font-mono text-[10px]">chrome://components</code> e controllando che "Optimization Guide On Device Model" sia scaricato ed aggiornato.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Check Status Widget */}
-                            <div className="pt-3 border-t border-gray-100 dark:border-gray-850 flex flex-col gap-3">
-                                <div className="flex justify-between items-center bg-gray-50 dark:bg-gray-955 p-2.5 rounded-xl border border-gray-100 dark:border-gray-850">
-                                    <div>
-                                        <p className="text-[10px] font-black text-gray-400 uppercase">Stato Attuale</p>
-                                        <p className="font-black text-xs mt-0.5">
-                                            {geminiStatus === 'readily' && <span className="text-scout-green font-extrabold">🎉 Pronto ed Attivo!</span>}
-                                            {geminiStatus === 'after-download' && <span className="text-yellow-650 dark:text-yellow-400 font-extrabold">⏳ In download...</span>}
-                                            {geminiStatus === 'no' && <span className="text-red-500 font-extrabold">❌ Flag disattivate</span>}
-                                            {geminiStatus === 'unsupported' && <span className="text-red-500 font-extrabold">❌ Browser non supportato</span>}
-                                            {geminiStatus === 'checking' && <span className="text-gray-400 font-extrabold">🔄 Verifica in corso...</span>}
-                                        </p>
-                                    </div>
-                                    <button 
-                                        type="button"
-                                        onClick={checkGeminiStatus}
-                                        className="p-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-750 rounded-xl transition-all active:scale-90 flex items-center justify-center shrink-0 cursor-pointer"
-                                        title="Riprova verifica"
-                                    >
-                                        <RefreshCw size={14} className={cn(geminiStatus === 'checking' && "animate-spin")} />
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Footer */}
-                        <div className="p-4 bg-gray-55/50 dark:bg-gray-950/40 border-t border-gray-100 dark:border-gray-800 flex gap-2 shrink-0">
-                            <button
-                                type="button"
-                                onClick={() => setShowGuide(false)}
-                                className="w-full py-2 bg-scout-green dark:bg-scout-green-dark text-white rounded-xl font-black text-center shadow-md shadow-emerald-500/10 cursor-pointer hover:opacity-90 active:scale-95 transition-all text-xs"
-                            >
-                                Ho capito, torna alla chat
-                            </button>
-                        </div>
-                    </div>
-                </div>
             )}
         </>
     );
