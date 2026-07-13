@@ -147,6 +147,10 @@ export default function InteractiveMap({ locations }: InteractiveMapProps) {
             }
         });
 
+        console.log("InteractiveMap - rendering markers. Total locations received:", locations.length);
+        const validCoordsCount = locations.filter(l => l.coordinates?.lat && l.coordinates?.lng).length;
+        console.log("InteractiveMap - locations with valid coordinates:", validCoordsCount);
+
         // Add pins for locations with valid coordinates
         locations.forEach((loc) => {
             if (loc.coordinates?.lat && loc.coordinates?.lng) {
