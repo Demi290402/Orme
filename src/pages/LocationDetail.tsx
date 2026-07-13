@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Phone, MessageCircle, Map, ArrowLeft, BedDouble, Tent, Coffee, ShieldAlert, Edit, Euro, Wrench, Ban, Star, Footprints, MessageSquare, X, Droplets, Flame, Wind, ShieldCheck, Users, ChevronLeft, ChevronRight, Globe } from 'lucide-react';
+import { Phone, MessageCircle, Map, ArrowLeft, BedDouble, Tent, Coffee, ShieldAlert, Edit, Euro, Wrench, Ban, Star, Footprints, MessageSquare, X, Droplets, Flame, Wind, ShieldCheck, Users, ChevronLeft, ChevronRight, Globe, Mail } from 'lucide-react';
 import { getLocations, getUser, getReviews, saveReview, deleteLocation, getLocationHistory, upsertLocationView, getUserLocationViews } from '@/lib/data';
 import { Location, LocationReview } from '@/types';
 import { getStalenessInfo, cn } from '@/lib/utils';
@@ -278,7 +278,9 @@ export default function LocationDetail() {
             : `https://${location.website}`)
         : undefined;
 
-    const actionButtonsCount = [phone, whatsapp, websiteUrl, true].filter(Boolean).length;
+    const emailUrl = location.email ? `mailto:${location.email}` : undefined;
+
+    const actionButtonsCount = [phone, whatsapp, websiteUrl, emailUrl, true].filter(Boolean).length;
 
     const updatedByText = updaterInfo ? `da ${updaterInfo.nickname}${updaterInfo.groupName ? ` - ${updaterInfo.groupName}` : ''}` : '';
 
@@ -559,6 +561,15 @@ export default function LocationDetail() {
                     >
                         <Globe className="text-scout-blue mb-1" size={24} />
                         <span className="text-[10px] font-black uppercase dark:text-gray-300">Sito Web</span>
+                    </a>
+                )}
+                {emailUrl && (
+                    <a
+                        href={emailUrl}
+                        className="flex flex-col items-center justify-center bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-95 transition-all text-center"
+                    >
+                        <Mail className="text-scout-green mb-1" size={24} />
+                        <span className="text-[10px] font-black uppercase dark:text-gray-300">Email</span>
                     </a>
                 )}
                 <a

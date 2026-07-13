@@ -35,6 +35,7 @@ export default function AddLocation() {
         phone: '',
         whatsapp: '',
         website: '',
+        email: '',
         googleMapsLink: '',
         latitude: '',
         longitude: '',
@@ -78,6 +79,7 @@ export default function AddLocation() {
     const livePoints = useMemo(() => {
         let points = 10; // Base
         if (formData.website && formData.website.trim() !== '') points += 2;
+        if (formData.email && formData.email.trim() !== '') points += 2;
 
         const hasCoordinates = (formData as any).latitude && (formData as any).longitude;
         const hasAddress = (formData as any).address && (formData as any).address.trim() !== '';
@@ -103,6 +105,7 @@ export default function AddLocation() {
                         phone: found.contacts.find(c => c.type === 'phone')?.value || '',
                         whatsapp: found.contacts.find(c => c.type === 'whatsapp')?.value || '',
                         website: found.website || '',
+                        email: found.email || '',
                         beds: found.beds?.toString() || '',
                         bathrooms: found.bathrooms?.toString() || '',
                         hasTents: found.hasTents,
@@ -187,6 +190,7 @@ export default function AddLocation() {
                 ...(formData.whatsapp ? [{ type: 'whatsapp', value: formData.whatsapp, name: 'WhatsApp' }] as any : [])
             ],
             website: formData.website,
+            email: formData.email,
             beds: formData.beds ? parseInt(formData.beds) : 0,
             bathrooms: formData.bathrooms ? parseInt(formData.bathrooms) : 0,
             hasTents: formData.hasTents,
@@ -394,6 +398,19 @@ export default function AddLocation() {
                             value={formData.website} onChange={handleChange}
                             placeholder="https://..."
                             className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                        />
+                    </div>
+
+                    <div className="mt-4">
+                        <div className="flex justify-between items-center mb-1">
+                            <label className="block text-sm font-medium">Email Contatto (opzionale)</label>
+                            <span className="text-[10px] font-bold text-scout-blue bg-scout-blue/10 px-2 py-0.5 rounded-full">+2 pt</span>
+                        </div>
+                        <input
+                            type="email" name="email"
+                            value={formData.email} onChange={handleChange}
+                            placeholder="esempio@dominio.it"
+                            className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-scout-green"
                         />
                     </div>
                 </div>
