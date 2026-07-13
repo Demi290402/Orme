@@ -46,6 +46,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/" element={<Layout><Home /></Layout>} />
+          <Route path="/mappa" element={<Layout><Home defaultView="map" /></Layout>} />
           <Route path="/location/:id" element={<Layout><LocationDetail /></Layout>} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/iscrizione/:groupId" element={<IscrizionePubblica />} />

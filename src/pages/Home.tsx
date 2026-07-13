@@ -3,6 +3,7 @@ import { Search, Filter, Plus, X, Check, Clock, Tent, BedDouble, Star, Bus } fro
 import { getLocations, getUser, getUserLocationViews, getAllLocationHistory } from '@/lib/data';
 import { Location, User as UserType } from '@/types';
 import LocationCard from '@/components/LocationCard';
+import InteractiveMap from '@/components/InteractiveMap';
 import TransportModal from '@/components/TransportModal';
 import { Link } from 'react-router-dom';
 import { cn, getStalenessInfo } from '@/lib/utils';
@@ -30,9 +31,14 @@ const STALENESS_LEVELS = [
     { level: 3, color: 'bg-red-500', label: 'Datato (>3a)' }
 ];
 
-export default function Home() {
+interface HomeProps {
+    defaultView?: 'list' | 'map';
+}
+
+export default function Home({ defaultView = 'list' }: HomeProps) {
     const [locations, setLocations] = useState<Location[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [viewMode, setViewMode] = useState<'list' | 'map'>(defaultView);
     const [showFilters, setShowFilters] = useState(false);
 
     // Advanced Filters State
@@ -462,63 +468,96 @@ export default function Home() {
                     </div>
                 </div>
             )}
-
-            {/* Results Grid */}
-            <div className="grid gap-4 md:grid-cols-2">
-                {(currentUser ? filteredLocations : filteredLocations.slice(0, 5)).map((location) => (
-                    <LocationCard 
-                        key={location.id} 
-                        location={location} 
-                        unreadModificationsCount={getUnreadCount(location.id)} 
-                    />
-                ))}
-
-                {/* Guest Invitation Message */}
-                {!currentUser && filteredLocations.length > 5 && (
-                    <div className="col-span-full mt-8 p-8 bg-white dark:bg-gray-800 rounded-3xl border-2 border-dashed border-scout-blue/30 text-center space-y-4 shadow-sm">
-                        <div className="bg-scout-blue/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto">
-                            <Plus className="text-scout-blue" size={32} />
-                        </div>
-                        <h3 className="text-xl font-bold text-gray-900 dark:text-white">Vuoi vedere altri luoghi?</h3>
-                        <p className="text-gray-500 dark:text-gray-400 max-w-sm mx-auto text-sm">
-                            Iscriviti gratuitamente per accedere all'intero database di {locations.length} luoghi scout e iniziare a pianificare le tue attività!
-                        </p>
-                        <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
-                            <Link to="/register" className="bg-scout-blue text-white px-8 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all">
-                                Registrati ora
-                            </Link>
-                            <Link to="/login" className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-8 py-3 rounded-xl font-bold hover:bg-gray-200 dark:hover:bg-gray-600 transition-all">
-                                Accedi
-                            </Link>
-                        </div>
-                    </div>
-                )}
-
-                {filteredLocations.length === 0 && (
-                    <div className="flex flex-col items-center justify-center py-20 text-center">
-                        <div className="bg-gray-100 p-6 rounded-full mb-4">
-                            <Search size={48} className="text-gray-400" />
-                        </div>
-                        <h3 className="text-xl font-bold text-gray-900 mb-2">Nessun luogo trovato</h3>
-                        <p className="text-gray-500 max-w-xs mx-auto">Prova a modificare i filtri o cerca qualcosa di diverso.</p>
-                        {activeFiltersCount > 0 && (
-                            <button
-                                onClick={() => {
-                                    setSearchTerm('');
-                                    setSelectedBranches([]);
-                                    setSelectedRegions([]);
-                                    setSelectedActivities([]);
-                                    setHasTents(false);
-                                    setHasBeds(false);
-                                }}
-                                className="mt-6 text-scout-blue font-bold hover:underline"
-                            >
-                                Resetta ricerca
-                            </button>
+             {/* View Toggle and Count Header */}
+            <div className="flex justify-between items-center bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-150 dark:border-gray-700 shadow-sm">
+                <span className="text-sm font-extrabold text-gray-500 dark:text-gray-400">
+                    Trovati {filteredLocations.length} luoghi
+                </span>
+                <div className="flex bg-gray-100 dark:bg-gray-700 p-1 rounded-xl shrink-0">
+                    <button
+                        onClick={() => setViewMode('list')}
+                        className={cn(
+                            "px-4 py-2 rounded-lg text-xs font-black transition-all uppercase tracking-wider cursor-pointer",
+                            viewMode === 'list'
+                                ? "bg-white dark:bg-gray-800 text-scout-green-dark dark:text-emerald-400 shadow-sm"
+                                : "text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
                         )}
-                    </div>
-                )}
+                    >
+                        Lista
+                    </button>
+                    <button
+                        onClick={() => setViewMode('map')}
+                        className={cn(
+                            "px-4 py-2 rounded-lg text-xs font-black transition-all uppercase tracking-wider cursor-pointer",
+                            viewMode === 'map'
+                                ? "bg-white dark:bg-gray-800 text-scout-green-dark dark:text-emerald-400 shadow-sm"
+                                : "text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                        )}
+                    >
+                        Mappa
+                    </button>
+                </div>
             </div>
+
+            {viewMode === 'list' ? (
+                <div className="grid gap-4 md:grid-cols-2">
+                    {(currentUser ? filteredLocations : filteredLocations.slice(0, 5)).map((location) => (
+                        <LocationCard 
+                            key={location.id} 
+                            location={location} 
+                            unreadModificationsCount={getUnreadCount(location.id)} 
+                        />
+                    ))}
+
+                    {/* Guest Invitation Message */}
+                    {!currentUser && filteredLocations.length > 5 && (
+                        <div className="col-span-full mt-8 p-8 bg-white dark:bg-gray-800 rounded-3xl border-2 border-dashed border-scout-blue/30 text-center space-y-4 shadow-sm">
+                            <div className="bg-scout-blue/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto">
+                                <Plus className="text-scout-blue" size={32} />
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-white">Vuoi vedere altri luoghi?</h3>
+                            <p className="text-gray-500 dark:text-gray-400 max-w-sm mx-auto text-sm">
+                                Iscriviti gratuitamente per accedere all'intero database di {locations.length} luoghi scout e iniziare a pianificare le tue attività!
+                            </p>
+                            <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+                                <Link to="/register" className="bg-scout-blue text-white px-8 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all">
+                                    Registrati ora
+                                </Link>
+                                <Link to="/login" className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-8 py-3 rounded-xl font-bold hover:bg-gray-200 dark:hover:bg-gray-600 transition-all">
+                                    Accedi
+                                </Link>
+                            </div>
+                        </div>
+                    )}
+
+                    {filteredLocations.length === 0 && (
+                        <div className="col-span-full flex flex-col items-center justify-center py-20 text-center">
+                            <div className="bg-gray-100 dark:bg-gray-700 p-6 rounded-full mb-4">
+                                <Search size={48} className="text-gray-400 dark:text-gray-300" />
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Nessun luogo trovato</h3>
+                            <p className="text-gray-500 dark:text-gray-400 max-w-xs mx-auto">Prova a modificare i filtri o cerca qualcosa di diverso.</p>
+                            {activeFiltersCount > 0 && (
+                                <button
+                                    onClick={() => {
+                                        setSearchTerm('');
+                                        setSelectedBranches([]);
+                                        setSelectedRegions([]);
+                                        setSelectedActivities([]);
+                                        setHasTents(false);
+                                        setHasBeds(false);
+                                    }}
+                                    className="mt-6 text-scout-blue font-bold hover:underline"
+                                >
+                                    Resetta ricerca
+                                </button>
+                            )}
+                        </div>
+                    )}
+                </div>
+            ) : (
+                <InteractiveMap locations={currentUser ? filteredLocations : filteredLocations.slice(0, 5)} />
+            )}
 
             {/* Floating Action Button (FAB) for Transport Directory */}
             {currentUser && (

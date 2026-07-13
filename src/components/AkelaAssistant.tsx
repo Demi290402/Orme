@@ -18,6 +18,7 @@ interface Message {
 const AKELA_SYSTEM_PROMPT = `Sei Akela, il vecchio e saggio lupo solitario del Branco della Rupe di Seeonee (dal Libro della Giungla di Kipling), ed ora sei l'assistente virtuale di "Orme", un'applicazione web per la gestione dei gruppi scout dell'AGESCI.
 Usa un tono estremamente caloroso, saggio, fraterno ed accogliente. Rivolgiti all'utente come "fratellino" o con formule di saluto scout come "Buona caccia!".
 Conosci la storia dello scautismo, la Legge e la Promessa scout, le opere di Sir Robert Baden-Powell (es: "Scautismo per Ragazzi", "Il Libro dei Capi", "La Strada verso il Successo"), e la totalità della terminologia scout (CoCa, branca L/C, E/G, R/S, cerchio, reparto, clan).
+Hai a disposizione una mappa interattiva d'Italia raggiungibile al percorso "/mappa" per visualizzare geograficamente tutti i luoghi scout censiti con un sistema di raggruppamento e segnaposto colorati. Se l'utente ti chiede di vedere i luoghi su una cartina o mappa, consigliala come ottimo supporto visivo e proponi il redirect a "/mappa".
 Rispondi in italiano in modo conciso e amichevole (massimo 3-4 frasi, tranne se serve una spiegazione approfondita), usando la formattazione markdown e icone a tema (🐺, ⛺, ⚜️, 📍).
 Non dire mai che sei un modello linguistico AI o che sei creato da OpenAI o altri. Sei Akela, programmato dai Capi di Orme.`;
 
@@ -445,6 +446,7 @@ export default function AkelaAssistant() {
     };
 
     const getPageLabel = (path: string): string => {
+        if (path === '/mappa') return 'Mappa Interattiva';
         if (path === '/add') return 'Aggiungi Luogo';
         if (path === '/verbali/nuovo') return 'Nuovo Verbale';
         if (path === '/verbali') return 'Archivio Verbali';
@@ -558,6 +560,18 @@ export default function AkelaAssistant() {
                 intent: 'nuovo_luogo',
                 reply: 'Che magnifica idea! Contribuire a censire e mappare nuovi luoghi, campi scout o case è uno dei servizi più utili per facilitare il cammino di tutto il gruppo. Ti reindirizzo alla pagina di inserimento di un nuovo luogo! 📍',
                 path: '/add'
+            };
+        }
+
+        // 2.a Mappa Interattiva d'Italia (Visualizzazione Geografica)
+        if (
+            has(['mappa interattiva', 'mappa d\'italia', 'mappa italia', 'cartina', 'puntini sulla mappa', 'segnaposto sulla mappa']) ||
+            (has(['mappa', 'cartina']) && has(['ved', 'mostr', 'apri', 'esplor', 'va al', 'vai al', 'vai alla']))
+        ) {
+            return {
+                intent: 'mappa_interattiva',
+                reply: 'Certamente, fratellino! Abbiamo una mappa interattiva d\'Italia spettacolare con tutti i luoghi scout censiti. Ti mostra i raggruppamenti per regione e provincia e, facendo zoom, i dettagli precisi di ogni struttura. Vuoi che ti ci porti? 🗺️',
+                path: '/mappa'
             };
         }
 
