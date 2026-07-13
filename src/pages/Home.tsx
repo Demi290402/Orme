@@ -56,6 +56,24 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
     const [showTransportModal, setShowTransportModal] = useState(false);
 
     useEffect(() => {
+        // Proactive Cache Refresh:
+        // Se la cache locale ha solo coordinate nulle, la svuotiamo per forzare il recupero delle nuove coordinate da Supabase.
+        try {
+            const rawCache = localStorage.getItem('cache_locations');
+            if (rawCache) {
+                const parsed = JSON.parse(rawCache);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    const hasAnyCoords = parsed.some(l => l.coordinates && (l.coordinates.lat || l.coordinates.lng || l.latitude || l.longitude));
+                    if (!hasAnyCoords) {
+                        localStorage.removeItem('cache_locations');
+                        console.log("Vecchio cache_locations con coordinate nulle rimosso con successo!");
+                    }
+                }
+            }
+        } catch (e) {
+            console.error("Errore pulizia cache preventiva:", e);
+        }
+
         getLocations().then(setLocations).catch(console.error);
         getUser().then(setCurrentUser).catch(console.error);
         getUserLocationViews().then(setLocationViews).catch(console.error);
