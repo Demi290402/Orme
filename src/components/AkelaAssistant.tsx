@@ -98,6 +98,7 @@ export default function AkelaAssistant() {
             // A. LISTA ATTESA QUANTITY
             if (has(['bambin', 'iscrit', 'ragazz', 'figl', 'lista', 'attesa'])) {
                 try {
+                    setLastTopic('waitlist_quantity');
                     const lista = await getListaAttesa();
                     let filtered = lista;
                     let filterDesc = 'in totale';
@@ -135,6 +136,7 @@ export default function AkelaAssistant() {
             // B. VERBALI QUANTITY
             if (has(['verbale', 'verbali', 'riunion'])) {
                 try {
+                    setLastTopic('verbali_quantity');
                     const verbali = await getVerbali();
                     let filtered = verbali;
                     let timeDesc = 'in totale';
@@ -165,6 +167,7 @@ export default function AkelaAssistant() {
             // C. CALENDARIO QUANTITY
             if (has(['event', 'attivita', 'uscit', 'pernott', 'incontro', 'incontri', 'calendario'])) {
                 try {
+                    setLastTopic('calendario_quantity');
                     const eventi = await getEventi();
                     let filtered = eventi;
                     let branchDesc = 'complessivi';
@@ -213,6 +216,7 @@ export default function AkelaAssistant() {
             // D. LUOGHI QUANTITY
             if (has(['luogh', 'camp', 'cas', 'struttur', 'bas'])) {
                 try {
+                    setLastTopic('locations_quantity');
                     const locations = await getLocations();
                     let filtered = locations;
                     let filterDesc = 'in totale';
@@ -245,6 +249,7 @@ export default function AkelaAssistant() {
         // 1. CALENDAR SEARCH (Intent: quando, data, ora, giorno, calendario, evento, uscita, riunione, attivita, impegno)
         if (has(['quando', 'data', 'ora', 'giorno', 'calendario', 'evento', 'uscita', 'riunione', 'attivita', 'impegno'])) {
             try {
+                setLastTopic('calendario');
                 const eventi = await getEventi();
                 const matches = eventi.filter(e => {
                     const titleClean = e.titolo.toLowerCase();
@@ -275,6 +280,7 @@ export default function AkelaAssistant() {
         // 2. LOCATION SEARCH (Intent: dove, rifugio, base, campo, posto, luogo, accantonamento)
         if (has(['dove', 'posto', 'luogo', 'campo', 'struttura', 'base', 'rifugio', 'accantonamento', 'censito', 'cerca', 'trova'])) {
             try {
+                setLastTopic('locations');
                 const locations = await getLocations();
                 const matches = locations.filter(l => {
                     const nameClean = l.name.toLowerCase();
@@ -304,6 +310,7 @@ export default function AkelaAssistant() {
         // 3. WAITLIST SEARCH (Intent: bambino, cognome, iscritto, lista)
         if (has(['bambin', 'iscritto', 'iscritti', 'lista', 'attesa', 'richiesta', 'genitore', 'cognome'])) {
             try {
+                setLastTopic('waitlist');
                 const lista = await getListaAttesa();
                 const matches = lista.filter(item => {
                     const nomeClean = item.nomeRagazzo.toLowerCase();
@@ -335,6 +342,7 @@ export default function AkelaAssistant() {
         // 4. MINUTES SEARCH (Intent: verbale, verbali, delibera, ordine del giorno, odg)
         if (has(['verbale', 'verbali', 'odg', 'ordine del giorno', 'delibera', 'riunione', 'coca', 'co.ca.'])) {
             try {
+                setLastTopic('verbali');
                 const verbali = await getVerbali();
                 const matches = verbali.filter(v => {
                     const odgClean = v.odg.map(o => `${o.titolo} ${o.contenuto} ${o.note || ''}`).join(' ').toLowerCase();
@@ -371,6 +379,7 @@ export default function AkelaAssistant() {
             const locMatches = locations.filter(l => l.name.toLowerCase().includes(searchTermStr));
             
             if (locMatches.length > 0) {
+                setLastTopic('locations');
                 const bestMatch = locMatches[0];
                 return {
                     reply: `🐺 Ho trovato questo luogo con lo stesso nome!\n\n📍 **${bestMatch.name}** (${bestMatch.commune || 'Comune non specificato'})\n🏠 Posti letto: ${bestMatch.beds || 0} | ⛺ Posti tenda: ${bestMatch.hasTents ? 'Sì' : 'No'}\n\nTi porto al dettaglio... [REDIRECT: /location/${bestMatch.id}]`,
@@ -378,6 +387,7 @@ export default function AkelaAssistant() {
                 };
             }
             if (eventMatches.length > 0) {
+                setLastTopic('calendario');
                 const bestMatch = eventMatches[0];
                 return {
                     reply: `🐺 Ho trovato questo evento nel calendario di gruppo!\n\n📅 **${bestMatch.titolo}** (${bestMatch.dataInizio})\n📍 Luogo: ${bestMatch.luogo || 'Non indicato'}\n\nTi porto al calendario... [REDIRECT: /calendario]`,
@@ -754,6 +764,52 @@ export default function AkelaAssistant() {
     const handleSend = async (textToSend: string) => {
         if (!textToSend.trim()) return;
 
+        let queryToProcess = textToSend;
+        const cleanLower = textToSend.toLowerCase()
+            .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+            .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g,"").trim();
+
+        // Check if query is a continuation
+        const isContinuation = cleanLower.startsWith('e ') || 
+                               cleanLower.startsWith('e della ') || 
+                               cleanLower.startsWith('e del ') || 
+                               cleanLower.startsWith('e di ') || 
+                               cleanLower.startsWith('e in ') || 
+                               cleanLower.startsWith('invece ') || 
+                               cleanLower.startsWith('anche ') || 
+                               cleanLower.startsWith('e anche ');
+
+        if (isContinuation && lastTopic) {
+            const prefixes = ['e anche ', 'e della ', 'e dello ', 'e dell\'', 'e del ', 'e dei ', 'e degli ', 'e delle ', 'e di ', 'e in ', 'e a ', 'e ', 'invece ', 'anche '];
+            let term = cleanLower;
+            for (const p of prefixes) {
+                if (term.startsWith(p)) {
+                    term = term.substring(p.length).trim();
+                    break;
+                }
+            }
+
+            if (term.length > 0) {
+                if (lastTopic === 'locations_quantity') {
+                    queryToProcess = `quanti luoghi abbiamo in ${term}`;
+                } else if (lastTopic === 'waitlist_quantity') {
+                    queryToProcess = `quanti ragazzi in lista attesa per ${term}`;
+                } else if (lastTopic === 'verbali_quantity') {
+                    queryToProcess = `quanti verbali ${term}`;
+                } else if (lastTopic === 'calendario_quantity') {
+                    queryToProcess = `quanti eventi calendario ${term}`;
+                } else if (lastTopic === 'locations') {
+                    queryToProcess = `dove si trova ${term}`;
+                } else if (lastTopic === 'waitlist') {
+                    queryToProcess = `cerca in lista d'attesa ${term}`;
+                } else if (lastTopic === 'verbali') {
+                    queryToProcess = `cerca nei verbali ${term}`;
+                } else if (lastTopic === 'calendario') {
+                    queryToProcess = `quando abbiamo ${term}`;
+                }
+            }
+        }
+
         const userMsg: Message = {
             id: crypto.randomUUID(),
             sender: 'user',
@@ -765,7 +821,7 @@ export default function AkelaAssistant() {
         setIsTyping(true);
 
         // 1. Asynchronously check if it matches a database query
-        const dbResult = await handleDatabaseSearch(textToSend, textToSend);
+        const dbResult = await handleDatabaseSearch(queryToProcess, queryToProcess);
         if (dbResult) {
             setTimeout(() => {
                 const akelaMsg: Message = {
