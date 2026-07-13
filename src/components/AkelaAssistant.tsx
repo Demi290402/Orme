@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, Send, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { matchScoutKnowledge } from '@/lib/scoutKnowledge';
+import { matchScoutKnowledge, scoutKnowledgeBase } from '@/lib/scoutKnowledge';
 import { getLocations } from '@/lib/data';
 import { getVerbali } from '@/lib/verbali';
 import { getEventi } from '@/lib/calendario';
@@ -45,9 +45,7 @@ export default function AkelaAssistant() {
         }
     });
     const [pendingLearning, setPendingLearning] = useState<{ term: string; definition: string } | null>(null);
-
-
-
+    const [lastTopic, setLastTopic] = useState<string | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
     const [isTyping, setIsTyping] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -242,6 +240,43 @@ export default function AkelaAssistant() {
         return null;
     };
 
+    const fetchWikipediaSummary = async (query: string): Promise<string | null> => {
+        try {
+            // Search Wikipedia
+            const searchUrl = `https://it.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
+            const searchRes = await fetch(searchUrl);
+            const searchData = await searchRes.json();
+            
+            if (!searchData.query?.search || searchData.query.search.length === 0) {
+                return null;
+            }
+            
+            const bestMatch = searchData.query.search[0];
+            const title = bestMatch.title;
+            
+            // Fetch page extract
+            const extractUrl = `https://it.wikipedia.org/w/api.php?action=query&prop=extracts&exintro=1&explaintext=1&titles=${encodeURIComponent(title)}&format=json&origin=*`;
+            const extractRes = await fetch(extractUrl);
+            const extractData = await extractRes.json();
+            
+            const pages = extractData.query?.pages;
+            if (!pages) return null;
+            
+            const pageId = Object.keys(pages)[0];
+            if (pageId === '-1') return null;
+            
+            const extract = pages[pageId].extract;
+            if (!extract || extract.trim().length === 0) return null;
+            
+            const trimmed = extract.length > 500 ? extract.substring(0, 500) + '...' : extract;
+            
+            return `🐺 Ho cercato sulla pista di Wikipedia per darti informazioni aggiornate in tempo reale! Ecco cosa ho trovato su **${title}**:\n\n"${trimmed}"\n\n*Vuoi saperne di più? Puoi cercare "${title}" direttamente sul web!* 🌐`;
+        } catch (err) {
+            console.error("Errore ricerca Wikipedia:", err);
+            return null;
+        }
+    };
+
     // NLP Intent Parser
     const parseIntent = (text: string): { intent: string; reply: string; path?: string } => {
         const clean = text.toLowerCase()
@@ -249,6 +284,19 @@ export default function AkelaAssistant() {
             .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g,""); // strip punctuation
 
         const has = (keywords: string[]) => keywords.some(k => clean.includes(k));
+
+        // Contextual follow-up check
+        if (has(['altri', 'ancora', 'altro', 'mostra altri', 'ci sono altri', 'e poi', 'quali sono'])) {
+            if (lastTopic === 'bp_books') {
+                const bookOverview = scoutKnowledgeBase.find(a => a.id === 'bp_libri_overview');
+                if (bookOverview) {
+                    return {
+                        intent: 'scout_knowledge',
+                        reply: `🐺 Oltre a quello di cui abbiamo parlato, Baden-Powell ha scritto molte altre opere fondamentali! Ecco la panoramica completa:\n\n${bookOverview.content}`
+                    };
+                }
+            }
+        }
 
         // Name Learning Check
         const nameMatch = clean.match(/(?:mi chiamo|chiamami|il mio nome e)\s+([a-zA-Z0-9\s]+)/);
@@ -484,6 +532,11 @@ export default function AkelaAssistant() {
         // 14. Deep Scout Knowledge Base Matcher (B-P books, Manuals, etc.)
         const scoutMatch = matchScoutKnowledge(text);
         if (scoutMatch) {
+            if (scoutMatch.category === 'bp_books') {
+                setLastTopic('bp_books');
+            } else {
+                setLastTopic(scoutMatch.category);
+            }
             return {
                 intent: 'scout_knowledge',
                 reply: scoutMatch.content
@@ -548,9 +601,8 @@ export default function AkelaAssistant() {
 
         // 1. Asynchronously check if it matches a database query
         const dbResult = await handleDatabaseSearch(textToSend, textToSend);
-
-        setTimeout(() => {
-            if (dbResult) {
+        if (dbResult) {
+            setTimeout(() => {
                 const akelaMsg: Message = {
                     id: crypto.randomUUID(),
                     sender: 'akela',
@@ -566,12 +618,33 @@ export default function AkelaAssistant() {
                         setIsOpen(false);
                     }, 1500);
                 }
+            }, 800);
+            return;
+        }
+
+        // 2. Fallback to NLP Intent Parser
+        const parsed = parseIntent(textToSend);
+        
+        // 3. If fallback and online, try Wikipedia search
+        if (parsed.intent === 'fallback' && typeof navigator !== 'undefined' && navigator.onLine) {
+            const wikiReply = await fetchWikipediaSummary(textToSend);
+            if (wikiReply) {
+                setTimeout(() => {
+                    const akelaMsg: Message = {
+                        id: crypto.randomUUID(),
+                        sender: 'akela',
+                        text: wikiReply
+                    };
+                    setMessages(prev => [...prev, akelaMsg]);
+                    setIsTyping(false);
+                    setPendingLearning(null);
+                }, 800);
                 return;
             }
+        }
 
-            // 2. Fallback to NLP Intent Parser
-            const parsed = parseIntent(textToSend);
-            
+        // 4. Default NLP response (or offline fallback)
+        setTimeout(() => {
             // Name Learning Hook
             if (parsed.intent === 'learn_name') {
                 const cleanText = textToSend.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g,"");

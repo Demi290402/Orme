@@ -8,6 +8,25 @@ export interface ScoutArticle {
 }
 
 export const scoutKnowledgeBase: ScoutArticle[] = [
+    {
+        id: 'bp_libri_overview',
+        title: 'Libri di Baden-Powell / Bibliografia Scout',
+        keywords: [
+            'libri di bp', 'libri di baden powell', 'bibliografia baden powell', 'cosa ha scritto baden powell', 
+            'quanti libri', 'quali libri', 'opere di bp', 'libri scritti da bp', 'libri di bp'
+        ],
+        category: 'bp_books',
+        summary: 'Panoramica completa dei principali libri scritti dal fondatore dello scautismo Robert Baden-Powell.',
+        content: `🐺 Sir Robert Baden-Powell ha scritto più di 30 libri durante la sua vita per spiegare il metodo scout e guidare ragazzi e capi. Ecco le sue opere più celebri e fondamentali:
+
+1. 📖 **Scautismo per Ragazzi (1908)**: Il testo fondamentale che descrive il metodo e la Legge Scout attraverso il gioco, il campeggio e la vita all'aperto.
+2. 📖 **Il Libro dei Capi (1919)**: Rivolto agli adulti e capi scout per aiutarli a comprendere lo spirito del servizio e la pedagogia del "learning by doing".
+3. 📖 **La Strada verso il Successo (1922)**: Dedicato ai Rover (ragazzi più grandi), un manuale di vita per superare gli scogli dell'esistenza.
+4. 📖 **Guida da te la tua Canoa (1930)**: Una raccolta di aforismi e lezioni per incoraggiare la responsabilità personale e l'autoeducazione.
+5. 📖 **Taccuino Scout / La mia vita da scout**: Scritti e appunti personali autobiografici sul cammino scout.
+
+*Se vuoi dettagli su uno di questi libri in particolare, chiedimi pure!* ⚜️`
+    },
     // BADEN-POWELL BOOKS
     {
         id: 'scautismo_per_ragazzi',
@@ -238,7 +257,7 @@ Chiedimi di navigare ad una sezione (es: *"voglio scrivere un verbale"*, *"aggiu
         title: 'Chi ti ha creato / Origine',
         keywords: [
             'chi ti ha creato', 'chi ti ha fatto', 'creatore', 'creata', 'fatto', 'sviluppatore', 
-            'programmatore', 'chi ha scritto akela', 'chi ti ha programmato', 'sviluppatori'
+            'programmatore', 'creatori di akela', 'chi ti ha programmato', 'sviluppatori'
         ],
         category: 'small_talk',
         summary: 'Informazioni sugli sviluppatori di Akela.',
