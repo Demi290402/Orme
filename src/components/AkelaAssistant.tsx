@@ -92,6 +92,156 @@ export default function AkelaAssistant() {
         if (searchTerms.length === 0) return null;
         const searchTermStr = searchTerms.join(' ');
 
+        const isQuantitative = has(['quanti', 'quante', 'numero', 'totale', 'conteggio', 'somma']);
+
+        if (isQuantitative) {
+            // A. LISTA ATTESA QUANTITY
+            if (has(['bambin', 'iscrit', 'ragazz', 'figl', 'lista', 'attesa'])) {
+                try {
+                    const lista = await getListaAttesa();
+                    let filtered = lista;
+                    let filterDesc = 'in totale';
+                    
+                    if (has(['lc', 'l/c', 'lupett', 'coccinell', 'elementar', 'primari'])) {
+                        filtered = lista.filter(item => {
+                            const cl = item.classe.toLowerCase();
+                            return cl.includes('elem') || cl.includes('prim') || ['1a', '2a', '3a', '4a', '5a'].some(k => cl.includes(k));
+                        });
+                        filterDesc = 'della branca L/C (Lupetti e Coccinelle)';
+                    } else if (has(['eg', 'e/g', 'esplorator', 'guid', 'medi'])) {
+                        filtered = lista.filter(item => {
+                            const cl = item.classe.toLowerCase();
+                            return cl.includes('med') || ['1a media', '2a media', '3a media'].some(k => cl.includes(k));
+                        });
+                        filterDesc = 'della branca E/G (Esploratori e Guide)';
+                    } else if (has(['rs', 'r/s', 'rover', 'scolt'])) {
+                        filtered = lista.filter(item => {
+                            const cl = item.classe.toLowerCase();
+                            return cl.includes('rs') || cl.includes('rover') || cl.includes('scolt') || cl.includes('sup') || cl.includes('univ');
+                        });
+                        filterDesc = 'della branca R/S (Rover e Scolte)';
+                    }
+                    
+                    const count = filtered.length;
+                    return {
+                        reply: `🐺 Ho controllato la lista d'attesa! Ci sono **${count}** bambini/ragazzi registrati ${filterDesc}.\n\nVuoi verificare l'elenco completo? [REDIRECT: /lista-attesa]`,
+                        path: '/lista-attesa'
+                    };
+                } catch (e) {
+                    console.error("Errore conteggio lista attesa:", e);
+                }
+            }
+
+            // B. VERBALI QUANTITY
+            if (has(['verbale', 'verbali', 'riunion'])) {
+                try {
+                    const verbali = await getVerbali();
+                    let filtered = verbali;
+                    let timeDesc = 'in totale';
+                    
+                    const yearMatch = clean.match(/\b(20\d{2})\b/);
+                    if (yearMatch) {
+                        const year = yearMatch[1];
+                        filtered = verbali.filter(v => v.data && v.data.startsWith(year));
+                        timeDesc = `nel ${year}`;
+                    } else if (has(['anno scorso', 'anno passato', 'scorso anno'])) {
+                        filtered = verbali.filter(v => v.data && v.data.startsWith('2025'));
+                        timeDesc = `l'anno scorso (nel 2025)`;
+                    } else if (has(['quest\'anno', 'anno in corso'])) {
+                        filtered = verbali.filter(v => v.data && v.data.startsWith('2026'));
+                        timeDesc = `quest'anno (nel 2026)`;
+                    }
+                    
+                    const count = filtered.length;
+                    return {
+                        reply: `🐺 Ho esaminato l'archivio dei verbali! Risultano scritti **${count}** verbali di Comunità Capi ${timeDesc}.\n\nTi porto all'elenco dei verbali... [REDIRECT: /verbali]`,
+                        path: '/verbali'
+                    };
+                } catch (e) {
+                    console.error("Errore conteggio verbali:", e);
+                }
+            }
+
+            // C. CALENDARIO QUANTITY
+            if (has(['event', 'attivita', 'uscit', 'pernott', 'incontro', 'incontri', 'calendario'])) {
+                try {
+                    const eventi = await getEventi();
+                    let filtered = eventi;
+                    let branchDesc = 'complessivi';
+                    let timeDesc = '';
+                    
+                    if (has(['lc', 'l/c', 'lupett', 'coccinell'])) {
+                        filtered = filtered.filter(e => e.branca === 'L/C');
+                        branchDesc = 'della branca L/C';
+                    } else if (has(['eg', 'e/g', 'esplorator', 'guid'])) {
+                        filtered = filtered.filter(e => e.branca === 'E/G');
+                        branchDesc = 'della branca E/G';
+                    } else if (has(['rs', 'r/s', 'rover', 'scolt'])) {
+                        filtered = filtered.filter(e => e.branca === 'R/S');
+                        branchDesc = 'della branca R/S';
+                    } else if (has(['coca', 'co.ca.', 'capi'])) {
+                        filtered = filtered.filter(e => e.branca === 'CoCa');
+                        branchDesc = 'della Comunità Capi';
+                    } else if (has(['gruppo'])) {
+                        filtered = filtered.filter(e => e.branca === 'Gruppo');
+                        branchDesc = 'di Gruppo';
+                    }
+                    
+                    const yearMatch = clean.match(/\b(20\d{2})\b/);
+                    if (yearMatch) {
+                        const year = yearMatch[1];
+                        filtered = filtered.filter(e => e.dataInizio && e.dataInizio.startsWith(year));
+                        timeDesc = ` nel ${year}`;
+                    } else if (has(['anno scorso', 'anno passato', 'scorso anno'])) {
+                        filtered = filtered.filter(e => e.dataInizio && e.dataInizio.startsWith('2025'));
+                        timeDesc = ` l'anno scorso (nel 2025)`;
+                    } else if (has(['quest\'anno', 'anno in corso'])) {
+                        filtered = filtered.filter(e => e.dataInizio && e.dataInizio.startsWith('2026'));
+                        timeDesc = ` quest'anno (nel 2026)`;
+                    }
+                    
+                    const count = filtered.length;
+                    return {
+                        reply: `🐺 Ho contato gli appuntamenti sul calendario! Ci sono **${count}** eventi ${branchDesc}${timeDesc} registrati.\n\nTi porto al calendario di gruppo... [REDIRECT: /calendario]`,
+                        path: '/calendario'
+                    };
+                } catch (e) {
+                    console.error("Errore conteggio calendario:", e);
+                }
+            }
+
+            // D. LUOGHI QUANTITY
+            if (has(['luogh', 'camp', 'cas', 'struttur', 'bas'])) {
+                try {
+                    const locations = await getLocations();
+                    let filtered = locations;
+                    let filterDesc = 'in totale';
+                    
+                    const regions = ['lombardia', 'piemonte', 'liguria', 'toscana', 'veneto', 'emilia', 'lazio', 'campania', 'sicilia', 'sardegna', 'trentino', 'friuli', 'umbria', 'marche', 'abruzzo', 'molise', 'puglia', 'basilicata', 'calabria', 'valle d\'aosta', 'vda'];
+                    const foundRegion = regions.find(r => clean.includes(r));
+                    if (foundRegion) {
+                        const regName = foundRegion === 'vda' ? "valle d'aosta" : foundRegion;
+                        filtered = locations.filter(l => l.region.toLowerCase().includes(regName));
+                        filterDesc = `nella regione ${regName.charAt(0).toUpperCase() + regName.slice(1)}`;
+                    } else if (has(['posti letto', 'letto', 'dormire'])) {
+                        filtered = locations.filter(l => l.beds && l.beds > 0);
+                        filterDesc = 'con posti letto al coperto';
+                    } else if (has(['tende', 'posti tenda', 'campeggio'])) {
+                        filtered = locations.filter(l => l.hasTents);
+                        filterDesc = 'con area attrezzata per posti tenda';
+                    }
+                    
+                    const count = filtered.length;
+                    return {
+                        reply: `🐺 Ho scansionato la mappa delle Orme! Abbiamo **${count}** luoghi scout registrati ${filterDesc}.\n\nVuoi esplorarli sulla mappa? [REDIRECT: /]`,
+                        path: '/'
+                    };
+                } catch (e) {
+                    console.error("Errore conteggio luoghi:", e);
+                }
+            }
+        }
+
         // 1. CALENDAR SEARCH (Intent: quando, data, ora, giorno, calendario, evento, uscita, riunione, attivita, impegno)
         if (has(['quando', 'data', 'ora', 'giorno', 'calendario', 'evento', 'uscita', 'riunione', 'attivita', 'impegno'])) {
             try {
