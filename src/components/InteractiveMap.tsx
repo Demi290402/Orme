@@ -187,17 +187,17 @@ export default function InteractiveMap({ locations }: InteractiveMapProps) {
                 const popupContent = `
                     <div class="p-2 font-sans max-w-[240px] text-gray-900 dark:text-white rounded-2xl">
                         <h4 class="font-extrabold text-sm mb-1 text-gray-900 dark:text-gray-100">${loc.name}</h4>
-                        <p class="text-[10px] text-gray-400 uppercase tracking-wider mb-2 font-bold">${loc.commune}, ${loc.region}</p>
+                        <p class="subtitle-text text-[10px] text-gray-400 uppercase tracking-wider mb-2 font-bold">${loc.commune}, ${loc.region}</p>
                         <div class="flex items-center gap-1.5 mb-3">
-                            <span class="text-xs font-black text-scout-green-dark dark:text-emerald-400">${loc.avgRating > 0 ? Number(loc.avgRating).toFixed(1) : '—'} ⭐</span>
+                            <span class="rating-text text-xs font-black text-scout-green-dark dark:text-emerald-400">${loc.avgRating > 0 ? Number(loc.avgRating).toFixed(1) : '—'} ⭐</span>
                             <span class="text-[9px] text-gray-400 font-semibold uppercase">(${loc.reviewsCount} orme)</span>
                         </div>
                         <div class="flex flex-wrap gap-1 mb-4">
-                            ${loc.hasTents ? '<span class="text-[8px] font-bold bg-green-50 dark:bg-emerald-950/20 text-green-700 dark:text-emerald-400 px-1.5 py-0.5 rounded border border-green-100 dark:border-emerald-800">🏕️ Tende</span>' : ''}
-                            ${loc.beds ? `<span class="text-[8px] font-bold bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 px-1.5 py-0.5 rounded border border-red-100 dark:border-red-800">🏠 ${loc.beds} Letti</span>` : ''}
-                            ${loc.hasDisabledAccess ? '<span class="text-[8px] font-bold bg-purple-50 dark:bg-purple-950/20 text-purple-700 dark:text-purple-400 px-1.5 py-0.5 rounded border border-purple-100 dark:border-purple-800">♿ Disabili</span>' : ''}
+                            ${loc.hasTents ? '<span class="badge-tende text-[8px] font-bold px-1.5 py-0.5 rounded border">🏕️ Tende</span>' : ''}
+                            ${loc.beds ? `<span class="badge-letti text-[8px] font-bold px-1.5 py-0.5 rounded border">🏠 ${loc.beds} Letti</span>` : ''}
+                            ${loc.hasDisabledAccess ? '<span class="badge-disabili text-[8px] font-bold px-1.5 py-0.5 rounded border">♿ Disabili</span>' : ''}
                         </div>
-                        <a href="/location/${loc.id}" class="block text-center w-full bg-scout-green text-white text-xs font-bold py-2.5 rounded-xl shadow-md hover:bg-scout-green-dark transition-all select-none">
+                        <a href="/location/${loc.id}" class="apri-scheda-btn block text-center w-full text-white text-xs font-bold py-2.5 rounded-xl shadow-md transition-all select-none">
                             Apri Scheda
                         </a>
                     </div>
@@ -257,6 +257,62 @@ export default function InteractiveMap({ locations }: InteractiveMapProps) {
 
     return (
         <div className="relative w-full font-sans">
+            <style>{`
+                /* Stili personalizzati per i popup Leaflet */
+                .custom-leaflet-popup .leaflet-popup-content-wrapper {
+                    background: ${theme === 'dark' ? '#1f2937' : '#ffffff'} !important;
+                    color: ${theme === 'dark' ? '#f3f4f6' : '#111827'} !important;
+                    border-radius: 1.5rem !important;
+                    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.15) !important;
+                    border: 1px solid ${theme === 'dark' ? '#374151' : '#e5e7eb'} !important;
+                    padding: 4px !important;
+                }
+                .custom-leaflet-popup .leaflet-popup-tip {
+                    background: ${theme === 'dark' ? '#1f2937' : '#ffffff'} !important;
+                    border: 1px solid ${theme === 'dark' ? '#374151' : '#e5e7eb'} !important;
+                }
+                .custom-leaflet-popup .leaflet-popup-close-button {
+                    color: ${theme === 'dark' ? '#9ca3af' : '#4b5563'} !important;
+                    padding: 8px 12px 8px 8px !important;
+                }
+                
+                /* Testi interni con colori a contrasto forzato */
+                .custom-leaflet-popup h4 {
+                    color: ${theme === 'dark' ? '#ffffff' : '#111827'} !important;
+                }
+                .custom-leaflet-popup .subtitle-text {
+                    color: ${theme === 'dark' ? '#9ca3af' : '#6b7280'} !important;
+                }
+                .custom-leaflet-popup .rating-text {
+                    color: ${theme === 'dark' ? '#34d399' : '#047857'} !important;
+                }
+                
+                /* Badges personalizzati in base al tema */
+                .custom-leaflet-popup .badge-tende {
+                    background-color: ${theme === 'dark' ? 'rgba(6, 78, 59, 0.3)' : '#f0fdf4'} !important;
+                    color: ${theme === 'dark' ? '#34d399' : '#15803d'} !important;
+                    border-color: ${theme === 'dark' ? 'rgba(6, 95, 70, 0.6)' : '#bbf7d0'} !important;
+                }
+                .custom-leaflet-popup .badge-letti {
+                    background-color: ${theme === 'dark' ? 'rgba(127, 29, 29, 0.3)' : '#fef2f2'} !important;
+                    color: ${theme === 'dark' ? '#f87171' : '#b91c1c'} !important;
+                    border-color: ${theme === 'dark' ? 'rgba(153, 27, 27, 0.6)' : '#fecaca'} !important;
+                }
+                .custom-leaflet-popup .badge-disabili {
+                    background-color: ${theme === 'dark' ? 'rgba(88, 28, 135, 0.3)' : '#faf5ff'} !important;
+                    color: ${theme === 'dark' ? '#c084fc' : '#6b21a8'} !important;
+                    border-color: ${theme === 'dark' ? 'rgba(107, 33, 168, 0.6)' : '#e9d5ff'} !important;
+                }
+                
+                /* Pulsante Apri Scheda a contrasto elevato */
+                .custom-leaflet-popup .apri-scheda-btn {
+                    color: #ffffff !important;
+                    background-color: #2b7a43 !important; /* Scout green */
+                }
+                .custom-leaflet-popup .apri-scheda-btn:hover {
+                    background-color: #1f562f !important;
+                }
+            `}</style>
             <div
                 id="scout-interactive-map"
                 ref={mapRef}
