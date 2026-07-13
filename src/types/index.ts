@@ -219,6 +219,7 @@ export interface Location {
     hasGreenSpace: boolean;
     hasEquippedKitchen: boolean; // Renamed from hasCookware
     hasPoles: boolean;
+    hasDisabledAccess: boolean;
 
     // Attenzioni (Precautions)
     hasPastures?: boolean;

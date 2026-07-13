@@ -50,6 +50,7 @@ export default function AddLocation() {
         hasGreenSpace: false,
         hasEquippedKitchen: false,
         hasPoles: false,
+        hasDisabledAccess: false,
         otherLogistics: '',
 
         // Attenzioni
@@ -115,6 +116,7 @@ export default function AddLocation() {
                         hasGreenSpace: found.hasGreenSpace,
                         hasEquippedKitchen: found.hasEquippedKitchen,
                         hasPoles: found.hasPoles,
+                        hasDisabledAccess: found.hasDisabledAccess || false,
                         otherLogistics: found.otherLogistics || '',
                         hasPastures: found.hasPastures || false,
                         hasInsects: found.hasInsects || false,
@@ -200,6 +202,7 @@ export default function AddLocation() {
             hasGreenSpace: formData.hasGreenSpace,
             hasEquippedKitchen: formData.hasEquippedKitchen,
             hasPoles: formData.hasPoles,
+            hasDisabledAccess: formData.hasDisabledAccess,
             otherLogistics: formData.otherLogistics,
 
             // Attenzioni
@@ -508,6 +511,7 @@ export default function AddLocation() {
                             { key: 'hasGreenSpace', label: 'Ampi spazi verdi' },
                             { key: 'hasEquippedKitchen', label: 'Cucina attrezzata' },
                             { key: 'hasPoles', label: 'Disponibilità paletti' },
+                            { key: 'hasDisabledAccess', label: 'Accessibile disabili ♿' },
                         ].map((item) => (
                             <label key={item.key} className="flex items-center gap-2 p-3 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer">
                                 <input

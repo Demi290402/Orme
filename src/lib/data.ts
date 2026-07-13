@@ -393,6 +393,7 @@ export async function addLocation(location: Omit<Location, 'id' | 'lastUpdatedAt
             has_green_space: location.hasGreenSpace,
             has_equipped_kitchen: location.hasEquippedKitchen,
             has_poles: location.hasPoles,
+            has_disabled_access: location.hasDisabledAccess,
             has_pastures: location.hasPastures,
             has_insects: location.hasInsects,
             has_diseases: location.hasDiseases,
@@ -819,6 +820,7 @@ function convertLocationToSupabaseFormat(location: Partial<Location>): any {
     if (location.hasGreenSpace !== undefined) data.has_green_space = location.hasGreenSpace;
     if (location.hasEquippedKitchen !== undefined) data.has_equipped_kitchen = location.hasEquippedKitchen;
     if (location.hasPoles !== undefined) data.has_poles = location.hasPoles;
+    if (location.hasDisabledAccess !== undefined) data.has_disabled_access = location.hasDisabledAccess;
     if (location.hasPastures !== undefined) data.has_pastures = location.hasPastures;
     if (location.hasInsects !== undefined) data.has_insects = location.hasInsects;
     if (location.hasDiseases !== undefined) data.has_diseases = location.hasDiseases;
@@ -858,6 +860,7 @@ function mapSupabaseLocationToLocation(data: any): Location {
         hasGreenSpace: data.has_green_space,
         hasEquippedKitchen: data.has_equipped_kitchen,
         hasPoles: data.has_poles,
+        hasDisabledAccess: data.has_disabled_access || false,
         hasPastures: data.has_pastures,
         hasInsects: data.has_insects,
         hasDiseases: data.has_diseases,
