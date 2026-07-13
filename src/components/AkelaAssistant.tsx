@@ -15,6 +15,12 @@ interface Message {
     isSystem?: boolean;
 }
 
+const AKELA_SYSTEM_PROMPT = `Sei Akela, il vecchio e saggio lupo solitario del Branco della Rupe di Seeonee (dal Libro della Giungla di Kipling), ed ora sei l'assistente virtuale di "Orme", un'applicazione web per la gestione dei gruppi scout dell'AGESCI.
+Usa un tono estremamente caloroso, saggio, fraterno ed accogliente. Rivolgiti all'utente come "fratellino" o con formule di saluto scout come "Buona caccia!".
+Conosci la storia dello scautismo, la Legge e la Promessa scout, le opere di Sir Robert Baden-Powell (es: "Scautismo per Ragazzi", "Il Libro dei Capi", "La Strada verso il Successo"), e la totalità della terminologia scout (CoCa, branca L/C, E/G, R/S, cerchio, reparto, clan).
+Rispondi in italiano in modo conciso e amichevole (massimo 3-4 frasi, tranne se serve una spiegazione approfondita), usando la formattazione markdown e icone a tema (🐺, ⛺, ⚜️, 📍).
+Non dire mai che sei un modello linguistico AI o che sei creato da OpenAI o altri. Sei Akela, programmato dai Capi di Orme.`;
+
 // Window AI Types
 interface WindowAI {
     languageModel?: {
@@ -843,8 +849,52 @@ export default function AkelaAssistant() {
         // 2. Fallback to NLP Intent Parser
         const parsed = parseIntent(textToSend);
         
-        // 3. If fallback and online, try Wikipedia search
+        // 3. If fallback and online, try Pollinations AI
         if (parsed.intent === 'fallback' && typeof navigator !== 'undefined' && navigator.onLine) {
+            try {
+                // Limit message history to last 6 messages (3 turns) to conserve bandwidth/context size
+                const historySlice = messages.slice(-6).map(m => ({
+                    role: m.sender === 'akela' ? 'assistant' : 'user',
+                    content: m.text
+                }));
+
+                const apiMessages = [
+                    { role: 'system', content: AKELA_SYSTEM_PROMPT },
+                    ...historySlice,
+                    { role: 'user', content: textToSend }
+                ];
+
+                const response = await fetch('https://text.pollinations.ai/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        messages: apiMessages,
+                        model: 'openai', // GPT-4o-mini
+                        jsonMode: false
+                    })
+                });
+
+                if (response.ok) {
+                    const aiReply = await response.text();
+                    if (aiReply && aiReply.trim().length > 0) {
+                        setTimeout(() => {
+                            const akelaMsg: Message = {
+                                id: crypto.randomUUID(),
+                                sender: 'akela',
+                                text: aiReply.trim()
+                            };
+                            setMessages(prev => [...prev, akelaMsg]);
+                            setIsTyping(false);
+                            setPendingLearning(null);
+                        }, 800);
+                        return;
+                    }
+                }
+            } catch (err) {
+                console.error("Errore richiamando Pollinations AI:", err);
+            }
+
+            // 3.b Fallback to Wikipedia search if Pollinations AI failed or returned empty
             const wikiReply = await fetchWikipediaSummary(textToSend);
             if (wikiReply) {
                 setTimeout(() => {
