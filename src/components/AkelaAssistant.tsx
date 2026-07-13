@@ -46,6 +46,7 @@ export default function AkelaAssistant() {
     });
     const [pendingLearning, setPendingLearning] = useState<{ term: string; definition: string } | null>(null);
     const [lastTopic, setLastTopic] = useState<string | null>(null);
+    const [pendingRedirect, setPendingRedirect] = useState<{ path: string; label: string } | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
     const [isTyping, setIsTyping] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -275,6 +276,20 @@ export default function AkelaAssistant() {
             console.error("Errore ricerca Wikipedia:", err);
             return null;
         }
+    };
+
+    const getPageLabel = (path: string): string => {
+        if (path === '/add') return 'Aggiungi Luogo';
+        if (path === '/verbali/nuovo') return 'Nuovo Verbale';
+        if (path === '/verbali') return 'Archivio Verbali';
+        if (path === '/calendario') return 'Calendario Eventi';
+        if (path === '/lista-attesa') return 'Lista d\'Attesa';
+        if (path === '/inventario') return 'Inventario';
+        if (path === '/bilancio') return 'Bilancio';
+        if (path === '/profile') return 'Profilo Socio';
+        if (path === '/settings') return 'Impostazioni';
+        if (path.startsWith('/location/')) return 'Dettaglio Luogo';
+        return 'Sezione Richiesta';
     };
 
     // NLP Intent Parser
@@ -613,10 +628,7 @@ export default function AkelaAssistant() {
                 setPendingLearning(null);
 
                 if (dbResult.path) {
-                    setTimeout(() => {
-                        navigate(dbResult.path!);
-                        setIsOpen(false);
-                    }, 1500);
+                    setPendingRedirect({ path: dbResult.path, label: getPageLabel(dbResult.path) });
                 }
             }, 800);
             return;
@@ -705,12 +717,8 @@ export default function AkelaAssistant() {
             setMessages(prev => [...prev, akelaMsg]);
             setIsTyping(false);
 
-            // Execute redirect if available
             if (parsed.path) {
-                setTimeout(() => {
-                    navigate(parsed.path!);
-                    setIsOpen(false);
-                }, 1500);
+                setPendingRedirect({ path: parsed.path, label: getPageLabel(parsed.path) });
             }
         }, 800);
     };
@@ -904,6 +912,33 @@ export default function AkelaAssistant() {
                                         className="px-3 py-1.5 bg-gray-150 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-[10px] font-black rounded-lg hover:bg-gray-205 dark:hover:bg-gray-705 active:scale-95 transition-all cursor-pointer"
                                     >
                                         Annulla
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {pendingRedirect && (
+                            <div className="p-3 bg-scout-green/10 dark:bg-emerald-955/20 border-t border-gray-150 dark:border-gray-800 flex flex-col gap-2 shrink-0 animate-in fade-in duration-200">
+                                <p className="text-[10px] text-gray-700 dark:text-gray-300 font-bold leading-normal">
+                                    🐺 Vuoi che ti accompagni alla sezione <span className="text-scout-green-dark dark:text-scout-green-light font-extrabold">"{pendingRedirect.label}"</span>?
+                                </p>
+                                <div className="flex gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            navigate(pendingRedirect.path);
+                                            setPendingRedirect(null);
+                                        }}
+                                        className="flex-1 py-1.5 bg-scout-green dark:bg-scout-green-dark text-white text-[10px] font-black rounded-lg hover:opacity-90 active:scale-95 transition-all text-center cursor-pointer"
+                                    >
+                                        Sì, vai
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setPendingRedirect(null)}
+                                        className="px-3 py-1.5 bg-gray-150 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-[10px] font-black rounded-lg hover:bg-gray-205 dark:hover:bg-gray-705 active:scale-95 transition-all cursor-pointer"
+                                    >
+                                        No, rimani qui
                                     </button>
                                 </div>
                             </div>
