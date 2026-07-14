@@ -175,55 +175,6 @@ export default function AddLocation() {
 
         setIsSubmitting(true);
 
-        let finalCoordinates = undefined;
-        if ((formData as any).latitude && (formData as any).longitude) {
-            finalCoordinates = {
-                lat: parseFloat((formData as any).latitude),
-                lng: parseFloat((formData as any).longitude)
-            };
-        } else {
-            // Attempt auto geocoding via Nominatim
-            try {
-                const queryStr = `${formData.address ? formData.address + ', ' : ''}${formData.commune}, ${formData.region}, Italia`;
-                const response = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(queryStr)}&format=json&limit=1`, {
-                    headers: {
-                        'Accept-Language': 'it',
-                        'User-Agent': 'OrmeScoutApp/1.0'
-                    }
-                });
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data && data.length > 0) {
-                        finalCoordinates = {
-                            lat: parseFloat(data[0].lat),
-                            lng: parseFloat(data[0].lon)
-                        };
-                    }
-                }
-
-                if (!finalCoordinates) {
-                    const fallbackQueryStr = `${formData.commune}, ${formData.region}, Italia`;
-                    const fallbackResponse = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(fallbackQueryStr)}&format=json&limit=1`, {
-                        headers: {
-                            'Accept-Language': 'it',
-                            'User-Agent': 'OrmeScoutApp/1.0'
-                        }
-                    });
-                    if (fallbackResponse.ok) {
-                        const fallbackData = await fallbackResponse.json();
-                        if (fallbackData && fallbackData.length > 0) {
-                            finalCoordinates = {
-                                lat: parseFloat(fallbackData[0].lat),
-                                lng: parseFloat(fallbackData[0].lon)
-                            };
-                        }
-                    }
-                }
-            } catch (geocodeErr) {
-                console.error("Nominatim geocoding failed, leaving coordinates undefined:", geocodeErr);
-            }
-        }
-
         const finalRestrictions = [...formData.restrictions];
         if (formData.otherRestrictionInput.trim()) {
             finalRestrictions.push(formData.otherRestrictionInput.trim());
@@ -263,7 +214,10 @@ export default function AddLocation() {
             otherAttention: formData.otherAttention,
 
             // Coordinates
-            coordinates: finalCoordinates,
+            coordinates: (formData as any).latitude && (formData as any).longitude ? {
+                lat: parseFloat((formData as any).latitude),
+                lng: parseFloat((formData as any).longitude)
+            } : undefined,
 
             quickNote: formData.quickNote,
             description: formData.description,

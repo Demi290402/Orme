@@ -8,6 +8,12 @@ interface InteractiveMapProps {
     locations: Location[];
 }
 
+interface ResolvedLocation {
+    location: Location;
+    lat: number;
+    lng: number;
+}
+
 const loadScript = (src: string): Promise<void> => {
     return new Promise((resolve, reject) => {
         if (document.querySelector(`script[src="${src}"]`)) {
@@ -47,6 +53,7 @@ export default function InteractiveMap({ locations }: InteractiveMapProps) {
     const markerClusterGroupRef = useRef<any>(null);
     const [libLoaded, setLibLoaded] = useState(false);
     const [loadError, setLoadError] = useState(false);
+    const [resolvedList, setResolvedList] = useState<ResolvedLocation[]>([]);
 
     // 1. Dynamic load Leaflet and MarkerCluster CDNs
     useEffect(() => {
@@ -70,7 +77,141 @@ export default function InteractiveMap({ locations }: InteractiveMapProps) {
             });
     }, []);
 
-    // 2. Capture dynamically created popup links and route using React Router
+    // 2. Resolve coordinates from Direct fields, Maps URLs or Geocoding Fallbacks
+    useEffect(() => {
+        if (!libLoaded) return;
+
+        let active = true;
+
+        const resolveAll = async () => {
+            const list: ResolvedLocation[] = [];
+            const pendingGeocodes: Location[] = [];
+
+            // First pass: resolve instantly via coordinates or parsed Google Maps link
+            locations.forEach((loc) => {
+                // a. Direct coordinates
+                if (loc.coordinates?.lat && loc.coordinates?.lng) {
+                    list.push({
+                        location: loc,
+                        lat: Number(loc.coordinates.lat),
+                        lng: Number(loc.coordinates.lng)
+                    });
+                    return;
+                }
+
+                // b. Parse Google Maps Link
+                if (loc.googleMapsLink) {
+                    const match1 = loc.googleMapsLink.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+                    if (match1) {
+                        list.push({ location: loc, lat: parseFloat(match1[1]), lng: parseFloat(match1[2]) });
+                        return;
+                    }
+                    const match2 = loc.googleMapsLink.match(/[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/);
+                    if (match2) {
+                        list.push({ location: loc, lat: parseFloat(match2[1]), lng: parseFloat(match2[2]) });
+                        return;
+                    }
+                    const match3 = loc.googleMapsLink.match(/[?&]ll=(-?\d+\.\d+),(-?\d+\.\d+)/);
+                    if (match3) {
+                        list.push({ location: loc, lat: parseFloat(match3[1]), lng: parseFloat(match3[2]) });
+                        return;
+                    }
+                }
+
+                // c. Otherwise, schedule for geocoding
+                pendingGeocodes.push(loc);
+            });
+
+            // Set the instantly resolved markers first
+            if (active) {
+                setResolvedList([...list]);
+            }
+
+            // Second pass: resolve pending geocoding (one by one to respect Nominatim usage policy)
+            for (const loc of pendingGeocodes) {
+                if (!active) break;
+
+                const queryParts = [loc.address, loc.commune, loc.region, 'Italia'];
+                const query = queryParts.filter(val => val && val.trim() !== '').join(', ');
+
+                const cacheKey = `geocode_${btoa(unescape(encodeURIComponent(query)))}`;
+                const cached = sessionStorage.getItem(cacheKey);
+
+                if (cached) {
+                    try {
+                        const coords = JSON.parse(cached);
+                        list.push({ location: loc, lat: coords.lat, lng: coords.lng });
+                        if (active) setResolvedList([...list]);
+                        continue;
+                    } catch (_) {}
+                }
+
+                // Stagger requests to avoid spamming Nominatim (requires 1 sec between calls)
+                await new Promise((resolve) => setTimeout(resolve, 1200));
+
+                try {
+                    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`, {
+                        headers: {
+                            'User-Agent': 'OrmeScoutApp/1.0 (contact: appormescout@gmail.com)'
+                        }
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data && data[0]) {
+                            const coords = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+                            sessionStorage.setItem(cacheKey, JSON.stringify(coords));
+                            list.push({ location: loc, lat: coords.lat, lng: coords.lng });
+                            if (active) setResolvedList([...list]);
+                            continue;
+                        }
+                    }
+                } catch (err) {
+                    console.warn("Geocoding failed for query:", query, err);
+                }
+
+                // Ultimate fallback: Geocode the Commune and Region centre
+                const fallbackQuery = `${loc.commune}, ${loc.region}, Italia`;
+                const fallbackCacheKey = `geocode_${btoa(unescape(encodeURIComponent(fallbackQuery)))}`;
+                const fallbackCached = sessionStorage.getItem(fallbackCacheKey);
+
+                if (fallbackCached) {
+                    try {
+                        const coords = JSON.parse(fallbackCached);
+                        list.push({ location: loc, lat: coords.lat, lng: coords.lng });
+                        if (active) setResolvedList([...list]);
+                        continue;
+                    } catch (_) {}
+                }
+
+                try {
+                    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fallbackQuery)}&limit=1`, {
+                        headers: {
+                            'User-Agent': 'OrmeScoutApp/1.0 (contact: appormescout@gmail.com)'
+                        }
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data && data[0]) {
+                            const coords = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+                            sessionStorage.setItem(fallbackCacheKey, JSON.stringify(coords));
+                            list.push({ location: loc, lat: coords.lat, lng: coords.lng });
+                            if (active) setResolvedList([...list]);
+                        }
+                    }
+                } catch (err) {
+                    console.warn("Geocoding fallback failed for:", fallbackQuery, err);
+                }
+            }
+        };
+
+        resolveAll();
+
+        return () => {
+            active = false;
+        };
+    }, [libLoaded, locations]);
+
+    // 3. Capture dynamically created popup links and route using React Router
     useEffect(() => {
         const mapEl = mapRef.current;
         if (!mapEl) return;
@@ -93,7 +234,7 @@ export default function InteractiveMap({ locations }: InteractiveMapProps) {
         };
     }, [navigate]);
 
-    // 3. Initialize Map and manage tile layers & markers
+    // 4. Initialize Map and manage tile layers & markers
     useEffect(() => {
         if (!libLoaded || !mapRef.current) return;
         const L = (window as any).L;
@@ -120,9 +261,7 @@ export default function InteractiveMap({ locations }: InteractiveMapProps) {
             ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
             : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
 
-        const tileAttribution = theme === 'dark'
-            ? '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-            : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
+        const tileAttribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
 
         tileLayerRef.current = L.tileLayer(tileUrl, {
             attribution: tileAttribution,
@@ -147,82 +286,75 @@ export default function InteractiveMap({ locations }: InteractiveMapProps) {
             }
         });
 
-        console.log("InteractiveMap - rendering markers. Total locations received:", locations.length);
-        const validCoordsCount = locations.filter(l => l.coordinates?.lat && l.coordinates?.lng).length;
-        console.log("InteractiveMap - locations with valid coordinates:", validCoordsCount);
-
-        // Add pins for locations with valid coordinates
-        locations.forEach((loc) => {
-            if (loc.coordinates?.lat && loc.coordinates?.lng) {
-                // Determine icon HTML based on characteristics
-                let iconHtml = '';
-                if (loc.hasTents) {
-                    iconHtml = `
-                        <div class="flex items-center justify-center w-8 h-8 rounded-full bg-scout-green border-2 border-white dark:border-gray-800 shadow-md text-white hover:scale-[1.1] transition-transform">
-                            🏕️
-                        </div>
-                    `;
-                } else if (loc.beds && loc.beds > 0) {
-                    iconHtml = `
-                        <div class="flex items-center justify-center w-8 h-8 rounded-full bg-red-500 border-2 border-white dark:border-gray-800 shadow-md text-white hover:scale-[1.1] transition-transform">
-                            🏠
-                        </div>
-                    `;
-                } else {
-                    iconHtml = `
-                        <div class="flex items-center justify-center w-8 h-8 rounded-full bg-scout-blue border-2 border-white dark:border-gray-800 shadow-md text-white hover:scale-[1.1] transition-transform">
-                            ⚜️
-                        </div>
-                    `;
-                }
-
-                const customIcon = L.divIcon({
-                    html: iconHtml,
-                    className: 'custom-location-pin',
-                    iconSize: L.point(32, 32),
-                    iconAnchor: L.point(16, 16)
-                });
-
-                // Popup content card
-                const popupContent = `
-                    <div class="p-2 font-sans max-w-[240px] text-gray-900 dark:text-white rounded-2xl">
-                        <h4 class="font-extrabold text-sm mb-1 text-gray-900 dark:text-gray-100">${loc.name}</h4>
-                        <p class="subtitle-text text-[10px] text-gray-400 uppercase tracking-wider mb-2 font-bold">${loc.commune}, ${loc.region}</p>
-                        <div class="flex items-center gap-1.5 mb-3">
-                            <span class="rating-text text-xs font-black text-scout-green-dark dark:text-emerald-400">${loc.avgRating > 0 ? Number(loc.avgRating).toFixed(1) : '—'} ⭐</span>
-                            <span class="text-[9px] text-gray-400 font-semibold uppercase">(${loc.reviewsCount} orme)</span>
-                        </div>
-                        <div class="flex flex-wrap gap-1 mb-4">
-                            ${loc.hasTents ? '<span class="badge-tende text-[8px] font-bold px-1.5 py-0.5 rounded border">🏕️ Tende</span>' : ''}
-                            ${loc.beds ? `<span class="badge-letti text-[8px] font-bold px-1.5 py-0.5 rounded border">🏠 ${loc.beds} Letti</span>` : ''}
-                            ${loc.hasDisabledAccess ? '<span class="badge-disabili text-[8px] font-bold px-1.5 py-0.5 rounded border">♿ Disabili</span>' : ''}
-                        </div>
-                        <a href="/location/${loc.id}" class="apri-scheda-btn block text-center w-full text-white text-xs font-bold py-2.5 rounded-xl shadow-md transition-all select-none">
-                            Apri Scheda
-                        </a>
+        // Add pins from resolved list
+        resolvedList.forEach(({ location: loc, lat, lng }) => {
+            // Determine icon HTML based on characteristics
+            let iconHtml = '';
+            if (loc.hasTents) {
+                iconHtml = `
+                    <div class="flex items-center justify-center w-8 h-8 rounded-full bg-scout-green border-2 border-white dark:border-gray-800 shadow-md text-white hover:scale-[1.1] transition-transform">
+                        🏕️
                     </div>
                 `;
-
-                const marker = L.marker([loc.coordinates.lat, loc.coordinates.lng], { icon: customIcon })
-                    .bindPopup(popupContent, {
-                        maxWidth: 250,
-                        className: 'custom-leaflet-popup'
-                    });
-
-                markers.addLayer(marker);
+            } else if (loc.beds && loc.beds > 0) {
+                iconHtml = `
+                    <div class="flex items-center justify-center w-8 h-8 rounded-full bg-red-500 border-2 border-white dark:border-gray-800 shadow-md text-white hover:scale-[1.1] transition-transform">
+                        🏠
+                    </div>
+                `;
+            } else {
+                iconHtml = `
+                    <div class="flex items-center justify-center w-8 h-8 rounded-full bg-scout-blue border-2 border-white dark:border-gray-800 shadow-md text-white hover:scale-[1.1] transition-transform">
+                        ⚜️
+                    </div>
+                `;
             }
+
+            const customIcon = L.divIcon({
+                html: iconHtml,
+                className: 'custom-location-pin',
+                iconSize: L.point(32, 32),
+                iconAnchor: L.point(16, 16)
+            });
+
+            // Popup content card
+            const popupContent = `
+                <div class="p-2 font-sans max-w-[240px] text-gray-900 dark:text-white rounded-2xl">
+                    <h4 class="font-extrabold text-sm mb-1 text-gray-900 dark:text-gray-100">${loc.name}</h4>
+                    <p class="text-[10px] text-gray-400 uppercase tracking-wider mb-2 font-bold">${loc.commune}, ${loc.region}</p>
+                    <div class="flex items-center gap-1.5 mb-3">
+                        <span class="text-xs font-black text-scout-green-dark dark:text-emerald-400">${loc.avgRating > 0 ? Number(loc.avgRating).toFixed(1) : '—'} ⭐</span>
+                        <span class="text-[9px] text-gray-400 font-semibold uppercase">(${loc.reviewsCount} orme)</span>
+                    </div>
+                    <div class="flex flex-wrap gap-1 mb-4">
+                        ${loc.hasTents ? '<span class="text-[8px] font-bold bg-green-50 dark:bg-emerald-950/20 text-green-700 dark:text-emerald-400 px-1.5 py-0.5 rounded border border-green-100 dark:border-emerald-800">🏕️ Tende</span>' : ''}
+                        ${loc.beds ? `<span class="text-[8px] font-bold bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 px-1.5 py-0.5 rounded border border-red-100 dark:border-red-800">🏠 ${loc.beds} Letti</span>` : ''}
+                        ${loc.hasDisabledAccess ? '<span class="text-[8px] font-bold bg-purple-50 dark:bg-purple-950/20 text-purple-700 dark:text-purple-400 px-1.5 py-0.5 rounded border border-purple-100 dark:border-purple-800">♿ Disabili</span>' : ''}
+                    </div>
+                    <a href="/location/${loc.id}" class="block text-center w-full bg-scout-green text-white text-xs font-bold py-2.5 rounded-xl shadow-md hover:bg-scout-green-dark transition-all select-none">
+                        Apri Scheda
+                    </a>
+                </div>
+            `;
+
+            const marker = L.marker([lat, lng], { icon: customIcon })
+                .bindPopup(popupContent, {
+                    maxWidth: 250,
+                    className: 'custom-leaflet-popup'
+                });
+
+            markers.addLayer(marker);
         });
 
         markers.addTo(map);
         markerClusterGroupRef.current = markers;
 
         // Auto zoom-to-bounds of markers if they exist
-        const validCoords = locations.filter(l => l.coordinates?.lat && l.coordinates?.lng);
-        if (validCoords.length > 0) {
-            const bounds = L.latLngBounds(validCoords.map(l => [l.coordinates!.lat, l.coordinates!.lng]));
+        if (resolvedList.length > 0) {
+            const bounds = L.latLngBounds(resolvedList.map(r => [r.lat, r.lng]));
             map.fitBounds(bounds, { padding: [30, 30] });
         }
-    }, [libLoaded, locations, theme]);
+    }, [libLoaded, resolvedList, theme]);
 
     // Clean up map instance on unmount
     useEffect(() => {
@@ -257,62 +389,6 @@ export default function InteractiveMap({ locations }: InteractiveMapProps) {
 
     return (
         <div className="relative w-full font-sans">
-            <style>{`
-                /* Stili personalizzati per i popup Leaflet */
-                .custom-leaflet-popup .leaflet-popup-content-wrapper {
-                    background: ${theme === 'dark' ? '#1f2937' : '#ffffff'} !important;
-                    color: ${theme === 'dark' ? '#f3f4f6' : '#111827'} !important;
-                    border-radius: 1.5rem !important;
-                    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.15) !important;
-                    border: 1px solid ${theme === 'dark' ? '#374151' : '#e5e7eb'} !important;
-                    padding: 4px !important;
-                }
-                .custom-leaflet-popup .leaflet-popup-tip {
-                    background: ${theme === 'dark' ? '#1f2937' : '#ffffff'} !important;
-                    border: 1px solid ${theme === 'dark' ? '#374151' : '#e5e7eb'} !important;
-                }
-                .custom-leaflet-popup .leaflet-popup-close-button {
-                    color: ${theme === 'dark' ? '#9ca3af' : '#4b5563'} !important;
-                    padding: 8px 12px 8px 8px !important;
-                }
-                
-                /* Testi interni con colori a contrasto forzato */
-                .custom-leaflet-popup h4 {
-                    color: ${theme === 'dark' ? '#ffffff' : '#111827'} !important;
-                }
-                .custom-leaflet-popup .subtitle-text {
-                    color: ${theme === 'dark' ? '#9ca3af' : '#6b7280'} !important;
-                }
-                .custom-leaflet-popup .rating-text {
-                    color: ${theme === 'dark' ? '#34d399' : '#047857'} !important;
-                }
-                
-                /* Badges personalizzati in base al tema */
-                .custom-leaflet-popup .badge-tende {
-                    background-color: ${theme === 'dark' ? 'rgba(6, 78, 59, 0.3)' : '#f0fdf4'} !important;
-                    color: ${theme === 'dark' ? '#34d399' : '#15803d'} !important;
-                    border-color: ${theme === 'dark' ? 'rgba(6, 95, 70, 0.6)' : '#bbf7d0'} !important;
-                }
-                .custom-leaflet-popup .badge-letti {
-                    background-color: ${theme === 'dark' ? 'rgba(127, 29, 29, 0.3)' : '#fef2f2'} !important;
-                    color: ${theme === 'dark' ? '#f87171' : '#b91c1c'} !important;
-                    border-color: ${theme === 'dark' ? 'rgba(153, 27, 27, 0.6)' : '#fecaca'} !important;
-                }
-                .custom-leaflet-popup .badge-disabili {
-                    background-color: ${theme === 'dark' ? 'rgba(88, 28, 135, 0.3)' : '#faf5ff'} !important;
-                    color: ${theme === 'dark' ? '#c084fc' : '#6b21a8'} !important;
-                    border-color: ${theme === 'dark' ? 'rgba(107, 33, 168, 0.6)' : '#e9d5ff'} !important;
-                }
-                
-                /* Pulsante Apri Scheda a contrasto elevato */
-                .custom-leaflet-popup .apri-scheda-btn {
-                    color: #ffffff !important;
-                    background-color: #2b7a43 !important; /* Scout green */
-                }
-                .custom-leaflet-popup .apri-scheda-btn:hover {
-                    background-color: #1f562f !important;
-                }
-            `}</style>
             <div
                 id="scout-interactive-map"
                 ref={mapRef}
