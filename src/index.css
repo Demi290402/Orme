@@ -123,3 +123,48 @@
     margin: 0;
   }
 }
+
+/* Leaflet Custom Style Overrides (Light & Dark Theme Compliance) */
+.leaflet-popup-content-wrapper {
+  border-radius: 1.5rem !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+  padding: 4px !important;
+}
+
+.dark .leaflet-popup-content-wrapper {
+  background-color: #1f2937 !important; /* bg-gray-800 */
+  color: #f3f4f6 !important; /* text-gray-100 */
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5) !important;
+}
+
+.dark .leaflet-popup-tip {
+  background-color: #1f2937 !important; /* bg-gray-800 */
+}
+
+.dark .leaflet-popup-close-button {
+  color: #9ca3af !important; /* text-gray-400 */
+  padding: 8px 8px 0 0 !important;
+}
+
+.dark .leaflet-popup-close-button:hover {
+  color: #f3f4f6 !important; /* text-gray-100 */
+  background: transparent !important;
+}
+
+/* Leaflet dark mode zoom controls */
+.dark .leaflet-bar {
+  border: 1px solid #374151 !important; /* border-gray-700 */
+}
+
+.dark .leaflet-control-zoom-in,
+.dark .leaflet-control-zoom-out {
+  background-color: #1f2937 !important; /* bg-gray-800 */
+  color: #f3f4f6 !important; /* text-gray-100 */
+  border-bottom: 1px solid #374151 !important;
+}
+
+.dark .leaflet-control-zoom-in:hover,
+.dark .leaflet-control-zoom-out:hover {
+  background-color: #374151 !important; /* bg-gray-700 */
+  color: #ffffff !important;
+}
