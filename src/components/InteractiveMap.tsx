@@ -6,7 +6,6 @@ if (typeof window !== 'undefined') {
 }
 import 'leaflet.markercluster';
 
-import { useTheme } from '@/context/ThemeContext';
 import { Location } from '@/types';
 import { MapPin, AlertTriangle, ChevronRight } from 'lucide-react';
 
@@ -14,19 +13,9 @@ interface InteractiveMapProps {
     locations: Location[];
 }
 
-// Configurazione tile layer basata sul tema
-function getTileConfig(theme: string) {
-    if (theme === 'dark') {
-        return {
-            url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        };
-    }
-    return {
-        url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    };
-}
+// Configurazione tile layer OpenStreetMap (100% gratuito, nessuna API key richiesta)
+const OSM_TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+const OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors';
 
 // Crea l'icona personalizzata per il marker
 function createLocationIcon(loc: Location): L.DivIcon {
@@ -91,7 +80,6 @@ function buildPopupHtml(loc: Location): string {
 
 export default function InteractiveMap({ locations }: InteractiveMapProps) {
     const navigate = useNavigate();
-    const { theme } = useTheme();
 
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapInstanceRef = useRef<L.Map | null>(null);
@@ -130,9 +118,8 @@ export default function InteractiveMap({ locations }: InteractiveMapProps) {
                 zoomControl: true,
             });
 
-            const tileConfig = getTileConfig(theme);
-            const tileLayer = L.tileLayer(tileConfig.url, {
-                attribution: tileConfig.attribution,
+            const tileLayer = L.tileLayer(OSM_TILE_URL, {
+                attribution: OSM_ATTRIBUTION,
                 maxZoom: 19,
             }).addTo(map);
 
@@ -167,24 +154,6 @@ export default function InteractiveMap({ locations }: InteractiveMapProps) {
             }
         };
     }, []);
-
-    // 2. Aggiorna TileLayer al cambio tema
-    useEffect(() => {
-        const map = mapInstanceRef.current;
-        if (!map) return;
-
-        if (tileLayerRef.current) {
-            map.removeLayer(tileLayerRef.current);
-        }
-
-        const tileConfig = getTileConfig(theme);
-        const newLayer = L.tileLayer(tileConfig.url, {
-            attribution: tileConfig.attribution,
-            maxZoom: 19,
-        }).addTo(map);
-
-        tileLayerRef.current = newLayer;
-    }, [theme]);
 
     // 3. Aggiorna marker sulla mappa
     useEffect(() => {

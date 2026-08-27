@@ -171,3 +171,12 @@
   background-color: #374151 !important; /* bg-gray-700 */
   color: #ffffff !important;
 }
+
+/* OpenStreetMap Dark Mode Tile Filter */
+.leaflet-tile-pane {
+  transition: filter 0.3s ease;
+}
+
+.dark .leaflet-tile-pane {
+  filter: brightness(0.65) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.75);
+}
