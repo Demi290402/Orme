@@ -1,403 +1,295 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import MarkerClusterGroup from '@changey/react-leaflet-markercluster';
+import L from 'leaflet';
 import { useTheme } from '@/context/ThemeContext';
 import { Location } from '@/types';
-import { Footprints } from 'lucide-react';
+import { MapPin, AlertTriangle, Tent, BedDouble, Accessibility, Star, ChevronRight } from 'lucide-react';
+
+// Fix per l'icona di default di Leaflet con Vite/Webpack (asset bundling)
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconUrl: markerIcon,
+    iconRetinaUrl: markerIcon2x,
+    shadowUrl: markerShadow,
+});
 
 interface InteractiveMapProps {
     locations: Location[];
 }
 
-interface ResolvedLocation {
-    location: Location;
-    lat: number;
-    lng: number;
+// Determina tile URL e attribution in base al tema
+function getTileConfig(theme: string) {
+    if (theme === 'dark') {
+        return {
+            url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        };
+    }
+    return {
+        url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    };
 }
 
-const loadScript = (src: string): Promise<void> => {
-    return new Promise((resolve, reject) => {
-        if (document.querySelector(`script[src="${src}"]`)) {
-            resolve();
-            return;
-        }
-        const script = document.createElement('script');
-        script.src = src;
-        script.async = true;
-        script.onload = () => resolve();
-        script.onerror = () => reject();
-        document.body.appendChild(script);
-    });
-};
+// Crea un'icona personalizzata in base al tipo di luogo
+function createLocationIcon(loc: Location): L.DivIcon {
+    let bg = 'bg-scout-blue';
+    let emoji = '⚜️';
+    if (loc.hasTents) { bg = 'bg-scout-green'; emoji = '🏕️'; }
+    else if (loc.beds && loc.beds > 0) { bg = 'bg-red-500'; emoji = '🏠'; }
 
-const loadStyle = (href: string): Promise<void> => {
-    return new Promise((resolve, reject) => {
-        if (document.querySelector(`link[href="${href}"]`)) {
-            resolve();
-            return;
-        }
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = href;
-        link.onload = () => resolve();
-        link.onerror = () => reject();
-        document.head.appendChild(link);
+    return L.divIcon({
+        html: `<div class="flex items-center justify-center w-9 h-9 rounded-full ${bg} border-2 border-white shadow-lg text-base leading-none">${emoji}</div>`,
+        className: 'custom-location-pin',
+        iconSize: L.point(36, 36),
+        iconAnchor: L.point(18, 18),
+        popupAnchor: L.point(0, -20),
     });
-};
+}
+
+// Sottocomponente per aggiornare il TileLayer quando cambia il tema
+function DynamicTileLayer() {
+    const { theme } = useTheme();
+    const tile = getTileConfig(theme);
+    return <TileLayer url={tile.url} attribution={tile.attribution} maxZoom={19} />;
+}
+
+// Sottocomponente per adattare la vista ai bounds dei marker
+function FitBounds({ positions }: { positions: [number, number][] }) {
+    const map = useMap();
+    const fitted = useRef(false);
+    useEffect(() => {
+        if (!fitted.current && positions.length > 0) {
+            fitted.current = true;
+            if (positions.length === 1) {
+                map.setView(positions[0], 13);
+            } else {
+                map.fitBounds(L.latLngBounds(positions), { padding: [40, 40] });
+            }
+        }
+    }, [map, positions]);
+    return null;
+}
 
 export default function InteractiveMap({ locations }: InteractiveMapProps) {
     const navigate = useNavigate();
-    const { theme } = useTheme();
-    const mapRef = useRef<HTMLDivElement>(null);
-    const leafletMapInstanceRef = useRef<any>(null);
-    const tileLayerRef = useRef<any>(null);
-    const markerClusterGroupRef = useRef<any>(null);
-    const [libLoaded, setLibLoaded] = useState(false);
-    const [loadError, setLoadError] = useState(false);
-    const [resolvedList, setResolvedList] = useState<ResolvedLocation[]>([]);
+    const [selectedId, setSelectedId] = useState<string | null>(null);
+    const markerRefs = useRef<Record<string, L.Marker>>(({}));
+    const mapRef = useRef<L.Map | null>(null);
 
-    // 1. Dynamic load Leaflet and MarkerCluster CDNs
-    useEffect(() => {
-        Promise.all([
-            loadStyle('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'),
-            loadScript('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js')
-        ])
-            .then(() => {
-                return Promise.all([
-                    loadStyle('https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css'),
-                    loadStyle('https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css'),
-                    loadScript('https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js')
-                ]);
-            })
-            .then(() => {
-                setLibLoaded(true);
-            })
-            .catch((err) => {
-                console.error("Failed to load Leaflet libraries:", err);
-                setLoadError(true);
-            });
-    }, []);
-
-    // 2. Resolve coordinates from Direct fields, Maps URLs or Geocoding Fallbacks
-    useEffect(() => {
-        if (!libLoaded) return;
-
-        let active = true;
-
-        const resolveAll = async () => {
-            const list: ResolvedLocation[] = [];
-            const pendingGeocodes: Location[] = [];
-
-            // First pass: resolve instantly via coordinates or parsed Google Maps link
-            locations.forEach((loc) => {
-                // a. Direct coordinates
-                if (loc.coordinates?.lat && loc.coordinates?.lng) {
-                    list.push({
-                        location: loc,
-                        lat: Number(loc.coordinates.lat),
-                        lng: Number(loc.coordinates.lng)
-                    });
-                    return;
-                }
-
-                // b. Parse Google Maps Link
-                if (loc.googleMapsLink) {
-                    const match1 = loc.googleMapsLink.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
-                    if (match1) {
-                        list.push({ location: loc, lat: parseFloat(match1[1]), lng: parseFloat(match1[2]) });
-                        return;
-                    }
-                    const match2 = loc.googleMapsLink.match(/[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/);
-                    if (match2) {
-                        list.push({ location: loc, lat: parseFloat(match2[1]), lng: parseFloat(match2[2]) });
-                        return;
-                    }
-                    const match3 = loc.googleMapsLink.match(/[?&]ll=(-?\d+\.\d+),(-?\d+\.\d+)/);
-                    if (match3) {
-                        list.push({ location: loc, lat: parseFloat(match3[1]), lng: parseFloat(match3[2]) });
-                        return;
-                    }
-                }
-
-                // c. Otherwise, schedule for geocoding
-                pendingGeocodes.push(loc);
-            });
-
-            // Set the instantly resolved markers first
-            if (active) {
-                setResolvedList([...list]);
-            }
-
-            // Second pass: resolve pending geocoding (one by one to respect Nominatim usage policy)
-            for (const loc of pendingGeocodes) {
-                if (!active) break;
-
-                const queryParts = [loc.address, loc.commune, loc.region, 'Italia'];
-                const query = queryParts.filter(val => val && val.trim() !== '').join(', ');
-
-                const cacheKey = `geocode_${btoa(unescape(encodeURIComponent(query)))}`;
-                const cached = sessionStorage.getItem(cacheKey);
-
-                if (cached) {
-                    try {
-                        const coords = JSON.parse(cached);
-                        list.push({ location: loc, lat: coords.lat, lng: coords.lng });
-                        if (active) setResolvedList([...list]);
-                        continue;
-                    } catch (_) {}
-                }
-
-                // Stagger requests to avoid spamming Nominatim (requires 1 sec between calls)
-                await new Promise((resolve) => setTimeout(resolve, 1200));
-
-                try {
-                    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`, {
-                        headers: {
-                            'User-Agent': 'OrmeScoutApp/1.0 (contact: appormescout@gmail.com)'
-                        }
-                    });
-                    if (res.ok) {
-                        const data = await res.json();
-                        if (data && data[0]) {
-                            const coords = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
-                            sessionStorage.setItem(cacheKey, JSON.stringify(coords));
-                            list.push({ location: loc, lat: coords.lat, lng: coords.lng });
-                            if (active) setResolvedList([...list]);
-                            continue;
-                        }
-                    }
-                } catch (err) {
-                    console.warn("Geocoding failed for query:", query, err);
-                }
-
-                // Ultimate fallback: Geocode the Commune and Region centre
-                const fallbackQuery = `${loc.commune}, ${loc.region}, Italia`;
-                const fallbackCacheKey = `geocode_${btoa(unescape(encodeURIComponent(fallbackQuery)))}`;
-                const fallbackCached = sessionStorage.getItem(fallbackCacheKey);
-
-                if (fallbackCached) {
-                    try {
-                        const coords = JSON.parse(fallbackCached);
-                        list.push({ location: loc, lat: coords.lat, lng: coords.lng });
-                        if (active) setResolvedList([...list]);
-                        continue;
-                    } catch (_) {}
-                }
-
-                try {
-                    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fallbackQuery)}&limit=1`, {
-                        headers: {
-                            'User-Agent': 'OrmeScoutApp/1.0 (contact: appormescout@gmail.com)'
-                        }
-                    });
-                    if (res.ok) {
-                        const data = await res.json();
-                        if (data && data[0]) {
-                            const coords = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
-                            sessionStorage.setItem(fallbackCacheKey, JSON.stringify(coords));
-                            list.push({ location: loc, lat: coords.lat, lng: coords.lng });
-                            if (active) setResolvedList([...list]);
-                        }
-                    }
-                } catch (err) {
-                    console.warn("Geocoding fallback failed for:", fallbackQuery, err);
-                }
-            }
-        };
-
-        resolveAll();
-
-        return () => {
-            active = false;
-        };
-    }, [libLoaded, locations]);
-
-    // 3. Capture dynamically created popup links and route using React Router
-    useEffect(() => {
-        const mapEl = mapRef.current;
-        if (!mapEl) return;
-
-        const handleLinkClick = (e: MouseEvent) => {
-            const target = e.target as HTMLElement;
-            const link = target.closest('a');
-            if (link) {
-                const href = link.getAttribute('href');
-                if (href && href.startsWith('/location/')) {
-                    e.preventDefault();
-                    navigate(href);
-                }
-            }
-        };
-
-        mapEl.addEventListener('click', handleLinkClick);
-        return () => {
-            mapEl.removeEventListener('click', handleLinkClick);
-        };
-    }, [navigate]);
-
-    // 4. Initialize Map and manage tile layers & markers
-    useEffect(() => {
-        if (!libLoaded || !mapRef.current) return;
-        const L = (window as any).L;
-        if (!L) return;
-
-        // Create map if it doesn't exist
-        if (!leafletMapInstanceRef.current) {
-            const map = L.map(mapRef.current, {
-                center: [42.0, 12.5], // Center of Italy
-                zoom: 6,
-                zoomControl: true
-            });
-            leafletMapInstanceRef.current = map;
-        }
-
-        const map = leafletMapInstanceRef.current;
-
-        // Update Tile Layer based on theme (Voyager for Light, Dark Matter for Dark)
-        if (tileLayerRef.current) {
-            map.removeLayer(tileLayerRef.current);
-        }
-
-        const tileUrl = theme === 'dark'
-            ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-            : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
-
-        const tileAttribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
-
-        tileLayerRef.current = L.tileLayer(tileUrl, {
-            attribution: tileAttribution,
-            maxZoom: 19
-        }).addTo(map);
-
-        // Update Markers
-        if (markerClusterGroupRef.current) {
-            map.removeLayer(markerClusterGroupRef.current);
-        }
-
-        const markers = L.markerClusterGroup({
-            showCoverageOnHover: false,
-            zoomToBoundsOnClick: true,
-            iconCreateFunction: function (cluster: any) {
-                const count = cluster.getChildCount();
-                return L.divIcon({
-                    html: `<div class="flex items-center justify-center w-10 h-10 rounded-full bg-scout-green text-white border-4 border-white dark:border-gray-800 font-black shadow-lg text-xs transition-all">${count}</div>`,
-                    className: 'custom-marker-cluster',
-                    iconSize: L.point(40, 40)
-                });
-            }
-        });
-
-        // Add pins from resolved list
-        resolvedList.forEach(({ location: loc, lat, lng }) => {
-            // Determine icon HTML based on characteristics
-            let iconHtml = '';
-            if (loc.hasTents) {
-                iconHtml = `
-                    <div class="flex items-center justify-center w-8 h-8 rounded-full bg-scout-green border-2 border-white dark:border-gray-800 shadow-md text-white hover:scale-[1.1] transition-transform">
-                        🏕️
-                    </div>
-                `;
-            } else if (loc.beds && loc.beds > 0) {
-                iconHtml = `
-                    <div class="flex items-center justify-center w-8 h-8 rounded-full bg-red-500 border-2 border-white dark:border-gray-800 shadow-md text-white hover:scale-[1.1] transition-transform">
-                        🏠
-                    </div>
-                `;
+    // Separa i luoghi con coordinate da quelli senza
+    const { withCoords, withoutCoords } = useMemo(() => {
+        const withCoords: Location[] = [];
+        const withoutCoords: Location[] = [];
+        for (const loc of locations) {
+            const lat = loc.coordinates?.lat;
+            const lng = loc.coordinates?.lng;
+            if (lat != null && lng != null && !isNaN(Number(lat)) && !isNaN(Number(lng))) {
+                withCoords.push(loc);
             } else {
-                iconHtml = `
-                    <div class="flex items-center justify-center w-8 h-8 rounded-full bg-scout-blue border-2 border-white dark:border-gray-800 shadow-md text-white hover:scale-[1.1] transition-transform">
-                        ⚜️
-                    </div>
-                `;
+                withoutCoords.push(loc);
             }
-
-            const customIcon = L.divIcon({
-                html: iconHtml,
-                className: 'custom-location-pin',
-                iconSize: L.point(32, 32),
-                iconAnchor: L.point(16, 16)
-            });
-
-            // Popup content card
-            const popupContent = `
-                <div class="p-2 font-sans max-w-[240px] text-gray-900 dark:text-white rounded-2xl">
-                    <h4 class="font-extrabold text-sm mb-1 text-gray-900 dark:text-gray-100">${loc.name}</h4>
-                    <p class="text-[10px] text-gray-400 uppercase tracking-wider mb-2 font-bold">${loc.commune}, ${loc.region}</p>
-                    <div class="flex items-center gap-1.5 mb-3">
-                        <span class="text-xs font-black text-scout-green-dark dark:text-emerald-400">${loc.avgRating > 0 ? Number(loc.avgRating).toFixed(1) : '—'} ⭐</span>
-                        <span class="text-[9px] text-gray-400 font-semibold uppercase">(${loc.reviewsCount} orme)</span>
-                    </div>
-                    <div class="flex flex-wrap gap-1 mb-4">
-                        ${loc.hasTents ? '<span class="text-[8px] font-bold bg-green-50 dark:bg-emerald-950/20 text-green-700 dark:text-emerald-400 px-1.5 py-0.5 rounded border border-green-100 dark:border-emerald-800">🏕️ Tende</span>' : ''}
-                        ${loc.beds ? `<span class="text-[8px] font-bold bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 px-1.5 py-0.5 rounded border border-red-100 dark:border-red-800">🏠 ${loc.beds} Letti</span>` : ''}
-                        ${loc.hasDisabledAccess ? '<span class="text-[8px] font-bold bg-purple-50 dark:bg-purple-950/20 text-purple-700 dark:text-purple-400 px-1.5 py-0.5 rounded border border-purple-100 dark:border-purple-800">♿ Disabili</span>' : ''}
-                    </div>
-                    <a href="/location/${loc.id}" class="block text-center w-full bg-scout-green text-white text-xs font-bold py-2.5 rounded-xl shadow-md hover:bg-scout-green-dark transition-all select-none">
-                        Apri Scheda
-                    </a>
-                </div>
-            `;
-
-            const marker = L.marker([lat, lng], { icon: customIcon })
-                .bindPopup(popupContent, {
-                    maxWidth: 250,
-                    className: 'custom-leaflet-popup'
-                });
-
-            markers.addLayer(marker);
-        });
-
-        markers.addTo(map);
-        markerClusterGroupRef.current = markers;
-
-        // Auto zoom-to-bounds of markers if they exist
-        if (resolvedList.length > 0) {
-            const bounds = L.latLngBounds(resolvedList.map(r => [r.lat, r.lng]));
-            map.fitBounds(bounds, { padding: [30, 30] });
         }
-    }, [libLoaded, resolvedList, theme]);
+        return { withCoords, withoutCoords };
+    }, [locations]);
 
-    // Clean up map instance on unmount
-    useEffect(() => {
-        return () => {
-            if (leafletMapInstanceRef.current) {
-                leafletMapInstanceRef.current.remove();
-                leafletMapInstanceRef.current = null;
-                tileLayerRef.current = null;
-                markerClusterGroupRef.current = null;
-            }
-        };
-    }, []);
+    const positions = useMemo(
+        () => withCoords.map(loc => [Number(loc.coordinates!.lat), Number(loc.coordinates!.lng)] as [number, number]),
+        [withCoords]
+    );
 
-    if (loadError) {
-        return (
-            <div className="w-full h-[65vh] bg-red-50 dark:bg-red-900/20 border border-red-150 dark:border-red-900/40 rounded-3xl flex flex-col items-center justify-center text-center p-6 gap-2">
-                <span className="text-3xl">⚠️</span>
-                <h4 className="font-bold text-red-800 dark:text-red-300">Errore di caricamento</h4>
-                <p className="text-sm text-red-600 dark:text-red-400 max-w-xs">Impossibile scaricare le mappe. Verifica la tua connessione ad Internet.</p>
-            </div>
-        );
-    }
+    // Cluster icon personalizzata
+    const clusterIconCreateFunction = (cluster: any) => {
+        const count = cluster.getChildCount();
+        return L.divIcon({
+            html: `<div class="flex items-center justify-center w-10 h-10 rounded-full bg-scout-green text-white border-4 border-white shadow-xl font-black text-xs">${count}</div>`,
+            className: 'custom-marker-cluster',
+            iconSize: L.point(40, 40),
+        });
+    };
 
-    if (!libLoaded) {
-        return (
-            <div className="w-full h-[65vh] bg-gray-50 dark:bg-gray-800/50 border border-gray-150 dark:border-gray-700 rounded-3xl flex flex-col items-center justify-center text-center p-6 gap-3 animate-pulse">
-                <Footprints size={40} className="text-scout-green animate-spin" />
-                <h4 className="font-bold text-gray-500 dark:text-gray-400">Caricamento Mappe...</h4>
-            </div>
-        );
-    }
+    // Centra la mappa e apre il popup sul luogo selezionato dalla lista
+    const handleListItemClick = (loc: Location) => {
+        setSelectedId(loc.id);
+        const marker = markerRefs.current[loc.id];
+        const map = mapRef.current;
+        if (marker && map) {
+            const latlng = marker.getLatLng();
+            map.setView(latlng, Math.max(map.getZoom(), 13), { animate: true });
+            setTimeout(() => marker.openPopup(), 350);
+        }
+    };
 
     return (
-        <div className="relative w-full font-sans">
-            <div
-                id="scout-interactive-map"
-                ref={mapRef}
-                className="w-full h-[65vh] md:h-[70vh] rounded-3xl overflow-hidden shadow-sm relative border border-gray-150 dark:border-gray-700 z-10"
-            />
-            {/* Pill Floating Badge (Match Screen) */}
-            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-20 bg-white dark:bg-gray-800 px-6 py-2.5 rounded-full shadow-xl border border-gray-100 dark:border-gray-700 flex items-center gap-2">
-                <span className="w-2.5 h-2.5 bg-scout-green rounded-full animate-pulse" />
-                <span className="text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Mappa Interattiva</span>
+        <div className="relative w-full font-sans flex flex-col gap-3">
+            {/* Avviso luoghi senza coordinate */}
+            {withoutCoords.length > 0 && (
+                <div className="flex items-start gap-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-2xl px-4 py-3">
+                    <AlertTriangle size={16} className="text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                    <p className="text-xs text-amber-700 dark:text-amber-300 font-semibold leading-relaxed">
+                        {withoutCoords.length} {withoutCoords.length === 1 ? 'luogo non ha' : 'luoghi non hanno'} coordinate salvate e {withoutCoords.length === 1 ? 'non viene visualizzato' : 'non vengono visualizzati'} sulla mappa:{' '}
+                        <span className="font-bold">{withoutCoords.map(l => l.name).join(', ')}</span>.
+                    </p>
+                </div>
+            )}
+
+            <div className="flex gap-3">
+                {/* Mappa principale */}
+                <div className="flex-1 min-w-0">
+                    <MapContainer
+                        center={[42.0, 12.5]}
+                        zoom={6}
+                        className="w-full h-[65vh] md:h-[70vh] rounded-3xl overflow-hidden shadow-sm border border-gray-150 dark:border-gray-700 z-10"
+                        zoomControl={true}
+                        ref={mapRef}
+                        // theme-key forzato per evitare problemi di re-mount
+                        key="scout-map"
+                    >
+                        <DynamicTileLayer />
+                        <FitBounds positions={positions} />
+
+                        <MarkerClusterGroup
+                            showCoverageOnHover={false}
+                            zoomToBoundsOnClick={true}
+                            iconCreateFunction={clusterIconCreateFunction}
+                        >
+                            {withCoords.map((loc) => {
+                                const lat = Number(loc.coordinates!.lat);
+                                const lng = Number(loc.coordinates!.lng);
+                                const rating = Number(loc.avgRating);
+                                return (
+                                    <Marker
+                                        key={loc.id}
+                                        position={[lat, lng]}
+                                        icon={createLocationIcon(loc)}
+                                        ref={(ref) => {
+                                            if (ref) markerRefs.current[loc.id] = ref;
+                                        }}
+                                        eventHandlers={{
+                                            click: () => setSelectedId(loc.id),
+                                        }}
+                                    >
+                                        <Popup
+                                            maxWidth={256}
+                                            className="custom-leaflet-popup"
+                                        >
+                                            <div className="p-1 font-sans w-56">
+                                                {/* Header */}
+                                                <h4 className="font-extrabold text-sm text-gray-900 mb-0.5 leading-tight">
+                                                    {loc.name}
+                                                </h4>
+                                                <p className="text-[10px] text-gray-400 uppercase tracking-wider font-bold mb-2">
+                                                    {loc.commune}, {loc.region}
+                                                </p>
+
+                                                {/* Rating */}
+                                                <div className="flex items-center gap-1 mb-2">
+                                                    <Star size={11} className="text-yellow-400 fill-yellow-400" />
+                                                    <span className="text-xs font-black text-gray-800">
+                                                        {rating > 0 ? rating.toFixed(1) : '—'}
+                                                    </span>
+                                                    <span className="text-[9px] text-gray-400 font-semibold">
+                                                        ({loc.reviewsCount} {loc.reviewsCount === 1 ? 'orma' : 'orme'})
+                                                    </span>
+                                                </div>
+
+                                                {/* Badge caratteristiche */}
+                                                <div className="flex flex-wrap gap-1 mb-3">
+                                                    {loc.hasTents && (
+                                                        <span className="inline-flex items-center gap-0.5 text-[9px] font-bold bg-green-50 text-green-700 px-1.5 py-0.5 rounded border border-green-100">
+                                                            <Tent size={9} /> Tende
+                                                        </span>
+                                                    )}
+                                                    {loc.beds && loc.beds > 0 ? (
+                                                        <span className="inline-flex items-center gap-0.5 text-[9px] font-bold bg-red-50 text-red-700 px-1.5 py-0.5 rounded border border-red-100">
+                                                            <BedDouble size={9} /> {loc.beds} letti
+                                                        </span>
+                                                    ) : null}
+                                                    {loc.hasDisabledAccess && (
+                                                        <span className="inline-flex items-center gap-0.5 text-[9px] font-bold bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded border border-purple-100">
+                                                            <Accessibility size={9} /> Disabili
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                {/* CTA */}
+                                                <button
+                                                    onClick={() => navigate(`/location/${loc.id}`)}
+                                                    className="block w-full text-center bg-scout-green hover:bg-scout-green-dark text-white text-xs font-bold py-2 rounded-xl transition-colors cursor-pointer"
+                                                >
+                                                    Apri Scheda
+                                                </button>
+                                            </div>
+                                        </Popup>
+                                    </Marker>
+                                );
+                            })}
+                        </MarkerClusterGroup>
+                    </MapContainer>
+                </div>
+
+                {/* Lista laterale — solo desktop */}
+                {withCoords.length > 0 && (
+                    <div className="hidden md:flex flex-col w-64 shrink-0 h-[70vh] bg-white dark:bg-gray-800 border border-gray-150 dark:border-gray-700 rounded-3xl overflow-hidden shadow-sm">
+                        <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 shrink-0">
+                            <h3 className="font-black text-sm text-gray-900 dark:text-white flex items-center gap-1.5">
+                                <MapPin size={14} className="text-scout-green" />
+                                Luoghi sulla mappa
+                            </h3>
+                            <p className="text-[10px] text-gray-400 dark:text-gray-500 font-semibold mt-0.5">
+                                {withCoords.length} {withCoords.length === 1 ? 'luogo' : 'luoghi'} visualizzati
+                            </p>
+                        </div>
+                        <ul className="flex-1 overflow-y-auto divide-y divide-gray-50 dark:divide-gray-700/50">
+                            {withCoords.map((loc) => {
+                                const isSelected = selectedId === loc.id;
+                                return (
+                                    <li key={loc.id}>
+                                        <button
+                                            onClick={() => handleListItemClick(loc)}
+                                            className={`w-full text-left px-4 py-3 transition-colors flex items-center gap-2 group cursor-pointer ${
+                                                isSelected
+                                                    ? 'bg-scout-green/10 dark:bg-emerald-950/30'
+                                                    : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                                            }`}
+                                        >
+                                            <div className="shrink-0 text-base leading-none">
+                                                {loc.hasTents ? '🏕️' : loc.beds && loc.beds > 0 ? '🏠' : '⚜️'}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className={`text-xs font-bold truncate ${isSelected ? 'text-scout-green-dark dark:text-emerald-400' : 'text-gray-900 dark:text-white'}`}>
+                                                    {loc.name}
+                                                </p>
+                                                <p className="text-[9px] text-gray-400 font-semibold truncate uppercase tracking-wider">
+                                                    {loc.commune}, {loc.region}
+                                                </p>
+                                            </div>
+                                            <ChevronRight
+                                                size={12}
+                                                className={`shrink-0 transition-colors ${isSelected ? 'text-scout-green' : 'text-gray-300 dark:text-gray-600 group-hover:text-gray-400'}`}
+                                            />
+                                        </button>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    </div>
+                )}
+            </div>
+
+            {/* Badge flottante in basso */}
+            <div className="flex justify-center">
+                <div className="inline-flex items-center gap-2 bg-white dark:bg-gray-800 px-5 py-2 rounded-full shadow-lg border border-gray-100 dark:border-gray-700">
+                    <span className="w-2 h-2 bg-scout-green rounded-full animate-pulse" />
+                    <span className="text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                        {withCoords.length} / {locations.length} luoghi sulla mappa
+                    </span>
+                </div>
             </div>
         </div>
     );

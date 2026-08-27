@@ -850,7 +850,18 @@ function mapSupabaseLocationToLocation(data: any): Location {
         contacts: data.contacts,
         activities: data.activities,
         quickNote: data.quick_note,
-        coordinates: data.coordinates,
+        coordinates: (() => {
+            const c = data.coordinates;
+            if (!c) return undefined;
+            let obj = c;
+            if (typeof c === 'string') {
+                try { obj = JSON.parse(c); } catch { return undefined; }
+            }
+            const lat = Number(obj?.lat);
+            const lng = Number(obj?.lng);
+            if (isNaN(lat) || isNaN(lng)) return undefined;
+            return { lat, lng };
+        })(),
         beds: data.beds,
         bathrooms: data.bathrooms,
         hasTents: data.has_tents,
