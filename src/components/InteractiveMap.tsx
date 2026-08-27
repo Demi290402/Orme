@@ -1,28 +1,20 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
-import MarkerClusterGroup from '@changey/react-leaflet-markercluster';
 import L from 'leaflet';
+if (typeof window !== 'undefined') {
+    (window as any).L = L;
+}
+import 'leaflet.markercluster';
+
 import { useTheme } from '@/context/ThemeContext';
 import { Location } from '@/types';
-import { MapPin, AlertTriangle, Tent, BedDouble, Accessibility, Star, ChevronRight } from 'lucide-react';
-
-// Fix per l'icona di default di Leaflet con Vite/Webpack (asset bundling)
-import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
-import markerIcon from 'leaflet/dist/images/marker-icon.png';
-import markerShadow from 'leaflet/dist/images/marker-shadow.png';
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-    iconUrl: markerIcon,
-    iconRetinaUrl: markerIcon2x,
-    shadowUrl: markerShadow,
-});
+import { MapPin, AlertTriangle, ChevronRight } from 'lucide-react';
 
 interface InteractiveMapProps {
     locations: Location[];
 }
 
-// Determina tile URL e attribution in base al tema
+// Configurazione tile layer basata sul tema
 function getTileConfig(theme: string) {
     if (theme === 'dark') {
         return {
@@ -36,56 +28,84 @@ function getTileConfig(theme: string) {
     };
 }
 
-// Crea un'icona personalizzata in base al tipo di luogo
+// Crea l'icona personalizzata per il marker
 function createLocationIcon(loc: Location): L.DivIcon {
     let bg = 'bg-scout-blue';
     let emoji = '⚜️';
-    if (loc.hasTents) { bg = 'bg-scout-green'; emoji = '🏕️'; }
-    else if (loc.beds && loc.beds > 0) { bg = 'bg-red-500'; emoji = '🏠'; }
+    if (loc.hasTents) {
+        bg = 'bg-scout-green';
+        emoji = '🏕️';
+    } else if (loc.beds && loc.beds > 0) {
+        bg = 'bg-red-500';
+        emoji = '🏠';
+    }
 
     return L.divIcon({
-        html: `<div class="flex items-center justify-center w-9 h-9 rounded-full ${bg} border-2 border-white shadow-lg text-base leading-none">${emoji}</div>`,
+        html: `<div class="flex items-center justify-center w-9 h-9 rounded-full ${bg} border-2 border-white shadow-lg text-base leading-none select-none">${emoji}</div>`,
         className: 'custom-location-pin',
-        iconSize: L.point(36, 36),
-        iconAnchor: L.point(18, 18),
-        popupAnchor: L.point(0, -20),
+        iconSize: [36, 36],
+        iconAnchor: [18, 18],
+        popupAnchor: [0, -18],
     });
 }
 
-// Sottocomponente per aggiornare il TileLayer quando cambia il tema
-function DynamicTileLayer() {
-    const { theme } = useTheme();
-    const tile = getTileConfig(theme);
-    return <TileLayer url={tile.url} attribution={tile.attribution} maxZoom={19} />;
-}
+// Crea l'HTML del popup per un dato luogo
+function buildPopupHtml(loc: Location): string {
+    const rating = Number(loc.avgRating) || 0;
+    const ratingText = rating > 0 ? rating.toFixed(1) : '—';
+    const ormeLabel = loc.reviewsCount === 1 ? 'orma' : 'orme';
 
-// Sottocomponente per adattare la vista ai bounds dei marker
-function FitBounds({ positions }: { positions: [number, number][] }) {
-    const map = useMap();
-    const fitted = useRef(false);
-    useEffect(() => {
-        if (!fitted.current && positions.length > 0) {
-            fitted.current = true;
-            if (positions.length === 1) {
-                map.setView(positions[0], 13);
-            } else {
-                map.fitBounds(L.latLngBounds(positions), { padding: [40, 40] });
-            }
-        }
-    }, [map, positions]);
-    return null;
+    let badgesHtml = '';
+    if (loc.hasTents) {
+        badgesHtml += `<span class="inline-flex items-center gap-1 text-[10px] font-bold bg-green-50 text-green-700 dark:bg-emerald-950/40 dark:text-emerald-300 px-2 py-0.5 rounded-md border border-green-200 dark:border-emerald-800">🏕️ Tende</span>`;
+    }
+    if (loc.beds && loc.beds > 0) {
+        badgesHtml += `<span class="inline-flex items-center gap-1 text-[10px] font-bold bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300 px-2 py-0.5 rounded-md border border-red-200 dark:border-red-800">🏠 ${loc.beds} letti</span>`;
+    }
+    if (loc.hasDisabledAccess) {
+        badgesHtml += `<span class="inline-flex items-center gap-1 text-[10px] font-bold bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 px-2 py-0.5 rounded-md border border-purple-200 dark:border-purple-800">♿ Disabili</span>`;
+    }
+
+    return `
+        <div class="p-2 font-sans w-56 text-gray-900 dark:text-gray-100">
+            <h4 class="font-black text-sm text-gray-900 dark:text-white mb-0.5 leading-tight">${loc.name}</h4>
+            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-bold mb-2">${loc.commune}, ${loc.region}</p>
+            
+            <div class="flex items-center gap-1.5 mb-2.5">
+                <span class="text-yellow-500 font-bold text-xs">⭐ ${ratingText}</span>
+                <span class="text-[10px] text-gray-400 font-semibold">(${loc.reviewsCount} ${ormeLabel})</span>
+            </div>
+
+            ${badgesHtml ? `<div class="flex flex-wrap gap-1.5 mb-3">${badgesHtml}</div>` : ''}
+
+            <button
+                type="button"
+                data-open-location="${loc.id}"
+                class="w-full text-center bg-scout-green hover:bg-scout-green-dark active:scale-[0.98] text-white text-xs font-bold py-2 rounded-xl shadow transition-all cursor-pointer select-none"
+            >
+                Apri Scheda
+            </button>
+        </div>
+    `;
 }
 
 export default function InteractiveMap({ locations }: InteractiveMapProps) {
     const navigate = useNavigate();
-    const [selectedId, setSelectedId] = useState<string | null>(null);
-    const markerRefs = useRef<Record<string, L.Marker>>(({}));
-    const mapRef = useRef<L.Map | null>(null);
+    const { theme } = useTheme();
 
-    // Separa i luoghi con coordinate da quelli senza
+    const mapContainerRef = useRef<HTMLDivElement>(null);
+    const mapInstanceRef = useRef<L.Map | null>(null);
+    const tileLayerRef = useRef<L.TileLayer | null>(null);
+    const clusterGroupRef = useRef<any>(null);
+    const markersMapRef = useRef<Record<string, L.Marker>>({});
+
+    const [selectedId, setSelectedId] = useState<string | null>(null);
+
+    // Separa i luoghi con coordinate valide
     const { withCoords, withoutCoords } = useMemo(() => {
         const withCoords: Location[] = [];
         const withoutCoords: Location[] = [];
+
         for (const loc of locations) {
             const lat = loc.coordinates?.lat;
             const lng = loc.coordinates?.lng;
@@ -98,32 +118,155 @@ export default function InteractiveMap({ locations }: InteractiveMapProps) {
         return { withCoords, withoutCoords };
     }, [locations]);
 
-    const positions = useMemo(
-        () => withCoords.map(loc => [Number(loc.coordinates!.lat), Number(loc.coordinates!.lng)] as [number, number]),
-        [withCoords]
-    );
+    // 1. Inizializzazione della mappa Leaflet
+    useEffect(() => {
+        if (!mapContainerRef.current) return;
 
-    // Cluster icon personalizzata
-    const clusterIconCreateFunction = (cluster: any) => {
-        const count = cluster.getChildCount();
-        return L.divIcon({
-            html: `<div class="flex items-center justify-center w-10 h-10 rounded-full bg-scout-green text-white border-4 border-white shadow-xl font-black text-xs">${count}</div>`,
-            className: 'custom-marker-cluster',
-            iconSize: L.point(40, 40),
-        });
-    };
+        // Se la mappa esiste già, non ricrearla
+        if (!mapInstanceRef.current) {
+            const map = L.map(mapContainerRef.current, {
+                center: [42.0, 12.5],
+                zoom: 6,
+                zoomControl: true,
+            });
 
-    // Centra la mappa e apre il popup sul luogo selezionato dalla lista
-    const handleListItemClick = (loc: Location) => {
-        setSelectedId(loc.id);
-        const marker = markerRefs.current[loc.id];
-        const map = mapRef.current;
-        if (marker && map) {
-            const latlng = marker.getLatLng();
-            map.setView(latlng, Math.max(map.getZoom(), 13), { animate: true });
-            setTimeout(() => marker.openPopup(), 350);
+            const tileConfig = getTileConfig(theme);
+            const tileLayer = L.tileLayer(tileConfig.url, {
+                attribution: tileConfig.attribution,
+                maxZoom: 19,
+            }).addTo(map);
+
+            tileLayerRef.current = tileLayer;
+
+            const clusterGroup = (L as any).markerClusterGroup({
+                showCoverageOnHover: false,
+                zoomToBoundsOnClick: true,
+                iconCreateFunction: (cluster: any) => {
+                    const count = cluster.getChildCount();
+                    return L.divIcon({
+                        html: `<div class="flex items-center justify-center w-10 h-10 rounded-full bg-scout-green text-white border-4 border-white dark:border-gray-800 shadow-xl font-black text-xs select-none">${count}</div>`,
+                        className: 'custom-marker-cluster',
+                        iconSize: [40, 40],
+                    });
+                },
+            });
+
+            clusterGroup.addTo(map);
+            clusterGroupRef.current = clusterGroup;
+            mapInstanceRef.current = map;
         }
-    };
+
+        // Cleanup al dismount
+        return () => {
+            if (mapInstanceRef.current) {
+                mapInstanceRef.current.remove();
+                mapInstanceRef.current = null;
+                tileLayerRef.current = null;
+                clusterGroupRef.current = null;
+                markersMapRef.current = {};
+            }
+        };
+    }, []);
+
+    // 2. Aggiorna TileLayer al cambio tema
+    useEffect(() => {
+        const map = mapInstanceRef.current;
+        if (!map) return;
+
+        if (tileLayerRef.current) {
+            map.removeLayer(tileLayerRef.current);
+        }
+
+        const tileConfig = getTileConfig(theme);
+        const newLayer = L.tileLayer(tileConfig.url, {
+            attribution: tileConfig.attribution,
+            maxZoom: 19,
+        }).addTo(map);
+
+        tileLayerRef.current = newLayer;
+    }, [theme]);
+
+    // 3. Aggiorna marker sulla mappa
+    useEffect(() => {
+        const map = mapInstanceRef.current;
+        const clusterGroup = clusterGroupRef.current;
+        if (!map || !clusterGroup) return;
+
+        clusterGroup.clearLayers();
+        markersMapRef.current = {};
+
+        const latLngs: L.LatLng[] = [];
+
+        withCoords.forEach((loc) => {
+            const lat = Number(loc.coordinates!.lat);
+            const lng = Number(loc.coordinates!.lng);
+            const latLng = L.latLng(lat, lng);
+            latLngs.push(latLng);
+
+            const icon = createLocationIcon(loc);
+            const marker = L.marker(latLng, { icon });
+            marker.bindPopup(buildPopupHtml(loc), {
+                maxWidth: 260,
+                className: 'custom-leaflet-popup',
+            });
+
+            marker.on('click', () => {
+                setSelectedId(loc.id);
+            });
+
+            markersMapRef.current[loc.id] = marker;
+            clusterGroup.addLayer(marker);
+        });
+
+        // Adatta la visuale ai marker presenti
+        if (latLngs.length === 1) {
+            map.setView(latLngs[0], 12);
+        } else if (latLngs.length > 1) {
+            map.fitBounds(L.latLngBounds(latLngs), { padding: [40, 40] });
+        }
+    }, [withCoords]);
+
+    // 4. Gestione click su bottoni all'interno dei popup HTML
+    useEffect(() => {
+        const container = mapContainerRef.current;
+        if (!container) return;
+
+        const handleClick = (e: MouseEvent) => {
+            const target = e.target as HTMLElement;
+            const btn = target.closest('[data-open-location]');
+            if (btn) {
+                const locId = btn.getAttribute('data-open-location');
+                if (locId) {
+                    navigate(`/location/${locId}`);
+                }
+            }
+        };
+
+        container.addEventListener('click', handleClick);
+        return () => {
+            container.removeEventListener('click', handleClick);
+        };
+    }, [navigate]);
+
+    // 5. Clicca su un luogo dalla lista laterale
+    const handleListItemClick = useCallback((loc: Location) => {
+        setSelectedId(loc.id);
+        const map = mapInstanceRef.current;
+        const marker = markersMapRef.current[loc.id];
+        const clusterGroup = clusterGroupRef.current;
+
+        if (map && marker && clusterGroup) {
+            const lat = Number(loc.coordinates!.lat);
+            const lng = Number(loc.coordinates!.lng);
+            const latLng = L.latLng(lat, lng);
+
+            // Se il marker è dentro un cluster, zoooma al cluster
+            clusterGroup.zoomToShowLayer(marker, () => {
+                map.setView(latLng, Math.max(map.getZoom(), 13), { animate: true });
+                marker.openPopup();
+            });
+        }
+    }, []);
 
     return (
         <div className="relative w-full font-sans flex flex-col gap-3">
@@ -132,8 +275,8 @@ export default function InteractiveMap({ locations }: InteractiveMapProps) {
                 <div className="flex items-start gap-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-2xl px-4 py-3">
                     <AlertTriangle size={16} className="text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
                     <p className="text-xs text-amber-700 dark:text-amber-300 font-semibold leading-relaxed">
-                        {withoutCoords.length} {withoutCoords.length === 1 ? 'luogo non ha' : 'luoghi non hanno'} coordinate salvate e {withoutCoords.length === 1 ? 'non viene visualizzato' : 'non vengono visualizzati'} sulla mappa:{' '}
-                        <span className="font-bold">{withoutCoords.map(l => l.name).join(', ')}</span>.
+                        {withoutCoords.length} {withoutCoords.length === 1 ? 'luogo non ha' : 'luoghi non hanno'} coordinate salvate:{' '}
+                        <span className="font-bold">{withoutCoords.map((l) => l.name).join(', ')}</span>.
                     </p>
                 </div>
             )}
@@ -141,96 +284,11 @@ export default function InteractiveMap({ locations }: InteractiveMapProps) {
             <div className="flex gap-3">
                 {/* Mappa principale */}
                 <div className="flex-1 min-w-0">
-                    <MapContainer
-                        center={[42.0, 12.5]}
-                        zoom={6}
+                    <div
+                        id="scout-interactive-map"
+                        ref={mapContainerRef}
                         className="w-full h-[65vh] md:h-[70vh] rounded-3xl overflow-hidden shadow-sm border border-gray-150 dark:border-gray-700 z-10"
-                        zoomControl={true}
-                        ref={mapRef}
-                        // theme-key forzato per evitare problemi di re-mount
-                        key="scout-map"
-                    >
-                        <DynamicTileLayer />
-                        <FitBounds positions={positions} />
-
-                        <MarkerClusterGroup
-                            showCoverageOnHover={false}
-                            zoomToBoundsOnClick={true}
-                            iconCreateFunction={clusterIconCreateFunction}
-                        >
-                            {withCoords.map((loc) => {
-                                const lat = Number(loc.coordinates!.lat);
-                                const lng = Number(loc.coordinates!.lng);
-                                const rating = Number(loc.avgRating);
-                                return (
-                                    <Marker
-                                        key={loc.id}
-                                        position={[lat, lng]}
-                                        icon={createLocationIcon(loc)}
-                                        ref={(ref) => {
-                                            if (ref) markerRefs.current[loc.id] = ref;
-                                        }}
-                                        eventHandlers={{
-                                            click: () => setSelectedId(loc.id),
-                                        }}
-                                    >
-                                        <Popup
-                                            maxWidth={256}
-                                            className="custom-leaflet-popup"
-                                        >
-                                            <div className="p-1 font-sans w-56">
-                                                {/* Header */}
-                                                <h4 className="font-extrabold text-sm text-gray-900 mb-0.5 leading-tight">
-                                                    {loc.name}
-                                                </h4>
-                                                <p className="text-[10px] text-gray-400 uppercase tracking-wider font-bold mb-2">
-                                                    {loc.commune}, {loc.region}
-                                                </p>
-
-                                                {/* Rating */}
-                                                <div className="flex items-center gap-1 mb-2">
-                                                    <Star size={11} className="text-yellow-400 fill-yellow-400" />
-                                                    <span className="text-xs font-black text-gray-800">
-                                                        {rating > 0 ? rating.toFixed(1) : '—'}
-                                                    </span>
-                                                    <span className="text-[9px] text-gray-400 font-semibold">
-                                                        ({loc.reviewsCount} {loc.reviewsCount === 1 ? 'orma' : 'orme'})
-                                                    </span>
-                                                </div>
-
-                                                {/* Badge caratteristiche */}
-                                                <div className="flex flex-wrap gap-1 mb-3">
-                                                    {loc.hasTents && (
-                                                        <span className="inline-flex items-center gap-0.5 text-[9px] font-bold bg-green-50 text-green-700 px-1.5 py-0.5 rounded border border-green-100">
-                                                            <Tent size={9} /> Tende
-                                                        </span>
-                                                    )}
-                                                    {loc.beds && loc.beds > 0 ? (
-                                                        <span className="inline-flex items-center gap-0.5 text-[9px] font-bold bg-red-50 text-red-700 px-1.5 py-0.5 rounded border border-red-100">
-                                                            <BedDouble size={9} /> {loc.beds} letti
-                                                        </span>
-                                                    ) : null}
-                                                    {loc.hasDisabledAccess && (
-                                                        <span className="inline-flex items-center gap-0.5 text-[9px] font-bold bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded border border-purple-100">
-                                                            <Accessibility size={9} /> Disabili
-                                                        </span>
-                                                    )}
-                                                </div>
-
-                                                {/* CTA */}
-                                                <button
-                                                    onClick={() => navigate(`/location/${loc.id}`)}
-                                                    className="block w-full text-center bg-scout-green hover:bg-scout-green-dark text-white text-xs font-bold py-2 rounded-xl transition-colors cursor-pointer"
-                                                >
-                                                    Apri Scheda
-                                                </button>
-                                            </div>
-                                        </Popup>
-                                    </Marker>
-                                );
-                            })}
-                        </MarkerClusterGroup>
-                    </MapContainer>
+                    />
                 </div>
 
                 {/* Lista laterale — solo desktop */}
@@ -251,6 +309,7 @@ export default function InteractiveMap({ locations }: InteractiveMapProps) {
                                 return (
                                     <li key={loc.id}>
                                         <button
+                                            type="button"
                                             onClick={() => handleListItemClick(loc)}
                                             className={`w-full text-left px-4 py-3 transition-colors flex items-center gap-2 group cursor-pointer ${
                                                 isSelected
@@ -262,7 +321,13 @@ export default function InteractiveMap({ locations }: InteractiveMapProps) {
                                                 {loc.hasTents ? '🏕️' : loc.beds && loc.beds > 0 ? '🏠' : '⚜️'}
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <p className={`text-xs font-bold truncate ${isSelected ? 'text-scout-green-dark dark:text-emerald-400' : 'text-gray-900 dark:text-white'}`}>
+                                                <p
+                                                    className={`text-xs font-bold truncate ${
+                                                        isSelected
+                                                            ? 'text-scout-green-dark dark:text-emerald-400'
+                                                            : 'text-gray-900 dark:text-white'
+                                                    }`}
+                                                >
                                                     {loc.name}
                                                 </p>
                                                 <p className="text-[9px] text-gray-400 font-semibold truncate uppercase tracking-wider">
@@ -271,7 +336,11 @@ export default function InteractiveMap({ locations }: InteractiveMapProps) {
                                             </div>
                                             <ChevronRight
                                                 size={12}
-                                                className={`shrink-0 transition-colors ${isSelected ? 'text-scout-green' : 'text-gray-300 dark:text-gray-600 group-hover:text-gray-400'}`}
+                                                className={`shrink-0 transition-colors ${
+                                                    isSelected
+                                                        ? 'text-scout-green'
+                                                        : 'text-gray-300 dark:text-gray-600 group-hover:text-gray-400'
+                                                }`}
                                             />
                                         </button>
                                     </li>
