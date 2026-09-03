@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ChevronLeft, Save, MapPin, Plus, Trash2, Phone, MessageCircle, User, Building, AlertTriangle, Sparkles, Loader2, Check } from 'lucide-react';
+import { ChevronLeft, Save, MapPin, Plus, Trash2, Phone, MessageCircle, User, Building, AlertTriangle, Sparkles, Loader2, Check, Mail } from 'lucide-react';
 import { addLocation, getLocations, updateLocation } from '@/lib/data';
 import { LocationContact } from '@/types';
 import { extractCoordsFromMapsUrl, resolveLocationCoordinates, isShortMapsUrl } from '@/lib/geo';
@@ -46,6 +46,28 @@ export default function AddLocation() {
     const [hasSilenceRules, setHasSilenceRules] = useState(false);
     const [silenceStart, setSilenceStart] = useState('23:00');
     const [silenceEnd, setSilenceEnd] = useState('07:00');
+
+    // Indirizzi email multipli
+    const [emails, setEmails] = useState<string[]>(['']);
+
+    const handleEmailChange = (index: number, value: string) => {
+        setEmails(prev => {
+            const next = [...prev];
+            next[index] = value;
+            return next;
+        });
+    };
+
+    const handleAddEmail = () => {
+        setEmails(prev => [...prev, '']);
+    };
+
+    const handleRemoveEmail = (index: number) => {
+        setEmails(prev => {
+            if (prev.length <= 1) return [''];
+            return prev.filter((_, i) => i !== index);
+        });
+    };
 
     const [formData, setFormData] = useState({
         name: '',
@@ -102,7 +124,8 @@ export default function AddLocation() {
     const livePoints = useMemo(() => {
         let points = 10; // Base
         if (formData.website && formData.website.trim() !== '') points += 2;
-        if (formData.email && formData.email.trim() !== '') points += 2;
+        const hasAnyEmail = emails.some(e => e.trim() !== '') || Boolean(formData.email && formData.email.trim() !== '');
+        if (hasAnyEmail) points += 2;
 
         const hasCoordinates = (formData as any).latitude && (formData as any).longitude;
         const hasAddress = (formData as any).address && (formData as any).address.trim() !== '';
@@ -115,7 +138,7 @@ export default function AddLocation() {
 
         if (formData.pricingBase && parseFloat(formData.pricingBase) > 0) points += 5;
         return points;
-    }, [formData, contacts]);
+    }, [formData, contacts, emails]);
 
     const handleAddContact = () => {
         setContacts(prev => [
@@ -237,6 +260,14 @@ export default function AddLocation() {
                         if (loaded.length > 0) {
                             setContacts(loaded);
                         }
+                    }
+
+                    // Carica indirizzi email multipli
+                    const loadedEmails = (found.emails && found.emails.length > 0)
+                        ? found.emails
+                        : (found.email ? found.email.split(/[,;\s]+/).map((s: string) => s.trim()).filter(Boolean) : []);
+                    if (loadedEmails.length > 0) {
+                        setEmails(loadedEmails);
                     }
 
                     setFormData({
@@ -376,6 +407,8 @@ export default function AddLocation() {
             }
         }
 
+        const validEmails = emails.map(e => e.trim()).filter(Boolean);
+
         const locationData = {
             name: formData.name,
             region: formData.region,
@@ -385,7 +418,8 @@ export default function AddLocation() {
             googleMapsLink: formData.googleMapsLink,
             contacts: cleanedContacts,
             website: formData.website,
-            email: formData.email,
+            email: validEmails.length > 0 ? validEmails.join(', ') : formData.email,
+            emails: validEmails,
             beds: formData.beds ? parseInt(formData.beds) : 0,
             bathrooms: formData.bathrooms ? parseInt(formData.bathrooms) : 0,
             hasTents: formData.hasTents,
@@ -708,17 +742,49 @@ export default function AddLocation() {
                         />
                     </div>
 
-                    <div className="mt-4">
+                    <div className="mt-4 space-y-2">
                         <div className="flex justify-between items-center mb-1">
-                            <label className="block text-sm font-medium">Email Contatto (opzionale)</label>
+                            <label className="block text-sm font-medium flex items-center gap-1.5 text-gray-900 dark:text-white">
+                                <Mail size={16} className="text-scout-green" />
+                                {emails.length > 1 ? `Indirizzi Email (${emails.length})` : 'Indirizzo Email'} (opzionale)
+                            </label>
                             <span className="text-[10px] font-bold text-scout-blue bg-scout-blue/10 px-2 py-0.5 rounded-full">+2 pt</span>
                         </div>
-                        <input
-                            type="email" name="email"
-                            value={formData.email} onChange={handleChange}
-                            placeholder="esempio@dominio.it"
-                            className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-scout-green"
-                        />
+
+                        <div className="space-y-2.5">
+                            {emails.map((emailVal, index) => (
+                                <div key={index} className="flex items-center gap-2">
+                                    <div className="relative flex-1">
+                                        <input
+                                            type="email"
+                                            value={emailVal}
+                                            onChange={(e) => handleEmailChange(index, e.target.value)}
+                                            placeholder={index === 0 ? "esempio@dominio.it" : `Email secondaria #${index + 1}...`}
+                                            className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-scout-green text-sm"
+                                        />
+                                    </div>
+                                    {emails.length > 1 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => handleRemoveEmail(index)}
+                                            className="p-3 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-xl transition-colors cursor-pointer shrink-0"
+                                            title="Rimuovi questa email"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={handleAddEmail}
+                            className="inline-flex items-center gap-1.5 text-xs font-bold text-scout-green hover:text-scout-green-dark bg-green-50 dark:bg-emerald-950/30 hover:bg-green-100 dark:hover:bg-emerald-950/50 px-3 py-2 rounded-xl transition-all cursor-pointer mt-1"
+                        >
+                            <Plus size={14} />
+                            Aggiungi un'altra email
+                        </button>
                     </div>
                 </div>
 

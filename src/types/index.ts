@@ -241,6 +241,7 @@ export interface Location {
     otherRestrictions?: string;
     website?: string;
     email?: string;
+    emails?: string[]; // Indirizzi email multipli per la struttura
     description?: string;
     pricing?: PricingInfo; // New field
     googleMapsLink?: string;

@@ -406,7 +406,9 @@ export async function addLocation(location: Omit<Location, 'id' | 'lastUpdatedAt
             availability_status: (location as any).availabilityStatus || 'available',
             other_restrictions: location.otherRestrictions,
             website: location.website,
-            email: location.email,
+            email: (location.emails && location.emails.length > 0)
+                ? location.emails.map(e => e.trim()).filter(Boolean).join(', ')
+                : (location.email || ''),
             description: location.description,
             pricing: location.pricing,
             last_updated_by: currentUser.id,
@@ -833,7 +835,11 @@ function convertLocationToSupabaseFormat(location: Partial<Location>): any {
     if (location.availabilityStatus !== undefined) data.availability_status = location.availabilityStatus;
     if (location.otherRestrictions !== undefined) data.other_restrictions = location.otherRestrictions;
     if (location.website !== undefined) data.website = location.website;
-    if (location.email !== undefined) data.email = location.email;
+    if (location.emails !== undefined) {
+        data.email = location.emails.map(e => e.trim()).filter(Boolean).join(', ');
+    } else if (location.email !== undefined) {
+        data.email = location.email;
+    }
     if (location.description !== undefined) data.description = location.description;
     if (location.pricing !== undefined) data.pricing = location.pricing;
     return data;
@@ -892,6 +898,23 @@ function mapSupabaseLocationToLocation(data: any): Location {
         website: data.website,
         googleMapsLink: data.google_maps_link,
         email: data.email,
+        emails: (() => {
+            const list: string[] = [];
+            if (Array.isArray(data.emails)) {
+                data.emails.forEach((e: any) => {
+                    if (typeof e === 'string' && e.trim() && !list.includes(e.trim())) {
+                        list.push(e.trim());
+                    }
+                });
+            }
+            if (data.email && typeof data.email === 'string') {
+                const parts = data.email.split(/[,;\s]+/).map((s: string) => s.trim()).filter(Boolean);
+                parts.forEach((s: string) => {
+                    if (!list.includes(s)) list.push(s);
+                });
+            }
+            return list;
+        })(),
         description: data.description,
         pricing: data.pricing,
         lastUpdatedAt: data.last_updated_at,

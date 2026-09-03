@@ -255,6 +255,14 @@ export default function LocationDetail() {
     const [updaterInfo, setUpdaterInfo] = useState<{ nickname: string, groupName: string } | null>(null);
     const [showContactPickerModal, setShowContactPickerModal] = useState(false);
     const [copiedPhone, setCopiedPhone] = useState<string | null>(null);
+    const [showEmailPickerModal, setShowEmailPickerModal] = useState(false);
+    const [copiedEmail, setCopiedEmail] = useState<string | null>(null);
+
+    const handleCopyEmail = (emailStr: string) => {
+        navigator.clipboard.writeText(emailStr);
+        setCopiedEmail(emailStr);
+        setTimeout(() => setCopiedEmail(null), 2500);
+    };
 
     const cleanPhoneForWhatsapp = (num: string) => {
         let clean = num.replace(/[^0-9+]/g, '');
@@ -300,7 +308,12 @@ export default function LocationDetail() {
             : `https://${location.website}`)
         : undefined;
 
-    const emailUrl = location.email ? `mailto:${location.email}` : undefined;
+    const emailList: string[] = (location.emails && location.emails.length > 0)
+        ? location.emails
+        : (location.email ? location.email.split(/[,;\s]+/).map(s => s.trim()).filter(Boolean) : []);
+
+    const primaryEmail = emailList[0];
+    const emailUrl = primaryEmail ? `mailto:${primaryEmail}` : undefined;
 
     const actionButtonsCount = [phone, whatsapp, websiteUrl, emailUrl, true].filter(Boolean).length;
 
@@ -613,13 +626,26 @@ export default function LocationDetail() {
                     </a>
                 )}
                 {emailUrl && (
-                    <a
-                        href={emailUrl}
-                        className="flex flex-col items-center justify-center bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-95 transition-all text-center"
-                    >
-                        <Mail className="text-scout-green mb-1" size={24} />
-                        <span className="text-[10px] font-black uppercase dark:text-gray-300">Email</span>
-                    </a>
+                    emailList.length === 1 ? (
+                        <a
+                            href={emailUrl}
+                            className="flex flex-col items-center justify-center bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-95 transition-all text-center"
+                        >
+                            <Mail className="text-scout-green mb-1" size={24} />
+                            <span className="text-[10px] font-black uppercase dark:text-gray-300">Email</span>
+                        </a>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={() => setShowEmailPickerModal(true)}
+                            className="flex flex-col items-center justify-center bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-95 transition-all text-center cursor-pointer"
+                        >
+                            <Mail className="text-scout-green mb-1" size={24} />
+                            <span className="text-[10px] font-black uppercase dark:text-gray-300">
+                                Email ({emailList.length})
+                            </span>
+                        </button>
+                    )
                 )}
                 <a
                     href={location.coordinates
@@ -754,6 +780,70 @@ export default function LocationDetail() {
                                 </div>
                             );
                         })}
+                    </div>
+                </div>
+            )}
+
+            {/* Sezione Indirizzi Email */}
+            {emailList.length > 0 && (
+                <div className="bg-white dark:bg-gray-800 rounded-[2rem] shadow-sm border border-gray-100 dark:border-gray-700 p-6 space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 pb-3 border-b border-gray-100 dark:border-gray-700">
+                        <div>
+                            <h2 className="font-black text-sm uppercase tracking-wider flex items-center gap-2 text-gray-900 dark:text-white">
+                                <Mail size={16} className="text-scout-blue" />
+                                {emailList.length > 1 ? `Indirizzi Email (${emailList.length})` : 'Indirizzo Email'}
+                            </h2>
+                            <p className="text-xs text-gray-400 dark:text-gray-500 font-medium mt-0.5">
+                                Recapiti telematici per richieste disponibilità, contratti e preventivi
+                            </p>
+                        </div>
+                        {emailList.length > 1 && (
+                            <span className="self-start sm:self-auto text-[10px] font-bold text-scout-blue dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/40 px-2.5 py-1 rounded-full">
+                                {emailList.length} indirizzi disponibili
+                            </span>
+                        )}
+                    </div>
+
+                    <div className="space-y-2.5">
+                        {emailList.map((em, idx) => (
+                            <div
+                                key={idx}
+                                className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-gray-50 dark:bg-gray-750 border border-gray-150 dark:border-gray-650"
+                            >
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                    <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-scout-blue flex items-center justify-center shrink-0">
+                                        <Mail size={16} />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <span className="text-xs sm:text-sm font-mono font-bold text-gray-900 dark:text-white truncate block">
+                                            {em}
+                                        </span>
+                                        {emailList.length > 1 && (
+                                            <span className="text-[10px] text-gray-400 font-medium">
+                                                Email #{idx + 1}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-2 shrink-0">
+                                    <a
+                                        href={`mailto:${em}`}
+                                        className="inline-flex items-center justify-center gap-1.5 bg-scout-blue hover:bg-blue-700 active:scale-95 text-white text-xs font-bold py-2 px-3 rounded-xl transition-all shadow-xs"
+                                    >
+                                        <Mail size={13} /> Scrivi
+                                    </a>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleCopyEmail(em)}
+                                        className="inline-flex items-center justify-center gap-1.5 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-xs font-bold py-2 px-3 rounded-xl border border-gray-200 dark:border-gray-600 transition-all cursor-pointer"
+                                    >
+                                        {copiedEmail === em ? <Check size={13} className="text-green-600" /> : <Copy size={13} />}
+                                        {copiedEmail === em ? 'Copiata!' : 'Copia'}
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
             )}
@@ -1046,6 +1136,68 @@ export default function LocationDetail() {
                                     </div>
                                 );
                             })}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Email Picker Modal */}
+            {showEmailPickerModal && (
+                <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+                    <div className="bg-white dark:bg-gray-800 w-full max-w-md rounded-3xl p-6 shadow-2xl border border-gray-100 dark:border-gray-700 space-y-4 max-h-[85vh] overflow-y-auto">
+                        <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700">
+                            <div>
+                                <h3 className="font-black text-base text-gray-900 dark:text-white flex items-center gap-2">
+                                    <Mail className="text-scout-blue" size={18} /> Seleziona Email
+                                </h3>
+                                <p className="text-xs text-gray-400 font-medium mt-0.5">
+                                    Questa struttura dispone di {emailList.length} indirizzi email
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setShowEmailPickerModal(false)}
+                                className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors cursor-pointer"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <div className="space-y-2.5">
+                            {emailList.map((em, idx) => (
+                                <div
+                                    key={idx}
+                                    className="p-3.5 rounded-2xl bg-gray-50 dark:bg-gray-700/50 border border-gray-150 dark:border-gray-650 space-y-2.5"
+                                >
+                                    <div className="flex items-center justify-between gap-2">
+                                        <div className="min-w-0">
+                                            <span className="text-[10px] uppercase font-bold text-gray-400 block">
+                                                Email #{idx + 1}
+                                            </span>
+                                            <span className="text-xs font-mono font-bold text-gray-900 dark:text-white truncate block">
+                                                {em}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2 pt-1">
+                                        <button
+                                            onClick={() => {
+                                                setShowEmailPickerModal(false);
+                                                window.open(`mailto:${em}`);
+                                            }}
+                                            className="flex-1 inline-flex items-center justify-center gap-1.5 bg-scout-blue hover:bg-blue-700 text-white text-xs font-bold py-2 rounded-xl transition-colors cursor-pointer"
+                                        >
+                                            <Mail size={13} /> Invia Email
+                                        </button>
+                                        <button
+                                            onClick={() => handleCopyEmail(em)}
+                                            className="inline-flex items-center justify-center gap-1.5 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-xs font-bold py-2 px-3 rounded-xl border border-gray-200 dark:border-gray-600 transition-colors cursor-pointer"
+                                        >
+                                            {copiedEmail === em ? <Check size={13} className="text-green-600" /> : <Copy size={13} />}
+                                            {copiedEmail === em ? 'Copiata!' : 'Copia'}
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </div>

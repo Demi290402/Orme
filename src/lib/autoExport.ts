@@ -70,6 +70,7 @@ export function flattenResource(key: string, rawData: any[]): any[] {
                 TipoTariffa: loc.pricing?.target === 'per_group' ? 'Gruppo' : 'Persona',
                 UnitaPrezzo: loc.pricing?.unit === 'per_night' ? 'Notte' : 'Giorno',
                 NotePrezzo: loc.pricing?.description || '',
+                Email: (loc.emails && loc.emails.length > 0) ? loc.emails.join('; ') : (loc.email || ''),
                 Contatti: (loc.contacts || []).map((c: any) => [c.name, c.role, c.value].filter(Boolean).join(' - ')).join('; '),
                 Attivita: (loc.activities || []).join(', '),
                 NotaRapida: loc.quickNote || '',
