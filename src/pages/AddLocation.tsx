@@ -1,11 +1,21 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ChevronLeft, Save, MapPin } from 'lucide-react';
+import { ChevronLeft, Save, MapPin, Plus, Trash2, Phone, MessageCircle, User, Building } from 'lucide-react';
 import { addLocation, getLocations, updateLocation } from '@/lib/data';
+import { LocationContact } from '@/types';
 import RichTextEditor from '@/components/RichTextEditor';
 // import { addPoints } from '@/lib/gamification'; // Handled in addLocation now
 
 import { ITALIAN_PROVINCIAL_DATA, ITALIAN_REGIONS } from '@/lib/constants';
+
+interface ContactFormItem {
+    id: string;
+    phone: string;
+    name: string;
+    role: string;
+    isWhatsapp: boolean;
+    notes: string;
+}
 
 const RESTRICTIONS_LIST = [
     "Acqua non potabile", "No fuochi di bivacco", "No tende", "No riscaldamento",
@@ -25,6 +35,9 @@ export default function AddLocation() {
     const [isEditMode, setIsEditMode] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    const [contacts, setContacts] = useState<ContactFormItem[]>([
+        { id: '1', phone: '', name: '', role: '', isWhatsapp: true, notes: '' }
+    ]);
 
     const [formData, setFormData] = useState({
         name: '',
@@ -87,9 +100,33 @@ export default function AddLocation() {
         const hasMapsLink = (formData as any).googleMapsLink && (formData as any).googleMapsLink.trim() !== '';
         if (hasCoordinates || hasAddress || hasMapsLink) points += 3;
 
+        // Punti extra per contatti dettagliati con proprietario / ente
+        const hasDetailedContacts = contacts.some(c => c.phone.trim() !== '' && (c.name.trim() !== '' || c.role.trim() !== ''));
+        if (hasDetailedContacts) points += 3;
+
         if (formData.pricingBase && parseFloat(formData.pricingBase) > 0) points += 5;
         return points;
-    }, [formData]);
+    }, [formData, contacts]);
+
+    const handleAddContact = () => {
+        setContacts(prev => [
+            ...prev,
+            { id: String(Date.now()), phone: '', name: '', role: '', isWhatsapp: true, notes: '' }
+        ]);
+    };
+
+    const handleRemoveContact = (index: number) => {
+        if (contacts.length <= 1) return;
+        setContacts(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const handleContactChange = (index: number, field: keyof ContactFormItem, value: any) => {
+        setContacts(prev => {
+            const next = [...prev];
+            next[index] = { ...next[index], [field]: value };
+            return next;
+        });
+    };
 
     useEffect(() => {
         if (id) {
@@ -97,6 +134,42 @@ export default function AddLocation() {
             getLocations().then(locations => {
                 const found = locations.find(l => l.id === id);
                 if (found) {
+                    // Popola contatti
+                    if (found.contacts && Array.isArray(found.contacts) && found.contacts.length > 0) {
+                        const loaded: ContactFormItem[] = [];
+                        found.contacts.forEach((c: any, idx: number) => {
+                            if (c.type === 'phone' || !c.type) {
+                                loaded.push({
+                                    id: String(Date.now() + idx),
+                                    phone: c.value || '',
+                                    name: c.name === 'Responsabile' ? '' : (c.name || ''),
+                                    role: c.role || '',
+                                    isWhatsapp: c.isWhatsapp !== undefined 
+                                        ? c.isWhatsapp 
+                                        : (found.contacts.some((w: any) => w.type === 'whatsapp' && w.value === c.value) || true),
+                                    notes: c.notes || '',
+                                });
+                            } else if (c.type === 'whatsapp') {
+                                const match = loaded.find(l => l.phone === c.value);
+                                if (match) {
+                                    match.isWhatsapp = true;
+                                } else {
+                                    loaded.push({
+                                        id: String(Date.now() + idx),
+                                        phone: c.value || '',
+                                        name: c.name === 'WhatsApp' ? '' : (c.name || ''),
+                                        role: c.role || '',
+                                        isWhatsapp: true,
+                                        notes: c.notes || '',
+                                    });
+                                }
+                            }
+                        });
+                        if (loaded.length > 0) {
+                            setContacts(loaded);
+                        }
+                    }
+
                     setFormData({
                         name: found.name,
                         region: found.region,
@@ -168,8 +241,9 @@ export default function AddLocation() {
         e.preventDefault();
         if (isSubmitting) return;
 
-        if (!formData.name || !formData.region || !formData.phone) {
-            alert("Compila i campi obbligatori (Nome, Regione, Telefono)");
+        const validContacts = contacts.filter(c => c.phone.trim() !== '');
+        if (!formData.name || !formData.region || validContacts.length === 0) {
+            alert("Compila i campi obbligatori (Nome, Regione, e almeno un Recapito Telefonico)");
             return;
         }
 
@@ -180,6 +254,15 @@ export default function AddLocation() {
             finalRestrictions.push(formData.otherRestrictionInput.trim());
         }
 
+        const cleanedContacts: LocationContact[] = validContacts.map(c => ({
+            type: 'phone',
+            value: c.phone.trim(),
+            name: c.name.trim() || undefined,
+            role: c.role.trim() || undefined,
+            notes: c.notes.trim() || undefined,
+            isWhatsapp: c.isWhatsapp,
+        }));
+
         const locationData = {
             name: formData.name,
             region: formData.region,
@@ -187,10 +270,7 @@ export default function AddLocation() {
             commune: formData.commune,
             address: formData.address,
             googleMapsLink: formData.googleMapsLink,
-            contacts: [
-                { type: 'phone', value: formData.phone, name: 'Responsabile' },
-                ...(formData.whatsapp ? [{ type: 'whatsapp', value: formData.whatsapp, name: 'WhatsApp' }] as any : [])
-            ],
+            contacts: cleanedContacts,
             website: formData.website,
             email: formData.email,
             beds: formData.beds ? parseInt(formData.beds) : 0,
@@ -382,13 +462,126 @@ export default function AddLocation() {
                         </div>
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-medium mb-1">Telefono Responsabile *</label>
-                        <input
-                            type="tel" name="phone" required
-                            value={formData.phone} onChange={handleChange}
-                            className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                        />
+                    {/* Recapiti e Referenti della Struttura */}
+                    <div className="space-y-4 pt-2 border-t border-gray-100 dark:border-gray-700">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <label className="block text-sm font-bold text-gray-900 dark:text-white">
+                                        Recapiti Telefonici e Referenti *
+                                    </label>
+                                    <span className="text-[10px] font-bold text-scout-blue bg-scout-blue/10 px-2 py-0.5 rounded-full">+3 pt</span>
+                                </div>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                    Inserisci uno o più numeri di riferimento (es. custode, parrocchia, comune o capi gruppo).
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={handleAddContact}
+                                className="self-start sm:self-auto inline-flex items-center gap-1.5 text-xs font-bold text-scout-green hover:text-scout-green-dark bg-green-50 dark:bg-emerald-950/30 hover:bg-green-100 dark:hover:bg-emerald-950/50 px-3 py-2 rounded-xl border border-green-200 dark:border-emerald-800 transition-all cursor-pointer"
+                            >
+                                <Plus size={14} /> Aggiungi Recapito
+                            </button>
+                        </div>
+
+                        <div className="space-y-3">
+                            {contacts.map((contact, index) => (
+                                <div
+                                    key={contact.id}
+                                    className="p-4 rounded-2xl bg-gray-50/80 dark:bg-gray-700/40 border border-gray-200 dark:border-gray-600 space-y-3 transition-all"
+                                >
+                                    <div className="flex items-center justify-between">
+                                        <span className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-gray-600 dark:text-gray-300">
+                                            <Phone size={13} className="text-scout-green" />
+                                            {index === 0 ? 'Recapito Principale *' : `Recapito Secondario #${index + 1}`}
+                                        </span>
+                                        {contacts.length > 1 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleRemoveContact(index)}
+                                                className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors cursor-pointer"
+                                                title="Rimuovi questo recapito"
+                                            >
+                                                <Trash2 size={15} />
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                                                Numero di Telefono *
+                                            </label>
+                                            <input
+                                                type="tel"
+                                                required={index === 0}
+                                                value={contact.phone}
+                                                onChange={(e) => handleContactChange(index, 'phone', e.target.value)}
+                                                placeholder="es. 333 1234567 o 080 123456"
+                                                className="w-full p-2.5 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm focus:ring-2 focus:ring-scout-green"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-1">
+                                                <User size={12} className="text-scout-blue" />
+                                                Nome Referente / Proprietario
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={contact.name}
+                                                onChange={(e) => handleContactChange(index, 'name', e.target.value)}
+                                                placeholder="es. Mario Rossi, Don Andrea, Custode..."
+                                                className="w-full p-2.5 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm focus:ring-2 focus:ring-scout-green"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-1">
+                                                <Building size={12} className="text-amber-500" />
+                                                Ente / Gruppo Gestore
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={contact.role}
+                                                onChange={(e) => handleContactChange(index, 'role', e.target.value)}
+                                                placeholder="es. Gruppo Scout AGESCI Grottaglie 1, Comune, Parrocchia..."
+                                                className="w-full p-2.5 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm focus:ring-2 focus:ring-scout-green"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                                                Note / Orari di reperibilità
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={contact.notes}
+                                                onChange={(e) => handleContactChange(index, 'notes', e.target.value)}
+                                                placeholder="es. Chiamare ore serali, referente chiavi..."
+                                                className="w-full p-2.5 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm focus:ring-2 focus:ring-scout-green"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="pt-1">
+                                        <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                                            <input
+                                                type="checkbox"
+                                                checked={contact.isWhatsapp}
+                                                onChange={(e) => handleContactChange(index, 'isWhatsapp', e.target.checked)}
+                                                className="rounded border-gray-300 text-scout-green focus:ring-scout-green w-4 h-4"
+                                            />
+                                            <span className="text-xs font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                                                <MessageCircle size={14} className="text-green-500" />
+                                                Numero abilitato anche su WhatsApp
+                                            </span>
+                                        </label>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
 
                     <div>

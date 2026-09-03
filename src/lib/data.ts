@@ -847,7 +847,14 @@ function mapSupabaseLocationToLocation(data: any): Location {
         province: data.province,
         commune: data.commune,
         address: data.address,
-        contacts: data.contacts,
+        contacts: (() => {
+            let c = data.contacts;
+            if (!c) return [];
+            if (typeof c === 'string') {
+                try { c = JSON.parse(c); } catch { return []; }
+            }
+            return Array.isArray(c) ? c : [];
+        })(),
         activities: data.activities,
         quickNote: data.quick_note,
         coordinates: (() => {

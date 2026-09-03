@@ -172,7 +172,10 @@ export type ActivityType =
 export interface LocationContact {
     type: 'phone' | 'whatsapp' | 'email';
     value: string;
-    name?: string;
+    name?: string;       // Nome referente / proprietario (es. "Mario Rossi")
+    role?: string;       // Ente / Gruppo Scout / Associazione / Ruolo (es. "Gruppo Scout Agesci Bari 1", "Comune", "Custode")
+    notes?: string;      // Note o orari (es. "Chiamare ore serali", "Solo messaggi")
+    isWhatsapp?: boolean; // Se abilitato a WhatsApp
 }
 
 export interface LocationReview {

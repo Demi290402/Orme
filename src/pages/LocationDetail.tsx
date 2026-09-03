@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Phone, MessageCircle, Map, ArrowLeft, BedDouble, Tent, Coffee, ShieldAlert, Edit, Euro, Wrench, Ban, Star, Footprints, MessageSquare, X, Droplets, Flame, Wind, ShieldCheck, Users, ChevronLeft, ChevronRight, Globe, Mail } from 'lucide-react';
+import { Phone, MessageCircle, Map, ArrowLeft, BedDouble, Tent, Coffee, ShieldAlert, Edit, Euro, Wrench, Ban, Star, Footprints, MessageSquare, X, Droplets, Flame, Wind, ShieldCheck, Users, ChevronLeft, ChevronRight, Globe, Mail, Copy, Check, Building } from 'lucide-react';
 import { getLocations, getUser, getReviews, saveReview, deleteLocation, getLocationHistory, upsertLocationView, getUserLocationViews } from '@/lib/data';
 import { Location, LocationReview } from '@/types';
 import { getStalenessInfo, cn } from '@/lib/utils';
@@ -253,6 +253,25 @@ export default function LocationDetail() {
     }, [id]);
 
     const [updaterInfo, setUpdaterInfo] = useState<{ nickname: string, groupName: string } | null>(null);
+    const [showContactPickerModal, setShowContactPickerModal] = useState(false);
+    const [copiedPhone, setCopiedPhone] = useState<string | null>(null);
+
+    const cleanPhoneForWhatsapp = (num: string) => {
+        let clean = num.replace(/[^0-9+]/g, '');
+        if (clean.startsWith('00')) clean = '+' + clean.slice(2);
+        if (!clean.startsWith('+')) {
+            if (clean.startsWith('3') && clean.length >= 9) {
+                clean = '+39' + clean;
+            }
+        }
+        return clean.replace('+', '');
+    };
+
+    const handleCopyPhone = (phoneNumber: string) => {
+        navigator.clipboard.writeText(phoneNumber);
+        setCopiedPhone(phoneNumber);
+        setTimeout(() => setCopiedPhone(null), 2000);
+    };
 
     useEffect(() => {
         if (location?.lastUpdatedBy) {
@@ -269,8 +288,11 @@ export default function LocationDetail() {
     if (!location) return <div className="p-8 text-center">Luogo non trovato</div>;
 
     const staleness = getStalenessInfo(location.lastUpdatedAt);
-    const phone = location.contacts.find(c => c.type === 'phone')?.value;
-    const whatsapp = location.contacts.find(c => c.type === 'whatsapp')?.value || phone;
+    const phoneContacts = (location.contacts || []).filter(c => (c.type === 'phone' || !c.type || c.type === 'whatsapp') && c.value);
+    const primaryPhoneContact = phoneContacts[0];
+    const phone = primaryPhoneContact?.value;
+    const whatsappContact = phoneContacts.find(c => c.isWhatsapp || c.type === 'whatsapp') || primaryPhoneContact;
+    const whatsapp = whatsappContact?.value;
 
     const websiteUrl = location.website 
         ? (location.website.startsWith('http://') || location.website.startsWith('https://') 
@@ -537,20 +559,38 @@ export default function LocationDetail() {
             )}>
                 {phone && (
                     <button 
-                        onClick={() => currentUser ? window.open(`tel:${phone}`) : navigate('/login')}
-                        className="flex flex-col items-center justify-center bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-95 transition-all text-center"
+                        onClick={() => {
+                            if (!currentUser) { navigate('/login'); return; }
+                            if (phoneContacts.length > 1) {
+                                setShowContactPickerModal(true);
+                            } else {
+                                window.open(`tel:${phone}`);
+                            }
+                        }}
+                        className="flex flex-col items-center justify-center bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-95 transition-all text-center cursor-pointer"
                     >
                         <Phone className={cn("text-scout-green mb-1", !currentUser && "blur-[2px]")} size={24} />
-                        <span className="text-[10px] font-black uppercase dark:text-gray-300">{currentUser ? 'Chiama' : 'Accedi'}</span>
+                        <span className="text-[10px] font-black uppercase dark:text-gray-300">
+                            {currentUser ? (phoneContacts.length > 1 ? `Chiama (${phoneContacts.length})` : 'Chiama') : 'Accedi'}
+                        </span>
                     </button>
                 )}
                 {whatsapp && (
                     <button 
-                        onClick={() => currentUser ? window.open(`https://wa.me/${whatsapp}`) : navigate('/login')}
-                        className="flex flex-col items-center justify-center bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-95 transition-all text-center"
+                        onClick={() => {
+                            if (!currentUser) { navigate('/login'); return; }
+                            if (phoneContacts.length > 1) {
+                                setShowContactPickerModal(true);
+                            } else {
+                                window.open(`https://wa.me/${cleanPhoneForWhatsapp(whatsapp)}`);
+                            }
+                        }}
+                        className="flex flex-col items-center justify-center bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-95 transition-all text-center cursor-pointer"
                     >
                         <MessageCircle className={cn("text-green-500 mb-1", !currentUser && "blur-[2px]")} size={24} />
-                        <span className="text-[10px] font-black uppercase dark:text-gray-300">{currentUser ? 'WhatsApp' : 'Accedi'}</span>
+                        <span className="text-[10px] font-black uppercase dark:text-gray-300">
+                            {currentUser ? (phoneContacts.length > 1 ? `WhatsApp (${phoneContacts.length})` : 'WhatsApp') : 'Accedi'}
+                        </span>
                     </button>
                 )}
                 {websiteUrl && (
@@ -584,6 +624,130 @@ export default function LocationDetail() {
                     <span className="text-[10px] font-black uppercase dark:text-gray-300">Mappa</span>
                 </a>
             </div>
+
+            {/* Sezione Contatti e Referenti */}
+            {phoneContacts.length > 0 && (
+                <div className="bg-white dark:bg-gray-800 rounded-[2rem] shadow-sm border border-gray-100 dark:border-gray-700 p-6 space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 pb-3 border-b border-gray-100 dark:border-gray-700">
+                        <div>
+                            <h2 className="font-black text-sm uppercase tracking-wider flex items-center gap-2 text-gray-900 dark:text-white">
+                                <Phone size={16} className="text-scout-green" /> Recapiti e Referenti ({phoneContacts.length})
+                            </h2>
+                            <p className="text-xs text-gray-400 dark:text-gray-500 font-medium mt-0.5">
+                                Contatti diretti per informazioni, chiavi e prenotazioni
+                            </p>
+                        </div>
+                        {phoneContacts.length > 1 && (
+                            <span className="self-start sm:self-auto text-[10px] font-bold text-scout-green-dark dark:text-emerald-400 bg-green-50 dark:bg-emerald-950/30 border border-green-200 dark:border-emerald-800/40 px-2.5 py-1 rounded-full">
+                                {phoneContacts.length} numeri disponibili
+                            </span>
+                        )}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-1">
+                        {phoneContacts.map((c, idx) => {
+                            const isWhatsapp = c.isWhatsapp !== false && c.type !== 'email';
+                            return (
+                                <div
+                                    key={idx}
+                                    className="p-4 rounded-2xl bg-gray-50/70 dark:bg-gray-700/30 border border-gray-150 dark:border-gray-700 flex flex-col justify-between space-y-3"
+                                >
+                                    <div className="space-y-2">
+                                        <div className="flex items-start justify-between gap-2">
+                                            <div className="flex items-center gap-2.5">
+                                                <div className="w-8 h-8 rounded-full bg-scout-green/10 dark:bg-emerald-950/40 text-scout-green-dark dark:text-emerald-400 flex items-center justify-center font-black text-xs shrink-0">
+                                                    {idx + 1}
+                                                </div>
+                                                <div>
+                                                    <h3 className="font-bold text-sm text-gray-900 dark:text-white leading-tight">
+                                                        {c.name || `Referente #${idx + 1}`}
+                                                    </h3>
+                                                    {c.role && (
+                                                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-md border border-amber-200 dark:border-amber-800/50 mt-1">
+                                                            <Building size={10} />
+                                                            {c.role}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Numero di telefono */}
+                                        <div className="pt-1">
+                                            {currentUser ? (
+                                                <div className="flex items-center justify-between bg-white dark:bg-gray-800 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-650 shadow-2xs">
+                                                    <span className="font-mono font-bold text-sm text-gray-800 dark:text-gray-100 tracking-wide">
+                                                        {c.value}
+                                                    </span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleCopyPhone(c.value)}
+                                                        className="inline-flex items-center gap-1 text-[10px] font-bold text-gray-500 hover:text-scout-green transition-colors cursor-pointer"
+                                                        title="Copia numero"
+                                                    >
+                                                        {copiedPhone === c.value ? (
+                                                            <>
+                                                                <Check size={12} className="text-scout-green" />
+                                                                <span className="text-scout-green">Copiato</span>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Copy size={12} />
+                                                                <span>Copia</span>
+                                                            </>
+                                                        )}
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <div
+                                                    onClick={() => navigate('/login')}
+                                                    className="flex items-center justify-between bg-white dark:bg-gray-800 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-650 cursor-pointer hover:border-scout-green transition-colors group"
+                                                >
+                                                    <span className="font-mono text-sm text-gray-400 blur-[3px] select-none">
+                                                        +39 333 •••••••
+                                                    </span>
+                                                    <span className="text-[10px] font-bold text-scout-blue group-hover:underline">
+                                                        Accedi per visualizzare
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Note se presenti */}
+                                        {c.notes && (
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 italic bg-white/60 dark:bg-gray-800/60 p-2 rounded-lg border border-gray-100 dark:border-gray-700/60">
+                                                💬 {c.notes}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    {/* Action Buttons per singolo contatto */}
+                                    <div className="flex gap-2 pt-1">
+                                        <button
+                                            type="button"
+                                            onClick={() => currentUser ? window.open(`tel:${c.value}`) : navigate('/login')}
+                                            className="flex-1 inline-flex items-center justify-center gap-1.5 bg-scout-green hover:bg-scout-green-dark active:scale-95 text-white text-xs font-bold py-2.5 px-3 rounded-xl shadow-sm transition-all cursor-pointer"
+                                        >
+                                            <Phone size={13} />
+                                            Chiama
+                                        </button>
+                                        {isWhatsapp && (
+                                            <button
+                                                type="button"
+                                                onClick={() => currentUser ? window.open(`https://wa.me/${cleanPhoneForWhatsapp(c.value)}`) : navigate('/login')}
+                                                className="flex-1 inline-flex items-center justify-center gap-1.5 bg-green-600 hover:bg-green-700 active:scale-95 text-white text-xs font-bold py-2.5 px-3 rounded-xl shadow-sm transition-all cursor-pointer"
+                                            >
+                                                <MessageCircle size={13} />
+                                                WhatsApp
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
 
             {/* LE ORME: Recent Reviews & Comments POPUP LIST */}
             {reviews.length > 0 && (
@@ -711,6 +875,85 @@ export default function LocationDetail() {
                         if (found) setLocation(found);
                     }}
                 />
+            )}
+
+            {/* Contact Picker Modal */}
+            {showContactPickerModal && (
+                <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+                    <div className="bg-white dark:bg-gray-800 w-full max-w-md rounded-3xl p-6 shadow-2xl border border-gray-100 dark:border-gray-700 space-y-4 max-h-[85vh] overflow-y-auto">
+                        <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700">
+                            <div>
+                                <h3 className="font-black text-base text-gray-900 dark:text-white">
+                                    Seleziona Recapito
+                                </h3>
+                                <p className="text-xs text-gray-400 font-medium">
+                                    Questa struttura dispone di {phoneContacts.length} numeri di riferimento
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setShowContactPickerModal(false)}
+                                className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors cursor-pointer"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <div className="space-y-3">
+                            {phoneContacts.map((c, idx) => {
+                                const isWhatsapp = c.isWhatsapp !== false && c.type !== 'email';
+                                return (
+                                    <div
+                                        key={idx}
+                                        className="p-3.5 rounded-2xl bg-gray-50 dark:bg-gray-700/50 border border-gray-150 dark:border-gray-650 space-y-2.5"
+                                    >
+                                        <div className="flex items-start justify-between gap-2">
+                                            <div>
+                                                <h4 className="font-bold text-sm text-gray-900 dark:text-white">
+                                                    {c.name || `Referente #${idx + 1}`}
+                                                </h4>
+                                                {c.role && (
+                                                    <span className="inline-block text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-800/40 mt-0.5">
+                                                        {c.role}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <span className="text-xs font-mono font-bold text-gray-700 dark:text-gray-200">
+                                                {c.value}
+                                            </span>
+                                        </div>
+                                        {c.notes && (
+                                            <p className="text-[11px] text-gray-500 dark:text-gray-400 italic">
+                                                💬 {c.notes}
+                                            </p>
+                                        )}
+                                        <div className="flex gap-2 pt-1">
+                                            <button
+                                                onClick={() => {
+                                                    setShowContactPickerModal(false);
+                                                    window.open(`tel:${c.value}`);
+                                                }}
+                                                className="flex-1 inline-flex items-center justify-center gap-1.5 bg-scout-green hover:bg-scout-green-dark text-white text-xs font-bold py-2 rounded-xl transition-colors cursor-pointer"
+                                            >
+                                                <Phone size={13} /> Chiama
+                                            </button>
+                                            {isWhatsapp && (
+                                                <button
+                                                    onClick={() => {
+                                                        setShowContactPickerModal(false);
+                                                        window.open(`https://wa.me/${cleanPhoneForWhatsapp(c.value)}`);
+                                                    }}
+                                                    className="flex-1 inline-flex items-center justify-center gap-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-bold py-2 rounded-xl transition-colors cursor-pointer"
+                                                >
+                                                    <MessageCircle size={13} /> WhatsApp
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
             )}
 
             {/* Actions */}
