@@ -3,7 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ChevronLeft, Save, MapPin, Plus, Trash2, Phone, MessageCircle, User, Building, AlertTriangle, Sparkles, Loader2, Check } from 'lucide-react';
 import { addLocation, getLocations, updateLocation } from '@/lib/data';
 import { LocationContact } from '@/types';
-import { extractCoordsFromMapsUrl, resolveLocationCoordinates } from '@/lib/geo';
+import { extractCoordsFromMapsUrl, resolveLocationCoordinates, isShortMapsUrl } from '@/lib/geo';
+import LocationMapPicker from '@/components/LocationMapPicker';
 import RichTextEditor from '@/components/RichTextEditor';
 // import { addPoints } from '@/lib/gamification'; // Handled in addLocation now
 
@@ -141,6 +142,7 @@ export default function AddLocation() {
         setGeoFeedback(null);
         try {
             const resolved = await resolveLocationCoordinates({
+                name: formData.name,
                 googleMapsLink: formData.googleMapsLink,
                 address: formData.address,
                 commune: formData.commune,
@@ -154,16 +156,35 @@ export default function AddLocation() {
                     latitude: resolved.coords.lat.toString(),
                     longitude: resolved.coords.lng.toString(),
                 }));
-                setGeoFeedback({
-                    type: 'success',
-                    message: resolved.isEstimated
-                        ? 'Coordinate stimate da comune/indirizzo (puoi verificarle e affinarle).'
-                        : 'Coordinate estratte dal link Google Maps!'
-                });
+
+                if (resolved.isTownCenter) {
+                    const shortLinkNotice = isShortMapsUrl(formData.googleMapsLink)
+                        ? " Il link incollato è un link breve (maps.app.goo.gl) che nasconde le coordinate."
+                        : "";
+                    setGeoFeedback({
+                        type: 'warn',
+                        message: `⚠️ Le coordinate trovate corrispondono al centro del comune di ${formData.commune || 'riferimento'}.${shortLinkNotice} Trascina il pin sulla mappa sottostante per posizionare il punto esatto della struttura.`
+                    });
+                } else if (resolved.source === 'poi_name') {
+                    setGeoFeedback({
+                        type: 'success',
+                        message: `🎯 Trovata posizione esatta su mappa per "${formData.name}"!`
+                    });
+                } else if (resolved.source === 'maps_url') {
+                    setGeoFeedback({
+                        type: 'success',
+                        message: `📍 Coordinate esatte estratte dal link Google Maps!`
+                    });
+                } else {
+                    setGeoFeedback({
+                        type: 'success',
+                        message: `📍 Coordinate ricavate dall'indirizzo civico: ${resolved.coords.lat.toFixed(5)}, ${resolved.coords.lng.toFixed(5)}.`
+                    });
+                }
             } else {
                 setGeoFeedback({
                     type: 'error',
-                    message: 'Impossibile trovare coordinate: inserisci comune, indirizzo o un link Maps valido.'
+                    message: 'Impossibile trovare coordinate: inserisci nome struttura, comune, indirizzo o coordinate valide.'
                 });
             }
         } catch {
@@ -343,6 +364,7 @@ export default function AddLocation() {
         if (!finalCoords) {
             // Tentativo automatico da link Maps o indirizzo/comune
             const autoResolved = await resolveLocationCoordinates({
+                name: formData.name,
                 googleMapsLink: formData.googleMapsLink,
                 address: formData.address,
                 commune: formData.commune,
@@ -768,7 +790,7 @@ export default function AddLocation() {
                                 placeholder="Incolla link di Google Maps..."
                                 className="w-full p-2.5 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm focus:ring-2 focus:ring-scout-green"
                                 onBlur={(e) => {
-                                    const val = e.target.value;
+                                    const val = e.target.value.trim();
                                     if (val) {
                                         const coords = extractCoordsFromMapsUrl(val);
                                         if (coords) {
@@ -779,7 +801,12 @@ export default function AddLocation() {
                                             }));
                                             setGeoFeedback({
                                                 type: 'success',
-                                                message: 'Coordinate estratte con successo dal link Google Maps!'
+                                                message: `📍 Coordinate estratte dal link Google Maps (${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)})!`
+                                            });
+                                        } else if (isShortMapsUrl(val)) {
+                                            setGeoFeedback({
+                                                type: 'warn',
+                                                message: '⚠️ Link breve (maps.app.goo.gl) rilevato: i link brevi non contengono coordinate nel testo. Clicca su "📍 Ricava Coordinate" o seleziona il punto esatto sulla mappa sottostante.'
                                             });
                                         }
                                     }
@@ -792,9 +819,26 @@ export default function AddLocation() {
                                 <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Latitudine</label>
                                 <input
                                     type="text" name="latitude"
-                                    value={(formData as any).latitude || ''} onChange={handleChange}
+                                    value={(formData as any).latitude || ''}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        const parsed = extractCoordsFromMapsUrl(val);
+                                        if (parsed) {
+                                            setFormData((prev: any) => ({
+                                                ...prev,
+                                                latitude: parsed.lat.toString(),
+                                                longitude: parsed.lng.toString(),
+                                            }));
+                                            setGeoFeedback({
+                                                type: 'success',
+                                                message: `📍 Coordinate inserite (${parsed.lat.toFixed(5)}, ${parsed.lng.toFixed(5)})`
+                                            });
+                                        } else {
+                                            handleChange(e);
+                                        }
+                                    }}
                                     className="w-full p-2.5 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm font-mono"
-                                    placeholder="Es. 41.1234"
+                                    placeholder="Es. 44.8311"
                                 />
                             </div>
                             <div>
@@ -803,10 +847,30 @@ export default function AddLocation() {
                                     type="text" name="longitude"
                                     value={(formData as any).longitude || ''} onChange={handleChange}
                                     className="w-full p-2.5 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm font-mono"
-                                    placeholder="Es. 16.5678"
+                                    placeholder="Es. 9.5986"
                                 />
                             </div>
                         </div>
+
+                        {/* Mappa interattiva per selezione o spostamento pin sul punto esatto */}
+                        <LocationMapPicker
+                            latitude={(formData as any).latitude || ''}
+                            longitude={(formData as any).longitude || ''}
+                            commune={formData.commune}
+                            province={formData.province}
+                            region={formData.region}
+                            onChange={(lat, lng) => {
+                                setFormData((prev: any) => ({
+                                    ...prev,
+                                    latitude: lat.toString(),
+                                    longitude: lng.toString(),
+                                }));
+                                setGeoFeedback({
+                                    type: 'success',
+                                    message: `📍 Punto esatto posizionato su mappa: ${lat.toFixed(5)}, ${lng.toFixed(5)}`
+                                });
+                            }}
+                        />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
