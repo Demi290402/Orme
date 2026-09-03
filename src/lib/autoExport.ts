@@ -67,6 +67,7 @@ export function flattenResource(key: string, rawData: any[]): any[] {
                 ServizioRover: loc.hasRoverService ? 'Sì' : 'No',
                 CucinaAttrezzata: loc.hasEquippedKitchen ? 'Sì' : 'No',
                 PrezzoBase: loc.pricing?.basePrice || '',
+                TipoTariffa: loc.pricing?.target === 'per_group' ? 'Gruppo' : 'Persona',
                 UnitaPrezzo: loc.pricing?.unit === 'per_night' ? 'Notte' : 'Giorno',
                 NotePrezzo: loc.pricing?.description || '',
                 Contatti: (loc.contacts || []).map((c: any) => [c.name, c.role, c.value].filter(Boolean).join(' - ')).join('; '),

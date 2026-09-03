@@ -149,6 +149,7 @@ export type Restriction =
 export interface PricingInfo {
     basePrice: number;
     unit: 'per_night' | 'per_day';
+    target?: 'per_person' | 'per_group'; // A persona (pro capite) o a gruppo (tariffa fissa totale)
     description: string; // Explanations for kitchen use, partial days, etc.
 }
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Search, Filter, Plus, X, Check, Clock, Tent, BedDouble, Star, Bus } from 'lucide-react';
+import { Search, Filter, Plus, X, Check, Clock, Tent, BedDouble, Bus } from 'lucide-react';
 import { getLocations, getUser, getUserLocationViews, getAllLocationHistory } from '@/lib/data';
 import { Location, User as UserType } from '@/types';
 import LocationCard from '@/components/LocationCard';
@@ -48,8 +48,6 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
     const [hasBeds, setHasBeds] = useState(false);
     const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
     const [selectedStaleness, setSelectedStaleness] = useState<number[]>([]);
-    const [minRating, setMinRating] = useState(0);
-    const [selectedPrices, setSelectedPrices] = useState<number[]>([]);
     const [currentUser, setCurrentUser] = useState<UserType | null>(null);
     const [locationViews, setLocationViews] = useState<Record<string, string>>({});
     const [histories, setHistories] = useState<any[]>([]);
@@ -123,35 +121,8 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
             matchesStaleness = selectedStaleness.includes(info.level);
         }
 
-        // 6. Rating
-        const matchesRating = loc.avgRating >= minRating;
-
-        // 7. Price
-        let matchesPrice = true;
-        if (selectedPrices.length > 0) {
-            matchesPrice = selectedPrices.some(p => {
-                if (loc.priceCategory === p) return true;
-                
-                // Se la categoria prezzo è 0 (N/D) ma c'è un basePrice, deduciamo la fascia per la ricerca
-                if ((!loc.priceCategory || loc.priceCategory === 0) && loc.pricing?.basePrice) {
-                    const price = loc.pricing.basePrice;
-                    if (loc.pricing.unit === 'per_night') {
-                        if (p === 1 && price <= 8) return true;
-                        if (p === 2 && price > 8 && price <= 15) return true;
-                        if (p === 3 && price > 15) return true;
-                    } else {
-                        if (p === 1 && price <= 50) return true;
-                        if (p === 2 && price > 50 && price <= 150) return true;
-                        if (p === 3 && price > 150) return true;
-                    }
-                }
-                return false;
-            });
-        }
-
         return matchesSearch && matchesTents && matchesBeds && matchesRegion && 
-               matchesBranch && matchesActivity && matchesStaleness && 
-               matchesRating && matchesPrice;
+               matchesBranch && matchesActivity && matchesStaleness;
     });
 
     const activeFiltersCount =
@@ -159,8 +130,6 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
         selectedRegions.length +
         selectedActivities.length +
         selectedStaleness.length +
-        selectedPrices.length +
-        (minRating > 0 ? 1 : 0) +
         (hasTents ? 1 : 0) +
         (hasBeds ? 1 : 0);
 
@@ -323,44 +292,7 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                             </div>
                         </div>
 
-                        {/* 1c. Rating & Prezzo */}
-                        <div className="grid grid-cols-2 gap-6">
-                            <div>
-                                <h3 className="font-bold text-gray-900 dark:text-white mb-3 text-sm">Rating Minimo</h3>
-                                <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-900 p-2 rounded-xl border border-gray-100 dark:border-gray-700">
-                                    <Star size={16} fill={minRating > 0 ? "#d97706" : "none"} className={minRating > 0 ? "text-amber-600" : "text-gray-300"} />
-                                    <select 
-                                        value={minRating}
-                                        onChange={e => setMinRating(Number(e.target.value))}
-                                        className="bg-transparent font-bold text-gray-700 dark:text-gray-300 outline-none flex-1 text-sm border-none"
-                                    >
-                                        <option value={0}>Qualsiasi</option>
-                                        <option value={3}>3+ Stelle</option>
-                                        <option value={4}>4+ Stelle</option>
-                                        <option value={4.5}>4.5+ Stelle</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div>
-                                <h3 className="font-bold text-gray-900 dark:text-white mb-3 text-sm">Fascia Prezzo</h3>
-                                <div className="flex gap-1.5">
-                                    {[1, 2, 3].map(p => (
-                                        <button
-                                            key={p}
-                                            onClick={() => toggleSelection(selectedPrices, p, setSelectedPrices)}
-                                            className={cn(
-                                                "w-10 h-10 rounded-xl font-black text-sm border transition-all",
-                                                selectedPrices.includes(p)
-                                                    ? "bg-scout-green text-white border-scout-green shadow-sm"
-                                                    : "bg-white dark:bg-gray-700 text-gray-400 dark:text-gray-450 border-gray-200 dark:border-gray-650 hover:bg-gray-55 dark:hover:bg-gray-600"
-                                            )}
-                                        >
-                                            {"€".repeat(p)}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
+
                         <div>
                             <h3 className="font-bold text-gray-900 dark:text-white mb-3">Logistica</h3>
                             <div className="flex gap-3">
@@ -454,8 +386,6 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                                         setSelectedRegions([]);
                                         setSelectedActivities([]);
                                         setSelectedStaleness([]);
-                                        setSelectedPrices([]);
-                                        setMinRating(0);
                                         setHasTents(false);
                                         setHasBeds(false);
                                     }}

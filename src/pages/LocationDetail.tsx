@@ -304,6 +304,15 @@ export default function LocationDetail() {
 
     const actionButtonsCount = [phone, whatsapp, websiteUrl, emailUrl, true].filter(Boolean).length;
 
+    const hasAnyAttention = Boolean(
+        location.hasPastures ||
+        location.hasInsects ||
+        location.hasDiseases ||
+        location.hasLittleShade ||
+        location.hasVeryBusyArea ||
+        (location.otherAttention && location.otherAttention.trim().length > 0)
+    );
+
     const updatedByText = updaterInfo ? `da ${updaterInfo.nickname}${updaterInfo.groupName ? ` - ${updaterInfo.groupName}` : ''}` : '';
 
     const totalPages = Math.ceil(historyList.length / pageSize);
@@ -794,11 +803,20 @@ export default function LocationDetail() {
                     <h2 className="font-black text-xs uppercase tracking-widest flex items-center gap-2 text-scout-brown">
                         <Euro size={16} /> Prezzi e Tariffe
                     </h2>
-                    <div className="flex items-baseline gap-2">
+                    <div className="flex flex-wrap items-baseline gap-2">
                         <span className="text-3xl font-black text-gray-900 dark:text-white">{location.pricing.basePrice}€</span>
-                        <span className="text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-tighter">
-                            {location.pricing.unit === 'per_night' ? 'a notte' : 'al giorno'} / persona
+                        <span className="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase tracking-wider">
+                            {location.pricing.unit === 'per_night' ? 'a notte' : 'al giorno'} / {location.pricing.target === 'per_group' ? 'gruppo' : 'persona'}
                         </span>
+                        {location.pricing.target === 'per_group' ? (
+                            <span className="text-[10px] font-bold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-800/40">
+                                👥 Tariffa fissa per l'intero gruppo
+                            </span>
+                        ) : (
+                            <span className="text-[10px] font-bold text-scout-blue dark:text-sky-400 bg-blue-50 dark:bg-sky-950/40 px-2 py-0.5 rounded-full border border-blue-200 dark:border-sky-800/40">
+                                👤 Tariffa a persona (pro capite)
+                            </span>
+                        )}
                     </div>
                     {location.pricing.description && (
                         <div className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-2xl border border-gray-100 dark:border-gray-600">
@@ -855,6 +873,67 @@ export default function LocationDetail() {
                     </div>
                 )}
             </div>
+
+            {/* Attenzioni e Aspetti Critici del Luogo */}
+            {hasAnyAttention && (
+                <div className="bg-orange-50/80 dark:bg-orange-950/30 rounded-[2rem] border border-orange-200 dark:border-orange-800/60 p-6 space-y-4 shadow-2xs">
+                    <div className="flex items-center gap-2.5 text-orange-900 dark:text-orange-200 pb-2 border-b border-orange-200/60 dark:border-orange-800/50">
+                        <div className="p-2 bg-orange-100 dark:bg-orange-900/60 rounded-xl text-orange-600 dark:text-orange-400">
+                            <ShieldAlert size={18} />
+                        </div>
+                        <div>
+                            <h2 className="font-black text-xs uppercase tracking-widest">
+                                Attenzioni e Aspetti Critici del Luogo
+                            </h2>
+                            <p className="text-[11px] text-orange-700/90 dark:text-orange-300/80 font-medium mt-0.5">
+                                Segnalazioni di sicurezza, fauna e territorio indicate dai capi
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        {location.hasPastures && (
+                            <div className="flex items-center gap-2.5 p-3 bg-white/90 dark:bg-gray-800/90 rounded-xl border border-orange-200/80 dark:border-orange-800/50 text-xs font-bold text-gray-800 dark:text-gray-200">
+                                <span className="text-lg leading-none">🐑</span>
+                                <span>Pascoli e Greggi (cani da pastore)</span>
+                            </div>
+                        )}
+                        {location.hasInsects && (
+                            <div className="flex items-center gap-2.5 p-3 bg-white/90 dark:bg-gray-800/90 rounded-xl border border-orange-200/80 dark:border-orange-800/50 text-xs font-bold text-gray-800 dark:text-gray-200">
+                                <span className="text-lg leading-none">🐝</span>
+                                <span>Calabroni / Tafani / Vespe / Mosche</span>
+                            </div>
+                        )}
+                        {location.hasDiseases && (
+                            <div className="flex items-center gap-2.5 p-3 bg-white/90 dark:bg-gray-800/90 rounded-xl border border-orange-200/80 dark:border-orange-800/50 text-xs font-bold text-gray-800 dark:text-gray-200">
+                                <span className="text-lg leading-none">🦠</span>
+                                <span>Parassiti e Malattie (zecche, leishmania)</span>
+                            </div>
+                        )}
+                        {location.hasLittleShade && (
+                            <div className="flex items-center gap-2.5 p-3 bg-white/90 dark:bg-gray-800/90 rounded-xl border border-orange-200/80 dark:border-orange-800/50 text-xs font-bold text-gray-800 dark:text-gray-200">
+                                <span className="text-lg leading-none">☀️</span>
+                                <span>Poche zone d'ombra (molto esposto al sole)</span>
+                            </div>
+                        )}
+                        {location.hasVeryBusyArea && (
+                            <div className="flex items-center gap-2.5 p-3 bg-white/90 dark:bg-gray-800/90 rounded-xl border border-orange-200/80 dark:border-orange-800/50 text-xs font-bold text-gray-800 dark:text-gray-200">
+                                <span className="text-lg leading-none">👥</span>
+                                <span>Zona molto frequentata / turistica</span>
+                            </div>
+                        )}
+                    </div>
+
+                    {location.otherAttention && (
+                        <div className="p-3.5 bg-white/95 dark:bg-gray-800/95 rounded-xl border border-orange-200/80 dark:border-orange-800/50 text-xs text-gray-700 dark:text-gray-300">
+                            <strong className="text-orange-950 dark:text-orange-200 block mb-1 font-bold">
+                                💬 Altre note specifiche di attenzione:
+                            </strong>
+                            <p className="italic leading-relaxed">"{location.otherAttention}"</p>
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Quick Note */}
             <div className="bg-yellow-50 dark:bg-yellow-900/20 p-6 rounded-[2rem] border border-yellow-100 dark:border-yellow-800 text-xs font-medium text-yellow-900 dark:text-yellow-200 italic leading-relaxed">

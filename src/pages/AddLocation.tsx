@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ChevronLeft, Save, MapPin, Plus, Trash2, Phone, MessageCircle, User, Building } from 'lucide-react';
+import { ChevronLeft, Save, MapPin, Plus, Trash2, Phone, MessageCircle, User, Building, AlertTriangle, Sparkles, Loader2, Check } from 'lucide-react';
 import { addLocation, getLocations, updateLocation } from '@/lib/data';
 import { LocationContact } from '@/types';
+import { extractCoordsFromMapsUrl, resolveLocationCoordinates } from '@/lib/geo';
 import RichTextEditor from '@/components/RichTextEditor';
 // import { addPoints } from '@/lib/gamification'; // Handled in addLocation now
 
@@ -34,6 +35,8 @@ export default function AddLocation() {
     const { id } = useParams();
     const [isEditMode, setIsEditMode] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isGeocoding, setIsGeocoding] = useState(false);
+    const [geoFeedback, setGeoFeedback] = useState<{ type: 'success' | 'warn' | 'error'; message: string } | null>(null);
 
     const [contacts, setContacts] = useState<ContactFormItem[]>([
         { id: '1', phone: '', name: '', role: '', isWhatsapp: true, notes: '' }
@@ -83,6 +86,7 @@ export default function AddLocation() {
         // Pricing
         pricingBase: '',
         pricingUnit: 'per_night' as 'per_night' | 'per_day',
+        pricingTarget: 'per_person' as 'per_person' | 'per_group',
         pricingDescription: '',
 
         // Availability
@@ -126,6 +130,46 @@ export default function AddLocation() {
             next[index] = { ...next[index], [field]: value };
             return next;
         });
+    };
+
+    const handleAutoFindCoordinates = async () => {
+        setIsGeocoding(true);
+        setGeoFeedback(null);
+        try {
+            const resolved = await resolveLocationCoordinates({
+                googleMapsLink: formData.googleMapsLink,
+                address: formData.address,
+                commune: formData.commune,
+                province: formData.province,
+                region: formData.region,
+            });
+
+            if (resolved) {
+                setFormData(prev => ({
+                    ...prev,
+                    latitude: resolved.coords.lat.toString(),
+                    longitude: resolved.coords.lng.toString(),
+                }));
+                setGeoFeedback({
+                    type: 'success',
+                    message: resolved.isEstimated
+                        ? 'Coordinate stimate da comune/indirizzo (puoi verificarle e affinarle).'
+                        : 'Coordinate estratte dal link Google Maps!'
+                });
+            } else {
+                setGeoFeedback({
+                    type: 'error',
+                    message: 'Impossibile trovare coordinate: inserisci comune, indirizzo o un link Maps valido.'
+                });
+            }
+        } catch {
+            setGeoFeedback({
+                type: 'error',
+                message: 'Errore durante la ricerca delle coordinate.'
+            });
+        } finally {
+            setIsGeocoding(false);
+        }
     };
 
     useEffect(() => {
@@ -207,6 +251,7 @@ export default function AddLocation() {
                         otherRestrictionInput: '',
                         pricingBase: found.pricing?.basePrice?.toString() || '',
                         pricingUnit: found.pricing?.unit || 'per_night',
+                        pricingTarget: found.pricing?.target || 'per_person',
                         pricingDescription: found.pricing?.description || '',
                         availabilityStatus: (found as any).availabilityStatus || 'available',
                         priceCategory: found.priceCategory || 0,
@@ -263,6 +308,30 @@ export default function AddLocation() {
             isWhatsapp: c.isWhatsapp,
         }));
 
+        // Risoluzione autonoma coordinate se non fornite manualmente
+        let finalCoords: { lat: number; lng: number } | undefined = undefined;
+        if ((formData as any).latitude && (formData as any).longitude) {
+            const lat = parseFloat((formData as any).latitude);
+            const lng = parseFloat((formData as any).longitude);
+            if (!isNaN(lat) && !isNaN(lng)) {
+                finalCoords = { lat, lng };
+            }
+        }
+
+        if (!finalCoords) {
+            // Tentativo automatico da link Maps o indirizzo/comune
+            const autoResolved = await resolveLocationCoordinates({
+                googleMapsLink: formData.googleMapsLink,
+                address: formData.address,
+                commune: formData.commune,
+                province: formData.province,
+                region: formData.region,
+            });
+            if (autoResolved) {
+                finalCoords = autoResolved.coords;
+            }
+        }
+
         const locationData = {
             name: formData.name,
             region: formData.region,
@@ -294,10 +363,7 @@ export default function AddLocation() {
             otherAttention: formData.otherAttention,
 
             // Coordinates
-            coordinates: (formData as any).latitude && (formData as any).longitude ? {
-                lat: parseFloat((formData as any).latitude),
-                lng: parseFloat((formData as any).longitude)
-            } : undefined,
+            coordinates: finalCoords,
 
             quickNote: formData.quickNote,
             description: formData.description,
@@ -310,6 +376,7 @@ export default function AddLocation() {
             pricing: formData.pricingBase ? {
                 basePrice: parseFloat(formData.pricingBase),
                 unit: formData.pricingUnit,
+                target: formData.pricingTarget,
                 description: formData.pricingDescription
             } : undefined
         };
@@ -618,59 +685,103 @@ export default function AddLocation() {
                     </div>
 
                     {/* Coordinates Section */}
-                    <div className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-xl border border-gray-200 dark:border-gray-600 mb-4">
-                        <label className="block text-sm font-medium mb-1">Link Google Maps (per coordinate automatiche)</label>
-                        <div className="flex gap-2 mb-3">
+                    <div className="bg-gray-50 dark:bg-gray-750/70 p-4 rounded-2xl border border-gray-200 dark:border-gray-650 mb-4 space-y-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                            <div>
+                                <label className="block text-sm font-bold text-gray-900 dark:text-white">
+                                    Coordinate Geografiche & Mappa
+                                </label>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                    Necessarie per visualizzare correttamente il luogo sulla mappa.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={handleAutoFindCoordinates}
+                                disabled={isGeocoding}
+                                className="inline-flex items-center gap-1.5 text-xs font-bold text-scout-blue hover:text-blue-700 bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-950/50 px-3 py-2 rounded-xl border border-blue-200 dark:border-blue-800 transition-all cursor-pointer disabled:opacity-50 self-start sm:self-auto"
+                            >
+                                {isGeocoding ? (
+                                    <>
+                                        <Loader2 size={13} className="animate-spin" />
+                                        Ricerca in corso...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Sparkles size={13} />
+                                        📍 Ricava Coordinate Automatiche
+                                    </>
+                                )}
+                            </button>
+                        </div>
+
+                        {/* Avviso Importanza Coordinate */}
+                        <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 flex items-start gap-2.5 text-xs text-amber-900 dark:text-amber-200">
+                            <AlertTriangle size={17} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                            <div className="leading-relaxed">
+                                <strong className="font-bold">Consiglio precisione mappa:</strong> Per collocare la struttura nella sua esatta posizione geografica, è fortemente consigliato verificare o inserire le coordinate (Latitudine e Longitudine). Se lasciate vuote, Orme le stimerà in automatico da indirizzo e link Maps al momento del salvataggio.
+                            </div>
+                        </div>
+
+                        {geoFeedback && (
+                            <div className={`p-2.5 rounded-xl border text-xs font-medium flex items-center gap-2 ${
+                                geoFeedback.type === 'success'
+                                    ? 'bg-green-50 dark:bg-emerald-950/30 text-green-800 dark:text-emerald-300 border-green-200 dark:border-emerald-800'
+                                    : 'bg-red-50 dark:bg-red-950/30 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800'
+                            }`}>
+                                {geoFeedback.type === 'success' ? <Check size={14} className="shrink-0 text-scout-green" /> : <AlertTriangle size={14} className="shrink-0 text-red-500" />}
+                                <span>{geoFeedback.message}</span>
+                            </div>
+                        )}
+
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                                Link Google Maps (opzionale, estrae coordinate istantaneamente)
+                            </label>
                             <input
                                 type="url"
                                 name="googleMapsLink"
                                 value={formData.googleMapsLink}
                                 onChange={handleChange}
-                                placeholder="Incolla link qui..."
-                                className="flex-1 p-3 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                placeholder="Incolla link di Google Maps..."
+                                className="w-full p-2.5 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm focus:ring-2 focus:ring-scout-green"
                                 onBlur={(e) => {
                                     const val = e.target.value;
                                     if (val) {
-                                        // Try regex for @lat,lng
-                                        const match = val.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
-                                        if (match) {
+                                        const coords = extractCoordsFromMapsUrl(val);
+                                        if (coords) {
                                             setFormData((prev: any) => ({
                                                 ...prev,
-                                                latitude: match[1],
-                                                longitude: match[2]
+                                                latitude: coords.lat.toString(),
+                                                longitude: coords.lng.toString()
                                             }));
-                                        } else {
-                                            // Try regex for query parameter
-                                            const match2 = val.match(/[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/);
-                                            if (match2) {
-                                                setFormData((prev: any) => ({
-                                                    ...prev,
-                                                    latitude: match2[1],
-                                                    longitude: match2[2]
-                                                }));
-                                            }
+                                            setGeoFeedback({
+                                                type: 'success',
+                                                message: 'Coordinate estratte con successo dal link Google Maps!'
+                                            });
                                         }
                                     }
                                 }}
                             />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+
+                        <div className="grid grid-cols-2 gap-3 pt-1">
                             <div>
-                                <label className="block text-xs text-gray-500 mb-1">Latitudine</label>
+                                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Latitudine</label>
                                 <input
                                     type="text" name="latitude"
                                     value={(formData as any).latitude || ''} onChange={handleChange}
-                                    className="w-full p-2 rounded-lg border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm"
-                                    placeholder="Es. 45.1234"
+                                    className="w-full p-2.5 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm font-mono"
+                                    placeholder="Es. 41.1234"
                                 />
                             </div>
                             <div>
-                                <label className="block text-xs text-gray-500 mb-1">Longitudine</label>
+                                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Longitudine</label>
                                 <input
                                     type="text" name="longitude"
                                     value={(formData as any).longitude || ''} onChange={handleChange}
-                                    className="w-full p-2 rounded-lg border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm"
-                                    placeholder="Es. 12.1234"
+                                    className="w-full p-2.5 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm font-mono"
+                                    placeholder="Es. 16.5678"
                                 />
                             </div>
                         </div>
@@ -830,28 +941,48 @@ export default function AddLocation() {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                         <div>
-                            <label className="block text-sm font-medium mb-1">Prezzo Base (€)</label>
+                            <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Prezzo Base (€)</label>
                             <input
                                 type="number" name="pricingBase"
                                 value={formData.pricingBase} onChange={handleChange}
-                                placeholder="Es. 10"
-                                className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                placeholder="Es. 10 oppure 400"
+                                className="w-full p-2.5 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium mb-1">Unità</label>
+                            <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Tariffa Applicata</label>
+                            <select
+                                name="pricingTarget"
+                                value={formData.pricingTarget} onChange={handleChange}
+                                className="w-full p-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white text-sm font-semibold"
+                            >
+                                <option value="per_person">👤 A Persona (pro capite)</option>
+                                <option value="per_group">👥 A Gruppo (prezzo fisso)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Frequenza</label>
                             <select
                                 name="pricingUnit"
                                 value={formData.pricingUnit} onChange={handleChange}
-                                className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white"
+                                className="w-full p-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white text-sm font-semibold"
                             >
-                                <option value="per_night">A Notte</option>
-                                <option value="per_day">Al Giorno</option>
+                                <option value="per_night">🌙 A Notte</option>
+                                <option value="per_day">☀️ Al Giorno</option>
                             </select>
                         </div>
                     </div>
+
+                    {formData.pricingBase && (
+                        <div className="p-2.5 rounded-xl bg-green-50 dark:bg-emerald-950/30 border border-green-200 dark:border-emerald-800 text-xs text-green-900 dark:text-emerald-200 font-bold flex items-center gap-2">
+                            <span>💶 Tariffa risultante:</span>
+                            <span className="underline">
+                                {formData.pricingBase}€ {formData.pricingUnit === 'per_night' ? 'a notte' : 'al giorno'} / {formData.pricingTarget === 'per_group' ? 'gruppo (prezzo forfettario totale)' : 'persona (a testa)'}
+                            </span>
+                        </div>
+                    )}
 
                     <div>
                         <label className="block text-sm font-medium mb-1">Dettagli e Flessibilità Prezzi</label>
