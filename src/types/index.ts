@@ -144,7 +144,9 @@ export type Restriction =
     | 'Accesso difficile veicoli'
     | 'Gestore invadente'
     | 'Acqua ed elettricità limitate'
-    | 'Altro';
+    | 'Altro'
+    | `Regole Silenzio: ${string}`
+    | string;
 
 export interface PricingInfo {
     basePrice: number;

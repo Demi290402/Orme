@@ -867,8 +867,24 @@ export default function LocationDetail() {
                         <h3 className="font-black uppercase tracking-widest mb-3 flex items-center gap-2">
                             <ShieldAlert size={16} /> Vincoli
                         </h3>
-                        <ul className="space-y-2 ml-1 font-bold opacity-80 uppercase tracking-tighter">
-                            {location.restrictions.map((r, i) => <li key={i} className="flex items-center gap-1.5"><X size={10} /> {r}</li>)}
+                        <ul className="space-y-2 ml-1 font-bold opacity-90 uppercase tracking-tighter">
+                            {location.restrictions.map((r, i) => {
+                                const isSilence = r.toLowerCase().includes('silenzio');
+                                return (
+                                    <li key={i} className={`flex items-center gap-2 ${
+                                        isSilence 
+                                            ? 'bg-red-100/70 dark:bg-red-950/70 p-2.5 rounded-xl border border-red-200 dark:border-red-800 text-red-950 dark:text-red-100 normal-case tracking-normal font-bold shadow-2xs' 
+                                            : ''
+                                    }`}>
+                                        {isSilence ? (
+                                            <span className="text-base leading-none shrink-0">🌙</span>
+                                        ) : (
+                                            <X size={10} className="shrink-0" />
+                                        )}
+                                        <span>{r}</span>
+                                    </li>
+                                );
+                            })}
                         </ul>
                     </div>
                 )}

@@ -42,6 +42,10 @@ export default function AddLocation() {
         { id: '1', phone: '', name: '', role: '', isWhatsapp: true, notes: '' }
     ]);
 
+    const [hasSilenceRules, setHasSilenceRules] = useState(false);
+    const [silenceStart, setSilenceStart] = useState('23:00');
+    const [silenceEnd, setSilenceEnd] = useState('07:00');
+
     const [formData, setFormData] = useState({
         name: '',
         region: '',
@@ -247,7 +251,22 @@ export default function AddLocation() {
                         quickNote: found.quickNote,
                         description: found.description || '',
                         activities: found.activities,
-                        restrictions: found.restrictions,
+                        restrictions: (() => {
+                            const silenceRule = (found.restrictions || []).find((r: string) => 
+                                r.toLowerCase().includes('silenzio')
+                            );
+                            if (silenceRule) {
+                                setHasSilenceRules(true);
+                                const match = silenceRule.match(/(\d{1,2}:\d{2})\s*[-–]\s*(\d{1,2}:\d{2})/);
+                                if (match) {
+                                    setSilenceStart(match[1].padStart(5, '0'));
+                                    setSilenceEnd(match[2].padStart(5, '0'));
+                                }
+                            }
+                            return (found.restrictions || []).filter((r: string) => 
+                                !r.toLowerCase().includes('silenzio')
+                            );
+                        })(),
                         otherRestrictionInput: '',
                         pricingBase: found.pricing?.basePrice?.toString() || '',
                         pricingUnit: found.pricing?.unit || 'per_night',
@@ -294,7 +313,10 @@ export default function AddLocation() {
 
         setIsSubmitting(true);
 
-        const finalRestrictions = [...formData.restrictions];
+        const finalRestrictions = [...formData.restrictions].filter(r => !r.toLowerCase().includes('silenzio'));
+        if (hasSilenceRules) {
+            finalRestrictions.push(`Regole Silenzio: ${silenceStart} - ${silenceEnd}`);
+        }
         if (formData.otherRestrictionInput.trim()) {
             finalRestrictions.push(formData.otherRestrictionInput.trim());
         }
@@ -895,13 +917,77 @@ export default function AddLocation() {
                             </label>
                         ))}
                     </div>
+
+                    {/* Regole del Silenzio con orario personalizzabile */}
+                    <div className={`p-4 border rounded-2xl transition-all ${
+                        hasSilenceRules
+                            ? 'bg-red-50/80 dark:bg-red-950/40 border-red-200 dark:border-red-800'
+                            : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750'
+                    }`}>
+                        <div className="flex items-center justify-between gap-3">
+                            <label className="flex items-start sm:items-center gap-3 cursor-pointer select-none">
+                                <input
+                                    type="checkbox"
+                                    checked={hasSilenceRules}
+                                    onChange={(e) => setHasSilenceRules(e.target.checked)}
+                                    className="w-5 h-5 text-red-600 rounded focus:ring-red-500 cursor-pointer mt-0.5 sm:mt-0"
+                                />
+                                <div>
+                                    <span className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                                        <span className="text-base">🌙</span> Regola del Silenzio (orari personalizzati)
+                                    </span>
+                                    <span className="text-[11px] text-gray-500 dark:text-gray-400 block mt-0.5">
+                                        Imposta la fascia oraria di rispetto del silenzio richiesta dalla struttura o dalla zona
+                                    </span>
+                                </div>
+                            </label>
+                            {hasSilenceRules && (
+                                <span className="text-[10px] font-black uppercase tracking-wider text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/60 px-2.5 py-1 rounded-full border border-red-200 dark:border-red-800 shrink-0">
+                                    Attivo
+                                </span>
+                            )}
+                        </div>
+
+                        {hasSilenceRules && (
+                            <div className="mt-3.5 pt-3.5 border-t border-red-200/70 dark:border-red-800/60 flex flex-wrap items-center gap-3">
+                                <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                                    Fascia oraria di silenzio:
+                                </span>
+                                <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-1.5 bg-white dark:bg-gray-700 px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-600 shadow-xs">
+                                        <span className="text-xs font-semibold text-gray-400">Dalle</span>
+                                        <input
+                                            type="time"
+                                            value={silenceStart}
+                                            onChange={(e) => setSilenceStart(e.target.value)}
+                                            className="bg-transparent text-xs font-black text-gray-800 dark:text-white outline-none cursor-pointer"
+                                        />
+                                    </div>
+                                    <span className="text-xs font-bold text-gray-400">fino alle</span>
+                                    <div className="flex items-center gap-1.5 bg-white dark:bg-gray-700 px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-600 shadow-xs">
+                                        <span className="text-xs font-semibold text-gray-400">Alle</span>
+                                        <input
+                                            type="time"
+                                            value={silenceEnd}
+                                            onChange={(e) => setSilenceEnd(e.target.value)}
+                                            className="bg-transparent text-xs font-black text-gray-800 dark:text-white outline-none cursor-pointer"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="text-xs font-bold text-red-800 dark:text-red-300 bg-white/90 dark:bg-gray-800/90 px-3 py-1.5 rounded-xl border border-red-200 dark:border-red-800/70 sm:ml-auto shadow-xs">
+                                    Vincolo: <span className="font-black">Regole Silenzio: {silenceStart} - {silenceEnd}</span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
                     <div>
                         <label className="block text-sm font-medium mb-1">Altro (specificare)</label>
                         <input
                             type="text" name="otherRestrictionInput"
                             value={formData.otherRestrictionInput} onChange={handleChange}
                             className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                            placeholder="Es. Orari di silenzio rigidi..."
+                            placeholder="Es. Non accendere musica, scarpe da togliere all'ingresso..."
                         />
                     </div>
                 </div>
