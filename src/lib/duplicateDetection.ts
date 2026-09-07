@@ -22,6 +22,19 @@ export interface LocationCandidate {
 
 export type DuplicateConfidence = 'critical' | 'high' | 'medium';
 
+export interface MatchedPillars {
+    name: boolean;
+    nameDetail?: string;
+    commune: boolean;
+    communeDetail?: string;
+    address: boolean;
+    addressDetail?: string;
+    coordinates: boolean;
+    coordinatesDetail?: string;
+    contacts: boolean;
+    contactsDetail?: string;
+}
+
 export interface DuplicateReason {
     type: 'coordinates' | 'phone' | 'email' | 'maps_link' | 'website' | 'social' | 'name_commune' | 'address';
     message: string;
@@ -35,11 +48,13 @@ export interface DuplicateMatch {
     reasons: DuplicateReason[];
     distanceMeters?: number;
     blocking: boolean;
+    isUnequivocal: boolean; // True solo se coordinate, indirizzo, contatti, nome e comune sono uguali
+    pillars: MatchedPillars;
 }
 
 export interface DuplicateDetectionResult {
-    isDuplicate: boolean; // true se critical o high
-    hasWarning: boolean;  // true se c'è almeno un medium
+    isDuplicate: boolean; // true se critical (inequivocabilmente uguale)
+    hasWarning: boolean;  // true se c'è almeno un medium o high
     bestMatch: DuplicateMatch | null;
     allMatches: DuplicateMatch[];
 }
@@ -252,261 +267,267 @@ export function findDuplicateLocation(
         // Escludi la struttura stessa se siamo in modalità modifica
         if (candidate.id && loc.id === candidate.id) continue;
 
-        let score = 0;
-        const reasons: DuplicateReason[] = [];
         let distanceMeters: number | undefined = undefined;
 
         // ----------------------------------------------------
-        // 1. CONFRONTO COORDINATE GPS
+        // VALUTAZIONE DEI 5 PILASTRI IDENTIFICATIVI:
+        // 1. NOME
+        // 2. COMUNE
+        // 3. INDIRIZZO
+        // 4. COORDINATE
+        // 5. CONTATTI
         // ----------------------------------------------------
+
+        // 1. NOME
+        const locNameNorm = normalizeText(loc.name);
+        const locTokens = extractDistinctiveTokens(loc.name);
+        const commonTokens = candTokens.filter(t => locTokens.includes(t));
+        const nameSim = (candNameNorm && locNameNorm) ? stringSimilarity(candNameNorm, locNameNorm) : 0;
+        const matchName = Boolean(
+            candNameNorm && locNameNorm && (
+                candNameNorm === locNameNorm ||
+                nameSim >= 0.85 ||
+                (candTokens.length > 0 && locTokens.length > 0 && commonTokens.length === candTokens.length && commonTokens.length === locTokens.length)
+            )
+        );
+
+        // 2. COMUNE
+        const locCommuneNorm = normalizeText(loc.commune);
+        const matchCommune = Boolean(
+            candCommuneNorm && locCommuneNorm && (
+                candCommuneNorm === locCommuneNorm ||
+                candCommuneNorm.includes(locCommuneNorm) ||
+                locCommuneNorm.includes(candCommuneNorm)
+            )
+        );
+
+        // 3. INDIRIZZO
+        const locAddressNorm = normalizeText(loc.address);
+        const addressSim = (candAddressNorm && locAddressNorm) ? stringSimilarity(candAddressNorm, locAddressNorm) : 0;
+        const matchAddress = Boolean(
+            candAddressNorm && locAddressNorm && (
+                candAddressNorm === locAddressNorm ||
+                addressSim >= 0.75 ||
+                candAddressNorm.includes(locAddressNorm) ||
+                locAddressNorm.includes(candAddressNorm)
+            )
+        );
+
+        // 4. COORDINATE (dirette o ricavate da google maps link)
         let locCoords = loc.coordinates;
         if ((!locCoords || !locCoords.lat || !locCoords.lng) && loc.googleMapsLink) {
             const ext = extractCoordsFromMapsUrl(loc.googleMapsLink);
             if (ext) locCoords = ext;
         }
-
         if (candCoords?.lat && candCoords?.lng && locCoords?.lat && locCoords?.lng) {
-            distanceMeters = haversineDistanceMeters(
-                candCoords.lat,
-                candCoords.lng,
-                locCoords.lat,
-                locCoords.lng
-            );
-
-            if (distanceMeters <= 150) {
-                score += 96;
-                reasons.push({
-                    type: 'coordinates',
-                    message: `Stesse coordinate geografiche (a soli ${Math.round(distanceMeters)} metri da "${loc.name}")`,
-                    severity: 'critical'
-                });
-            } else if (distanceMeters <= 350) {
-                // Se sono molto vicini (150-350m) e nello stesso comune
-                const locCommune = normalizeText(loc.commune);
-                const sameCommune = candCommuneNorm && locCommune && (candCommuneNorm === locCommune || candCommuneNorm.includes(locCommune) || locCommune.includes(candCommuneNorm));
-                if (sameCommune) {
-                    score += 85;
-                    reasons.push({
-                        type: 'coordinates',
-                        message: `Posizione adiacente a ${Math.round(distanceMeters)}m da "${loc.name}" a ${loc.commune}`,
-                        severity: 'high'
-                    });
-                } else {
-                    score += 65;
-                    reasons.push({
-                        type: 'coordinates',
-                        message: `Posizione geografica vicina (${Math.round(distanceMeters)} metri)`,
-                        severity: 'medium'
-                    });
-                }
-            } else if (distanceMeters <= 800) {
-                const locCommune = normalizeText(loc.commune);
-                if (candCommuneNorm && locCommune && candCommuneNorm === locCommune) {
-                    score += 40;
-                    reasons.push({
-                        type: 'coordinates',
-                        message: `Posizione nello stesso raggio di ${Math.round(distanceMeters)} metri a ${loc.commune}`,
-                        severity: 'medium'
-                    });
-                }
-            }
+            distanceMeters = haversineDistanceMeters(candCoords.lat, candCoords.lng, locCoords.lat, locCoords.lng);
         }
+        const matchCoords = Boolean(distanceMeters !== undefined && distanceMeters <= 250);
 
-        // ----------------------------------------------------
-        // 2. CONFRONTO NUMERI DI TELEFONO E WHATSAPP
-        // ----------------------------------------------------
+        // 5. CONTATTI (telefono, whatsapp, email, facebook, instagram, website)
         const locPhones = getAllPhones(loc);
-        for (const cp of candPhones) {
-            for (const lp of locPhones) {
-                if (cp === lp && cp.length >= 8) {
-                    score += 95;
-                    reasons.push({
-                        type: 'phone',
-                        message: `Stesso recapito telefonico di riferimento (termina con ...${cp.slice(-6)})`,
-                        severity: 'critical'
-                    });
-                    break;
-                }
-            }
-        }
+        const matchedPhone = candPhones.find(cp => locPhones.includes(cp));
 
-        // ----------------------------------------------------
-        // 3. CONFRONTO EMAIL
-        // ----------------------------------------------------
         const locEmails = getAllEmails(loc);
-        for (const ce of candEmails) {
-            for (const le of locEmails) {
-                if (ce === le && ce.length > 5) {
-                    score += 95;
-                    reasons.push({
-                        type: 'email',
-                        message: `Stesso indirizzo email di contatto ("${ce}")`,
-                        severity: 'critical'
-                    });
-                    break;
-                }
-            }
-        }
+        const matchedEmail = candEmails.find(ce => locEmails.includes(ce));
 
-        // ----------------------------------------------------
-        // 4. CONFRONTO SITO WEB
-        // ----------------------------------------------------
-        const locWebsite = normalizeUrl(loc.website);
-        if (candWebsite && locWebsite && candWebsite.length > 4) {
-            // Evita match su domini generici di social media a meno che l'intero path coincida
-            const isGenericDomain = candWebsite.startsWith('facebook.com') || candWebsite.startsWith('instagram.com') || candWebsite.startsWith('google.com');
-            if (!isGenericDomain && candWebsite === locWebsite) {
-                score += 90;
-                reasons.push({
-                    type: 'website',
-                    message: `Stesso sito web ("${loc.website}")`,
-                    severity: 'critical'
-                });
-            }
-        }
-
-        // ----------------------------------------------------
-        // 4b. CONFRONTO CANALI SOCIAL (Facebook, Instagram)
-        // ----------------------------------------------------
         const candFb = normalizeSocialHandle(candidate.facebook);
         const locFb = normalizeSocialHandle(loc.facebook);
-        if (candFb && locFb && candFb === locFb && candFb.length >= 3) {
-            score += 92;
-            reasons.push({
-                type: 'social',
-                message: `Stessa pagina Facebook ("${loc.facebook}")`,
-                severity: 'critical'
-            });
-        }
+        const matchedFb = (candFb && locFb && candFb === locFb && candFb.length >= 3) ? candFb : undefined;
 
         const candIg = normalizeSocialHandle(candidate.instagram);
         const locIg = normalizeSocialHandle(loc.instagram);
-        if (candIg && locIg && candIg === locIg && candIg.length >= 3) {
-            score += 92;
+        const matchedIg = (candIg && locIg && candIg === locIg && candIg.length >= 3) ? candIg : undefined;
+
+        const locWebsite = normalizeUrl(loc.website);
+        const matchedWebsite = (candWebsite && locWebsite && candWebsite === locWebsite && !candWebsite.startsWith('facebook.com') && !candWebsite.startsWith('instagram.com') && candWebsite.length > 4) ? candWebsite : undefined;
+
+        const matchContacts = Boolean(matchedPhone || matchedEmail || matchedFb || matchedIg || matchedWebsite);
+
+        const matchedContactDetail = matchedPhone
+            ? `Tel: ...${matchedPhone.slice(-6)}`
+            : (matchedEmail
+                ? `Email: ${matchedEmail}`
+                : (matchedFb
+                    ? `Facebook: ${matchedFb}`
+                    : (matchedIg
+                        ? `Instagram: @${matchedIg}`
+                        : (matchedWebsite ? `Sito: ${matchedWebsite}` : undefined))));
+
+        const pillars: MatchedPillars = {
+            name: matchName,
+            nameDetail: matchName ? `"${loc.name}"` : undefined,
+            commune: matchCommune,
+            communeDetail: matchCommune ? loc.commune : undefined,
+            address: matchAddress,
+            addressDetail: matchAddress ? loc.address : undefined,
+            coordinates: matchCoords,
+            coordinatesDetail: matchCoords ? `~${Math.round(distanceMeters || 0)}m` : undefined,
+            contacts: matchContacts,
+            contactsDetail: matchedContactDetail,
+        };
+
+        // REQUISITO UTENTE:
+        // Una struttura è inequivocabilmente uguale ad una già registrata se:
+        // coordinate, indirizzo, contatti, nome e comune sono uguali.
+        const isUnequivocal = matchName && matchCommune && matchAddress && matchCoords && matchContacts;
+
+        let confidence: DuplicateConfidence = 'medium';
+        let score = 0;
+        let blocking = false;
+        const reasons: DuplicateReason[] = [];
+
+        if (isUnequivocal) {
+            // TUTTI E 5 I FATTORI COINCIDONO: BLOCCO CRITICO INEQUIVOCABILE
+            confidence = 'critical';
+            score = 100;
+            blocking = true;
+
             reasons.push({
-                type: 'social',
-                message: `Stesso profilo Instagram ("${loc.instagram}")`,
+                type: 'name_commune',
+                message: `Struttura inequivocabilmente identica: coordinate, indirizzo, contatti, nome e comune coincidono con "${loc.name}" a ${loc.commune}`,
                 severity: 'critical'
             });
-        }
-
-        // ----------------------------------------------------
-        // 5. CONFRONTO TOPONOMASTICO: NOME + COMUNE
-        // ----------------------------------------------------
-        const locCommuneNorm = normalizeText(loc.commune);
-        const locProvinceNorm = normalizeText(loc.province);
-        const sameCommune = candCommuneNorm && locCommuneNorm && (
-            candCommuneNorm === locCommuneNorm ||
-            candCommuneNorm.includes(locCommuneNorm) ||
-            locCommuneNorm.includes(candCommuneNorm)
-        );
-        const sameProvince = candProvinceNorm && locProvinceNorm && (
-            candProvinceNorm === locProvinceNorm ||
-            candProvinceNorm.includes(locProvinceNorm) ||
-            locProvinceNorm.includes(candProvinceNorm)
-        );
-
-        const locNameNorm = normalizeText(loc.name);
-
-        // 5a. Nome identico
-        if (candNameNorm && locNameNorm && candNameNorm === locNameNorm) {
-            if (sameCommune) {
-                score += 95;
+            reasons.push({
+                type: 'name_commune',
+                message: `Nome coincidente: "${loc.name}"`,
+                severity: 'critical'
+            });
+            reasons.push({
+                type: 'name_commune',
+                message: `Comune coincidente: ${loc.commune}`,
+                severity: 'critical'
+            });
+            reasons.push({
+                type: 'address',
+                message: `Indirizzo civico coincidente: "${loc.address}"`,
+                severity: 'critical'
+            });
+            reasons.push({
+                type: 'coordinates',
+                message: `Coordinate coincidenti: a soli ${Math.round(distanceMeters || 0)} metri di distanza`,
+                severity: 'critical'
+            });
+            if (matchedContactDetail) {
                 reasons.push({
-                    type: 'name_commune',
-                    message: `Nome identico ("${loc.name}") nello stesso comune di ${loc.commune}`,
+                    type: matchedPhone ? 'phone' : (matchedEmail ? 'email' : (matchedFb || matchedIg ? 'social' : 'website')),
+                    message: `Contatto coincidente: ${matchedContactDetail}`,
                     severity: 'critical'
                 });
-            } else {
-                score += 70;
-                reasons.push({
-                    type: 'name_commune',
-                    message: `Nome identico ("${loc.name}") registrato in un altro comune (${loc.commune || loc.region})`,
-                    severity: 'medium'
-                });
             }
-        } else if (sameCommune && candNameNorm && locNameNorm) {
-            // 5b. Stesso comune con token distintivi coincidenti (es. "Spettine" a Bettola)
-            const locTokens = extractDistinctiveTokens(loc.name);
-            const commonTokens = candTokens.filter(t => locTokens.includes(t));
+        } else {
+            // FATTORI PARZIALMENTE COINCIDENTI (nessun blocco permanente)
+            const matchedPillarsCount = [matchName, matchCommune, matchAddress, matchCoords, matchContacts].filter(Boolean).length;
 
-            if (commonTokens.length > 0) {
-                const tokenScore = Math.min(85, 75 + commonTokens.length * 5);
-                score += tokenScore;
+            if (matchName && matchCommune && (matchAddress || matchCoords || matchContacts)) {
+                // 3 o 4 fattori coincidenti inclusi nome e comune -> Alta probabilità
+                confidence = 'high';
+                score = 80 + (matchedPillarsCount * 4);
+                blocking = false;
+
                 reasons.push({
                     type: 'name_commune',
-                    message: `Nome fortemente coincidente ("${commonTokens.join(', ')}") nello stesso comune di ${loc.commune}`,
+                    message: `Nome e comune coincidenti con "${loc.name}" a ${loc.commune}`,
                     severity: 'high'
                 });
-            } else {
-                // 5c. Similarità di stringa elevata nello stesso comune
-                const sim = stringSimilarity(candNameNorm, locNameNorm);
-                if (sim >= 0.75) {
-                    score += 80;
-                    reasons.push({
-                        type: 'name_commune',
-                        message: `Denominazione quasi identica a "${loc.name}" a ${loc.commune}`,
-                        severity: 'high'
-                    });
-                } else if (sim >= 0.55) {
-                    score += 50;
-                    reasons.push({
-                        type: 'name_commune',
-                        message: `Nome affine a "${loc.name}" a ${loc.commune}`,
-                        severity: 'medium'
-                    });
+                if (matchAddress) {
+                    reasons.push({ type: 'address', message: `Stesso indirizzo civico ("${loc.address}")`, severity: 'high' });
                 }
-            }
-        } else if (!sameCommune && sameProvince && candNameNorm && locNameNorm) {
-            // 5d. Stessa provincia con token distintivi coincidenti (comune confinante o frazione)
-            const locTokens = extractDistinctiveTokens(loc.name);
-            const commonTokens = candTokens.filter(t => locTokens.includes(t));
-            if (commonTokens.length > 0) {
-                score += 55;
+                if (matchCoords) {
+                    reasons.push({ type: 'coordinates', message: `Coordinate geografiche vicine (~${Math.round(distanceMeters || 0)}m)`, severity: 'high' });
+                }
+                if (matchContacts && matchedContactDetail) {
+                    reasons.push({ type: 'phone', message: `Recapito di contatto coincidente: ${matchedContactDetail}`, severity: 'high' });
+                }
+            } else if (matchAddress && matchCoords && matchContacts) {
+                // Stesso indirizzo, coordinate e contatto
+                confidence = 'high';
+                score = 88;
+                blocking = false;
+
+                reasons.push({
+                    type: 'address',
+                    message: `Stesso indirizzo e coordinate a ${loc.commune} con contatto coincidente (${matchedContactDetail})`,
+                    severity: 'high'
+                });
+            } else if (matchCoords && matchContacts) {
+                // Stesse coordinate e stesso contatto
+                confidence = 'high';
+                score = 82;
+                blocking = false;
+
+                reasons.push({
+                    type: 'coordinates',
+                    message: `Stesse coordinate GPS (~${Math.round(distanceMeters || 0)}m) e stesso contatto (${matchedContactDetail})`,
+                    severity: 'high'
+                });
+            } else if (matchName && matchCommune) {
+                // Solo nome e comune
+                confidence = nameSim >= 0.95 ? 'high' : 'medium';
+                score = nameSim >= 0.95 ? 78 : 65;
+                blocking = false;
+
                 reasons.push({
                     type: 'name_commune',
-                    message: `Nome affine ("${commonTokens.join(', ')}") nella stessa provincia (${loc.province})`,
+                    message: `Nome analogo ("${loc.name}") nello stesso comune di ${loc.commune}`,
+                    severity: confidence
+                });
+            } else if (matchCoords && distanceMeters !== undefined && distanceMeters <= 150) {
+                // Coordinate vicine
+                confidence = 'medium';
+                score = 60;
+                blocking = false;
+
+                reasons.push({
+                    type: 'coordinates',
+                    message: `Posizione geografica vicina a "${loc.name}" (~${Math.round(distanceMeters)}m)`,
                     severity: 'medium'
                 });
-            }
-        }
+            } else if (matchContacts && matchedContactDetail) {
+                // Solo contatto coincidente
+                confidence = 'medium';
+                score = 55;
+                blocking = false;
 
-        // ----------------------------------------------------
-        // 6. STESSO INDIRIZZO CIVICO NELLO STESSO COMUNE
-        // ----------------------------------------------------
-        const locAddressNorm = normalizeText(loc.address);
-        if (sameCommune && candAddressNorm && locAddressNorm && candAddressNorm.length > 5) {
-            if (candAddressNorm === locAddressNorm || stringSimilarity(candAddressNorm, locAddressNorm) > 0.8) {
-                score += 85;
+                reasons.push({
+                    type: matchedPhone ? 'phone' : (matchedEmail ? 'email' : 'social'),
+                    message: `Recapito telefonico o telematico coincidente (${matchedContactDetail}) associato anche a "${loc.name}" (${loc.commune})`,
+                    severity: 'medium'
+                });
+            } else if (matchAddress && matchCommune) {
+                // Solo indirizzo nel comune
+                confidence = 'medium';
+                score = 55;
+                blocking = false;
+
                 reasons.push({
                     type: 'address',
                     message: `Stesso indirizzo civico a ${loc.commune} ("${loc.address}")`,
-                    severity: 'high'
+                    severity: 'medium'
+                });
+            } else if (candTokens.length > 0 && commonTokens.length > 0 && (candCommuneNorm === locCommuneNorm || candProvinceNorm === normalizeText(loc.province))) {
+                confidence = 'medium';
+                score = 50;
+                blocking = false;
+
+                reasons.push({
+                    type: 'name_commune',
+                    message: `Denominazione affine ("${commonTokens.join(', ')}") per una struttura a ${loc.commune}`,
+                    severity: 'medium'
                 });
             }
         }
 
-        // Cap score a 100
-        const finalScore = Math.min(100, score);
-
-        if (finalScore >= 50 && reasons.length > 0) {
-            const hasCriticalReason = reasons.some(r => r.severity === 'critical');
-            const hasHighReason = reasons.some(r => r.severity === 'high');
-
-            let confidence: DuplicateConfidence = 'medium';
-            if (hasCriticalReason || finalScore >= 90) {
-                confidence = 'critical';
-            } else if (hasHighReason || finalScore >= 75) {
-                confidence = 'high';
-            }
-
+        if (score >= 50 && reasons.length > 0) {
             matches.push({
                 location: loc,
                 confidence,
-                score: finalScore,
+                score,
                 reasons,
                 distanceMeters,
-                blocking: confidence === 'critical' || confidence === 'high'
+                blocking,
+                isUnequivocal,
+                pillars,
             });
         }
     }
@@ -515,8 +536,8 @@ export function findDuplicateLocation(
     matches.sort((a, b) => b.score - a.score);
 
     const bestMatch = matches.length > 0 ? matches[0] : null;
-    const isDuplicate = Boolean(bestMatch && (bestMatch.confidence === 'critical' || bestMatch.confidence === 'high'));
-    const hasWarning = matches.length > 0;
+    const isDuplicate = Boolean(bestMatch && bestMatch.confidence === 'critical');
+    const hasWarning = Boolean(bestMatch && (bestMatch.confidence === 'high' || bestMatch.confidence === 'medium'));
 
     return {
         isDuplicate,

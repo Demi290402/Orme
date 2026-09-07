@@ -733,10 +733,10 @@ export default function AddLocation() {
                                                     : 'text-blue-900 dark:text-blue-300'
                                         }`}>
                                             {duplicateMatch.confidence === 'critical'
-                                                ? 'Struttura già registrata su Orme'
+                                                ? 'Struttura inequivocabilmente già registrata'
                                                 : duplicateMatch.confidence === 'high'
                                                     ? 'Possibile duplicato rilevato'
-                                                    : 'Struttura simile trovata'}
+                                                    : 'Struttura con dati simili'}
                                         </h3>
                                         <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider ${
                                             duplicateMatch.confidence === 'critical'
@@ -745,13 +745,15 @@ export default function AddLocation() {
                                                     ? 'bg-amber-200 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300'
                                                     : 'bg-blue-200 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300'
                                         }`}>
-                                            {duplicateMatch.confidence === 'critical' ? 'Corrispondenza Certa' : duplicateMatch.confidence === 'high' ? 'Alta Probabilità' : 'Info'}
+                                            {duplicateMatch.confidence === 'critical' ? 'Corrispondenza Inequivocabile (5/5 parametri)' : duplicateMatch.confidence === 'high' ? 'Alta Probabilità' : 'Info'}
                                         </span>
                                     </div>
                                     <p className="text-sm text-gray-700 dark:text-gray-300 leading-snug">
                                         {duplicateMatch.confidence === 'critical'
-                                            ? `Questa struttura coincide con "${duplicateMatch.location.name}" a ${duplicateMatch.location.commune} (${duplicateMatch.location.province || duplicateMatch.location.region}). Orme evita i doppioni per non frammentare contatti e recensioni.`
-                                            : `Nel comune di ${duplicateMatch.location.commune} è già registrata una struttura correlata: "${duplicateMatch.location.name}".`}
+                                            ? `Questa struttura coincide inequivocabilmente con "${duplicateMatch.location.name}" a ${duplicateMatch.location.commune}: coordinate, indirizzo, contatti, nome e comune sono uguali. Orme evita i doppioni per non frammentare contatti e recensioni.`
+                                            : duplicateMatch.confidence === 'high'
+                                                ? `Nel comune di ${duplicateMatch.location.commune} è già registrata una struttura correlata: "${duplicateMatch.location.name}". Verifica i dati prima di procedere.`
+                                                : `Un recapito o una posizione simile è presente per "${duplicateMatch.location.name}". Se gestisci una struttura distinta puoi procedere liberamente.`}
                                     </p>
                                 </div>
                             </div>
@@ -1622,35 +1624,49 @@ export default function AddLocation() {
                             </div>
                             <div>
                                 <h3 className="font-black text-lg text-gray-900 dark:text-white">
-                                    Struttura già registrata su Orme
+                                    Struttura inequivocabilmente già registrata
                                 </h3>
                                 <p className="text-xs text-red-600 dark:text-red-400 font-bold">
-                                    Impossibile creare un doppione
+                                    Coordinate, indirizzo, contatti, nome e comune sono uguali
                                 </p>
                             </div>
                         </div>
 
                         <div className="space-y-3">
                             <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-                                Questa struttura è già presente nel database di Orme come <strong className="text-gray-900 dark:text-white">"{blockingDuplicate.location.name}"</strong> a <strong>{blockingDuplicate.location.commune}</strong> ({blockingDuplicate.location.province || blockingDuplicate.location.region}).
+                                Questa struttura coincide inequivocabilmente con <strong className="text-gray-900 dark:text-white">"{blockingDuplicate.location.name}"</strong> a <strong>{blockingDuplicate.location.commune}</strong> ({blockingDuplicate.location.province || blockingDuplicate.location.region}). Tutti i 5 parametri identificativi principali risultano identici.
                             </p>
 
-                            <div className="p-4 bg-red-50/60 dark:bg-red-950/30 rounded-2xl border border-red-100 dark:border-red-900/60 space-y-2">
-                                <span className="text-[11px] font-bold uppercase tracking-wider text-red-800 dark:text-red-400">
-                                    Motivi di blocco riscontrati:
+                            <div className="p-4 bg-red-50/60 dark:bg-red-950/30 rounded-2xl border border-red-100 dark:border-red-900/60 space-y-2.5">
+                                <span className="text-[11px] font-bold uppercase tracking-wider text-red-800 dark:text-red-400 block">
+                                    I 5 parametri verificati coincidenti:
                                 </span>
-                                <ul className="space-y-1.5">
-                                    {blockingDuplicate.reasons.map((r, i) => (
-                                        <li key={i} className="text-xs font-semibold text-red-700 dark:text-red-300 flex items-start gap-2">
-                                            <span className="mt-1 w-1.5 h-1.5 rounded-full bg-red-500 shrink-0"></span>
-                                            <span>{r.message}</span>
-                                        </li>
-                                    ))}
-                                </ul>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-semibold">
+                                    <div className="flex items-center gap-2 p-2 rounded-xl bg-white dark:bg-gray-800 border border-red-200 dark:border-red-900/60 text-gray-800 dark:text-gray-200">
+                                        <Check size={14} className="text-green-600 shrink-0" />
+                                        <span className="truncate">Nome: <strong>{blockingDuplicate.location.name}</strong></span>
+                                    </div>
+                                    <div className="flex items-center gap-2 p-2 rounded-xl bg-white dark:bg-gray-800 border border-red-200 dark:border-red-900/60 text-gray-800 dark:text-gray-200">
+                                        <Check size={14} className="text-green-600 shrink-0" />
+                                        <span className="truncate">Comune: <strong>{blockingDuplicate.location.commune}</strong></span>
+                                    </div>
+                                    <div className="flex items-center gap-2 p-2 rounded-xl bg-white dark:bg-gray-800 border border-red-200 dark:border-red-900/60 text-gray-800 dark:text-gray-200">
+                                        <Check size={14} className="text-green-600 shrink-0" />
+                                        <span className="truncate">Indirizzo: <strong>{blockingDuplicate.location.address || 'Coincidente'}</strong></span>
+                                    </div>
+                                    <div className="flex items-center gap-2 p-2 rounded-xl bg-white dark:bg-gray-800 border border-red-200 dark:border-red-900/60 text-gray-800 dark:text-gray-200">
+                                        <Check size={14} className="text-green-600 shrink-0" />
+                                        <span className="truncate">Coordinate: <strong>~{Math.round(blockingDuplicate.distanceMeters || 0)}m</strong></span>
+                                    </div>
+                                    <div className="col-span-1 sm:col-span-2 flex items-center gap-2 p-2 rounded-xl bg-white dark:bg-gray-800 border border-red-200 dark:border-red-900/60 text-gray-800 dark:text-gray-200">
+                                        <Check size={14} className="text-green-600 shrink-0" />
+                                        <span className="truncate">Contatti: <strong>{blockingDuplicate.pillars?.contactsDetail || 'Recapito coincidente'}</strong></span>
+                                    </div>
+                                </div>
                             </div>
 
                             <p className="text-xs text-gray-500 dark:text-gray-400">
-                                💡 Per aiutare tutta la comunità capi e mantenere informazioni unificate, puoi aggiornare la scheda già esistente con i tuoi nuovi contatti, note, foto o prezzi.
+                                💡 Per mantenere le informazioni unificate ed evitare duplicati nel database, ti invitiamo ad aggiornare la scheda esistente con nuovi recapiti, foto, prezzi o note.
                             </p>
                         </div>
 
