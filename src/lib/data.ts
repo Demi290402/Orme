@@ -409,6 +409,8 @@ export async function addLocation(location: Omit<Location, 'id' | 'lastUpdatedAt
             has_equipped_kitchen: location.hasEquippedKitchen,
             has_poles: location.hasPoles,
             has_disabled_access: location.hasDisabledAccess,
+            has_heating: location.hasHeating ?? false,
+            truck_distance: location.truckDistance || null,
             has_pastures: location.hasPastures,
             has_insects: location.hasInsects,
             has_diseases: location.hasDiseases,
@@ -840,6 +842,8 @@ function convertLocationToSupabaseFormat(location: Partial<Location>): any {
     if (location.hasEquippedKitchen !== undefined) data.has_equipped_kitchen = location.hasEquippedKitchen;
     if (location.hasPoles !== undefined) data.has_poles = location.hasPoles;
     if (location.hasDisabledAccess !== undefined) data.has_disabled_access = location.hasDisabledAccess;
+    if (location.hasHeating !== undefined) data.has_heating = location.hasHeating;
+    if (location.truckDistance !== undefined) data.truck_distance = location.truckDistance;
     if (location.hasPastures !== undefined) data.has_pastures = location.hasPastures;
     if (location.hasInsects !== undefined) data.has_insects = location.hasInsects;
     if (location.hasDiseases !== undefined) data.has_diseases = location.hasDiseases;
@@ -953,6 +957,8 @@ function mapSupabaseLocationToLocation(data: any): Location {
         hasEquippedKitchen: data.has_equipped_kitchen,
         hasPoles: data.has_poles,
         hasDisabledAccess: data.has_disabled_access || false,
+        hasHeating: data.has_heating || false,
+        truckDistance: data.truck_distance || '',
         hasPastures: data.has_pastures,
         hasInsects: data.has_insects,
         hasDiseases: data.has_diseases,

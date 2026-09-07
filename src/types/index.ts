@@ -226,6 +226,8 @@ export interface Location {
     hasEquippedKitchen: boolean; // Renamed from hasCookware
     hasPoles: boolean;
     hasDisabledAccess: boolean;
+    hasHeating?: boolean; // Presenza impianto riscaldamento
+    truckDistance?: string; // Distanza punto scarico camion/furgone dalla struttura o campo
 
     // Attenzioni (Precautions)
     hasPastures?: boolean;

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Phone, MessageCircle, Map, ArrowLeft, BedDouble, Tent, Coffee, ShieldAlert, Edit, Euro, Wrench, Ban, Star, Footprints, MessageSquare, X, Droplets, Flame, Wind, ShieldCheck, Users, ChevronLeft, ChevronRight, Globe, Mail, Copy, Check, Building, Facebook, Instagram } from 'lucide-react';
+import { Phone, MessageCircle, Map, ArrowLeft, BedDouble, Tent, Coffee, ShieldAlert, Edit, Euro, Wrench, Ban, Star, Footprints, MessageSquare, X, Droplets, Flame, Wind, ShieldCheck, Users, ChevronLeft, ChevronRight, Globe, Mail, Copy, Check, Building, Facebook, Instagram, Truck } from 'lucide-react';
 import { getLocations, getUser, getReviews, saveReview, deleteLocation, getLocationHistory, upsertLocationView, getUserLocationViews } from '@/lib/data';
 import { Location, LocationReview } from '@/types';
 import { getStalenessInfo, cn } from '@/lib/utils';
@@ -1080,8 +1080,39 @@ export default function LocationDetail() {
                             {location.hasGreenSpace && <span className="text-[10px] font-black uppercase bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-3 py-1.5 rounded-lg">🌳 Spazi Verdi</span>}
                             {location.hasEquippedKitchen && <span className="text-[10px] font-black uppercase bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-3 py-1.5 rounded-lg">🍳 Cucina OK</span>}
                             {location.hasPoles && <span className="text-[10px] font-black uppercase bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-3 py-1.5 rounded-lg">🪵 Paletti OK</span>}
-                            {location.hasDisabledAccess && <span className="text-[10px] font-black uppercase bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-3 py-1.5 rounded-lg col-span-2">♿ Accessibile Disabili</span>}
+                            {location.hasHeating && <span className="text-[10px] font-black uppercase bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300 border border-orange-200 dark:border-orange-800 px-3 py-1.5 rounded-lg flex items-center gap-1">🔥 Riscaldamento OK</span>}
+                            {location.hasDisabledAccess && <span className="text-[10px] font-black uppercase bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 px-3 py-1.5 rounded-lg">♿ Accessibile Disabili</span>}
                         </div>
+
+                        {/* Distanza scarico camion */}
+                        {location.truckDistance && (
+                            <div className="col-span-2 mt-1 p-3 bg-blue-50/80 dark:bg-blue-950/30 rounded-2xl border border-blue-100 dark:border-blue-900/50 flex items-start gap-3 text-xs text-blue-950 dark:text-blue-200">
+                                <div className="p-2 bg-blue-100 dark:bg-blue-900/50 text-scout-blue dark:text-blue-300 rounded-xl shrink-0">
+                                    <Truck size={18} />
+                                </div>
+                                <div className="space-y-0.5">
+                                    <span className="font-bold block text-[10px] uppercase tracking-wider text-blue-700 dark:text-blue-300">
+                                        Distanza Scarico Camion / Materiale
+                                    </span>
+                                    <p className="font-bold text-sm text-gray-900 dark:text-white">
+                                        {location.truckDistance}
+                                    </p>
+                                    <p className="text-[10px] text-blue-600/80 dark:text-blue-400/80">
+                                        Distanza dal punto di sosta/scarico del mezzo fino alla struttura o campo
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Altre informazioni logistiche */}
+                        {location.otherLogistics && (
+                            <div className="col-span-2 p-3 bg-gray-50 dark:bg-gray-750/50 rounded-xl border border-gray-200 dark:border-gray-700 text-xs text-gray-700 dark:text-gray-300">
+                                <span className="font-bold block text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-0.5">
+                                    Altre informazioni logistiche
+                                </span>
+                                <span>{location.otherLogistics}</span>
+                            </div>
+                        )}
                     </div>
                 </div>
 

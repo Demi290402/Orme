@@ -33,6 +33,8 @@ export default function AddLocationWizard() {
         hasGreenSpace: false,
         hasEquippedKitchen: false,
         hasPoles: false,
+        hasHeating: false,
+        truckDistance: '',
         hasPastures: false,
         hasInsects: false,
         hasDiseases: false,

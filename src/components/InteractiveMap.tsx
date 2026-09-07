@@ -62,6 +62,12 @@ function buildPopupHtml(item: MappedLocation): string {
     if (loc.hasDisabledAccess) {
         badgesHtml += `<span class="inline-flex items-center gap-1 text-[10px] font-bold bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 px-2 py-0.5 rounded-md border border-purple-200 dark:border-purple-800">♿ Disabili</span>`;
     }
+    if (loc.hasHeating) {
+        badgesHtml += `<span class="inline-flex items-center gap-1 text-[10px] font-bold bg-orange-50 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300 px-2 py-0.5 rounded-md border border-orange-200 dark:border-orange-800">🔥 Riscaldamento</span>`;
+    }
+    if (loc.truckDistance) {
+        badgesHtml += `<span class="inline-flex items-center gap-1 text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 px-2 py-0.5 rounded-md border border-blue-200 dark:border-blue-800">🚚 ${loc.truckDistance}</span>`;
+    }
 
     const estimatedNotice = item.isEstimated ? `
         <div class="mb-2 p-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-[10px] font-bold text-amber-800 dark:text-amber-300 leading-tight flex items-center gap-1">

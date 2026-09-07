@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Search, Filter, Plus, X, Check, Clock, Tent, BedDouble, Bus } from 'lucide-react';
+import { Search, Filter, Plus, X, Check, Clock, Tent, BedDouble, Bus, Flame } from 'lucide-react';
 import { getLocations, getUser, getUserLocationViews, getAllLocationHistory } from '@/lib/data';
 import { Location, User as UserType } from '@/types';
 import LocationCard from '@/components/LocationCard';
@@ -47,6 +47,7 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
     const [hasTents, setHasTents] = useState(false);
     const [hasBeds, setHasBeds] = useState(false);
     const [minBeds, setMinBeds] = useState<number | null>(null);
+    const [hasHeating, setHasHeating] = useState(false);
     const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
     const [selectedStaleness, setSelectedStaleness] = useState<number[]>([]);
     const [currentUser, setCurrentUser] = useState<UserType | null>(null);
@@ -96,7 +97,7 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
             loc.commune.toLowerCase().includes(searchTerm.toLowerCase()) ||
             loc.region.toLowerCase().includes(searchTerm.toLowerCase());
 
-        // 2. Tents & Beds
+        // 2. Tents, Beds & Heating
         const matchesTents = hasTents ? loc.hasTents : true;
         let matchesBeds = true;
         if (minBeds !== null && minBeds > 0) {
@@ -104,6 +105,7 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
         } else if (hasBeds) {
             matchesBeds = (loc.beds || 0) > 0;
         }
+        const matchesHeating = hasHeating ? !!loc.hasHeating : true;
 
         // 3. Regions
         const matchesRegion = selectedRegions.length > 0 ? selectedRegions.includes(loc.region) : true;
@@ -127,7 +129,7 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
             matchesStaleness = selectedStaleness.includes(info.level);
         }
 
-        return matchesSearch && matchesTents && matchesBeds && matchesRegion && 
+        return matchesSearch && matchesTents && matchesBeds && matchesHeating && matchesRegion && 
                matchesBranch && matchesActivity && matchesStaleness;
     });
 
@@ -137,7 +139,8 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
         selectedActivities.length +
         selectedStaleness.length +
         (hasTents ? 1 : 0) +
-        ((minBeds !== null && minBeds > 0) || hasBeds ? 1 : 0);
+        ((minBeds !== null && minBeds > 0) || hasBeds ? 1 : 0) +
+        (hasHeating ? 1 : 0);
 
     return (
         <div className="space-y-6 relative min-h-[calc(100vh-150px)] pb-20">
@@ -280,10 +283,10 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                                 <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 text-sm">
                                     <BedDouble size={18} className="text-scout-blue" /> Logistica e Posti Letto
                                 </h3>
-                                {(minBeds !== null || hasBeds || hasTents) && (
+                                {(minBeds !== null || hasBeds || hasTents || hasHeating) && (
                                     <button
                                         type="button"
-                                        onClick={() => { setMinBeds(null); setHasBeds(false); setHasTents(false); }}
+                                        onClick={() => { setMinBeds(null); setHasBeds(false); setHasTents(false); setHasHeating(false); }}
                                         className="text-xs text-red-500 font-bold hover:underline cursor-pointer"
                                     >
                                         Azzera
@@ -291,22 +294,22 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                                 )}
                             </div>
 
-                            {/* Checkbox Tende / Letti */}
-                            <div className="flex gap-3">
+                            {/* Checkbox Tende / Letti / Riscaldamento */}
+                            <div className="grid grid-cols-3 gap-2">
                                 <label className={cn(
-                                    "flex-1 flex items-center justify-center gap-2 p-3 border rounded-xl cursor-pointer transition-all",
+                                    "flex items-center justify-center gap-1.5 p-2.5 border rounded-xl cursor-pointer transition-all text-xs font-bold",
                                     hasTents 
-                                        ? "bg-green-50 dark:bg-emerald-950/20 border-green-500 text-green-700 dark:text-emerald-400 font-bold" 
-                                        : "bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-650 text-gray-700 dark:text-gray-300 font-semibold"
+                                        ? "bg-green-50 dark:bg-emerald-950/20 border-green-500 text-green-700 dark:text-emerald-400" 
+                                        : "bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-650 text-gray-700 dark:text-gray-300"
                                 )}>
                                     <input type="checkbox" checked={hasTents} onChange={e => setHasTents(e.target.checked)} className="hidden" />
-                                    <span>🏕️ Terreno Tende</span>
+                                    <span>🏕️ Tende</span>
                                 </label>
                                 <label className={cn(
-                                    "flex-1 flex items-center justify-center gap-2 p-3 border rounded-xl cursor-pointer transition-all",
+                                    "flex items-center justify-center gap-1.5 p-2.5 border rounded-xl cursor-pointer transition-all text-xs font-bold",
                                     hasBeds || (minBeds !== null && minBeds > 0)
-                                        ? "bg-blue-50 dark:bg-blue-950/30 border-scout-blue text-scout-blue font-bold" 
-                                        : "bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-650 text-gray-700 dark:text-gray-300 font-semibold"
+                                        ? "bg-blue-50 dark:bg-blue-950/30 border-scout-blue text-scout-blue" 
+                                        : "bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-650 text-gray-700 dark:text-gray-300"
                                 )}>
                                     <input
                                         type="checkbox"
@@ -317,7 +320,21 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                                         }}
                                         className="hidden"
                                     />
-                                    <span>🛏️ Con Letti</span>
+                                    <span>🛏️ Letti</span>
+                                </label>
+                                <label className={cn(
+                                    "flex items-center justify-center gap-1.5 p-2.5 border rounded-xl cursor-pointer transition-all text-xs font-bold",
+                                    hasHeating
+                                        ? "bg-orange-50 dark:bg-orange-950/30 border-orange-500 text-orange-700 dark:text-orange-300" 
+                                        : "bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-650 text-gray-700 dark:text-gray-300"
+                                )}>
+                                    <input
+                                        type="checkbox"
+                                        checked={hasHeating}
+                                        onChange={e => setHasHeating(e.target.checked)}
+                                        className="hidden"
+                                    />
+                                    <span>🔥 Riscaldato</span>
                                 </label>
                             </div>
 
@@ -550,6 +567,19 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                             </button>
                         </span>
                     )}
+                    {hasHeating && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300 border border-orange-200 dark:border-orange-800/50 whitespace-nowrap">
+                            <Flame size={13} />
+                            Riscaldato
+                            <button
+                                type="button"
+                                onClick={() => setHasHeating(false)}
+                                className="hover:bg-orange-200/50 rounded-full p-0.5 cursor-pointer"
+                            >
+                                <X size={12} />
+                            </button>
+                        </span>
+                    )}
                     {selectedBranches.map(b => (
                         <span key={b} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600 whitespace-nowrap">
                             {b}
@@ -596,6 +626,7 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                             setHasTents(false);
                             setHasBeds(false);
                             setMinBeds(null);
+                            setHasHeating(false);
                         }}
                         className="text-xs text-red-500 dark:text-red-400 font-bold hover:underline whitespace-nowrap ml-1 cursor-pointer"
                     >
@@ -684,6 +715,7 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                                         setHasTents(false);
                                         setHasBeds(false);
                                         setMinBeds(null);
+                                        setHasHeating(false);
                                     }}
                                     className="mt-6 text-scout-blue font-bold hover:underline"
                                 >

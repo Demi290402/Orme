@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ChevronLeft, Save, MapPin, Plus, Trash2, Phone, MessageCircle, User, Building, AlertTriangle, Sparkles, Loader2, Check, Mail, ExternalLink, ArrowRight, Eye, X, ShieldAlert, Globe, Facebook, Instagram } from 'lucide-react';
+import { ChevronLeft, Save, MapPin, Plus, Trash2, Phone, MessageCircle, User, Building, AlertTriangle, Sparkles, Loader2, Check, Mail, ExternalLink, ArrowRight, Eye, X, ShieldAlert, Globe, Facebook, Instagram, Truck } from 'lucide-react';
 import { addLocation, getLocations, updateLocation } from '@/lib/data';
 import { Location, LocationContact } from '@/types';
 import { extractCoordsFromMapsUrl, resolveLocationCoordinates, isShortMapsUrl } from '@/lib/geo';
@@ -105,6 +105,8 @@ export default function AddLocation() {
         hasEquippedKitchen: false,
         hasPoles: false,
         hasDisabledAccess: false,
+        hasHeating: false,
+        truckDistance: '',
         otherLogistics: '',
 
         // Attenzioni
@@ -144,6 +146,9 @@ export default function AddLocation() {
         const hasAddress = (formData as any).address && (formData as any).address.trim() !== '';
         const hasMapsLink = (formData as any).googleMapsLink && (formData as any).googleMapsLink.trim() !== '';
         if (hasCoordinates || hasAddress || hasMapsLink) points += 3;
+
+        // Punti extra per logistica scarico camion (utile per campi scout)
+        if (formData.truckDistance && formData.truckDistance.trim() !== '') points += 1;
 
         // Punti extra per contatti dettagliati con proprietario / ente
         const hasDetailedContacts = contacts.some(c => c.phone.trim() !== '' && (c.name.trim() !== '' || c.role.trim() !== ''));
@@ -306,6 +311,8 @@ export default function AddLocation() {
                         hasEquippedKitchen: found.hasEquippedKitchen,
                         hasPoles: found.hasPoles,
                         hasDisabledAccess: found.hasDisabledAccess || false,
+                        hasHeating: found.hasHeating || false,
+                        truckDistance: found.truckDistance || '',
                         otherLogistics: found.otherLogistics || '',
                         hasPastures: found.hasPastures || false,
                         hasInsects: found.hasInsects || false,
@@ -551,6 +558,8 @@ export default function AddLocation() {
             hasEquippedKitchen: formData.hasEquippedKitchen,
             hasPoles: formData.hasPoles,
             hasDisabledAccess: formData.hasDisabledAccess,
+            hasHeating: formData.hasHeating,
+            truckDistance: formData.truckDistance?.trim() || undefined,
             otherLogistics: formData.otherLogistics,
 
             // Attenzioni
@@ -1297,6 +1306,7 @@ export default function AddLocation() {
                             { key: 'hasEquippedKitchen', label: 'Cucina attrezzata' },
                             { key: 'hasPoles', label: 'Disponibilità paletti' },
                             { key: 'hasDisabledAccess', label: 'Accessibile disabili ♿' },
+                            { key: 'hasHeating', label: 'Riscaldamento 🔥' },
                         ].map((item) => (
                             <label key={item.key} className="flex items-center gap-2 p-3 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer">
                                 <input
@@ -1309,6 +1319,65 @@ export default function AddLocation() {
                                 <span className="text-sm font-medium">{item.label}</span>
                             </label>
                         ))}
+                    </div>
+
+                    {/* Distanza scarico camion */}
+                    <div className="p-4 bg-gray-50 dark:bg-gray-750/60 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-3">
+                        <div className="flex items-start gap-2.5">
+                            <div className="p-2 bg-blue-100 dark:bg-blue-900/40 text-scout-blue dark:text-blue-300 rounded-xl shrink-0 mt-0.5">
+                                <Truck size={18} />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-gray-900 dark:text-white">
+                                    Distanza Scarico Camion (materiale / cambusa / tende)
+                                </label>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">
+                                    Indica la distanza tra il punto in cui camion o furgoni possono fermarsi per scaricare e la struttura o il terreno dove si pernotta (fondamentale per la logistica dei Campi Estivi E/G).
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Preset rapidi */}
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                            {[
+                                'Sul posto (0 m)',
+                                'Meno di 50 m',
+                                '100 - 200 m',
+                                '500 m',
+                                'Oltre 500 m (a piedi / sentiero)',
+                                'Non accessibile a camion'
+                            ].map((preset) => {
+                                const isSelected = formData.truckDistance === preset;
+                                return (
+                                    <button
+                                        key={preset}
+                                        type="button"
+                                        onClick={() => {
+                                            setFormData((prev: any) => ({
+                                                ...prev,
+                                                truckDistance: isSelected ? '' : preset
+                                            }));
+                                        }}
+                                        className={`text-xs px-2.5 py-1 rounded-lg border font-medium transition-all ${
+                                            isSelected
+                                                ? 'bg-scout-blue text-white border-scout-blue shadow-xs'
+                                                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                                        }`}
+                                    >
+                                        {preset}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        <input
+                            type="text"
+                            name="truckDistance"
+                            value={formData.truckDistance}
+                            onChange={handleChange}
+                            placeholder="Es. Sul posto (0 m), 50 m in piano, 300 m su sentiero..."
+                            className="w-full p-2.5 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm"
+                        />
                     </div>
 
                     <div>
