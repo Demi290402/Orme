@@ -428,6 +428,7 @@ export async function addLocation(location: Omit<Location, 'id' | 'lastUpdatedAt
                 : (location.email || ''),
             description: location.description,
             pricing: location.pricing,
+            views_count: 0,
             last_updated_by: currentUser.id,
             group_id: currentUser.groupId,
         };
@@ -820,6 +821,80 @@ export async function upsertLocationView(locationId: string): Promise<void> {
     }
 }
 
+/**
+ * Registra una visita / visualizzazione per una scheda luogo.
+ * Incrementa atomicamente il contatore su Supabase (e nella cache locale)
+ * e previene incrementi multipli da spam/refresh nella stessa sessione browser.
+ */
+export async function recordLocationVisit(locationId: string): Promise<number> {
+    if (!locationId) return 0;
+
+    const sessionKey = `visited_location_${locationId}`;
+    const alreadyVisitedThisSession = typeof sessionStorage !== 'undefined' && sessionStorage.getItem(sessionKey) === '1';
+
+    // Recupera conteggio attuale dalla cache locale
+    const cachedLocations = getCachedData<Location[]>('locations') || [];
+    const locIndex = cachedLocations.findIndex(l => l.id === locationId);
+    let currentViews = locIndex !== -1 ? (cachedLocations[locIndex].viewsCount || 0) : 0;
+
+    // Se l'utente ha già visitato questa scheda durante la sessione corrente, restituiamo il conteggio senza duplicare
+    if (alreadyVisitedThisSession) {
+        return currentViews;
+    }
+
+    // Segna la visita nella sessione
+    if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem(sessionKey, '1');
+    }
+
+    // Incrementa subito in locale per reattività istantanea
+    currentViews += 1;
+    if (locIndex !== -1) {
+        cachedLocations[locIndex].viewsCount = currentViews;
+        setCachedData('locations', cachedLocations);
+    }
+
+    if (!isOnline()) {
+        return currentViews;
+    }
+
+    try {
+        // 1. Prova con la funzione RPC PostgreSQL increment_location_views se presente
+        const { data: rpcCount, error: rpcError } = await supabase
+            .rpc('increment_location_views', { loc_id: locationId });
+
+        if (!rpcError && typeof rpcCount === 'number') {
+            if (locIndex !== -1) {
+                cachedLocations[locIndex].viewsCount = rpcCount;
+                setCachedData('locations', cachedLocations);
+            }
+            return rpcCount;
+        }
+
+        // 2. Fallback diretto: legge views_count attuale ed esegue update incrementale
+        const { data: row } = await supabase
+            .from('locations')
+            .select('views_count')
+            .eq('id', locationId)
+            .single();
+
+        const newDbCount = Number(row?.views_count || 0) + 1;
+        await supabase
+            .from('locations')
+            .update({ views_count: newDbCount })
+            .eq('id', locationId);
+
+        if (locIndex !== -1) {
+            cachedLocations[locIndex].viewsCount = newDbCount;
+            setCachedData('locations', cachedLocations);
+        }
+        return newDbCount;
+    } catch (err) {
+        console.error('Error recording location visit:', err);
+        return currentViews;
+    }
+}
+
 function convertLocationToSupabaseFormat(location: Partial<Location>): any {
     const data: any = {};
     if (location.name !== undefined) data.name = location.name;
@@ -896,6 +971,7 @@ function convertLocationToSupabaseFormat(location: Partial<Location>): any {
     }
     if (location.description !== undefined) data.description = location.description;
     if (location.pricing !== undefined) data.pricing = location.pricing;
+    if (location.viewsCount !== undefined) data.views_count = location.viewsCount;
     return data;
 }
 
@@ -999,6 +1075,7 @@ function mapSupabaseLocationToLocation(data: any): Location {
         avgRating: Number(data.avg_rating) || 0,
         reviewsCount: data.reviews_count || 0,
         priceCategory: data.price_category || 0,
+        viewsCount: Number(data.views_count ?? data.views ?? 0),
     };
 }
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Phone, MessageCircle, Map, ArrowLeft, BedDouble, Tent, Coffee, ShieldAlert, Edit, Euro, Wrench, Ban, Star, Footprints, MessageSquare, X, Droplets, Flame, Wind, ShieldCheck, Users, ChevronLeft, ChevronRight, Globe, Mail, Copy, Check, Building, Facebook, Instagram, Truck } from 'lucide-react';
-import { getLocations, getUser, getReviews, saveReview, deleteLocation, getLocationHistory, upsertLocationView, getUserLocationViews } from '@/lib/data';
+import { Phone, MessageCircle, Map, ArrowLeft, BedDouble, Tent, Coffee, ShieldAlert, Edit, Euro, Wrench, Ban, Star, Footprints, MessageSquare, X, Droplets, Flame, Wind, ShieldCheck, Users, ChevronLeft, ChevronRight, Globe, Mail, Copy, Check, Building, Facebook, Instagram, Truck, Eye } from 'lucide-react';
+import { getLocations, getUser, getReviews, saveReview, deleteLocation, getLocationHistory, upsertLocationView, getUserLocationViews, recordLocationVisit } from '@/lib/data';
 import { Location, LocationReview } from '@/types';
 import { getStalenessInfo, cn } from '@/lib/utils';
 import { addPointsWithStats } from '@/lib/gamification';
@@ -219,6 +219,8 @@ export default function LocationDetail() {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
+    const [viewsCount, setViewsCount] = useState<number>(0);
+
     useEffect(() => {
         const loadData = async () => {
             try {
@@ -226,6 +228,7 @@ export default function LocationDetail() {
                 const found = locs.find(l => l.id === id);
                 if (found) {
                     setLocation(found);
+                    setViewsCount(found.viewsCount || 0);
                     const revs = await getReviews(found.id);
                     setReviews(revs);
 
@@ -240,6 +243,14 @@ export default function LocationDetail() {
 
                     // Track current view read state
                     await upsertLocationView(found.id);
+
+                    // Track overall location views count on Orme (nice to have)
+                    recordLocationVisit(found.id).then(newCount => {
+                        if (newCount > 0) {
+                            setViewsCount(newCount);
+                            setLocation(prev => prev ? { ...prev, viewsCount: newCount } : prev);
+                        }
+                    }).catch(console.error);
                 }
                 const user = await getUser();
                 setCurrentUser(user);
@@ -472,13 +483,23 @@ export default function LocationDetail() {
                 </div>
             </div>
 
-            <div className={cn(
-                "inline-flex items-center px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all shadow-sm",
-                staleness.bgLight,
-                staleness.text,
-                staleness.border
-            )}>
-                Aggiornato: {new Date(location.lastUpdatedAt).toLocaleDateString('it-IT', { month: 'short', year: 'numeric' })} {updatedByText}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className={cn(
+                    "inline-flex items-center px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all shadow-sm",
+                    staleness.bgLight,
+                    staleness.text,
+                    staleness.border
+                )}>
+                    Aggiornato: {new Date(location.lastUpdatedAt).toLocaleDateString('it-IT', { month: 'short', year: 'numeric' })} {updatedByText}
+                </div>
+
+                <div 
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-2xs"
+                    title="Numero totale di visualizzazioni della scheda su Orme"
+                >
+                    <Eye size={13} className="text-scout-blue dark:text-blue-400 shrink-0" />
+                    <span>{viewsCount} {viewsCount === 1 ? 'visita' : 'visite'}</span>
+                </div>
             </div>
 
             {/* Modification History Banner */}
@@ -1409,8 +1430,14 @@ export default function LocationDetail() {
                 </div>
             )}
 
+            {/* Visualizzazioni scheda (nice to have) */}
+            <div className="pt-8 border-t border-gray-100 dark:border-gray-800 flex items-center justify-center gap-2 text-xs text-gray-400 dark:text-gray-500">
+                <Eye size={14} className="text-scout-blue/70 dark:text-blue-400/70" />
+                <span>Questa scheda è stata visualizzata <strong>{viewsCount}</strong> {viewsCount === 1 ? 'volta' : 'volte'} su Orme</span>
+            </div>
+
             {/* Platform Compliance */}
-            <div className="pt-8 border-t border-gray-100 dark:border-gray-800 text-center">
+            <div className="pt-3 text-center">
                 <button 
                     onClick={() => alert("Segnalazione inviata con successo.")}
                     className="text-[9px] font-black text-gray-300 dark:text-gray-600 hover:text-red-400 transition-colors uppercase tracking-[0.2em]"

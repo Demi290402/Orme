@@ -1,5 +1,5 @@
 
-import { MapPin, Tent, BedDouble, AlertCircle, Wrench, Ban, Star } from 'lucide-react';
+import { MapPin, Tent, BedDouble, AlertCircle, Wrench, Ban, Star, Eye } from 'lucide-react';
 import { Location } from '@/types';
 import { Link } from 'react-router-dom';
 import { getStalenessInfo } from '@/lib/utils';
@@ -84,18 +84,27 @@ export default function LocationCard({ location, unreadModificationsCount }: Loc
                             )}
                         </div>
 
-                        {location.priceCategory > 0 && (
-                            <div className="flex gap-0.5">
-                                {[1, 2, 3].map(i => (
-                                    <span 
-                                        key={i} 
-                                        className={i <= location.priceCategory ? "text-scout-green font-black" : "text-gray-200 dark:text-gray-700"}
-                                    >
-                                        €
-                                    </span>
-                                ))}
-                            </div>
-                        )}
+                        <div className="flex items-center gap-3">
+                            {location.viewsCount !== undefined && location.viewsCount > 0 && (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-gray-400 dark:text-gray-500" title={`${location.viewsCount} visualizzazioni su Orme`}>
+                                    <Eye size={11} className="text-gray-400 dark:text-gray-500" />
+                                    {location.viewsCount}
+                                </span>
+                            )}
+
+                            {location.priceCategory > 0 && (
+                                <div className="flex gap-0.5">
+                                    {[1, 2, 3].map(i => (
+                                        <span 
+                                            key={i} 
+                                            className={i <= location.priceCategory ? "text-scout-green font-black" : "text-gray-200 dark:text-gray-700"}
+                                        >
+                                            €
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     <div className="flex flex-wrap gap-2 text-xs text-gray-600 dark:text-gray-300">

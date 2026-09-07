@@ -254,6 +254,7 @@ export interface Location {
     avgRating: number;
     reviewsCount: number;
     priceCategory: number; // 0: N/D, 1: €, 2: €€, 3: €€€
+    viewsCount?: number; // Numero totale di visite / visualizzazioni della scheda su Orme
 
     // Metadata
     lastUpdatedAt: string; // ISODate

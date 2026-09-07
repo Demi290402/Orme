@@ -21,6 +21,7 @@ ADD COLUMN IF NOT EXISTS facebook TEXT,
 ADD COLUMN IF NOT EXISTS instagram TEXT,
 ADD COLUMN IF NOT EXISTS has_heating BOOLEAN DEFAULT false,
 ADD COLUMN IF NOT EXISTS truck_distance TEXT,
+ADD COLUMN IF NOT EXISTS views_count INTEGER DEFAULT 0,
 ADD COLUMN IF NOT EXISTS pricing JSONB,
 ADD COLUMN IF NOT EXISTS other_attention TEXT,
 ADD COLUMN IF NOT EXISTS has_pastures BOOLEAN DEFAULT false,
@@ -90,6 +91,23 @@ BEGIN
             FOR ALL USING (user_id = auth.uid());
     END IF;
 END $$;
+
+-- 6. Funzione per incremento automatico visite / visualizzazioni schede
+CREATE OR REPLACE FUNCTION increment_location_views(loc_id UUID)
+RETURNS integer AS $$
+DECLARE
+    new_count integer;
+BEGIN
+    UPDATE locations
+    SET views_count = COALESCE(views_count, 0) + 1
+    WHERE id = loc_id
+    RETURNING views_count INTO new_count;
+    RETURN new_count;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Permetti l'esecuzione della funzione per tutti gli utenti autenticati e anonimi
+GRANT EXECUTE ON FUNCTION increment_location_views(UUID) TO authenticated, anon;
 
 -- ==========================================================
 -- Fine Script - Schema DB allineato a tutte le ultime modifiche
