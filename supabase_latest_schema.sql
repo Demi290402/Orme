@@ -110,5 +110,69 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 GRANT EXECUTE ON FUNCTION increment_location_views(UUID) TO authenticated, anon;
 
 -- ==========================================================
+-- 7. RLS e Policy per Verbali, Membri e Impostazioni CoCa
+-- Garantisce che un utente possa sempre visualizzare i verbali
+-- del proprio Gruppo Scout OPPURE quelli da lui stesso creati,
+-- evitando problemi di disallineamento gruppo tra PC e telefono.
+-- ==========================================================
+
+-- Indici prestazioni
+CREATE INDEX IF NOT EXISTS idx_verbali_group_id ON verbali(group_id);
+CREATE INDEX IF NOT EXISTS idx_verbali_created_by ON verbali(created_by);
+CREATE INDEX IF NOT EXISTS idx_membri_group_id ON membri(group_id);
+
+-- Abilitazione RLS
+ALTER TABLE verbali ENABLE ROW LEVEL SECURITY;
+ALTER TABLE membri ENABLE ROW LEVEL SECURITY;
+ALTER TABLE impostazioni_verbali ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+    -- Pulizia policy preesistenti su verbali
+    DROP POLICY IF EXISTS "Group isolation" ON verbali;
+    DROP POLICY IF EXISTS "Verbali group and author policy" ON verbali;
+    DROP POLICY IF EXISTS "Verbali access policy" ON verbali;
+
+    -- Policy su VERBALI: un utente autenticato può accedere se autore del verbale
+    -- o se appartiene al gruppo scout associato al verbale
+    CREATE POLICY "Verbali access policy" ON verbali
+        FOR ALL USING (
+            auth.role() = 'authenticated' AND (
+                created_by = auth.uid() 
+                OR group_id = (SELECT group_id FROM users WHERE id = auth.uid())
+            )
+        )
+        WITH CHECK (
+            auth.role() = 'authenticated'
+        );
+
+    -- Pulizia e policy su MEMBRI COCA
+    DROP POLICY IF EXISTS "Group isolation" ON membri;
+    DROP POLICY IF EXISTS "Membri access policy" ON membri;
+    CREATE POLICY "Membri access policy" ON membri
+        FOR ALL USING (
+            auth.role() = 'authenticated' AND (
+                group_id = (SELECT group_id FROM users WHERE id = auth.uid())
+            )
+        )
+        WITH CHECK (
+            auth.role() = 'authenticated'
+        );
+
+    -- Pulizia e policy su IMPOSTAZIONI VERBALI
+    DROP POLICY IF EXISTS "Group isolation" ON impostazioni_verbali;
+    DROP POLICY IF EXISTS "Impostazioni verbali access policy" ON impostazioni_verbali;
+    CREATE POLICY "Impostazioni verbali access policy" ON impostazioni_verbali
+        FOR ALL USING (
+            auth.role() = 'authenticated' AND (
+                group_id = (SELECT group_id FROM users WHERE id = auth.uid())
+            )
+        )
+        WITH CHECK (
+            auth.role() = 'authenticated'
+        );
+END $$;
+
+-- ==========================================================
 -- Fine Script - Schema DB allineato a tutte le ultime modifiche
 -- ==========================================================

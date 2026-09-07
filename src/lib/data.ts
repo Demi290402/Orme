@@ -140,6 +140,10 @@ export async function loginUser(email: string, password: string): Promise<User |
 
         if (profileError) throw profileError;
 
+        if (profileData) {
+            setCachedData('currentUser', profileData);
+        }
+
         return mapSupabaseUserToUser(profileData);
     } catch (error) {
         console.error('Login error:', error);
@@ -148,6 +152,9 @@ export async function loginUser(email: string, password: string): Promise<User |
 }
 
 export async function logoutUser() {
+    try {
+        localStorage.removeItem('cache_currentUser');
+    } catch (e) {}
     await supabase.auth.signOut();
 }
 
@@ -163,6 +170,9 @@ export async function deleteUserProfile(): Promise<void> {
     if (error) throw error;
 
     // Sign out
+    try {
+        localStorage.removeItem('cache_currentUser');
+    } catch (e) {}
     await supabase.auth.signOut();
 }
 
@@ -203,6 +213,20 @@ export async function getUser(id?: string): Promise<User> {
             .single();
 
         if (profileError) throw profileError;
+
+        // Auto-heal missing group_id if user has group_name
+        if (!profileData.group_id && profileData.group_name) {
+            try {
+                const gruppo = await aggiungiGruppoScout(profileData.region || '', profileData.scout_zone || '', profileData.group_name);
+                if (gruppo && gruppo.id) {
+                    profileData.group_id = String(gruppo.id);
+                    await supabase.from('users').update({ group_id: String(gruppo.id) }).eq('id', profileData.id);
+                }
+            } catch (e) {
+                console.warn('Could not auto-resolve group_id in getUser:', e);
+            }
+        }
+
         setCachedData('currentUser', profileData);
 
         return mapSupabaseUserToUser(profileData);
@@ -240,6 +264,19 @@ export async function getAllUsers(): Promise<User[]> {
 }
 
 export async function updateUser(user: User): Promise<User> {
+    let resolvedGroupId = user.groupId ? String(user.groupId).trim() : '';
+    if (!resolvedGroupId && user.groupName) {
+        try {
+            const gruppo = await aggiungiGruppoScout(user.region || '', user.scoutZone || '', user.groupName);
+            if (gruppo && gruppo.id) {
+                resolvedGroupId = String(gruppo.id);
+                user.groupId = resolvedGroupId;
+            }
+        } catch (e) {
+            console.warn('Could not auto-resolve group_id on updateUser:', e);
+        }
+    }
+
     const updateData = {
         first_name: user.firstName,
         last_name: user.lastName,
@@ -251,7 +288,7 @@ export async function updateUser(user: User): Promise<User> {
         region: user.region,
         scout_zone: user.scoutZone,
         group_name: user.groupName,
-        group_id: user.groupId,
+        group_id: resolvedGroupId || user.groupId,
         points: user.points,
         level: user.level,
         badges: user.badges,

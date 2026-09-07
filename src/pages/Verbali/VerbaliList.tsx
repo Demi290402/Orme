@@ -1,27 +1,40 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, FileText, Search, Calendar, MapPin, User as UserIcon, Filter, X, Settings } from 'lucide-react';
+import { Plus, FileText, Search, Calendar, MapPin, User as UserIcon, Filter, X, Settings, RotateCw, AlertTriangle } from 'lucide-react';
 import { getVerbali } from '@/lib/verbali';
-import { Verbale } from '@/types';
+import { getUser } from '@/lib/data';
+import { Verbale, User } from '@/types';
 import { cn } from '@/lib/utils';
 
 export default function VerbaliList() {
     const [verbali, setVerbali] = useState<Verbale[]>([]);
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const [selectedYear, setSelectedYear] = useState<string>('all');
     const [selectedMonth, setSelectedMonth] = useState<string>('all');
     const [hasOspite, setHasOspite] = useState<string>('all');
     const [showFilters, setShowFilters] = useState(false);
 
-    useEffect(() => {
-        getVerbali().then(data => {
+    const loadData = async () => {
+        try {
+            const [u, data] = await Promise.all([
+                getUser().catch(() => null),
+                getVerbali()
+            ]);
+            if (u) setCurrentUser(u);
             setVerbali(data);
-            setLoading(false);
-        }).catch(err => {
+        } catch (err) {
             console.error(err);
+        } finally {
             setLoading(false);
-        });
+            setRefreshing(false);
+        }
+    };
+
+    useEffect(() => {
+        loadData();
     }, []);
 
     const getScoutYear = (dateStr: string) => {
@@ -72,6 +85,22 @@ export default function VerbaliList() {
                 <FileText size={48} className="opacity-20 hidden md:block" />
             </div>
 
+            {/* Group Missing Warning */}
+            {currentUser && !currentUser.groupId && !currentUser.groupName && (
+                <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-2xl p-4 flex items-start gap-3 text-amber-800 dark:text-amber-200 text-sm shadow-sm">
+                    <AlertTriangle size={20} className="shrink-0 text-amber-600 mt-0.5" />
+                    <div className="flex-1">
+                        <p className="font-bold">Nessun Gruppo Scout associato al tuo profilo</p>
+                        <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
+                            Per visualizzare e sincronizzare i verbali della tua Comunità Capi su tutti i tuoi dispositivi (PC e telefono), imposta la tua Regione, Zona e Gruppo Scout nel profilo.
+                        </p>
+                    </div>
+                    <Link to="/profile" className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shrink-0 transition-colors shadow-sm">
+                        Imposta Gruppo
+                    </Link>
+                </div>
+            )}
+
             {/* Actions & Search */}
             <div className="space-y-4">
                 <div className="flex flex-col sm:flex-row gap-4">
@@ -86,6 +115,14 @@ export default function VerbaliList() {
                         />
                     </div>
                     <div className="flex gap-2">
+                        <button
+                            onClick={() => { setRefreshing(true); loadData(); }}
+                            disabled={refreshing || loading}
+                            className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-scout-brown/10 dark:border-gray-700 shadow-sm hover:border-scout-brown/30 dark:hover:border-gray-600 text-scout-brown dark:text-gray-300 hover:bg-scout-brown/5 dark:hover:bg-gray-700 transition-all outline-none"
+                            title="Ricarica elenco verbali"
+                        >
+                            <RotateCw size={20} className={cn(refreshing ? "animate-spin text-scout-green" : "")} />
+                        </button>
                         <button
                             onClick={() => setShowFilters(!showFilters)}
                             className={cn(
@@ -200,8 +237,41 @@ export default function VerbaliList() {
                         Caricamento verbali...
                     </div>
                 ) : filteredVerbali.length === 0 ? (
-                    <div className="p-12 text-center text-gray-400 bg-white dark:bg-gray-800 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
-                        {searchTerm ? 'Nessuna corrispondenza trovata.' : 'Nessun verbale presente in archivio.'}
+                    <div className="p-8 md:p-12 text-center bg-white dark:bg-gray-800 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 space-y-4">
+                        <div className="max-w-md mx-auto space-y-2">
+                            <p className="text-base font-semibold text-gray-700 dark:text-gray-200">
+                                {searchTerm ? 'Nessuna corrispondenza trovata con i filtri correnti.' : 'Nessun verbale presente in archivio per il tuo gruppo.'}
+                            </p>
+                            {currentUser && (
+                                <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/60 p-3 rounded-xl border border-gray-100 dark:border-gray-700/60 space-y-1 text-left">
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-400">Account collegato:</span>
+                                        <span className="font-semibold text-gray-700 dark:text-gray-300">{currentUser.email}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-400">Gruppo scout:</span>
+                                        <span className="font-semibold text-gray-700 dark:text-gray-300">{currentUser.groupName || 'Non impostato'}</span>
+                                    </div>
+                                    <p className="text-[11px] text-gray-400 pt-1">
+                                        Nota: Se hai salvato dei verbali da telefono con un account o un gruppo scout diverso, assicurati di effettuare l'accesso con lo stesso account o imposta il gruppo corretto.
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                        <div className="flex justify-center gap-3 pt-2">
+                            <button
+                                onClick={() => { setRefreshing(true); loadData(); }}
+                                className="px-4 py-2 text-xs font-bold text-scout-green bg-green-50 dark:bg-green-950/40 rounded-xl hover:bg-green-100 dark:hover:bg-green-900/50 transition-colors border border-green-200 dark:border-green-800/50"
+                            >
+                                {refreshing ? 'Aggiornamento...' : 'Ricarica Elenco'}
+                            </button>
+                            <Link
+                                to="/profile"
+                                className="px-4 py-2 text-xs font-bold text-scout-brown dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 rounded-xl hover:bg-amber-100 dark:hover:bg-amber-900/50 transition-colors border border-amber-200 dark:border-amber-800/50"
+                            >
+                                Verifica Profilo
+                            </Link>
+                        </div>
                     </div>
                 ) : (
                     filteredVerbali.map((v) => (

@@ -6,22 +6,69 @@ import { syncVerbaleEventi } from './calendario';
 export async function getVerbali(): Promise<Verbale[]> {
     try {
         const currentUser = await getUser();
-        // Fetch verbali
-        const { data: verbaliData, error } = await supabase
-            .from('verbali')
-            .select('*')
-            .eq('group_id', currentUser.groupId)
-            .order('data', { ascending: false });
+        if (!currentUser) return [];
 
-        if (error) throw error;
+        const userGroupId = currentUser.groupId ? String(currentUser.groupId).trim() : '';
+        let verbaliData: any[] = [];
 
-        // Fetch user info to resolve createdByName
-        const { data: usersData } = await supabase
-            .from('users')
-            .select('id, nickname, first_name, last_name')
-            .eq('group_id', currentUser.groupId);
+        let query = supabase.from('verbali').select('*');
 
-        const usersMap = new Map((usersData || []).map(u => [u.id, u.nickname || u.first_name || '']));
+        if (userGroupId && currentUser.id) {
+            // Include both verbali belonging to the user's group AND any verbali authored by the user directly
+            query = query.or(`group_id.eq.${userGroupId},created_by.eq.${currentUser.id}`);
+        } else if (userGroupId) {
+            query = query.eq('group_id', userGroupId);
+        } else if (currentUser.id) {
+            query = query.eq('created_by', currentUser.id);
+        }
+
+        const { data, error } = await query.order('data', { ascending: false });
+
+        if (error) {
+            console.warn('Primary verbali query error, attempting fallback by author:', error);
+            // Fallback: If group filter errored, attempt fetching directly authored verbali
+            if (currentUser.id) {
+                const { data: authorData } = await supabase
+                    .from('verbali')
+                    .select('*')
+                    .eq('created_by', currentUser.id)
+                    .order('data', { ascending: false });
+                verbaliData = authorData || [];
+            }
+        } else {
+            verbaliData = data || [];
+        }
+
+        // Secondary fallback: if nothing was returned by group query, check if user authored any verbali
+        if (verbaliData.length === 0 && currentUser.id) {
+            const { data: myData } = await supabase
+                .from('verbali')
+                .select('*')
+                .eq('created_by', currentUser.id)
+                .order('data', { ascending: false });
+            if (myData && myData.length > 0) {
+                verbaliData = myData;
+            }
+        }
+
+        if (verbaliData.length === 0) {
+            return [];
+        }
+
+        // Fetch user info to resolve createdByName using creator IDs
+        const creatorIds = Array.from(new Set(verbaliData.map(v => v.created_by).filter(Boolean)));
+        let usersMap = new Map<string, string>();
+        if (creatorIds.length > 0) {
+            const { data: usersData } = await supabase
+                .from('users')
+                .select('id, nickname, first_name, last_name')
+                .in('id', creatorIds);
+
+            usersMap = new Map((usersData || []).map(u => [
+                u.id,
+                u.nickname || `${u.first_name || ''} ${u.last_name || ''}`.trim() || 'Utente'
+            ]));
+        }
 
         return verbaliData.map(v => {
             const verbale = mapSupabaseVerbaleToVerbale(v);
@@ -37,14 +84,17 @@ export async function getVerbali(): Promise<Verbale[]> {
 export async function getMembriCoCa(): Promise<MembroCoCa[]> {
     try {
         const currentUser = await getUser();
+        const userGroupId = currentUser.groupId ? String(currentUser.groupId).trim() : '';
+        if (!userGroupId) return [];
+
         const { data, error } = await supabase
             .from('membri')
             .select('*')
-            .eq('group_id', currentUser.groupId)
+            .eq('group_id', userGroupId)
             .order('nome', { ascending: true });
 
         if (error) throw error;
-        return data.map(mapSupabaseMembroToMembro);
+        return (data || []).map(mapSupabaseMembroToMembro);
     } catch (error) {
         console.error('Error fetching membri:', error);
         return [];
@@ -53,8 +103,9 @@ export async function getMembriCoCa(): Promise<MembroCoCa[]> {
 
 export async function saveVerbale(verbale: Partial<Verbale>): Promise<Verbale> {
     const currentUser = await getUser();
+    const resolvedGroupId = (currentUser?.groupId ? String(currentUser.groupId).trim() : '') || verbale.groupId || 'default';
     const dataToSave = {
-        group_id: currentUser.groupId,
+        group_id: resolvedGroupId,
         numero: verbale.numero || 0,
         titolo: verbale.titolo || 'Senza Titolo',
         data: verbale.data || new Date().toISOString().split('T')[0],
@@ -208,10 +259,13 @@ export interface ImpostazioniVerbali {
 export async function getImpostazioniVerbali(): Promise<ImpostazioniVerbali | null> {
     try {
         const currentUser = await getUser();
+        const userGroupId = currentUser?.groupId ? String(currentUser.groupId).trim() : '';
+        if (!userGroupId) return null;
+
         const { data, error } = await supabase
             .from('impostazioni_verbali')
             .select('*')
-            .eq('group_id', currentUser.groupId)
+            .eq('group_id', userGroupId)
             .maybeSingle();
 
         if (error || !data) return null;
@@ -229,8 +283,9 @@ export async function getImpostazioniVerbali(): Promise<ImpostazioniVerbali | nu
 
 export async function saveImpostazioniVerbali(impostazioni: Partial<ImpostazioniVerbali>): Promise<void> {
     const currentUser = await getUser();
+    const userGroupId = (currentUser?.groupId ? String(currentUser.groupId).trim() : '') || impostazioni.groupId || 'default';
     const dataToSave = {
-        group_id: currentUser.groupId,
+        group_id: userGroupId,
         intestazione: impostazioni.intestazioneHtml,
         pie_pagina: impostazioni.piePaginaHtml,
         font_family: impostazioni.fontFamily || 'serif',
@@ -240,11 +295,11 @@ export async function saveImpostazioniVerbali(impostazioni: Partial<Impostazioni
     const { data: existing } = await supabase
         .from('impostazioni_verbali')
         .select('*')
-        .eq('group_id', currentUser.groupId)
+        .eq('group_id', userGroupId)
         .maybeSingle();
 
     if (existing) {
-        await supabase.from('impostazioni_verbali').update(dataToSave).eq('group_id', currentUser.groupId);
+        await supabase.from('impostazioni_verbali').update(dataToSave).eq('group_id', userGroupId);
     } else {
         await supabase.from('impostazioni_verbali').insert(dataToSave);
     }
