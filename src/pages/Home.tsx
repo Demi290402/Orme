@@ -46,6 +46,7 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
     const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
     const [hasTents, setHasTents] = useState(false);
     const [hasBeds, setHasBeds] = useState(false);
+    const [minBeds, setMinBeds] = useState<number | null>(null);
     const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
     const [selectedStaleness, setSelectedStaleness] = useState<number[]>([]);
     const [currentUser, setCurrentUser] = useState<UserType | null>(null);
@@ -97,7 +98,12 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
 
         // 2. Tents & Beds
         const matchesTents = hasTents ? loc.hasTents : true;
-        const matchesBeds = hasBeds ? (loc.beds || 0) > 0 : true;
+        let matchesBeds = true;
+        if (minBeds !== null && minBeds > 0) {
+            matchesBeds = (loc.beds || 0) >= minBeds;
+        } else if (hasBeds) {
+            matchesBeds = (loc.beds || 0) > 0;
+        }
 
         // 3. Regions
         const matchesRegion = selectedRegions.length > 0 ? selectedRegions.includes(loc.region) : true;
@@ -131,7 +137,7 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
         selectedActivities.length +
         selectedStaleness.length +
         (hasTents ? 1 : 0) +
-        (hasBeds ? 1 : 0);
+        ((minBeds !== null && minBeds > 0) || hasBeds ? 1 : 0);
 
     return (
         <div className="space-y-6 relative min-h-[calc(100vh-150px)] pb-20">
@@ -244,30 +250,6 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                                         {branch}
                                     </button>
                                 ))}
-                                <button
-                                    onClick={() => setHasTents(!hasTents)}
-                                    className={cn(
-                                        "p-3 rounded-xl border flex flex-col items-center gap-2 transition-all",
-                                        hasTents
-                                            ? "bg-scout-green/10 border-scout-green text-scout-green-dark dark:text-emerald-400"
-                                            : "bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-scout-green/50"
-                                    )}
-                                >
-                                    <Tent size={20} />
-                                    <span className="text-sm font-medium">Solo con Tende</span>
-                                </button>
-                                <button
-                                    onClick={() => setHasBeds(!hasBeds)}
-                                    className={cn(
-                                        "p-3 rounded-xl border flex flex-col items-center gap-2 transition-all",
-                                        hasBeds
-                                            ? "bg-scout-green/10 border-scout-green text-scout-green-dark dark:text-emerald-400"
-                                            : "bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-scout-green/50"
-                                    )}
-                                >
-                                    <BedDouble size={20} />
-                                    <span className="text-sm font-medium">Solo con Letti</span>
-                                </button>
                             </div>
                         </div>
 
@@ -292,28 +274,151 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                             </div>
                         </div>
 
+                        {/* 2. Logistica & Numero Posti Letto */}
+                        <div className="space-y-3">
+                            <div className="flex justify-between items-center">
+                                <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 text-sm">
+                                    <BedDouble size={18} className="text-scout-blue" /> Logistica e Posti Letto
+                                </h3>
+                                {(minBeds !== null || hasBeds || hasTents) && (
+                                    <button
+                                        type="button"
+                                        onClick={() => { setMinBeds(null); setHasBeds(false); setHasTents(false); }}
+                                        className="text-xs text-red-500 font-bold hover:underline cursor-pointer"
+                                    >
+                                        Azzera
+                                    </button>
+                                )}
+                            </div>
 
-                        <div>
-                            <h3 className="font-bold text-gray-900 dark:text-white mb-3">Logistica</h3>
+                            {/* Checkbox Tende / Letti */}
                             <div className="flex gap-3">
                                 <label className={cn(
                                     "flex-1 flex items-center justify-center gap-2 p-3 border rounded-xl cursor-pointer transition-all",
                                     hasTents 
-                                        ? "bg-green-50 dark:bg-emerald-950/20 border-green-500 text-green-700 dark:text-emerald-400" 
-                                        : "bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-650 text-gray-700 dark:text-gray-300"
+                                        ? "bg-green-50 dark:bg-emerald-950/20 border-green-500 text-green-700 dark:text-emerald-400 font-bold" 
+                                        : "bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-650 text-gray-700 dark:text-gray-300 font-semibold"
                                 )}>
                                     <input type="checkbox" checked={hasTents} onChange={e => setHasTents(e.target.checked)} className="hidden" />
-                                    <span className="font-semibold">🏕️ Tende</span>
+                                    <span>🏕️ Terreno Tende</span>
                                 </label>
                                 <label className={cn(
                                     "flex-1 flex items-center justify-center gap-2 p-3 border rounded-xl cursor-pointer transition-all",
-                                    hasBeds 
-                                        ? "bg-green-50 dark:bg-emerald-950/20 border-green-500 text-green-700 dark:text-emerald-400" 
-                                        : "bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-650 text-gray-700 dark:text-gray-300"
+                                    hasBeds || (minBeds !== null && minBeds > 0)
+                                        ? "bg-blue-50 dark:bg-blue-950/30 border-scout-blue text-scout-blue font-bold" 
+                                        : "bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-650 text-gray-700 dark:text-gray-300 font-semibold"
                                 )}>
-                                    <input type="checkbox" checked={hasBeds} onChange={e => setHasBeds(e.target.checked)} className="hidden" />
-                                    <span className="font-semibold">🛏️ Letti</span>
+                                    <input
+                                        type="checkbox"
+                                        checked={hasBeds || (minBeds !== null && minBeds > 0)}
+                                        onChange={e => {
+                                            setHasBeds(e.target.checked);
+                                            if (!e.target.checked) setMinBeds(null);
+                                        }}
+                                        className="hidden"
+                                    />
+                                    <span>🛏️ Con Letti</span>
                                 </label>
+                            </div>
+
+                            {/* Filtro specifico per Numero Posti Letto Minimi */}
+                            <div className="p-3.5 bg-gray-50 dark:bg-gray-700/40 rounded-2xl border border-gray-150 dark:border-gray-650 space-y-2.5">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                                        Posti letto minimi richiesti:
+                                    </span>
+                                    {minBeds !== null && minBeds > 0 && (
+                                        <span className="text-[11px] font-black text-scout-blue bg-blue-50 dark:bg-blue-950/40 px-2.5 py-0.5 rounded-full border border-blue-200 dark:border-blue-800/40">
+                                            Almeno {minBeds} letti
+                                        </span>
+                                    )}
+                                </div>
+
+                                {/* Preset rapidi */}
+                                <div className="grid grid-cols-5 gap-1.5">
+                                    {[
+                                        { label: 'Tutti', val: null },
+                                        { label: '10+', val: 10 },
+                                        { label: '20+', val: 20 },
+                                        { label: '30+', val: 30 },
+                                        { label: '50+', val: 50 },
+                                    ].map(preset => {
+                                        const isSelected = preset.val === null ? (minBeds === null) : minBeds === preset.val;
+                                        return (
+                                            <button
+                                                key={preset.label}
+                                                type="button"
+                                                onClick={() => {
+                                                    if (preset.val === null) {
+                                                        setMinBeds(null);
+                                                    } else {
+                                                        setMinBeds(preset.val);
+                                                        setHasBeds(true);
+                                                    }
+                                                }}
+                                                className={cn(
+                                                    "py-2 px-1 rounded-xl text-xs font-bold border transition-all text-center cursor-pointer",
+                                                    isSelected
+                                                        ? "bg-scout-blue text-white border-scout-blue shadow-sm"
+                                                        : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-scout-blue/40"
+                                                )}
+                                            >
+                                                {preset.label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Stepper numerico personalizzato */}
+                                <div className="flex items-center justify-between gap-3 pt-1">
+                                    <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                                        Oppure imposta un numero esatto:
+                                    </span>
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const current = minBeds || 0;
+                                                const next = Math.max(0, current - 5);
+                                                setMinBeds(next === 0 ? null : next);
+                                                if (next === 0) setHasBeds(false);
+                                            }}
+                                            disabled={!minBeds || minBeds <= 0}
+                                            className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 flex items-center justify-center font-bold text-sm disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                                        >
+                                            -
+                                        </button>
+                                        <input
+                                            type="number"
+                                            min={0}
+                                            max={500}
+                                            placeholder="0"
+                                            value={minBeds ?? ''}
+                                            onChange={e => {
+                                                const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
+                                                if (val === null || isNaN(val) || val <= 0) {
+                                                    setMinBeds(null);
+                                                } else {
+                                                    setMinBeds(val);
+                                                    setHasBeds(true);
+                                                }
+                                            }}
+                                            className="w-16 py-1 px-1.5 text-center font-mono font-bold text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-scout-blue"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const current = minBeds || 0;
+                                                const next = current + 5;
+                                                setMinBeds(next);
+                                                setHasBeds(true);
+                                            }}
+                                            className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 flex items-center justify-center font-bold text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                                        >
+                                            +
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -388,6 +493,7 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                                         setSelectedStaleness([]);
                                         setHasTents(false);
                                         setHasBeds(false);
+                                        setMinBeds(null);
                                     }}
                                     className="w-full mt-3 text-gray-500 dark:text-gray-400 font-medium py-2 hover:text-gray-900 dark:hover:text-white"
                                 >
@@ -398,6 +504,106 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                     </div>
                 </div>
             )}
+
+            {/* Active Filters Bar */}
+            {activeFiltersCount > 0 && (
+                <div className="flex items-center gap-2 overflow-x-auto pb-1 -mt-2 no-scrollbar">
+                    <span className="text-xs font-bold text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                        Filtri:
+                    </span>
+                    {minBeds !== null && minBeds > 0 && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-50 dark:bg-blue-950/40 text-scout-blue border border-blue-200 dark:border-blue-800/50 whitespace-nowrap">
+                            <BedDouble size={13} />
+                            ≥ {minBeds} letti
+                            <button
+                                type="button"
+                                onClick={() => { setMinBeds(null); setHasBeds(false); }}
+                                className="hover:bg-blue-200/50 rounded-full p-0.5 cursor-pointer"
+                            >
+                                <X size={12} />
+                            </button>
+                        </span>
+                    )}
+                    {hasBeds && (minBeds === null || minBeds === 0) && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-green-50 dark:bg-green-950/40 text-scout-green-dark dark:text-emerald-400 border border-green-200 dark:border-green-800/50 whitespace-nowrap">
+                            <BedDouble size={13} />
+                            Con letti
+                            <button
+                                type="button"
+                                onClick={() => setHasBeds(false)}
+                                className="hover:bg-green-200/50 rounded-full p-0.5 cursor-pointer"
+                            >
+                                <X size={12} />
+                            </button>
+                        </span>
+                    )}
+                    {hasTents && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-green-50 dark:bg-green-950/40 text-scout-green-dark dark:text-emerald-400 border border-green-200 dark:border-green-800/50 whitespace-nowrap">
+                            <Tent size={13} />
+                            Tende
+                            <button
+                                type="button"
+                                onClick={() => setHasTents(false)}
+                                className="hover:bg-green-200/50 rounded-full p-0.5 cursor-pointer"
+                            >
+                                <X size={12} />
+                            </button>
+                        </span>
+                    )}
+                    {selectedBranches.map(b => (
+                        <span key={b} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600 whitespace-nowrap">
+                            {b}
+                            <button
+                                type="button"
+                                onClick={() => toggleSelection(selectedBranches, b, setSelectedBranches)}
+                                className="hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full p-0.5 cursor-pointer"
+                            >
+                                <X size={12} />
+                            </button>
+                        </span>
+                    ))}
+                    {selectedRegions.map(r => (
+                        <span key={r} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600 whitespace-nowrap">
+                            {r}
+                            <button
+                                type="button"
+                                onClick={() => toggleSelection(selectedRegions, r, setSelectedRegions)}
+                                className="hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full p-0.5 cursor-pointer"
+                            >
+                                <X size={12} />
+                            </button>
+                        </span>
+                    ))}
+                    {selectedActivities.map(a => (
+                        <span key={a} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600 whitespace-nowrap">
+                            {a}
+                            <button
+                                type="button"
+                                onClick={() => toggleSelection(selectedActivities, a, setSelectedActivities)}
+                                className="hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full p-0.5 cursor-pointer"
+                            >
+                                <X size={12} />
+                            </button>
+                        </span>
+                    ))}
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setSelectedBranches([]);
+                            setSelectedRegions([]);
+                            setSelectedActivities([]);
+                            setSelectedStaleness([]);
+                            setHasTents(false);
+                            setHasBeds(false);
+                            setMinBeds(null);
+                        }}
+                        className="text-xs text-red-500 dark:text-red-400 font-bold hover:underline whitespace-nowrap ml-1 cursor-pointer"
+                    >
+                        Azzera tutti
+                    </button>
+                </div>
+            )}
+
              {/* View Toggle and Count Header */}
             <div className="flex justify-between items-center bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-150 dark:border-gray-700 shadow-sm">
                 <span className="text-sm font-extrabold text-gray-500 dark:text-gray-400">
@@ -474,8 +680,10 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                                         setSelectedBranches([]);
                                         setSelectedRegions([]);
                                         setSelectedActivities([]);
+                                        setSelectedStaleness([]);
                                         setHasTents(false);
                                         setHasBeds(false);
+                                        setMinBeds(null);
                                     }}
                                     className="mt-6 text-scout-blue font-bold hover:underline"
                                 >
