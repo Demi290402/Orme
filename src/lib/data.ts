@@ -2,6 +2,7 @@ import { supabase } from './supabase';
 import { Location, User, LocationReview } from '@/types';
 import { createNotificationsForGroup } from './notifications';
 import { isOnline, getCachedData, setCachedData, enqueueOfflineWrite } from './offline';
+import { findDuplicateLocation } from './duplicateDetection';
 
 // =====================================================
 // GRUPPI SCOUT (per registrazione con cascading dropdown)
@@ -350,24 +351,12 @@ export async function addLocation(location: Omit<Location, 'id' | 'lastUpdatedAt
     try {
         const currentUser = await getUser();
         
-        // Check for duplicate name
-        const checkName = location.name.trim();
-        if (isOnline()) {
-            const { data: existing } = await supabase
-                .from('locations')
-                .select('id')
-                .ilike('name', checkName)
-                .maybeSingle();
-
-            if (existing) {
-                throw new Error('Esiste già un luogo registrato con questo nome.');
-            }
-        } else {
-            const cached = getCachedData<any[]>('locations') || [];
-            const isDuplicate = cached.some(loc => loc.name.trim().toLowerCase() === checkName.toLowerCase());
-            if (isDuplicate) {
-                throw new Error('Esiste già un luogo registrato con questo nome.');
-            }
+        // Controllo anti-duplicati intelligente multi-fattore (GPS, telefoni, email, toponomastica)
+        const existingLocations = await getLocations();
+        const dupResult = findDuplicateLocation(location as any, existingLocations);
+        if (dupResult.bestMatch && dupResult.bestMatch.confidence === 'critical') {
+            const reasonsText = dupResult.bestMatch.reasons.map(r => r.message).join('. ');
+            throw new Error(`Questa struttura risulta già registrata su Orme ("${dupResult.bestMatch.location.name}" a ${dupResult.bestMatch.location.commune}): ${reasonsText}. Aggiorna la scheda esistente invece di creare un duplicato.`);
         }
 
         const locationId = crypto.randomUUID();

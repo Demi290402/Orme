@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ChevronLeft, Save, MapPin, Plus, Trash2, Phone, MessageCircle, User, Building, AlertTriangle, Sparkles, Loader2, Check, Mail } from 'lucide-react';
+import { ChevronLeft, Save, MapPin, Plus, Trash2, Phone, MessageCircle, User, Building, AlertTriangle, Sparkles, Loader2, Check, Mail, ExternalLink, ArrowRight, Eye, X, ShieldAlert } from 'lucide-react';
 import { addLocation, getLocations, updateLocation } from '@/lib/data';
-import { LocationContact } from '@/types';
+import { Location, LocationContact } from '@/types';
 import { extractCoordsFromMapsUrl, resolveLocationCoordinates, isShortMapsUrl } from '@/lib/geo';
+import { findDuplicateLocation, DuplicateMatch, LocationCandidate } from '@/lib/duplicateDetection';
 import LocationMapPicker from '@/components/LocationMapPicker';
 import RichTextEditor from '@/components/RichTextEditor';
 // import { addPoints } from '@/lib/gamification'; // Handled in addLocation now
@@ -49,6 +50,14 @@ export default function AddLocation() {
 
     // Indirizzi email multipli
     const [emails, setEmails] = useState<string[]>(['']);
+
+    // Archivio luoghi esistenti e stati rilevamento duplicati
+    const [allLocations, setAllLocations] = useState<Location[]>([]);
+    const [duplicateMatch, setDuplicateMatch] = useState<DuplicateMatch | null>(null);
+    const [dismissedMatchId, setDismissedMatchId] = useState<string | null>(null);
+    const [blockingDuplicate, setBlockingDuplicate] = useState<DuplicateMatch | null>(null);
+    const [confirmingDuplicate, setConfirmingDuplicate] = useState<DuplicateMatch | null>(null);
+    const [pendingLocationData, setPendingLocationData] = useState<any | null>(null);
 
     const handleEmailChange = (index: number, value: string) => {
         setEmails(prev => {
@@ -221,9 +230,10 @@ export default function AddLocation() {
     };
 
     useEffect(() => {
-        if (id) {
-            setIsEditMode(true);
-            getLocations().then(locations => {
+        getLocations().then(locations => {
+            setAllLocations(locations);
+            if (id) {
+                setIsEditMode(true);
                 const found = locations.find(l => l.id === id);
                 if (found) {
                     // Popola contatti
@@ -328,9 +338,72 @@ export default function AddLocation() {
                         priceCategory: found.priceCategory || 0,
                     });
                 }
-            }).catch(console.error);
-        }
+            }
+        }).catch(console.error);
     }, [id]);
+
+    // Rilevamento duplicati in tempo reale (debounced a 350ms)
+    useEffect(() => {
+        if (allLocations.length === 0) return;
+
+        const candidateId = isEditMode && id ? id : undefined;
+        const hasName = Boolean(formData.name && formData.name.trim().length >= 3);
+        const hasCoords = Boolean(formData.latitude && formData.longitude);
+        const hasPhone = contacts.some(c => c.phone && c.phone.trim().length >= 8);
+        const hasEmail = emails.some(e => e && e.trim().includes('@'));
+        const hasMaps = Boolean(formData.googleMapsLink && formData.googleMapsLink.trim().length > 10);
+
+        if (!hasName && !hasCoords && !hasPhone && !hasEmail && !hasMaps) {
+            setDuplicateMatch(null);
+            return;
+        }
+
+        const timer = setTimeout(() => {
+            const coords = (formData.latitude && formData.longitude) ? {
+                lat: parseFloat(formData.latitude),
+                lng: parseFloat(formData.longitude)
+            } : undefined;
+
+            const candidate: LocationCandidate = {
+                id: candidateId,
+                name: formData.name,
+                region: formData.region,
+                province: formData.province,
+                commune: formData.commune,
+                address: formData.address,
+                coordinates: coords,
+                googleMapsLink: formData.googleMapsLink,
+                website: formData.website,
+                contacts: contacts.map(c => ({ value: c.phone, type: 'phone', name: c.name, role: c.role })),
+                emails: emails.filter(Boolean),
+            };
+
+            const result = findDuplicateLocation(candidate, allLocations);
+            if (result.bestMatch && result.bestMatch.location.id !== dismissedMatchId) {
+                setDuplicateMatch(result.bestMatch);
+            } else if (!result.bestMatch) {
+                setDuplicateMatch(null);
+            }
+        }, 350);
+
+        return () => clearTimeout(timer);
+    }, [
+        formData.name,
+        formData.region,
+        formData.province,
+        formData.commune,
+        formData.address,
+        formData.latitude,
+        formData.longitude,
+        formData.googleMapsLink,
+        formData.website,
+        contacts,
+        emails,
+        allLocations,
+        isEditMode,
+        id,
+        dismissedMatchId
+    ]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -459,6 +532,36 @@ export default function AddLocation() {
             } : undefined
         };
 
+        if (!isEditMode) {
+            const candidate: LocationCandidate = {
+                name: locationData.name,
+                region: locationData.region,
+                province: locationData.province,
+                commune: locationData.commune,
+                address: locationData.address,
+                coordinates: locationData.coordinates,
+                googleMapsLink: locationData.googleMapsLink,
+                website: locationData.website,
+                contacts: locationData.contacts,
+                email: locationData.email,
+                emails: locationData.emails,
+            };
+
+            const dupCheck = findDuplicateLocation(candidate, allLocations);
+            if (dupCheck.bestMatch) {
+                if (dupCheck.bestMatch.confidence === 'critical') {
+                    setBlockingDuplicate(dupCheck.bestMatch);
+                    setIsSubmitting(false);
+                    return;
+                } else if (dupCheck.bestMatch.confidence === 'high') {
+                    setPendingLocationData(locationData);
+                    setConfirmingDuplicate(dupCheck.bestMatch);
+                    setIsSubmitting(false);
+                    return;
+                }
+            }
+        }
+
         try {
             if (isEditMode && id) {
                 const detailsSummary = prompt("Descrivi brevemente cosa hai modificato (es. Aggiornati contatti, Aggiunti posti letto):") || "Aggiornate informazioni generali";
@@ -474,6 +577,21 @@ export default function AddLocation() {
         } catch (error: any) {
             console.error('Submission error:', error);
             alert(error.message || 'Errore durante il salvataggio. Riprova.');
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleProceedSaveDuplicate = async () => {
+        if (!pendingLocationData) return;
+        const dataToSave = pendingLocationData;
+        setConfirmingDuplicate(null);
+        setIsSubmitting(true);
+        try {
+            await addLocation(dataToSave);
+            navigate('/');
+        } catch (error: any) {
+            console.error('Submission error:', error);
+            alert(error.message || 'Errore durante il salvataggio.');
             setIsSubmitting(false);
         }
     };
@@ -528,6 +646,120 @@ export default function AddLocation() {
                         </label>
                     </div>
                 </div>
+
+                {/* Banner Rilevamento Duplicati Reattivo */}
+                {duplicateMatch && (
+                    <div className={`p-5 rounded-2xl border transition-all duration-300 shadow-md animate-fade-in ${
+                        duplicateMatch.confidence === 'critical'
+                            ? 'bg-red-50/90 dark:bg-red-950/40 border-red-300 dark:border-red-800'
+                            : duplicateMatch.confidence === 'high'
+                                ? 'bg-amber-50/90 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800'
+                                : 'bg-blue-50/90 dark:bg-blue-950/40 border-blue-300 dark:border-blue-800'
+                    }`}>
+                        <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-start gap-3">
+                                <div className={`p-2.5 rounded-xl shrink-0 ${
+                                    duplicateMatch.confidence === 'critical'
+                                        ? 'bg-red-500 text-white'
+                                        : duplicateMatch.confidence === 'high'
+                                            ? 'bg-amber-500 text-white'
+                                            : 'bg-blue-500 text-white'
+                                }`}>
+                                    {duplicateMatch.confidence === 'critical' ? (
+                                        <ShieldAlert size={22} />
+                                    ) : duplicateMatch.confidence === 'high' ? (
+                                        <AlertTriangle size={22} />
+                                    ) : (
+                                        <Eye size={22} />
+                                    )}
+                                </div>
+                                <div className="space-y-1">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <h3 className={`font-bold text-base ${
+                                            duplicateMatch.confidence === 'critical'
+                                                ? 'text-red-900 dark:text-red-300'
+                                                : duplicateMatch.confidence === 'high'
+                                                    ? 'text-amber-900 dark:text-amber-300'
+                                                    : 'text-blue-900 dark:text-blue-300'
+                                        }`}>
+                                            {duplicateMatch.confidence === 'critical'
+                                                ? 'Struttura già registrata su Orme'
+                                                : duplicateMatch.confidence === 'high'
+                                                    ? 'Possibile duplicato rilevato'
+                                                    : 'Struttura simile trovata'}
+                                        </h3>
+                                        <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider ${
+                                            duplicateMatch.confidence === 'critical'
+                                                ? 'bg-red-200 text-red-800 dark:bg-red-900/60 dark:text-red-300'
+                                                : duplicateMatch.confidence === 'high'
+                                                    ? 'bg-amber-200 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300'
+                                                    : 'bg-blue-200 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300'
+                                        }`}>
+                                            {duplicateMatch.confidence === 'critical' ? 'Corrispondenza Certa' : duplicateMatch.confidence === 'high' ? 'Alta Probabilità' : 'Info'}
+                                        </span>
+                                    </div>
+                                    <p className="text-sm text-gray-700 dark:text-gray-300 leading-snug">
+                                        {duplicateMatch.confidence === 'critical'
+                                            ? `Questa struttura coincide con "${duplicateMatch.location.name}" a ${duplicateMatch.location.commune} (${duplicateMatch.location.province || duplicateMatch.location.region}). Orme evita i doppioni per non frammentare contatti e recensioni.`
+                                            : `Nel comune di ${duplicateMatch.location.commune} è già registrata una struttura correlata: "${duplicateMatch.location.name}".`}
+                                    </p>
+                                </div>
+                            </div>
+                            {duplicateMatch.confidence !== 'critical' && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setDismissedMatchId(duplicateMatch.location.id);
+                                        setDuplicateMatch(null);
+                                    }}
+                                    className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 rounded-lg transition-colors"
+                                    title="Ignora avviso"
+                                >
+                                    <X size={18} />
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Motivi specifici del match */}
+                        <div className="mt-3 pl-12 space-y-1.5">
+                            <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                Corrispondenze riscontrate:
+                            </span>
+                            <ul className="space-y-1">
+                                {duplicateMatch.reasons.map((r, idx) => (
+                                    <li key={idx} className="text-xs flex items-center gap-2 text-gray-800 dark:text-gray-200 font-medium">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0"></span>
+                                        {r.message}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+
+                        {/* Azioni rapide */}
+                        <div className="mt-4 pl-12 flex items-center gap-3 flex-wrap">
+                            <button
+                                type="button"
+                                onClick={() => window.open(`/location/${duplicateMatch.location.id}`, '_blank')}
+                                className="inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-xl bg-white dark:bg-gray-800 text-gray-800 dark:text-white border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 shadow-sm transition-all"
+                            >
+                                <ExternalLink size={14} />
+                                Vedi scheda esistente
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    if (confirm(`Vuoi abbandonare questo inserimento e modificare la scheda esistente di "${duplicateMatch.location.name}"?`)) {
+                                        navigate(`/edit/${duplicateMatch.location.id}`);
+                                    }
+                                }}
+                                className="inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-xl bg-scout-green text-white hover:bg-scout-green/90 shadow-sm transition-all"
+                            >
+                                <ArrowRight size={14} />
+                                Aggiorna scheda esistente
+                            </button>
+                        </div>
+                    </div>
+                )}
 
                 {/* Section 1: Info Base */}
                 <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 space-y-4">
@@ -1283,7 +1515,149 @@ export default function AddLocation() {
                         <span className="text-sm font-bold">Punti totali</span>
                     </div>
                 </div>
-            </form >
-        </div >
+            </form>
+
+            {/* Modal Blocco Duplicato Certo (Critical) */}
+            {blockingDuplicate && (
+                <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+                    <div className="bg-white dark:bg-gray-800 w-full max-w-lg rounded-3xl p-6 shadow-2xl border border-red-200 dark:border-red-900 space-y-5">
+                        <div className="flex items-center gap-3 pb-3 border-b border-gray-100 dark:border-gray-700 text-red-600 dark:text-red-400">
+                            <div className="p-3 bg-red-100 dark:bg-red-950/50 rounded-2xl">
+                                <ShieldAlert size={28} />
+                            </div>
+                            <div>
+                                <h3 className="font-black text-lg text-gray-900 dark:text-white">
+                                    Struttura già registrata su Orme
+                                </h3>
+                                <p className="text-xs text-red-600 dark:text-red-400 font-bold">
+                                    Impossibile creare un doppione
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-3">
+                            <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+                                Questa struttura è già presente nel database di Orme come <strong className="text-gray-900 dark:text-white">"{blockingDuplicate.location.name}"</strong> a <strong>{blockingDuplicate.location.commune}</strong> ({blockingDuplicate.location.province || blockingDuplicate.location.region}).
+                            </p>
+
+                            <div className="p-4 bg-red-50/60 dark:bg-red-950/30 rounded-2xl border border-red-100 dark:border-red-900/60 space-y-2">
+                                <span className="text-[11px] font-bold uppercase tracking-wider text-red-800 dark:text-red-400">
+                                    Motivi di blocco riscontrati:
+                                </span>
+                                <ul className="space-y-1.5">
+                                    {blockingDuplicate.reasons.map((r, i) => (
+                                        <li key={i} className="text-xs font-semibold text-red-700 dark:text-red-300 flex items-start gap-2">
+                                            <span className="mt-1 w-1.5 h-1.5 rounded-full bg-red-500 shrink-0"></span>
+                                            <span>{r.message}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                                💡 Per aiutare tutta la comunità capi e mantenere informazioni unificate, puoi aggiornare la scheda già esistente con i tuoi nuovi contatti, note, foto o prezzi.
+                            </p>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row items-center gap-2.5 pt-2 border-t border-gray-100 dark:border-gray-700">
+                            <button
+                                type="button"
+                                onClick={() => navigate(`/edit/${blockingDuplicate.location.id}`)}
+                                className="w-full sm:flex-1 py-3 px-4 rounded-xl bg-scout-green hover:bg-scout-green/90 text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2"
+                            >
+                                <ArrowRight size={16} />
+                                Aggiorna Scheda Esistente
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => window.open(`/location/${blockingDuplicate.location.id}`, '_blank')}
+                                className="w-full sm:w-auto py-3 px-4 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-bold text-sm transition-all"
+                            >
+                                Vedi Scheda
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setBlockingDuplicate(null)}
+                                className="w-full sm:w-auto py-3 px-4 rounded-xl text-gray-500 hover:text-gray-800 dark:hover:text-white text-sm font-semibold transition-all"
+                            >
+                                Chiudi
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal Conferma Duplicato Probabile (High) */}
+            {confirmingDuplicate && (
+                <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+                    <div className="bg-white dark:bg-gray-800 w-full max-w-lg rounded-3xl p-6 shadow-2xl border border-amber-200 dark:border-amber-900 space-y-5">
+                        <div className="flex items-center gap-3 pb-3 border-b border-gray-100 dark:border-gray-700 text-amber-600 dark:text-amber-400">
+                            <div className="p-3 bg-amber-100 dark:bg-amber-950/50 rounded-2xl">
+                                <AlertTriangle size={28} />
+                            </div>
+                            <div>
+                                <h3 className="font-black text-lg text-gray-900 dark:text-white">
+                                    Verifica Duplicato
+                                </h3>
+                                <p className="text-xs text-amber-600 dark:text-amber-400 font-bold">
+                                    Struttura molto simile trovata nello stesso comune
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-3">
+                            <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+                                A <strong className="text-gray-900 dark:text-white">{confirmingDuplicate.location.commune}</strong> esiste già la struttura <strong className="text-gray-900 dark:text-white">"{confirmingDuplicate.location.name}"</strong> che presenta caratteristiche quasi identiche a quelle inserite.
+                            </p>
+
+                            <div className="p-4 bg-amber-50/60 dark:bg-amber-950/30 rounded-2xl border border-amber-100 dark:border-amber-800/60 space-y-2">
+                                <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">
+                                    Corrispondenze rilevate:
+                                </span>
+                                <ul className="space-y-1.5">
+                                    {confirmingDuplicate.reasons.map((r, i) => (
+                                        <li key={i} className="text-xs font-semibold text-amber-900 dark:text-amber-300 flex items-start gap-2">
+                                            <span className="mt-1 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>
+                                            <span>{r.message}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                                Si tratta dello stesso luogo? Se sì, ti consigliamo di aggiornare la scheda esistente per non disperdere le informazioni.
+                            </p>
+                        </div>
+
+                        <div className="flex flex-col gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+                            <button
+                                type="button"
+                                onClick={() => navigate(`/edit/${confirmingDuplicate.location.id}`)}
+                                className="w-full py-3 px-4 rounded-xl bg-scout-green hover:bg-scout-green/90 text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2"
+                            >
+                                <ArrowRight size={16} />
+                                Sì, aggiorna la scheda esistente (Consigliato)
+                            </button>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={handleProceedSaveDuplicate}
+                                    className="flex-1 py-3 px-4 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-bold text-xs transition-all"
+                                >
+                                    No, è un luogo diverso (Salva comunque)
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setConfirmingDuplicate(null)}
+                                    className="py-3 px-4 rounded-xl text-gray-500 hover:text-gray-800 dark:hover:text-white text-xs font-semibold transition-all"
+                                >
+                                    Annulla
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
     );
 }
