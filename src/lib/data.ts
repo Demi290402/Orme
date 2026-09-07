@@ -361,6 +361,32 @@ export async function addLocation(location: Omit<Location, 'id' | 'lastUpdatedAt
 
         const locationId = crypto.randomUUID();
 
+        // Separazione sito web e canali social (Facebook, Instagram)
+        let cleanWebsite = location.website?.trim() || '';
+        let cleanFacebook = (location as any).facebook?.trim() || '';
+        let cleanInstagram = (location as any).instagram?.trim() || '';
+
+        // Se nel campo sito web è stato incollato un link social, lo spostiamo nel relativo campo
+        if (cleanWebsite) {
+            const lowerWeb = cleanWebsite.toLowerCase();
+            if (lowerWeb.includes('facebook.com') || lowerWeb.includes('fb.me') || lowerWeb.includes('fb.com')) {
+                if (!cleanFacebook) cleanFacebook = cleanWebsite;
+                cleanWebsite = '';
+            } else if (lowerWeb.includes('instagram.com') || lowerWeb.includes('instagr.am')) {
+                if (!cleanInstagram) cleanInstagram = cleanWebsite;
+                cleanWebsite = '';
+            }
+        }
+
+        // Salva i social anche nella struttura JSONB contacts per piena compatibilità Supabase
+        const contactsToInsert = Array.isArray(location.contacts) ? [...location.contacts] : [];
+        if (cleanFacebook && !contactsToInsert.some(c => c.type === 'facebook')) {
+            contactsToInsert.push({ name: 'Facebook', role: 'Social', value: cleanFacebook, type: 'facebook' });
+        }
+        if (cleanInstagram && !contactsToInsert.some(c => c.type === 'instagram')) {
+            contactsToInsert.push({ name: 'Instagram', role: 'Social', value: cleanInstagram, type: 'instagram' });
+        }
+
         const insertData = {
             id: locationId,
             name: location.name,
@@ -369,7 +395,7 @@ export async function addLocation(location: Omit<Location, 'id' | 'lastUpdatedAt
             commune: location.commune,
             address: location.address,
             google_maps_link: location.googleMapsLink,
-            contacts: location.contacts,
+            contacts: contactsToInsert,
             activities: location.activities,
             quick_note: location.quickNote,
             coordinates: location.coordinates,
@@ -394,7 +420,7 @@ export async function addLocation(location: Omit<Location, 'id' | 'lastUpdatedAt
             restrictions: location.restrictions,
             availability_status: (location as any).availabilityStatus || 'available',
             other_restrictions: location.otherRestrictions,
-            website: location.website,
+            website: cleanWebsite,
             email: (location.emails && location.emails.length > 0)
                 ? location.emails.map(e => e.trim()).filter(Boolean).join(', ')
                 : (location.email || ''),
@@ -421,13 +447,15 @@ export async function addLocation(location: Omit<Location, 'id' | 'lastUpdatedAt
         let pointsAwarded = 10; // Base points
         const hasCoordinates = location.coordinates && location.coordinates.lat && location.coordinates.lng;
         const hasPricing = location.pricing && (location.pricing.basePrice > 0 || location.pricing.description);
-        const hasWebsite = location.website && location.website.trim() !== '';
+        const hasWebsite = cleanWebsite !== '';
+        const hasSocials = Boolean(cleanFacebook !== '' || cleanInstagram !== '');
         const hasMapsLink = location.googleMapsLink && location.googleMapsLink.trim() !== '';
         const hasLocationInfo = hasCoordinates || (location.address && location.address.trim() !== '') || hasMapsLink;
 
         if (hasLocationInfo) pointsAwarded += 3;
         if (hasPricing) pointsAwarded += 5;
         if (hasWebsite) pointsAwarded += 2;
+        if (hasSocials) pointsAwarded += 2; // +2 punti per canali social (Facebook, Instagram)
 
         // Update user stats
         await supabase
@@ -823,7 +851,40 @@ function convertLocationToSupabaseFormat(location: Partial<Location>): any {
     if (location.restrictions !== undefined) data.restrictions = location.restrictions;
     if (location.availabilityStatus !== undefined) data.availability_status = location.availabilityStatus;
     if (location.otherRestrictions !== undefined) data.other_restrictions = location.otherRestrictions;
-    if (location.website !== undefined) data.website = location.website;
+
+    // Gestione sito web e canali social (Facebook, Instagram)
+    let web = location.website !== undefined ? location.website.trim() : (data.website || '');
+    let fb = (location as any).facebook !== undefined ? (location as any).facebook.trim() : '';
+    let ig = (location as any).instagram !== undefined ? (location as any).instagram.trim() : '';
+
+    if (web) {
+        const lowerWeb = web.toLowerCase();
+        if (lowerWeb.includes('facebook.com') || lowerWeb.includes('fb.me') || lowerWeb.includes('fb.com')) {
+            if (!fb) fb = web;
+            web = '';
+        } else if (lowerWeb.includes('instagram.com') || lowerWeb.includes('instagr.am')) {
+            if (!ig) ig = web;
+            web = '';
+        }
+    }
+
+    // Salva i social anche nella struttura contacts JSONB per compatibilità
+    let contactsToSave = Array.isArray(location.contacts) ? [...location.contacts] : (data.contacts ? [...data.contacts] : []);
+    contactsToSave = contactsToSave.filter((c: any) => c.type !== 'facebook' && c.type !== 'instagram');
+    if (fb) {
+        contactsToSave.push({ name: 'Facebook', role: 'Social', value: fb, type: 'facebook' });
+    }
+    if (ig) {
+        contactsToSave.push({ name: 'Instagram', role: 'Social', value: ig, type: 'instagram' });
+    }
+
+    if (location.contacts !== undefined || (location as any).facebook !== undefined || (location as any).instagram !== undefined) {
+        data.contacts = contactsToSave;
+    }
+    if (location.website !== undefined || web !== (location.website || '')) {
+        data.website = web;
+    }
+
     if (location.emails !== undefined) {
         data.email = location.emails.map(e => e.trim()).filter(Boolean).join(', ');
     } else if (location.email !== undefined) {
@@ -835,6 +896,31 @@ function convertLocationToSupabaseFormat(location: Partial<Location>): any {
 }
 
 function mapSupabaseLocationToLocation(data: any): Location {
+    const rawContacts = (() => {
+        let c = data.contacts;
+        if (!c) return [];
+        if (typeof c === 'string') {
+            try { c = JSON.parse(c); } catch { return []; }
+        }
+        return Array.isArray(c) ? c : [];
+    })();
+
+    let facebook = data.facebook || rawContacts.find((c: any) => c.type === 'facebook')?.value || undefined;
+    let instagram = data.instagram || rawContacts.find((c: any) => c.type === 'instagram')?.value || undefined;
+
+    // Se website contiene profili Facebook o Instagram, lo scorporiamo lasciando website vuoto
+    let website = data.website?.trim() || undefined;
+    if (website) {
+        const lowerWeb = website.toLowerCase();
+        if (lowerWeb.includes('facebook.com') || lowerWeb.includes('fb.me') || lowerWeb.includes('fb.com')) {
+            if (!facebook) facebook = website;
+            website = undefined;
+        } else if (lowerWeb.includes('instagram.com') || lowerWeb.includes('instagr.am')) {
+            if (!instagram) instagram = website;
+            website = undefined;
+        }
+    }
+
     return {
         id: data.id,
         name: data.name,
@@ -842,14 +928,7 @@ function mapSupabaseLocationToLocation(data: any): Location {
         province: data.province,
         commune: data.commune,
         address: data.address,
-        contacts: (() => {
-            let c = data.contacts;
-            if (!c) return [];
-            if (typeof c === 'string') {
-                try { c = JSON.parse(c); } catch { return []; }
-            }
-            return Array.isArray(c) ? c : [];
-        })(),
+        contacts: rawContacts,
         activities: data.activities,
         quickNote: data.quick_note,
         coordinates: (() => {
@@ -884,7 +963,9 @@ function mapSupabaseLocationToLocation(data: any): Location {
         roverServiceDescription: data.rover_service_description,
         restrictions: data.restrictions,
         otherRestrictions: data.other_restrictions,
-        website: data.website,
+        website,
+        facebook,
+        instagram,
         googleMapsLink: data.google_maps_link,
         email: data.email,
         emails: (() => {

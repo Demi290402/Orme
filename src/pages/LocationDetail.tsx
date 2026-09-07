@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Phone, MessageCircle, Map, ArrowLeft, BedDouble, Tent, Coffee, ShieldAlert, Edit, Euro, Wrench, Ban, Star, Footprints, MessageSquare, X, Droplets, Flame, Wind, ShieldCheck, Users, ChevronLeft, ChevronRight, Globe, Mail, Copy, Check, Building } from 'lucide-react';
+import { Phone, MessageCircle, Map, ArrowLeft, BedDouble, Tent, Coffee, ShieldAlert, Edit, Euro, Wrench, Ban, Star, Footprints, MessageSquare, X, Droplets, Flame, Wind, ShieldCheck, Users, ChevronLeft, ChevronRight, Globe, Mail, Copy, Check, Building, Facebook, Instagram } from 'lucide-react';
 import { getLocations, getUser, getReviews, saveReview, deleteLocation, getLocationHistory, upsertLocationView, getUserLocationViews } from '@/lib/data';
 import { Location, LocationReview } from '@/types';
 import { getStalenessInfo, cn } from '@/lib/utils';
@@ -308,6 +308,22 @@ export default function LocationDetail() {
             : `https://${location.website}`)
         : undefined;
 
+    const facebookUrl = location.facebook
+        ? (location.facebook.startsWith('http://') || location.facebook.startsWith('https://')
+            ? location.facebook
+            : (location.facebook.startsWith('facebook.com') || location.facebook.startsWith('www.facebook.com')
+                ? `https://${location.facebook}`
+                : `https://facebook.com/${location.facebook.replace(/^@/, '')}`))
+        : undefined;
+
+    const instagramUrl = location.instagram
+        ? (location.instagram.startsWith('http://') || location.instagram.startsWith('https://')
+            ? location.instagram
+            : (location.instagram.startsWith('instagram.com') || location.instagram.startsWith('www.instagram.com')
+                ? `https://${location.instagram}`
+                : `https://instagram.com/${location.instagram.replace(/^@/, '')}`))
+        : undefined;
+
     const emailList: string[] = (location.emails && location.emails.length > 0)
         ? location.emails
         : (location.email ? location.email.split(/[,;\s]+/).map(s => s.trim()).filter(Boolean) : []);
@@ -315,7 +331,7 @@ export default function LocationDetail() {
     const primaryEmail = emailList[0];
     const emailUrl = primaryEmail ? `mailto:${primaryEmail}` : undefined;
 
-    const actionButtonsCount = [phone, whatsapp, websiteUrl, emailUrl, true].filter(Boolean).length;
+    const actionButtonsCount = [phone, whatsapp, websiteUrl, facebookUrl, instagramUrl, emailUrl, true].filter(Boolean).length;
 
     const hasAnyAttention = Boolean(
         location.hasPastures ||
@@ -573,11 +589,12 @@ export default function LocationDetail() {
 
             {/* Action Buttons */}
             <div className={cn(
-                "grid gap-3",
+                "grid gap-2 sm:gap-3",
                 actionButtonsCount === 1 && "grid-cols-1",
                 actionButtonsCount === 2 && "grid-cols-2",
                 actionButtonsCount === 3 && "grid-cols-3",
-                actionButtonsCount >= 4 && "grid-cols-4"
+                actionButtonsCount === 4 && "grid-cols-2 sm:grid-cols-4",
+                actionButtonsCount >= 5 && "grid-cols-3 sm:grid-cols-4 md:grid-cols-6"
             )}>
                 {phone && (
                     <button 
@@ -623,6 +640,26 @@ export default function LocationDetail() {
                     >
                         <Globe className="text-scout-blue mb-1" size={24} />
                         <span className="text-[10px] font-black uppercase dark:text-gray-300">Sito Web</span>
+                    </a>
+                )}
+                {facebookUrl && (
+                    <a
+                        href={facebookUrl}
+                        target="_blank" rel="noreferrer"
+                        className="flex flex-col items-center justify-center bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-95 transition-all text-center"
+                    >
+                        <Facebook className="text-[#1877F2] mb-1" size={24} />
+                        <span className="text-[10px] font-black uppercase dark:text-gray-300">Facebook</span>
+                    </a>
+                )}
+                {instagramUrl && (
+                    <a
+                        href={instagramUrl}
+                        target="_blank" rel="noreferrer"
+                        className="flex flex-col items-center justify-center bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-95 transition-all text-center"
+                    >
+                        <Instagram className="text-[#E4405F] mb-1" size={24} />
+                        <span className="text-[10px] font-black uppercase dark:text-gray-300">Instagram</span>
                     </a>
                 )}
                 {emailUrl && (
@@ -844,6 +881,103 @@ export default function LocationDetail() {
                                 </div>
                             </div>
                         ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Sezione Sito Web & Canali Social */}
+            {(websiteUrl || facebookUrl || instagramUrl) && (
+                <div className="bg-white dark:bg-gray-800 rounded-[2rem] shadow-sm border border-gray-100 dark:border-gray-700 p-6 space-y-4">
+                    <div className="pb-3 border-b border-gray-100 dark:border-gray-700">
+                        <h2 className="font-black text-sm uppercase tracking-wider flex items-center gap-2 text-gray-900 dark:text-white">
+                            <Globe size={16} className="text-scout-blue" />
+                            Sito Web & Canali Social
+                        </h2>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 font-medium mt-0.5">
+                            Canali ufficiali della struttura per foto, avvisi e informazioni aggiornate
+                        </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {websiteUrl && (
+                            <div className="flex items-center justify-between gap-3 p-3.5 rounded-2xl bg-gray-50 dark:bg-gray-750 border border-gray-150 dark:border-gray-650">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                    <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-scout-blue flex items-center justify-center shrink-0">
+                                        <Globe size={18} />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <span className="text-[10px] font-black uppercase text-gray-400 dark:text-gray-500 tracking-wider block">
+                                            Sito Ufficiale
+                                        </span>
+                                        <span className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white truncate block">
+                                            {location.website?.replace(/^https?:\/\//, '')}
+                                        </span>
+                                    </div>
+                                </div>
+                                <a
+                                    href={websiteUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex items-center justify-center gap-1.5 bg-scout-blue hover:bg-blue-700 active:scale-95 text-white text-xs font-bold py-2 px-3.5 rounded-xl transition-all shadow-xs shrink-0"
+                                >
+                                    Visita
+                                </a>
+                            </div>
+                        )}
+
+                        {facebookUrl && (
+                            <div className="flex items-center justify-between gap-3 p-3.5 rounded-2xl bg-gray-50 dark:bg-gray-750 border border-gray-150 dark:border-gray-650">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                    <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-[#1877F2] flex items-center justify-center shrink-0">
+                                        <Facebook size={18} />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <span className="text-[10px] font-black uppercase text-[#1877F2] tracking-wider block">
+                                            Facebook
+                                        </span>
+                                        <span className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white truncate block">
+                                            {location.facebook?.replace(/^https?:\/\/(www\.)?facebook\.com\//, '').replace(/\/$/, '') || 'Pagina Facebook'}
+                                        </span>
+                                    </div>
+                                </div>
+                                <a
+                                    href={facebookUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex items-center justify-center gap-1.5 bg-[#1877F2] hover:bg-blue-700 active:scale-95 text-white text-xs font-bold py-2 px-3.5 rounded-xl transition-all shadow-xs shrink-0"
+                                >
+                                    Pagina
+                                </a>
+                            </div>
+                        )}
+
+                        {instagramUrl && (
+                            <div className="flex items-center justify-between gap-3 p-3.5 rounded-2xl bg-gray-50 dark:bg-gray-750 border border-gray-150 dark:border-gray-650">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                    <div className="w-9 h-9 rounded-xl bg-pink-50 dark:bg-pink-950/40 text-[#E4405F] flex items-center justify-center shrink-0">
+                                        <Instagram size={18} />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <span className="text-[10px] font-black uppercase text-[#E4405F] tracking-wider block">
+                                            Instagram
+                                        </span>
+                                        <span className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white truncate block">
+                                            {location.instagram?.startsWith('@')
+                                                ? location.instagram
+                                                : `@${location.instagram?.replace(/^https?:\/\/(www\.)?instagram\.com\//, '').replace(/\/$/, '') || 'profilo'}`}
+                                        </span>
+                                    </div>
+                                </div>
+                                <a
+                                    href={instagramUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex items-center justify-center gap-1.5 bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF] hover:opacity-90 active:scale-95 text-white text-xs font-bold py-2 px-3.5 rounded-xl transition-all shadow-xs shrink-0"
+                                >
+                                    Profilo
+                                </a>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

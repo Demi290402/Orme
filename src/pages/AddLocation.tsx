@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ChevronLeft, Save, MapPin, Plus, Trash2, Phone, MessageCircle, User, Building, AlertTriangle, Sparkles, Loader2, Check, Mail, ExternalLink, ArrowRight, Eye, X, ShieldAlert } from 'lucide-react';
+import { ChevronLeft, Save, MapPin, Plus, Trash2, Phone, MessageCircle, User, Building, AlertTriangle, Sparkles, Loader2, Check, Mail, ExternalLink, ArrowRight, Eye, X, ShieldAlert, Globe, Facebook, Instagram } from 'lucide-react';
 import { addLocation, getLocations, updateLocation } from '@/lib/data';
 import { Location, LocationContact } from '@/types';
 import { extractCoordsFromMapsUrl, resolveLocationCoordinates, isShortMapsUrl } from '@/lib/geo';
@@ -87,6 +87,8 @@ export default function AddLocation() {
         phone: '',
         whatsapp: '',
         website: '',
+        facebook: '',
+        instagram: '',
         email: '',
         googleMapsLink: '',
         latitude: '',
@@ -133,6 +135,8 @@ export default function AddLocation() {
     const livePoints = useMemo(() => {
         let points = 10; // Base
         if (formData.website && formData.website.trim() !== '') points += 2;
+        const hasSocials = Boolean((formData.facebook && formData.facebook.trim() !== '') || (formData.instagram && formData.instagram.trim() !== ''));
+        if (hasSocials) points += 2;
         const hasAnyEmail = emails.some(e => e.trim() !== '') || Boolean(formData.email && formData.email.trim() !== '');
         if (hasAnyEmail) points += 2;
 
@@ -289,6 +293,8 @@ export default function AddLocation() {
                         phone: found.contacts.find(c => c.type === 'phone')?.value || '',
                         whatsapp: found.contacts.find(c => c.type === 'whatsapp')?.value || '',
                         website: found.website || '',
+                        facebook: found.facebook || found.contacts?.find(c => c.type === 'facebook')?.value || '',
+                        instagram: found.instagram || found.contacts?.find(c => c.type === 'instagram')?.value || '',
                         email: found.email || '',
                         beds: found.beds?.toString() || '',
                         bathrooms: found.bathrooms?.toString() || '',
@@ -374,6 +380,8 @@ export default function AddLocation() {
                 coordinates: coords,
                 googleMapsLink: formData.googleMapsLink,
                 website: formData.website,
+                facebook: formData.facebook,
+                instagram: formData.instagram,
                 contacts: contacts.map(c => ({ value: c.phone, type: 'phone', name: c.name, role: c.role })),
                 emails: emails.filter(Boolean),
             };
@@ -397,6 +405,8 @@ export default function AddLocation() {
         formData.longitude,
         formData.googleMapsLink,
         formData.website,
+        formData.facebook,
+        formData.instagram,
         contacts,
         emails,
         allLocations,
@@ -404,6 +414,26 @@ export default function AddLocation() {
         id,
         dismissedMatchId
     ]);
+
+    const handleWebsiteInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        const lower = val.toLowerCase().trim();
+        if (lower.includes('facebook.com') || lower.includes('fb.me') || lower.includes('fb.com')) {
+            setFormData(prev => ({
+                ...prev,
+                website: '',
+                facebook: prev.facebook || val.trim()
+            }));
+        } else if (lower.includes('instagram.com') || lower.includes('instagr.am')) {
+            setFormData(prev => ({
+                ...prev,
+                website: '',
+                instagram: prev.instagram || val.trim()
+            }));
+        } else {
+            setFormData(prev => ({ ...prev, website: val }));
+        }
+    };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -482,6 +512,22 @@ export default function AddLocation() {
 
         const validEmails = emails.map(e => e.trim()).filter(Boolean);
 
+        // Pulizia e scorporo social da website
+        let cleanWebsite = formData.website.trim();
+        let cleanFacebook = formData.facebook.trim();
+        let cleanInstagram = formData.instagram.trim();
+
+        if (cleanWebsite) {
+            const lowerWeb = cleanWebsite.toLowerCase();
+            if (lowerWeb.includes('facebook.com') || lowerWeb.includes('fb.me') || lowerWeb.includes('fb.com')) {
+                if (!cleanFacebook) cleanFacebook = cleanWebsite;
+                cleanWebsite = '';
+            } else if (lowerWeb.includes('instagram.com') || lowerWeb.includes('instagr.am')) {
+                if (!cleanInstagram) cleanInstagram = cleanWebsite;
+                cleanWebsite = '';
+            }
+        }
+
         const locationData = {
             name: formData.name,
             region: formData.region,
@@ -490,7 +536,9 @@ export default function AddLocation() {
             address: formData.address,
             googleMapsLink: formData.googleMapsLink,
             contacts: cleanedContacts,
-            website: formData.website,
+            website: cleanWebsite || undefined,
+            facebook: cleanFacebook || undefined,
+            instagram: cleanInstagram || undefined,
             email: validEmails.length > 0 ? validEmails.join(', ') : formData.email,
             emails: validEmails,
             beds: formData.beds ? parseInt(formData.beds) : 0,
@@ -542,6 +590,8 @@ export default function AddLocation() {
                 coordinates: locationData.coordinates,
                 googleMapsLink: locationData.googleMapsLink,
                 website: locationData.website,
+                facebook: (locationData as any).facebook,
+                instagram: (locationData as any).instagram,
                 contacts: locationData.contacts,
                 email: locationData.email,
                 emails: locationData.emails,
@@ -961,17 +1011,62 @@ export default function AddLocation() {
                         </div>
                     </div>
 
-                    <div>
-                        <div className="flex justify-between items-center mb-1">
-                            <label className="block text-sm font-medium">Sito Web (opzionale)</label>
-                            <span className="text-[10px] font-bold text-scout-blue bg-scout-blue/10 px-2 py-0.5 rounded-full">+2 pt</span>
+                    {/* Sezione Sito Web & Canali Social */}
+                    <div className="space-y-4 pt-2">
+                        <div>
+                            <div className="flex justify-between items-center mb-1">
+                                <label className="block text-sm font-medium flex items-center gap-1.5 text-gray-900 dark:text-white">
+                                    <Globe size={16} className="text-scout-blue" />
+                                    Sito Web Ufficiale (opzionale)
+                                </label>
+                                <span className="text-[10px] font-bold text-scout-blue bg-scout-blue/10 px-2 py-0.5 rounded-full">+2 pt</span>
+                            </div>
+                            <input
+                                type="url" name="website"
+                                value={formData.website} onChange={handleWebsiteInput}
+                                placeholder="https://www.basescout... (lascia vuoto se hai solo i social)"
+                                className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm focus:ring-2 focus:ring-scout-green"
+                            />
+                            <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">
+                                💡 Se incolli un link a Facebook o Instagram qui, Orme lo sposterà automaticamente nel campo social corretto lasciando il sito web vuoto.
+                            </p>
                         </div>
-                        <input
-                            type="url" name="website"
-                            value={formData.website} onChange={handleChange}
-                            placeholder="https://..."
-                            className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                        />
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {/* Pagina Facebook */}
+                            <div>
+                                <div className="flex justify-between items-center mb-1">
+                                    <label className="block text-sm font-medium flex items-center gap-1.5 text-blue-600 dark:text-blue-400">
+                                        <Facebook size={16} />
+                                        Pagina Facebook (opzionale)
+                                    </label>
+                                    <span className="text-[10px] font-bold text-blue-600 bg-blue-50 dark:bg-blue-950/40 px-2 py-0.5 rounded-full">+2 pt</span>
+                                </div>
+                                <input
+                                    type="text" name="facebook"
+                                    value={formData.facebook} onChange={handleChange}
+                                    placeholder="https://facebook.com/basescout... o nome pagina"
+                                    className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm focus:ring-2 focus:ring-blue-500"
+                                />
+                            </div>
+
+                            {/* Profilo Instagram */}
+                            <div>
+                                <div className="flex justify-between items-center mb-1">
+                                    <label className="block text-sm font-medium flex items-center gap-1.5 text-pink-600 dark:text-pink-400">
+                                        <Instagram size={16} />
+                                        Profilo Instagram (opzionale)
+                                    </label>
+                                    <span className="text-[10px] font-bold text-pink-600 bg-pink-50 dark:bg-pink-950/40 px-2 py-0.5 rounded-full">+2 pt</span>
+                                </div>
+                                <input
+                                    type="text" name="instagram"
+                                    value={formData.instagram} onChange={handleChange}
+                                    placeholder="@basescout... o link Instagram"
+                                    className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm focus:ring-2 focus:ring-pink-500"
+                                />
+                            </div>
+                        </div>
                     </div>
 
                     <div className="mt-4 space-y-2">

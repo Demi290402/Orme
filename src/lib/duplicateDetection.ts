@@ -16,12 +16,14 @@ export interface LocationCandidate {
     contacts?: { value: string; type?: string; name?: string; role?: string }[];
     email?: string;
     emails?: string[];
+    facebook?: string;
+    instagram?: string;
 }
 
 export type DuplicateConfidence = 'critical' | 'high' | 'medium';
 
 export interface DuplicateReason {
-    type: 'coordinates' | 'phone' | 'email' | 'maps_link' | 'website' | 'name_commune' | 'address';
+    type: 'coordinates' | 'phone' | 'email' | 'maps_link' | 'website' | 'social' | 'name_commune' | 'address';
     message: string;
     severity: DuplicateConfidence;
 }
@@ -84,6 +86,18 @@ export function normalizeUrl(url?: string): string {
     } catch {
         return url.trim().toLowerCase();
     }
+}
+
+// Normalizza handle social (rimuove domini facebook, instagram, @, query params)
+export function normalizeSocialHandle(val?: string): string {
+    if (!val) return '';
+    let s = val.trim().toLowerCase();
+    s = s.replace(/^https?:\/\//, '').replace(/^www\./, '');
+    s = s.replace(/^(facebook\.com|fb\.me|fb\.com|instagram\.com|instagr\.am)\//, '');
+    s = s.replace(/^@/, '');
+    s = s.split('?')[0].split('#')[0];
+    s = s.replace(/\/+$/, '');
+    return s.trim();
 }
 
 // Normalizza testo rimuovendo accenti, punteggiatura e spazi doppi
@@ -349,6 +363,31 @@ export function findDuplicateLocation(
                     severity: 'critical'
                 });
             }
+        }
+
+        // ----------------------------------------------------
+        // 4b. CONFRONTO CANALI SOCIAL (Facebook, Instagram)
+        // ----------------------------------------------------
+        const candFb = normalizeSocialHandle(candidate.facebook);
+        const locFb = normalizeSocialHandle(loc.facebook);
+        if (candFb && locFb && candFb === locFb && candFb.length >= 3) {
+            score += 92;
+            reasons.push({
+                type: 'social',
+                message: `Stessa pagina Facebook ("${loc.facebook}")`,
+                severity: 'critical'
+            });
+        }
+
+        const candIg = normalizeSocialHandle(candidate.instagram);
+        const locIg = normalizeSocialHandle(loc.instagram);
+        if (candIg && locIg && candIg === locIg && candIg.length >= 3) {
+            score += 92;
+            reasons.push({
+                type: 'social',
+                message: `Stesso profilo Instagram ("${loc.instagram}")`,
+                severity: 'critical'
+            });
         }
 
         // ----------------------------------------------------

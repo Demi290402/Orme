@@ -173,7 +173,7 @@ export type ActivityType =
     | 'Campo di gruppo';
 
 export interface LocationContact {
-    type: 'phone' | 'whatsapp' | 'email';
+    type: 'phone' | 'whatsapp' | 'email' | 'facebook' | 'instagram' | 'other';
     value: string;
     name?: string;       // Nome referente / proprietario (es. "Mario Rossi")
     role?: string;       // Ente / Gruppo Scout / Associazione / Ruolo (es. "Gruppo Scout Agesci Bari 1", "Comune", "Custode")
@@ -240,6 +240,8 @@ export interface Location {
     restrictions: Restriction[];
     otherRestrictions?: string;
     website?: string;
+    facebook?: string; // Profilo o pagina Facebook della struttura
+    instagram?: string; // Profilo Instagram della struttura
     email?: string;
     emails?: string[]; // Indirizzi email multipli per la struttura
     description?: string;
