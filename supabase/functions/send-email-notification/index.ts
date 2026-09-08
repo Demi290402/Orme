@@ -60,6 +60,9 @@ serve(async (req) => {
       })
     }
 
+    const senderEmail = Deno.env.get('BREVO_SENDER_EMAIL') || 'appormescout@gmail.com'
+    const senderName = Deno.env.get('BREVO_SENDER_NAME') || 'Orme App'
+
     // Send email via Brevo
     const response = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
@@ -70,12 +73,12 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         sender: {
-          name: 'Orme App',
-          email: 'appormescout@gmail.com' // Il tuo alias verificato su Brevo
+          name: senderName,
+          email: senderEmail
         },
         to: validEmails.map(email => ({ email })), // Invio a tutti
         replyTo: {
-          email: 'appormescout@gmail.com',
+          email: senderEmail,
           name: 'Supporto Orme'
         },
         subject: subject,

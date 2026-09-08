@@ -4,8 +4,10 @@ import {
     Save, ChevronLeft, Users, FileText,
     Eye, Download, ArrowUp, ArrowDown,
     Plus, Trash2, Clock, Pencil, Bell, Mail, BellOff,
-    CheckCircle2, AlertCircle, Puzzle, MoreVertical, X, Calendar, FileDown
+    CheckCircle2, AlertCircle, Puzzle, MoreVertical, X, Calendar, FileDown,
+    MessageSquare, Copy, RotateCw
 } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 import { getMembriCoCa, saveVerbale, getVerbali, getImpostazioniVerbali } from '@/lib/verbali';
 import { exportVerbaleToPdf } from '@/utils/pdfExport';
 import { exportVerbaleToDocx } from '@/utils/docxExport';
@@ -46,6 +48,9 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
         inApp: 'idle' | 'sending' | 'done' | 'error';
         email: 'idle' | 'sending' | 'done' | 'error' | 'not_configured';
     }>({ inApp: 'idle', email: 'idle' });
+    const [emailErrorDetails, setEmailErrorDetails] = useState<string | null>(null);
+    const [copiedNotification, setCopiedNotification] = useState(false);
+    const [groupEmails, setGroupEmails] = useState<string[]>([]);
     const [_savedVerbaleForModal, setSavedVerbaleForModal] = useState<Verbale | null>(null);
     const [isNewVerbale, setIsNewVerbale] = useState(false);
 
@@ -158,6 +163,61 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
         }
     };
 
+    const loadGroupEmails = async (gId: string) => {
+        if (!gId) return;
+        try {
+            const { data } = await supabase
+                .from('users')
+                .select('email')
+                .eq('group_id', String(gId).trim());
+            const emails = [...new Set((data || []).map((u: any) => u.email).filter((e: any) => e && typeof e === 'string' && e.includes('@')))];
+            setGroupEmails(emails);
+        } catch (e) {
+            console.warn('Errore recupero email gruppo:', e);
+        }
+    };
+
+    const getShareMessageData = () => {
+        const v = (_savedVerbaleForModal || verbale) as Verbale;
+        const num = v.numero || 1;
+        const title = v.titolo || 'Riunione di CoCa';
+        const dateStr = v.data ? new Date(v.data).toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric' }) : '';
+        const author = currentUser?.nickname || currentUser?.firstName || 'La CoCa';
+        const verbaleId = v.id || id || '';
+        const verbaleUrl = `${window.location.origin}/verbali/visualizza/${verbaleId}`;
+
+        const subject = `📋 Verbale CoCa N. ${num} — ${title}`;
+        const body = `Ciao a tutti,\n\n${author} ha pubblicato il verbale della riunione di CoCa N. ${num} ("${title}") del ${dateStr}.\n\nPuoi visualizzarlo e consultarlo su Orme a questo link:\n${verbaleUrl}\n\nBuona Caccia!`;
+        const whatsappText = `📋 *Verbale di CoCa N. ${num}* — ${title}\n📅 Riunione del ${dateStr}\n👤 Inserito da: ${author}\n\nLeggi il verbale su Orme:\n${verbaleUrl}`;
+
+        return { subject, body, whatsappText, verbaleUrl };
+    };
+
+    const getMailtoUrl = () => {
+        const { subject, body } = getShareMessageData();
+        const recipients = groupEmails.join(',');
+        return `mailto:${recipients}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    };
+
+    const getWhatsAppUrl = () => {
+        const { whatsappText } = getShareMessageData();
+        return `https://api.whatsapp.com/send?text=${encodeURIComponent(whatsappText)}`;
+    };
+
+    const handleCopyShareText = () => {
+        const { whatsappText } = getShareMessageData();
+        if (navigator?.clipboard?.writeText) {
+            navigator.clipboard.writeText(whatsappText).then(() => {
+                setCopiedNotification(true);
+                setTimeout(() => setCopiedNotification(false), 2500);
+            }).catch(() => {
+                alert(whatsappText);
+            });
+        } else {
+            alert(whatsappText);
+        }
+    };
+
     const handleSave = async (silent = false) => {
         setSaving(true);
         try {
@@ -172,7 +232,10 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                 setIsNewVerbale(!id);
                 setSavedVerbaleForModal(saved);
                 setNotifyStatus({ inApp: 'idle', email: 'idle' });
+                setEmailErrorDetails(null);
                 setShowNotifyModal(true);
+                const gId = saved.groupId || currentUser?.groupId || '';
+                if (gId) loadGroupEmails(gId);
             }
             return saved;
         } catch (err: any) {
@@ -187,10 +250,11 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
         if (!currentUser || notifyStatus.inApp !== 'idle') return;
         setNotifyStatus(s => ({ ...s, inApp: 'sending' }));
         try {
-            const v = verbale as Verbale;
+            const v = (_savedVerbaleForModal || verbale) as Verbale;
+            const targetGroupId = (currentUser?.groupId ? String(currentUser.groupId).trim() : '') || (v.groupId ? String(v.groupId).trim() : '');
             const dateStr = v.data ? new Date(v.data).toLocaleDateString('it-IT', { day: '2-digit', month: 'long' }) : '';
             await createNotificationsForGroup(
-                currentUser.groupId,
+                targetGroupId,
                 'verbale_saved',
                 `📋 Verbale N. ${v.numero} — ${v.titolo || 'Riunione di CoCa'}`,
                 `${currentUser.nickname || currentUser.firstName} ha salvato il verbale del ${dateStr}.`,
@@ -204,37 +268,114 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
     };
 
     const handleNotifyEmail = async () => {
-        if (!currentUser || notifyStatus.email !== 'idle') return;
+        if (!currentUser || notifyStatus.email === 'sending') return;
         setNotifyStatus(s => ({ ...s, email: 'sending' }));
+        setEmailErrorDetails(null);
+
+        const v = (_savedVerbaleForModal || verbale) as Verbale;
+        const targetGroupId = (currentUser?.groupId ? String(currentUser.groupId).trim() : '') || (v.groupId ? String(v.groupId).trim() : '');
+        const actionLabel = isNewVerbale ? 'pubblicato' : 'aggiornato';
+        const verbaleTitle = v.titolo || 'Riunione di CoCa';
+        const dateStr = v.data ? new Date(v.data).toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric' }) : '';
+        const authorName = currentUser.nickname || `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || 'Un capo';
+
+        const emailSubject = `${isNewVerbale ? '🆕' : '🔄'} Verbale CoCa ${actionLabel}: N. ${v.numero} — ${verbaleTitle}`;
+        const emailBody = `${authorName} ha ${actionLabel} il verbale del ${dateStr}. Aprilo su Orme per consultare l'ordine del giorno e le decisioni prese: ${window.location.origin}/verbali/visualizza/${v.id || id || ''}`;
+
         try {
             const supabaseUrl = (import.meta as any).env.VITE_SUPABASE_URL;
             const supabaseKey = (import.meta as any).env.VITE_SUPABASE_ANON_KEY;
-            const v = verbale as Verbale;
-            const actionLabel = isNewVerbale ? 'pubblicato' : 'aggiornato';
-            const res = await fetch(`${supabaseUrl}/functions/v1/send-email-notification`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${supabaseKey}`,
-                },
-                body: JSON.stringify({
-                    groupId: currentUser.groupId,
-                    subject: `${isNewVerbale ? '🆕' : '🔄'} Verbale ${actionLabel}: N. ${v.numero} — ${v.titolo || 'Riunione di CoCa'}`,
-                    body: `${currentUser.nickname || currentUser.firstName} ha ${actionLabel} il verbale del ${
-                        v.data ? new Date(v.data).toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric' }) : ''
-                    }. Aprilo su Orme per leggere i dettagli.`,
-                }),
-            });
-            if (!res.ok) throw new Error(await res.text());
+
+            let errorMsg: string | null = null;
+
+            // 1. Invoking via Supabase Functions SDK
+            try {
+                const { data, error } = await supabase.functions.invoke('send-email-notification', {
+                    body: {
+                        groupId: targetGroupId,
+                        excludeUserId: currentUser.id,
+                        subject: emailSubject,
+                        body: emailBody,
+                    }
+                });
+
+                if (error) {
+                    errorMsg = error.message;
+                    if ((error as any).context) {
+                        try {
+                            const ctxText = await (error as any).context.text();
+                            if (ctxText) errorMsg = ctxText;
+                        } catch {}
+                    }
+                } else if (data && data.error) {
+                    errorMsg = data.error;
+                }
+            } catch (invokeErr: any) {
+                errorMsg = invokeErr.message || String(invokeErr);
+            }
+
+            // 2. Direct fetch fallback if invoke returned error
+            if (errorMsg && supabaseUrl && supabaseKey) {
+                try {
+                    const res = await fetch(`${supabaseUrl}/functions/v1/send-email-notification`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'apikey': supabaseKey,
+                            'Authorization': `Bearer ${supabaseKey}`,
+                        },
+                        body: JSON.stringify({
+                            groupId: targetGroupId,
+                            excludeUserId: currentUser.id,
+                            subject: emailSubject,
+                            body: emailBody,
+                        }),
+                    });
+
+                    if (res.ok) {
+                        errorMsg = null;
+                    } else {
+                        const directText = await res.text();
+                        errorMsg = directText || `Errore HTTP ${res.status}`;
+                    }
+                } catch (fetchErr: any) {
+                    errorMsg = fetchErr.message || errorMsg;
+                }
+            }
+
+            if (errorMsg) {
+                throw new Error(errorMsg);
+            }
+
             setNotifyStatus(s => ({ ...s, email: 'done' }));
+            setEmailErrorDetails(null);
         } catch (e: any) {
             console.error('handleNotifyEmail error:', e);
-            // If function not deployed, show a friendly message
-            if (e.message?.includes('not_configured') || e.message?.includes('404') || e.message?.includes('RESEND_API_KEY')) {
-                setNotifyStatus(s => ({ ...s, email: 'not_configured' }));
+            const raw = String(e?.message || e || '');
+            let userMsg = 'Si è verificato un errore durante l\'invio automatico.';
+
+            if (raw.includes('BREVO_API_KEY') || raw.includes('segreti')) {
+                userMsg = 'La chiave segreta BREVO_API_KEY non è configurata in Supabase.';
+            } else if (raw.includes('404') || raw.includes('not found') || raw.includes('Function not found') || raw.includes('Failed to send request')) {
+                userMsg = 'La funzione server di invio email ("send-email-notification") non è attiva o distribuita su Supabase.';
+            } else if (raw.includes('sender') || raw.includes('verified') || raw.includes('invalid_parameter')) {
+                userMsg = 'L\'indirizzo mittente (appormescout@gmail.com) non è verificato nel tuo account Brevo.';
+            } else if (raw.includes('Campi obbligatori')) {
+                userMsg = 'Dati del gruppo scout mancanti o non associati al verbale.';
+            } else if (raw.includes('Nessun destinatario')) {
+                userMsg = 'Nessun indirizzo email trovato tra i membri registrati per il tuo gruppo scout.';
             } else {
-                setNotifyStatus(s => ({ ...s, email: 'error' }));
+                try {
+                    const parsed = JSON.parse(raw);
+                    if (parsed.error) userMsg = parsed.error;
+                    else if (parsed.message) userMsg = parsed.message;
+                } catch {
+                    userMsg = raw;
+                }
             }
+
+            setEmailErrorDetails(userMsg);
+            setNotifyStatus(s => ({ ...s, email: 'error' }));
         }
     };
 
@@ -1444,25 +1585,89 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                     </button>
                                     <button
                                         onClick={handleNotifyEmail}
-                                        disabled={notifyStatus.email !== 'idle'}
+                                        disabled={notifyStatus.email === 'sending' || notifyStatus.email === 'done'}
                                         className={cn(
-                                            "w-full py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-100 disabled:cursor-not-allowed",
+                                            "w-full py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-100 disabled:cursor-not-allowed shadow-sm",
                                             notifyStatus.email === 'idle' ? "bg-blue-500 text-white hover:bg-blue-600" :
                                             notifyStatus.email === 'sending' ? "bg-blue-300 text-white" :
                                             notifyStatus.email === 'done' ? "bg-scout-green text-white" :
                                             notifyStatus.email === 'not_configured' ? "bg-gray-200 text-gray-500 dark:text-gray-300" :
-                                            "bg-red-500 text-white"
+                                            "bg-amber-600 text-white hover:bg-amber-700"
                                         )}
                                         title={notifyStatus.email === 'not_configured' ? 'Servizio email non configurato' : ''}
                                     >
                                         {notifyStatus.email === 'done' ? <CheckCircle2 size={18} /> : 
+                                         notifyStatus.email === 'sending' ? <RotateCw size={18} className="animate-spin" /> :
+                                         notifyStatus.email === 'error' ? <RotateCw size={18} /> :
                                          notifyStatus.email === 'not_configured' ? <AlertCircle size={18} /> : <Mail size={18} />}
-                                        {notifyStatus.email === 'idle' ? 'Invia email' :
+                                        {notifyStatus.email === 'idle' ? 'Invia email automatica' :
                                          notifyStatus.email === 'sending' ? 'Invio in corso...' :
-                                         notifyStatus.email === 'error' ? 'Errore' :
+                                         notifyStatus.email === 'error' ? 'Riprova invio email' :
                                          notifyStatus.email === 'not_configured' ? 'Email disabilitate' :
                                          'Email inviata!'}
                                     </button>
+
+                                    {/* Error Details Alert */}
+                                    {emailErrorDetails && (
+                                        <div className="p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/60 rounded-xl text-xs text-red-700 dark:text-red-300 space-y-1.5 animate-in fade-in duration-200">
+                                            <div className="flex items-start gap-2">
+                                                <AlertCircle size={15} className="shrink-0 text-red-500 mt-0.5" />
+                                                <div className="flex-1">
+                                                    <p className="font-bold">Dettagli errore invio email:</p>
+                                                    <p className="text-[11px] leading-relaxed mt-0.5 opacity-90">{emailErrorDetails}</p>
+                                                </div>
+                                            </div>
+                                            <p className="text-[10px] text-gray-500 dark:text-gray-400 italic pt-1 border-t border-red-200/50 dark:border-red-800/40">
+                                                Consiglio: Puoi comunque notificare subito la CoCa tramite la tua app email o WhatsApp qui sotto.
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {/* Quick alternative channels (Always accessible, zero-config) */}
+                                    <div className="pt-2 border-t border-amber-200/60 dark:border-gray-700/60 space-y-2">
+                                        <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                            Canali diretti (senza configurazione server)
+                                        </p>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <a
+                                                href={getMailtoUrl()}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="py-2.5 px-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-blue-500 rounded-xl text-xs font-bold text-gray-700 dark:text-gray-200 flex items-center justify-center gap-1.5 transition-all shadow-sm hover:shadow"
+                                                title="Apri nel tuo programma email predefinito (Gmail, Outlook, Mail)"
+                                            >
+                                                <Mail size={14} className="text-blue-500" />
+                                                <span>Tua App Email</span>
+                                            </a>
+                                            <a
+                                                href={getWhatsAppUrl()}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="py-2.5 px-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-green-500 rounded-xl text-xs font-bold text-gray-700 dark:text-gray-200 flex items-center justify-center gap-1.5 transition-all shadow-sm hover:shadow"
+                                                title="Condividi sul gruppo WhatsApp della Comunità Capi"
+                                            >
+                                                <MessageSquare size={14} className="text-green-500" />
+                                                <span>WhatsApp</span>
+                                            </a>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={handleCopyShareText}
+                                            className="w-full py-2 px-3 bg-gray-50 dark:bg-gray-900/60 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-medium text-gray-600 dark:text-gray-300 flex items-center justify-center gap-1.5 transition-colors"
+                                        >
+                                            {copiedNotification ? (
+                                                <>
+                                                    <CheckCircle2 size={14} className="text-scout-green" />
+                                                    <span className="text-scout-green font-bold">Messaggio e link copiati!</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Copy size={14} />
+                                                    <span>Copia messaggio e link</span>
+                                                </>
+                                            )}
+                                        </button>
+                                    </div>
                                     
                                     {(notifyStatus.inApp === 'done' || notifyStatus.email === 'done') ? (
                                         <button
@@ -1478,7 +1683,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                             className="w-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300 dark:text-gray-300 py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
                                         >
                                             <BellOff size={18} />
-                                            Non notificare
+                                            Chiudi
                                         </button>
                                     )}
                                 </div>
