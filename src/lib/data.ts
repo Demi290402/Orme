@@ -475,13 +475,35 @@ export async function addLocation(location: Omit<Location, 'id' | 'lastUpdatedAt
             return mapSupabaseLocationToLocation({ ...insertData, created_at: new Date().toISOString() });
         }
 
-        const { data, error } = await supabase
-            .from('locations')
-            .insert(insertData)
-            .select()
-            .single();
+        let currentInsertData: any = { ...insertData };
+        let insertedData: any = null;
+        let attempts = 0;
 
-        if (error) throw error;
+        while (attempts < 8) {
+            attempts++;
+            const { data, error } = await supabase
+                .from('locations')
+                .insert(currentInsertData)
+                .select()
+                .single();
+
+            if (!error) {
+                insertedData = data;
+                break;
+            }
+
+            // Se Supabase non trova una colonna nel proprio schema cache
+            const missingCol = error.message?.match(/Could not find the '([^']+)' column/i)?.[1]
+                || error.details?.match(/column "([^"]+)" of relation "locations" does not exist/i)?.[1]
+                || error.message?.match(/column "([^"]+)" of relation "locations" does not exist/i)?.[1];
+
+            if (missingCol && currentInsertData[missingCol] !== undefined) {
+                console.warn(`Colonna '${missingCol}' non ancora presente nella tabella locations di Supabase. Riprovo inserimento senza questa colonna.`);
+                delete currentInsertData[missingCol];
+            } else {
+                throw error;
+            }
+        }
 
         // Calculate points based on information provided
         let pointsAwarded = 10; // Base points
@@ -517,12 +539,12 @@ export async function addLocation(location: Omit<Location, 'id' | 'lastUpdatedAt
                 'location_added',
                 `📍 Nuovo luogo: ${location.name || 'Senza nome'}`,
                 `${currentUser.nickname || currentUser.firstName} ha aggiunto ${location.name || 'un luogo'} in ${location.commune || location.region || 'un nuovo posto'}.`,
-                { locationId: data.id },
+                { locationId: (insertedData || currentInsertData).id },
                 currentUser.id
             ).catch(e => console.error("Error creating location notification:", e));
         }
 
-        return mapSupabaseLocationToLocation(data);
+        return mapSupabaseLocationToLocation(insertedData || { ...insertData, id: locationId });
     } catch (error) {
         console.error('Error adding location:', error);
         throw error;
@@ -552,18 +574,39 @@ export async function updateLocation(id: string, location: Partial<Location>, de
             return found ? mapSupabaseLocationToLocation({ ...found, ...supabaseData }) : null;
         }
 
-        const { data, error } = await supabase
-            .from('locations')
-            .update({
-                ...supabaseData,
-                last_updated_at: new Date().toISOString(),
-                last_updated_by: currentUser.id
-            })
-            .eq('id', id)
-            .select()
-            .single();
+        let updatePayload: any = {
+            ...supabaseData,
+            last_updated_at: new Date().toISOString(),
+            last_updated_by: currentUser.id
+        };
+        let updatedData: any = null;
+        let attempts = 0;
 
-        if (error) throw error;
+        while (attempts < 8) {
+            attempts++;
+            const { data, error } = await supabase
+                .from('locations')
+                .update(updatePayload)
+                .eq('id', id)
+                .select()
+                .single();
+
+            if (!error) {
+                updatedData = data;
+                break;
+            }
+
+            const missingCol = error.message?.match(/Could not find the '([^']+)' column/i)?.[1]
+                || error.details?.match(/column "([^"]+)" of relation "locations" does not exist/i)?.[1]
+                || error.message?.match(/column "([^"]+)" of relation "locations" does not exist/i)?.[1];
+
+            if (missingCol && updatePayload[missingCol] !== undefined) {
+                console.warn(`Colonna '${missingCol}' non ancora presente nella tabella locations di Supabase. Riprovo update senza questa colonna.`);
+                delete updatePayload[missingCol];
+            } else {
+                throw error;
+            }
+        }
 
         // Log to history online
         const { error: historyErr } = await supabase
@@ -579,7 +622,7 @@ export async function updateLocation(id: string, location: Partial<Location>, de
         // Update local cache
         await getLocations();
 
-        return mapSupabaseLocationToLocation(data);
+        return mapSupabaseLocationToLocation(updatedData);
     } catch (error) {
         console.error('Error updating location:', error);
         throw error;
