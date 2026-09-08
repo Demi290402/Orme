@@ -21,7 +21,7 @@ interface ContactFormItem {
 }
 
 const RESTRICTIONS_LIST = [
-    "Acqua non potabile", "No fuochi di bivacco", "No tende", "No riscaldamento",
+    "Acqua non potabile", "Fuochi solo su braciere", "No tende", "No riscaldamento",
     "Accesso difficile veicoli", "Gestore invadente", "Acqua ed elettricità limitate"
 ];
 
@@ -340,7 +340,9 @@ export default function AddLocation() {
                                     setSilenceEnd(match[2].padStart(5, '0'));
                                 }
                             }
-                            return (found.restrictions || []).filter((r: string) => 
+                            return (found.restrictions || []).map((r: string) => 
+                                r === 'No fuochi di bivacco' ? 'Fuochi solo su braciere' : r
+                            ).filter((r: string) => 
                                 !r.toLowerCase().includes('silenzio')
                             );
                         })(),

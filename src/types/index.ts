@@ -139,6 +139,7 @@ export interface Verbale {
 
 export type Restriction =
     | 'Acqua non potabile'
+    | 'Fuochi solo su braciere'
     | 'No fuochi di bivacco'
     | 'No tende'
     | 'No riscaldamento'

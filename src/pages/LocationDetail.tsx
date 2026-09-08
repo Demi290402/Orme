@@ -77,7 +77,7 @@ function SpiderChart({ reviews }: { reviews: LocationReview[] }) {
 function ReviewModal({ location, onClose, onSave }: { location: Location, onClose: () => void, onSave: () => void }) {
     // Automating initial values based on location census
     const censusAcqua = !location.restrictions.includes('Acqua non potabile');
-    const censusFuochi = !location.restrictions.includes('No fuochi di bivacco');
+    const censusFuochi = !location.restrictions.includes('Fuochi solo su braciere') && !location.restrictions.includes('No fuochi di bivacco');
     
     // Map priceCategory (0-3) to a starting rating (1-5)
     // 1 (€) -> 4 (Good value), 2 (€€) -> 3 (Average), 3 (€€€) -> 2 (Expensive), 0 -> 3
@@ -1147,6 +1147,7 @@ export default function LocationDetail() {
                         <ul className="space-y-2 ml-1 font-bold opacity-90 uppercase tracking-tighter">
                             {location.restrictions.map((r, i) => {
                                 const isSilence = r.toLowerCase().includes('silenzio');
+                                const displayLabel = r === 'No fuochi di bivacco' ? 'Fuochi solo su braciere' : r;
                                 return (
                                     <li key={i} className={`flex items-center gap-2 ${
                                         isSilence 
@@ -1158,7 +1159,7 @@ export default function LocationDetail() {
                                         ) : (
                                             <X size={10} className="shrink-0" />
                                         )}
-                                        <span>{r}</span>
+                                        <span>{displayLabel}</span>
                                     </li>
                                 );
                             })}
