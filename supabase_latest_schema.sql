@@ -93,6 +93,7 @@ BEGIN
 END $$;
 
 -- 6. Funzione per incremento automatico visite / visualizzazioni schede
+DROP FUNCTION IF EXISTS increment_location_views(UUID);
 CREATE OR REPLACE FUNCTION increment_location_views(loc_id UUID)
 RETURNS integer AS $$
 DECLARE
