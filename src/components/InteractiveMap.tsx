@@ -65,6 +65,9 @@ function buildPopupHtml(item: MappedLocation): string {
     if (loc.hasHeating) {
         badgesHtml += `<span class="inline-flex items-center gap-1 text-[10px] font-bold bg-orange-50 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300 px-2 py-0.5 rounded-md border border-orange-200 dark:border-orange-800">🔥 Riscaldamento</span>`;
     }
+    if (loc.hasWaterPoints) {
+        badgesHtml += `<span class="inline-flex items-center gap-1 text-[10px] font-bold bg-cyan-50 text-cyan-700 dark:bg-cyan-950/40 dark:text-cyan-300 px-2 py-0.5 rounded-md border border-cyan-200 dark:border-cyan-800">🚰 Punti d'acqua</span>`;
+    }
     if (loc.truckDistance) {
         badgesHtml += `<span class="inline-flex items-center gap-1 text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 px-2 py-0.5 rounded-md border border-blue-200 dark:border-blue-800">🚚 ${loc.truckDistance}</span>`;
     }

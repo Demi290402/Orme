@@ -106,6 +106,7 @@ export default function AddLocation() {
         hasPoles: false,
         hasDisabledAccess: false,
         hasHeating: false,
+        hasWaterPoints: false,
         truckDistance: '',
         otherLogistics: '',
 
@@ -312,6 +313,7 @@ export default function AddLocation() {
                         hasPoles: found.hasPoles,
                         hasDisabledAccess: found.hasDisabledAccess || false,
                         hasHeating: found.hasHeating || false,
+                        hasWaterPoints: found.hasWaterPoints || false,
                         truckDistance: found.truckDistance || '',
                         otherLogistics: found.otherLogistics || '',
                         hasPastures: found.hasPastures || false,
@@ -559,6 +561,7 @@ export default function AddLocation() {
             hasPoles: formData.hasPoles,
             hasDisabledAccess: formData.hasDisabledAccess,
             hasHeating: formData.hasHeating,
+            hasWaterPoints: formData.hasWaterPoints,
             truckDistance: formData.truckDistance?.trim() || undefined,
             otherLogistics: formData.otherLogistics,
 
@@ -1307,6 +1310,7 @@ export default function AddLocation() {
                             { key: 'hasPoles', label: 'Disponibilità paletti' },
                             { key: 'hasDisabledAccess', label: 'Accessibile disabili ♿' },
                             { key: 'hasHeating', label: 'Riscaldamento 🔥' },
+                            { key: 'hasWaterPoints', label: "Punti d'acqua 🚰" },
                         ].map((item) => (
                             <label key={item.key} className="flex items-center gap-2 p-3 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer">
                                 <input

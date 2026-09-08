@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Search, Filter, Plus, X, Check, Clock, Tent, BedDouble, Bus, Flame } from 'lucide-react';
+import { Search, Filter, Plus, X, Check, Clock, Tent, BedDouble, Bus, Flame, Droplets } from 'lucide-react';
 import { getLocations, getUser, getUserLocationViews, getAllLocationHistory } from '@/lib/data';
 import { Location, User as UserType } from '@/types';
 import LocationCard from '@/components/LocationCard';
@@ -48,6 +48,7 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
     const [hasBeds, setHasBeds] = useState(false);
     const [minBeds, setMinBeds] = useState<number | null>(null);
     const [hasHeating, setHasHeating] = useState(false);
+    const [hasWaterPoints, setHasWaterPoints] = useState(false);
     const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
     const [selectedStaleness, setSelectedStaleness] = useState<number[]>([]);
     const [currentUser, setCurrentUser] = useState<UserType | null>(null);
@@ -97,7 +98,7 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
             loc.commune.toLowerCase().includes(searchTerm.toLowerCase()) ||
             loc.region.toLowerCase().includes(searchTerm.toLowerCase());
 
-        // 2. Tents, Beds & Heating
+        // 2. Tents, Beds, Heating & Water Points
         const matchesTents = hasTents ? loc.hasTents : true;
         let matchesBeds = true;
         if (minBeds !== null && minBeds > 0) {
@@ -106,6 +107,7 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
             matchesBeds = (loc.beds || 0) > 0;
         }
         const matchesHeating = hasHeating ? !!loc.hasHeating : true;
+        const matchesWaterPoints = hasWaterPoints ? !!loc.hasWaterPoints : true;
 
         // 3. Regions
         const matchesRegion = selectedRegions.length > 0 ? selectedRegions.includes(loc.region) : true;
@@ -129,7 +131,7 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
             matchesStaleness = selectedStaleness.includes(info.level);
         }
 
-        return matchesSearch && matchesTents && matchesBeds && matchesHeating && matchesRegion && 
+        return matchesSearch && matchesTents && matchesBeds && matchesHeating && matchesWaterPoints && matchesRegion && 
                matchesBranch && matchesActivity && matchesStaleness;
     });
 
@@ -140,7 +142,8 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
         selectedStaleness.length +
         (hasTents ? 1 : 0) +
         ((minBeds !== null && minBeds > 0) || hasBeds ? 1 : 0) +
-        (hasHeating ? 1 : 0);
+        (hasHeating ? 1 : 0) +
+        (hasWaterPoints ? 1 : 0);
 
     return (
         <div className="space-y-6 relative min-h-[calc(100vh-150px)] pb-20">
@@ -283,10 +286,10 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                                 <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 text-sm">
                                     <BedDouble size={18} className="text-scout-blue" /> Logistica e Posti Letto
                                 </h3>
-                                {(minBeds !== null || hasBeds || hasTents || hasHeating) && (
+                                {(minBeds !== null || hasBeds || hasTents || hasHeating || hasWaterPoints) && (
                                     <button
                                         type="button"
-                                        onClick={() => { setMinBeds(null); setHasBeds(false); setHasTents(false); setHasHeating(false); }}
+                                        onClick={() => { setMinBeds(null); setHasBeds(false); setHasTents(false); setHasHeating(false); setHasWaterPoints(false); }}
                                         className="text-xs text-red-500 font-bold hover:underline cursor-pointer"
                                     >
                                         Azzera
@@ -294,8 +297,8 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                                 )}
                             </div>
 
-                            {/* Checkbox Tende / Letti / Riscaldamento */}
-                            <div className="grid grid-cols-3 gap-2">
+                            {/* Checkbox Tende / Letti / Riscaldamento / Punti d'acqua */}
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                                 <label className={cn(
                                     "flex items-center justify-center gap-1.5 p-2.5 border rounded-xl cursor-pointer transition-all text-xs font-bold",
                                     hasTents 
@@ -335,6 +338,20 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                                         className="hidden"
                                     />
                                     <span>🔥 Riscaldato</span>
+                                </label>
+                                <label className={cn(
+                                    "flex items-center justify-center gap-1.5 p-2.5 border rounded-xl cursor-pointer transition-all text-xs font-bold",
+                                    hasWaterPoints
+                                        ? "bg-cyan-50 dark:bg-cyan-950/30 border-cyan-500 text-cyan-700 dark:text-cyan-300" 
+                                        : "bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-650 text-gray-700 dark:text-gray-300"
+                                )}>
+                                    <input
+                                        type="checkbox"
+                                        checked={hasWaterPoints}
+                                        onChange={e => setHasWaterPoints(e.target.checked)}
+                                        className="hidden"
+                                    />
+                                    <span>🚰 Punti d'acqua</span>
                                 </label>
                             </div>
 
@@ -580,6 +597,19 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                             </button>
                         </span>
                     )}
+                    {hasWaterPoints && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-cyan-50 dark:bg-cyan-950/40 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800/50 whitespace-nowrap">
+                            <Droplets size={13} />
+                            Punti d'acqua
+                            <button
+                                type="button"
+                                onClick={() => setHasWaterPoints(false)}
+                                className="hover:bg-cyan-200/50 rounded-full p-0.5 cursor-pointer"
+                            >
+                                <X size={12} />
+                            </button>
+                        </span>
+                    )}
                     {selectedBranches.map(b => (
                         <span key={b} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600 whitespace-nowrap">
                             {b}
@@ -627,6 +657,7 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                             setHasBeds(false);
                             setMinBeds(null);
                             setHasHeating(false);
+                            setHasWaterPoints(false);
                         }}
                         className="text-xs text-red-500 dark:text-red-400 font-bold hover:underline whitespace-nowrap ml-1 cursor-pointer"
                     >
@@ -716,6 +747,7 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                                         setHasBeds(false);
                                         setMinBeds(null);
                                         setHasHeating(false);
+                                        setHasWaterPoints(false);
                                     }}
                                     className="mt-6 text-scout-blue font-bold hover:underline"
                                 >

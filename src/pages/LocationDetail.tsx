@@ -1102,6 +1102,7 @@ export default function LocationDetail() {
                             {location.hasEquippedKitchen && <span className="text-[10px] font-black uppercase bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-3 py-1.5 rounded-lg">🍳 Cucina OK</span>}
                             {location.hasPoles && <span className="text-[10px] font-black uppercase bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-3 py-1.5 rounded-lg">🪵 Paletti OK</span>}
                             {location.hasHeating && <span className="text-[10px] font-black uppercase bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300 border border-orange-200 dark:border-orange-800 px-3 py-1.5 rounded-lg flex items-center gap-1">🔥 Riscaldamento OK</span>}
+                            {location.hasWaterPoints && <span className="text-[10px] font-black uppercase bg-cyan-50 dark:bg-cyan-950/40 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800 px-3 py-1.5 rounded-lg flex items-center gap-1">🚰 Punti d'Acqua OK</span>}
                             {location.hasDisabledAccess && <span className="text-[10px] font-black uppercase bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 px-3 py-1.5 rounded-lg">♿ Accessibile Disabili</span>}
                         </div>
 

@@ -228,6 +228,7 @@ export interface Location {
     hasPoles: boolean;
     hasDisabledAccess: boolean;
     hasHeating?: boolean; // Presenza impianto riscaldamento
+    hasWaterPoints?: boolean; // Presenza fontanelle e/o punti d'acqua sul posto
     truckDistance?: string; // Distanza punto scarico camion/furgone dalla struttura o campo
 
     // Attenzioni (Precautions)

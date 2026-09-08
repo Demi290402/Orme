@@ -34,6 +34,7 @@ export default function AddLocationWizard() {
         hasEquippedKitchen: false,
         hasPoles: false,
         hasHeating: false,
+        hasWaterPoints: false,
         truckDistance: '',
         hasPastures: false,
         hasInsects: false,

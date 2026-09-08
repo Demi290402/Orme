@@ -447,6 +447,7 @@ export async function addLocation(location: Omit<Location, 'id' | 'lastUpdatedAt
             has_poles: location.hasPoles,
             has_disabled_access: location.hasDisabledAccess,
             has_heating: location.hasHeating ?? false,
+            has_water_points: location.hasWaterPoints ?? false,
             truck_distance: location.truckDistance || null,
             has_pastures: location.hasPastures,
             has_insects: location.hasInsects,
@@ -998,6 +999,7 @@ function convertLocationToSupabaseFormat(location: Partial<Location>): any {
     if (location.hasPoles !== undefined) data.has_poles = location.hasPoles;
     if (location.hasDisabledAccess !== undefined) data.has_disabled_access = location.hasDisabledAccess;
     if (location.hasHeating !== undefined) data.has_heating = location.hasHeating;
+    if (location.hasWaterPoints !== undefined) data.has_water_points = location.hasWaterPoints;
     if (location.truckDistance !== undefined) data.truck_distance = location.truckDistance;
     if (location.hasPastures !== undefined) data.has_pastures = location.hasPastures;
     if (location.hasInsects !== undefined) data.has_insects = location.hasInsects;
@@ -1114,6 +1116,7 @@ function mapSupabaseLocationToLocation(data: any): Location {
         hasPoles: data.has_poles,
         hasDisabledAccess: data.has_disabled_access || false,
         hasHeating: data.has_heating || false,
+        hasWaterPoints: data.has_water_points || false,
         truckDistance: data.truck_distance || '',
         hasPastures: data.has_pastures,
         hasInsects: data.has_insects,
