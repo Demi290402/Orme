@@ -101,10 +101,36 @@ export async function getMembriCoCa(): Promise<MembroCoCa[]> {
     }
 }
 
+/**
+ * Calcola l'anno associativo scout a partire da una data (YYYY-MM-DD).
+ * Regola scout:
+ * - Ottobre (10), Novembre (11), Dicembre (12) -> appartengono all'anno in corso (es. Ottobre 2024 -> 2024).
+ * - Da Gennaio (1) a Settembre (9) -> appartengono all'anno iniziato nell'autunno precedente (es. Maggio 2025 -> 2024, Settembre 2025 -> 2024).
+ */
+export function calculateScoutYear(dateStr?: string): number {
+    const currentYear = new Date().getFullYear();
+    if (!dateStr) return currentYear;
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return currentYear;
+
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1; // 1-12
+    return month >= 10 ? year : year - 1;
+}
+
+/**
+ * Formatta l'anno scout in forma leggibile (es. 2024 -> "2024 — 2025")
+ */
+export function formatScoutYear(year: number): string {
+    return `${year} — ${year + 1}`;
+}
+
 export async function saveVerbale(verbale: Partial<Verbale>): Promise<Verbale> {
     const currentUser = await getUser();
     const resolvedGroupId = (currentUser?.groupId ? String(currentUser.groupId).trim() : '') || verbale.groupId || 'default';
-    const dataToSave = {
+    const targetAnnoScout = verbale.annoScout ?? calculateScoutYear(verbale.data || new Date().toISOString().split('T')[0]);
+
+    const dataToSave: any = {
         group_id: resolvedGroupId,
         numero: verbale.numero || 0,
         titolo: verbale.titolo || 'Senza Titolo',
@@ -125,38 +151,69 @@ export async function saveVerbale(verbale: Partial<Verbale>): Promise<Verbale> {
         uscite_anticipate: verbale.usciteAnticipate || [],
         varie: verbale.varie || '',
         sezioni_attive: verbale.sezioniAttive || [],
+        anno_scout: targetAnnoScout,
     };
 
     let result;
-    if (verbale.id) {
-        const { data, error } = await supabase
-            .from('verbali')
-            .update(dataToSave)
-            .eq('id', verbale.id)
-            .select()
-            .single();
-        if (error) {
-            console.error("Supabase update error:", error);
-            throw error;
+    try {
+        if (verbale.id) {
+            const { data, error } = await supabase
+                .from('verbali')
+                .update(dataToSave)
+                .eq('id', verbale.id)
+                .select()
+                .single();
+            if (error) throw error;
+            result = data;
+        } else {
+            const { data, error } = await supabase
+                .from('verbali')
+                .insert({
+                    ...dataToSave,
+                    created_by: currentUser.id
+                })
+                .select()
+                .single();
+            if (error) throw error;
+            result = data;
         }
-        result = data;
-    } else {
-        const { data, error } = await supabase
-            .from('verbali')
-            .insert({
-                ...dataToSave,
-                created_by: currentUser.id
-            })
-            .select()
-            .single();
-        if (error) {
-            console.error("Supabase insert error:", error);
-            throw error;
+    } catch (err: any) {
+        // Fallback: se la colonna anno_scout non è ancora stata creata in Supabase, salva comunque senza bloccare l'utente
+        if (err?.message?.includes('anno_scout') || err?.code === '42703') {
+            console.warn('Colonna anno_scout non ancora presente in Supabase, salvataggio fallback senza anno_scout:', err);
+            delete dataToSave.anno_scout;
+            if (verbale.id) {
+                const { data, error } = await supabase
+                    .from('verbali')
+                    .update(dataToSave)
+                    .eq('id', verbale.id)
+                    .select()
+                    .single();
+                if (error) throw error;
+                result = data;
+            } else {
+                const { data, error } = await supabase
+                    .from('verbali')
+                    .insert({
+                        ...dataToSave,
+                        created_by: currentUser.id
+                    })
+                    .select()
+                    .single();
+                if (error) throw error;
+                result = data;
+            }
+        } else {
+            console.error("Supabase error during saveVerbale:", err);
+            throw err;
         }
-        result = data;
     }
 
     const savedVerbale = mapSupabaseVerbaleToVerbale(result);
+    // Assicuriamoci che l'anno associativo desiderato rimanga nell'oggetto restituito
+    if (savedVerbale && !savedVerbale.annoScout) {
+        savedVerbale.annoScout = targetAnnoScout;
+    }
     // Sincronizza dateImportanti e prossimiImpegni col nuovo Calendario
     await syncVerbaleEventi(savedVerbale).catch(err => console.error("Sync calendario fallito:", err));
 
@@ -164,10 +221,16 @@ export async function saveVerbale(verbale: Partial<Verbale>): Promise<Verbale> {
 }
 
 function mapSupabaseVerbaleToVerbale(data: any): Verbale {
+    const rawAnno = data.anno_scout;
+    const computedAnno = (rawAnno !== undefined && rawAnno !== null && !isNaN(Number(rawAnno)))
+        ? Number(rawAnno)
+        : calculateScoutYear(data.data);
+
     return {
         id: data.id,
         groupId: data.group_id,
         numero: data.numero,
+        annoScout: computedAnno,
         titolo: data.titolo,
         data: data.data,
         luogo: data.luogo,

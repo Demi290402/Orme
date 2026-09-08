@@ -1,14 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
     Save, ChevronLeft, Users, FileText,
     Eye, Download, ArrowUp, ArrowDown,
     Plus, Trash2, Clock, Pencil, Bell, Mail, BellOff,
     CheckCircle2, AlertCircle, Puzzle, MoreVertical, X, Calendar, FileDown,
-    MessageSquare, Copy, RotateCw
+    RotateCw
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { getMembriCoCa, saveVerbale, getVerbali, getImpostazioniVerbali } from '@/lib/verbali';
+import { getMembriCoCa, saveVerbale, getVerbali, getImpostazioniVerbali, calculateScoutYear, formatScoutYear } from '@/lib/verbali';
 import { exportVerbaleToPdf } from '@/utils/pdfExport';
 import { exportVerbaleToDocx } from '@/utils/docxExport';
 import { Verbale, MembroCoCa } from '@/types';
@@ -49,13 +49,12 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
         email: 'idle' | 'sending' | 'done' | 'error' | 'not_configured';
     }>({ inApp: 'idle', email: 'idle' });
     const [emailErrorDetails, setEmailErrorDetails] = useState<string | null>(null);
-    const [copiedNotification, setCopiedNotification] = useState(false);
-    const [groupEmails, setGroupEmails] = useState<string[]>([]);
     const [_savedVerbaleForModal, setSavedVerbaleForModal] = useState<Verbale | null>(null);
     const [isNewVerbale, setIsNewVerbale] = useState(false);
 
     const [verbale, setVerbale] = useState<Partial<Verbale>>({
         numero: 1,
+        annoScout: calculateScoutYear(new Date().toISOString().split('T')[0]),
         titolo: 'Riunione di CoCa',
         data: new Date().toISOString().split('T')[0],
         luogo: 'Sede',
@@ -75,6 +74,19 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
         varie: '',
         sezioniAttive: ['ritorni', 'posti_azione']
     });
+
+    const availableScoutYears = useMemo(() => {
+        const currentCalYear = new Date().getFullYear();
+        const years: number[] = [];
+        for (let y = currentCalYear + 1; y >= currentCalYear - 6; y--) {
+            years.push(y);
+        }
+        if (verbale.annoScout && !years.includes(verbale.annoScout)) {
+            years.push(verbale.annoScout);
+            years.sort((a, b) => b - a);
+        }
+        return years;
+    }, [verbale.annoScout]);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -96,6 +108,9 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                     const allVerbali = await getVerbali();
                     const found = allVerbali.find(v => v.id === id);
                     if (found) {
+                        if (!found.annoScout) {
+                            found.annoScout = calculateScoutYear(found.data);
+                        }
                         setVerbale(found);
                         // Passive gamification: track verbale view (once ever per verbale)
                         if (viewMode && userData) {
@@ -106,9 +121,17 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                     }
                 } else {
                     const allVerbali = await getVerbali();
-                    const validNums = allVerbali.map(v => Number(v.numero)).filter(n => !isNaN(n));
+                    const defaultScoutYear = calculateScoutYear(new Date().toISOString().split('T')[0]);
+                    const validNums = allVerbali
+                        .filter(v => (v.annoScout ?? calculateScoutYear(v.data)) === defaultScoutYear)
+                        .map(v => Number(v.numero))
+                        .filter(n => !isNaN(n));
                     const lastNum = validNums.length > 0 ? Math.max(...validNums) : 0;
-                    setVerbale(prev => ({ ...prev, numero: lastNum + 1 }));
+                    setVerbale(prev => ({ 
+                        ...prev, 
+                        annoScout: prev.annoScout || defaultScoutYear,
+                        numero: lastNum + 1 
+                    }));
                 }
             } catch (err) {
                 console.error(err);
@@ -163,61 +186,6 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
         }
     };
 
-    const loadGroupEmails = async (gId: string) => {
-        if (!gId) return;
-        try {
-            const { data } = await supabase
-                .from('users')
-                .select('email')
-                .eq('group_id', String(gId).trim());
-            const emails = [...new Set((data || []).map((u: any) => u.email).filter((e: any) => e && typeof e === 'string' && e.includes('@')))];
-            setGroupEmails(emails);
-        } catch (e) {
-            console.warn('Errore recupero email gruppo:', e);
-        }
-    };
-
-    const getShareMessageData = () => {
-        const v = (_savedVerbaleForModal || verbale) as Verbale;
-        const num = v.numero || 1;
-        const title = v.titolo || 'Riunione di CoCa';
-        const dateStr = v.data ? new Date(v.data).toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric' }) : '';
-        const author = currentUser?.nickname || currentUser?.firstName || 'La CoCa';
-        const verbaleId = v.id || id || '';
-        const verbaleUrl = `${window.location.origin}/verbali/visualizza/${verbaleId}`;
-
-        const subject = `📋 Verbale CoCa N. ${num} — ${title}`;
-        const body = `Ciao a tutti,\n\n${author} ha pubblicato il verbale della riunione di CoCa N. ${num} ("${title}") del ${dateStr}.\n\nPuoi visualizzarlo e consultarlo su Orme a questo link:\n${verbaleUrl}\n\nBuona Caccia!`;
-        const whatsappText = `📋 *Verbale di CoCa N. ${num}* — ${title}\n📅 Riunione del ${dateStr}\n👤 Inserito da: ${author}\n\nLeggi il verbale su Orme:\n${verbaleUrl}`;
-
-        return { subject, body, whatsappText, verbaleUrl };
-    };
-
-    const getMailtoUrl = () => {
-        const { subject, body } = getShareMessageData();
-        const recipients = groupEmails.join(',');
-        return `mailto:${recipients}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    };
-
-    const getWhatsAppUrl = () => {
-        const { whatsappText } = getShareMessageData();
-        return `https://api.whatsapp.com/send?text=${encodeURIComponent(whatsappText)}`;
-    };
-
-    const handleCopyShareText = () => {
-        const { whatsappText } = getShareMessageData();
-        if (navigator?.clipboard?.writeText) {
-            navigator.clipboard.writeText(whatsappText).then(() => {
-                setCopiedNotification(true);
-                setTimeout(() => setCopiedNotification(false), 2500);
-            }).catch(() => {
-                alert(whatsappText);
-            });
-        } else {
-            alert(whatsappText);
-        }
-    };
-
     const handleSave = async (silent = false) => {
         setSaving(true);
         try {
@@ -234,8 +202,6 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                 setNotifyStatus({ inApp: 'idle', email: 'idle' });
                 setEmailErrorDetails(null);
                 setShowNotifyModal(true);
-                const gId = saved.groupId || currentUser?.groupId || '';
-                if (gId) loadGroupEmails(gId);
             }
             return saved;
         } catch (err: any) {
@@ -408,6 +374,11 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                     <h1 className="text-xl font-serif font-black text-scout-brown dark:text-scout-yellow">
                         {id ? `Verbale N. ${verbale.numero}` : 'Apertura Nuovo Verbale'}
                     </h1>
+                    {verbale.data && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mt-0.5">
+                            Anno Associativo: <strong className="text-scout-brown dark:text-amber-300">{formatScoutYear(verbale.annoScout ?? calculateScoutYear(verbale.data))}</strong>
+                        </p>
+                    )}
                 </div>
                 <div className="flex items-center gap-2 flex-wrap justify-end">
                     {viewMode && (
@@ -460,54 +431,105 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
 
             {/* Metadata Bar */}
             {!viewMode && (
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm flex flex-wrap gap-4 items-end">
-                <div className="space-y-1">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Titolo</label>
-                    <input 
-                        type="text" 
-                        value={verbale.titolo}
-                        onChange={e => setVerbale(v => ({ ...v, titolo: e.target.value }))}
-                        className="p-2 border border-gray-100 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-scout-green w-64 transition-all"
-                    />
-                </div>
-                <div className="space-y-1">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Data</label>
-                    <input 
-                        type="date" 
-                        value={verbale.data}
-                        onChange={e => setVerbale(v => ({ ...v, data: e.target.value }))}
-                        className="p-2 border border-gray-100 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-scout-green transition-all"
-                    />
-                </div>
-                <div className="space-y-1">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Luogo</label>
-                    <input 
-                        type="text" 
-                        value={verbale.luogo}
-                        onChange={e => setVerbale(v => ({ ...v, luogo: e.target.value }))}
-                        className="p-2 border border-gray-100 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-scout-green transition-all"
-                    />
-                </div>
-                <div className="flex gap-2">
+            <div className="space-y-2">
+                <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm flex flex-wrap gap-4 items-end">
                     <div className="space-y-1">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Inizio</label>
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider">N. Verbale</label>
                         <input 
-                            type="time" 
-                            value={verbale.oraInizio}
-                            onChange={e => setVerbale(v => ({ ...v, oraInizio: e.target.value }))}
+                            type="number"
+                            min="1"
+                            value={verbale.numero ?? 1}
+                            onChange={e => setVerbale(v => ({ ...v, numero: parseInt(e.target.value) || 1 }))}
+                            className="p-2 border border-gray-100 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-scout-green w-20 font-bold transition-all text-center"
+                        />
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Anno Associativo</label>
+                        <select 
+                            value={verbale.annoScout ?? calculateScoutYear(verbale.data || '')}
+                            onChange={e => {
+                                const chosen = parseInt(e.target.value);
+                                setVerbale(v => ({ ...v, annoScout: chosen }));
+                            }}
+                            className="p-2 border border-gray-100 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-scout-green font-bold text-scout-brown dark:text-amber-300 transition-all cursor-pointer"
+                        >
+                            {availableScoutYears.map(y => (
+                                <option key={y} value={y}>
+                                    {formatScoutYear(y)}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Titolo</label>
+                        <input 
+                            type="text" 
+                            value={verbale.titolo}
+                            onChange={e => setVerbale(v => ({ ...v, titolo: e.target.value }))}
+                            className="p-2 border border-gray-100 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-scout-green w-64 transition-all"
+                        />
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Data</label>
+                        <input 
+                            type="date" 
+                            value={verbale.data}
+                            onChange={e => {
+                                const newData = e.target.value;
+                                setVerbale(v => {
+                                    const oldCalculated = calculateScoutYear(v.data || '');
+                                    const newCalculated = calculateScoutYear(newData);
+                                    const shouldAutoUpdate = v.annoScout === undefined || v.annoScout === oldCalculated;
+                                    return {
+                                        ...v,
+                                        data: newData,
+                                        annoScout: shouldAutoUpdate ? newCalculated : v.annoScout
+                                    };
+                                });
+                            }}
                             className="p-2 border border-gray-100 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-scout-green transition-all"
                         />
                     </div>
                     <div className="space-y-1">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Fine</label>
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Luogo</label>
                         <input 
-                            type="time" 
-                            value={verbale.oraFine}
-                            onChange={e => setVerbale(v => ({ ...v, oraFine: e.target.value }))}
+                            type="text" 
+                            value={verbale.luogo}
+                            onChange={e => setVerbale(v => ({ ...v, luogo: e.target.value }))}
                             className="p-2 border border-gray-100 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-scout-green transition-all"
                         />
                     </div>
+                    <div className="flex gap-2">
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Inizio</label>
+                            <input 
+                                type="time" 
+                                value={verbale.oraInizio}
+                                onChange={e => setVerbale(v => ({ ...v, oraInizio: e.target.value }))}
+                                className="p-2 border border-gray-100 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-scout-green transition-all"
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Fine</label>
+                            <input 
+                                type="time" 
+                                value={verbale.oraFine}
+                                onChange={e => setVerbale(v => ({ ...v, oraFine: e.target.value }))}
+                                className="p-2 border border-gray-100 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-scout-green transition-all"
+                            />
+                        </div>
+                    </div>
                 </div>
+
+                {/* September transition helper alert */}
+                {verbale.data && verbale.data.split('-')[1] === '09' && (
+                    <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-xl p-3 text-xs text-amber-900 dark:text-amber-200 flex items-start gap-2 shadow-sm animate-in fade-in duration-200">
+                        <span className="text-base">💡</span>
+                        <div className="flex-1 leading-relaxed">
+                            <strong>Mese di Settembre (Transizione scout):</strong> per le riunioni di settembre puoi scegliere liberamente dal selettore "Anno Associativo" se assegnare questo verbale all'<strong>anno uscente ({formatScoutYear(Number(verbale.data.split('-')[0]) - 1)})</strong> per la verifica di fine anno, oppure al <strong>nuovo anno ({formatScoutYear(Number(verbale.data.split('-')[0]))})</strong> per la progettazione.
+                        </div>
+                    </div>
+                )}
             </div>
             )}
 
@@ -1362,7 +1384,10 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                             <div className="space-y-8 font-serif px-4 md:px-[80px] py-5 md:py-10 break-words">
                                                 {/* LINEAR METADATA (MATCHING SCREEN 2) */}
                                                 <div className="space-y-1.5 text-[12px]">
-                                                    <div className="font-bold">{new Date(verbale.data || '').toLocaleDateString('it-IT')}</div>
+                                                    <div className="flex justify-between items-center font-bold">
+                                                        <span>{new Date(verbale.data || '').toLocaleDateString('it-IT')}</span>
+                                                        <span className="text-gray-500 font-normal text-[11px]">A.A. {formatScoutYear(verbale.annoScout ?? calculateScoutYear(verbale.data || ''))}</span>
+                                                    </div>
                                                     <div>
                                                         <span className="font-black">Oggetto: </span>
                                                         <span className="capitalize">{verbale.titolo}</span>
@@ -1630,57 +1655,11 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                 </div>
                                             </div>
                                             <p className="text-[10px] text-gray-500 dark:text-gray-400 italic pt-1 border-t border-red-200/50 dark:border-red-800/40">
-                                                Consiglio: Puoi comunque notificare subito la CoCa tramite la tua app email o WhatsApp qui sotto.
+                                                Verifica che il tuo account Brevo consenta l'invio dal cloud di Supabase prima di riprovare.
                                             </p>
                                         </div>
                                     )}
 
-                                    {/* Quick alternative channels (Always accessible, zero-config) */}
-                                    <div className="pt-2 border-t border-amber-200/60 dark:border-gray-700/60 space-y-2">
-                                        <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                            Canali diretti (senza configurazione server)
-                                        </p>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <a
-                                                href={getMailtoUrl()}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="py-2.5 px-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-blue-500 rounded-xl text-xs font-bold text-gray-700 dark:text-gray-200 flex items-center justify-center gap-1.5 transition-all shadow-sm hover:shadow"
-                                                title="Apri nel tuo programma email predefinito (Gmail, Outlook, Mail)"
-                                            >
-                                                <Mail size={14} className="text-blue-500" />
-                                                <span>Tua App Email</span>
-                                            </a>
-                                            <a
-                                                href={getWhatsAppUrl()}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="py-2.5 px-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-green-500 rounded-xl text-xs font-bold text-gray-700 dark:text-gray-200 flex items-center justify-center gap-1.5 transition-all shadow-sm hover:shadow"
-                                                title="Condividi sul gruppo WhatsApp della Comunità Capi"
-                                            >
-                                                <MessageSquare size={14} className="text-green-500" />
-                                                <span>WhatsApp</span>
-                                            </a>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={handleCopyShareText}
-                                            className="w-full py-2 px-3 bg-gray-50 dark:bg-gray-900/60 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-medium text-gray-600 dark:text-gray-300 flex items-center justify-center gap-1.5 transition-colors"
-                                        >
-                                            {copiedNotification ? (
-                                                <>
-                                                    <CheckCircle2 size={14} className="text-scout-green" />
-                                                    <span className="text-scout-green font-bold">Messaggio e link copiati!</span>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Copy size={14} />
-                                                    <span>Copia messaggio e link</span>
-                                                </>
-                                            )}
-                                        </button>
-                                    </div>
-                                    
                                     {(notifyStatus.inApp === 'done' || notifyStatus.email === 'done') ? (
                                         <button
                                             onClick={() => setShowNotifyModal(false)}
@@ -1692,7 +1671,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                     ) : (
                                         <button
                                             onClick={() => setShowNotifyModal(false)}
-                                            className="w-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300 dark:text-gray-300 py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
+                                            className="w-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300 py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all mt-1"
                                         >
                                             <BellOff size={18} />
                                             Chiudi

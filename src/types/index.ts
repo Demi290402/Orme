@@ -110,6 +110,7 @@ export interface Verbale {
     id: string;
     groupId: string;
     numero: number;
+    annoScout?: number; // Anno iniziale dell'anno associativo scout (es. 2024 per "2024 — 2025")
     titolo: string;
     data: string;
     luogo: string;

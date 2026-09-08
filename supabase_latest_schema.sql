@@ -116,9 +116,13 @@ GRANT EXECUTE ON FUNCTION increment_location_views(UUID) TO authenticated, anon;
 -- evitando problemi di disallineamento gruppo tra PC e telefono.
 -- ==========================================================
 
+-- 7.1 Colonne Verbali
+ALTER TABLE verbali ADD COLUMN IF NOT EXISTS anno_scout INTEGER;
+
 -- Indici prestazioni
 CREATE INDEX IF NOT EXISTS idx_verbali_group_id ON verbali(group_id);
 CREATE INDEX IF NOT EXISTS idx_verbali_created_by ON verbali(created_by);
+CREATE INDEX IF NOT EXISTS idx_verbali_anno_scout ON verbali(anno_scout);
 CREATE INDEX IF NOT EXISTS idx_membri_group_id ON membri(group_id);
 
 -- Abilitazione RLS

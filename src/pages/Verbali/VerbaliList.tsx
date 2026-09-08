@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, FileText, Search, Calendar, MapPin, User as UserIcon, Filter, X, Settings, RotateCw, AlertTriangle } from 'lucide-react';
-import { getVerbali } from '@/lib/verbali';
+import { Plus, FileText, Search, Calendar, MapPin, User as UserIcon, Filter, X, Settings, RotateCw, AlertTriangle, ChevronDown } from 'lucide-react';
+import { getVerbali, calculateScoutYear, formatScoutYear } from '@/lib/verbali';
 import { getUser } from '@/lib/data';
 import { Verbale, User } from '@/types';
 import { cn } from '@/lib/utils';
@@ -16,6 +16,7 @@ export default function VerbaliList() {
     const [selectedMonth, setSelectedMonth] = useState<string>('all');
     const [hasOspite, setHasOspite] = useState<string>('all');
     const [showFilters, setShowFilters] = useState(false);
+    const [expandedYears, setExpandedYears] = useState<Record<number, boolean>>({});
 
     const loadData = async () => {
         try {
@@ -37,35 +38,80 @@ export default function VerbaliList() {
         loadData();
     }, []);
 
-    const getScoutYear = (dateStr: string) => {
-        const date = new Date(dateStr);
-        const year = date.getFullYear();
-        const month = date.getMonth(); // 0-indexed, 8 is September
-        if (month >= 8) {
-            return `${year}/${year + 1}`;
-        }
-        return `${year - 1}/${year}`;
+    const getVerbaleScoutYear = (v: Verbale): number => {
+        return v.annoScout ?? calculateScoutYear(v.data);
     };
 
-    const scoutYears = Array.from(new Set(verbali.map(v => getScoutYear(v.data)))).sort().reverse();
+    const scoutYears = useMemo(() => {
+        const years = Array.from(new Set(verbali.map(getVerbaleScoutYear)));
+        return years.sort((a, b) => b - a);
+    }, [verbali]);
 
-    const filteredVerbali = verbali.filter(v => {
-        const matchesSearch = 
-            v.titolo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            v.luogo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            v.numero.toString().includes(searchTerm) ||
-            v.odg?.some(p => p.titolo.toLowerCase().includes(searchTerm.toLowerCase()) || p.contenuto.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            v.cassa?.some(c => c.note.toLowerCase().includes(searchTerm.toLowerCase()) || c.branca.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            v.varie?.toLowerCase().includes(searchTerm.toLowerCase());
-        
-        const date = new Date(v.data);
-        const matchesYear = selectedYear === 'all' || getScoutYear(v.data) === selectedYear;
-        const matchesMonth = selectedMonth === 'all' || (date.getMonth() + 1).toString().padStart(2, '0') === selectedMonth;
-        const vHasOspite = v.ospiti && v.ospiti.length > 0;
-        const matchesOspite = hasOspite === 'all' || (hasOspite === 'yes' ? vHasOspite : !vHasOspite);
-        
-        return matchesSearch && matchesYear && matchesMonth && matchesOspite;
-    });
+    const filteredVerbali = useMemo(() => {
+        return verbali.filter(v => {
+            const matchesSearch = 
+                v.titolo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                v.luogo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                v.numero.toString().includes(searchTerm) ||
+                v.odg?.some(p => p.titolo.toLowerCase().includes(searchTerm.toLowerCase()) || p.contenuto.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                v.cassa?.some(c => c.note.toLowerCase().includes(searchTerm.toLowerCase()) || c.branca.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                v.varie?.toLowerCase().includes(searchTerm.toLowerCase());
+            
+            const date = new Date(v.data);
+            const vScoutYear = getVerbaleScoutYear(v);
+            const matchesYear = selectedYear === 'all' || vScoutYear.toString() === selectedYear;
+            const matchesMonth = selectedMonth === 'all' || (date.getMonth() + 1).toString().padStart(2, '0') === selectedMonth;
+            const vHasOspite = v.ospiti && v.ospiti.length > 0;
+            const matchesOspite = hasOspite === 'all' || (hasOspite === 'yes' ? vHasOspite : !vHasOspite);
+            
+            return matchesSearch && matchesYear && matchesMonth && matchesOspite;
+        });
+    }, [verbali, searchTerm, selectedYear, selectedMonth, hasOspite]);
+
+    const groupedVerbali = useMemo(() => {
+        const groups: Record<number, Verbale[]> = {};
+        filteredVerbali.forEach(v => {
+            const y = getVerbaleScoutYear(v);
+            if (!groups[y]) groups[y] = [];
+            groups[y].push(v);
+        });
+        Object.keys(groups).forEach(y => {
+            groups[Number(y)].sort((a, b) => {
+                const dateComp = (b.data || '').localeCompare(a.data || '');
+                if (dateComp !== 0) return dateComp;
+                return (b.numero || 0) - (a.numero || 0);
+            });
+        });
+        return groups;
+    }, [filteredVerbali]);
+
+    const sortedYears = useMemo(() => {
+        return Object.keys(groupedVerbali).map(Number).sort((a, b) => b - a);
+    }, [groupedVerbali]);
+
+    // Expand newest year by default, or all years when searching
+    useEffect(() => {
+        if (sortedYears.length > 0) {
+            setExpandedYears(prev => {
+                if (searchTerm.trim()) {
+                    const allOpen: Record<number, boolean> = {};
+                    sortedYears.forEach(y => { allOpen[y] = true; });
+                    return allOpen;
+                }
+                if (Object.keys(prev).length === 0) {
+                    return { [sortedYears[0]]: true };
+                }
+                return prev;
+            });
+        }
+    }, [sortedYears, searchTerm]);
+
+    const toggleYear = (year: number) => {
+        setExpandedYears(prev => ({
+            ...prev,
+            [year]: !prev[year]
+        }));
+    };
 
     const months = [
         { value: '01', label: 'Gennaio' }, { value: '02', label: 'Febbraio' }, { value: '03', label: 'Marzo' },
@@ -198,7 +244,7 @@ export default function VerbaliList() {
                                 >
                                     <option value="all">Tutti gli anni</option>
                                     {scoutYears.map(y => (
-                                        <option key={y} value={y}>{y}</option>
+                                        <option key={y} value={y.toString()}>{formatScoutYear(y)}</option>
                                     ))}
                                 </select>
                             </div>
@@ -230,13 +276,13 @@ export default function VerbaliList() {
                 )}
             </div>
 
-            {/* List */}
-            <div className="grid gap-4">
+            {/* Grouped Accordion List */}
+            <div className="space-y-4">
                 {loading ? (
                     <div className="p-12 text-center text-gray-500 bg-white dark:bg-gray-800 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
                         Caricamento verbali...
                     </div>
-                ) : filteredVerbali.length === 0 ? (
+                ) : sortedYears.length === 0 ? (
                     <div className="p-8 md:p-12 text-center bg-white dark:bg-gray-800 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 space-y-4">
                         <div className="max-w-md mx-auto space-y-2">
                             <p className="text-base font-semibold text-gray-700 dark:text-gray-200">
@@ -274,40 +320,91 @@ export default function VerbaliList() {
                         </div>
                     </div>
                 ) : (
-                    filteredVerbali.map((v) => (
-                        <Link
-                            key={v.id}
-                            to={`/verbali/visualizza/${v.id}`}
-                            className="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md hover:border-scout-green/30 dark:hover:border-scout-green/50 transition-all group"
-                        >
-                            <div className="flex items-start justify-between mb-3">
-                                <div>
-                                    <span className="text-[10px] font-bold text-scout-green dark:text-scout-green-light bg-green-50 dark:bg-green-900/30 px-2 py-0.5 rounded-full border border-green-100 dark:border-green-800 uppercase mb-2 inline-block">
-                                        Verbale N. {v.numero}
-                                    </span>
-                                    <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 group-hover:text-scout-green transition-colors">
-                                        {v.titolo}
-                                    </h3>
-                                </div>
-                                <Calendar size={18} className="text-gray-300" />
-                            </div>
+                    sortedYears.map((year) => {
+                        const isExpanded = !!expandedYears[year];
+                        const yearVerbali = groupedVerbali[year] || [];
 
-                            <div className="flex flex-wrap gap-4 text-sm text-gray-500 dark:text-gray-400 mt-auto">
-                                <div className="flex items-center gap-1.5">
-                                    <Calendar size={14} />
-                                    <span>{new Date(v.data).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                    <MapPin size={14} />
-                                    <span>{v.luogo}</span>
-                                </div>
-                                <div className="flex items-center gap-1.5 ml-auto text-[10px] font-medium text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-900 px-2 py-1 rounded-md border border-gray-100 dark:border-gray-700">
-                                    <UserIcon size={12} />
-                                    <span>Caricato da {v.createdByName || 'Admin'}</span>
-                                </div>
+                        return (
+                            <div
+                                key={year}
+                                className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden transition-all duration-300"
+                            >
+                                {/* Year Accordion Header */}
+                                <button
+                                    type="button"
+                                    onClick={() => toggleYear(year)}
+                                    className="w-full flex items-center justify-between p-5 hover:bg-gray-50/80 dark:hover:bg-gray-700/50 transition-colors text-left"
+                                >
+                                    <div className="flex items-center gap-3.5">
+                                        <div className="bg-scout-brown/90 dark:bg-amber-900/80 text-white w-11 h-11 rounded-2xl flex items-center justify-center shadow-md shadow-amber-900/10 shrink-0">
+                                            <Calendar size={22} />
+                                        </div>
+                                        <div>
+                                            <h2 className="text-lg font-black text-gray-900 dark:text-white leading-tight flex items-center gap-2">
+                                                Anno Associativo {formatScoutYear(year)}
+                                            </h2>
+                                            <p className="text-xs font-bold text-scout-brown/70 dark:text-amber-400/80 uppercase tracking-tight mt-0.5">
+                                                {yearVerbali.length} {yearVerbali.length === 1 ? 'verbale archiviato' : 'verbali archiviati'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className={cn(
+                                        "p-2 rounded-full bg-gray-100 dark:bg-gray-700 transition-transform duration-300",
+                                        isExpanded ? "rotate-180 bg-scout-green/10 text-scout-green dark:bg-emerald-900/40 dark:text-emerald-400" : "text-gray-500 dark:text-gray-400"
+                                    )}>
+                                        <ChevronDown size={18} />
+                                    </div>
+                                </button>
+
+                                {/* Verbali list in expanded accordion */}
+                                {isExpanded && (
+                                    <div className="px-5 pb-5 pt-1 space-y-3 border-t border-gray-100/80 dark:border-gray-700/60 animate-in fade-in slide-in-from-top-2 duration-200">
+                                        {yearVerbali.map((v) => (
+                                            <Link
+                                                key={v.id}
+                                                to={`/verbali/visualizza/${v.id}`}
+                                                className="bg-gray-50/70 dark:bg-gray-900/60 p-4 rounded-2xl border border-gray-100 dark:border-gray-700/80 hover:border-scout-green/40 dark:hover:border-scout-green/50 hover:bg-white dark:hover:bg-gray-800 shadow-sm hover:shadow transition-all group block"
+                                            >
+                                                <div className="flex items-start justify-between mb-2">
+                                                    <div>
+                                                        <span className="text-[10px] font-bold text-scout-green dark:text-scout-green-light bg-green-50 dark:bg-green-900/30 px-2.5 py-0.5 rounded-full border border-green-100 dark:border-green-800 uppercase mb-1.5 inline-block">
+                                                            Verbale N. {v.numero}
+                                                        </span>
+                                                        <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 group-hover:text-scout-green transition-colors">
+                                                            {v.titolo}
+                                                        </h3>
+                                                    </div>
+                                                    <Calendar size={16} className="text-gray-300 dark:text-gray-600 shrink-0 mt-1" />
+                                                </div>
+
+                                                <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mt-2 pt-2 border-t border-gray-100/60 dark:border-gray-800">
+                                                    <div className="flex items-center gap-1">
+                                                        <Calendar size={13} className="text-gray-400" />
+                                                        <span>{new Date(v.data).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
+                                                    </div>
+                                                    {v.luogo && (
+                                                        <div className="flex items-center gap-1">
+                                                            <MapPin size={13} className="text-gray-400" />
+                                                            <span>{v.luogo}</span>
+                                                        </div>
+                                                    )}
+                                                    {v.presenti && v.presenti.length > 0 && (
+                                                        <div className="flex items-center gap-1 text-[11px] text-scout-green font-medium">
+                                                            <span>• {v.presenti.length} presenti</span>
+                                                        </div>
+                                                    )}
+                                                    <div className="flex items-center gap-1 ml-auto text-[10px] font-medium text-gray-400 dark:text-gray-500 bg-white dark:bg-gray-800 px-2 py-0.5 rounded-md border border-gray-100 dark:border-gray-700">
+                                                        <UserIcon size={11} />
+                                                        <span>Caricato da {v.createdByName || 'Admin'}</span>
+                                                    </div>
+                                                </div>
+                                            </Link>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
-                        </Link>
-                    ))
+                        );
+                    })
                 )}
             </div>
         </div>
