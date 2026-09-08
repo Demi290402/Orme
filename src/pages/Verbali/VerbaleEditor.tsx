@@ -358,6 +358,8 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                 userMsg = 'La chiave segreta BREVO_API_KEY non è configurata in Supabase.';
             } else if (raw.includes('404') || raw.includes('not found') || raw.includes('Function not found') || raw.includes('Failed to send request')) {
                 userMsg = 'La funzione server di invio email ("send-email-notification") non è attiva o distribuita su Supabase.';
+            } else if (raw.includes('unrecognised IP') || raw.includes('authorised_ips')) {
+                userMsg = 'Brevo ha bloccato la richiesta per sicurezza (IP cloud non riconosciuto). Disattiva la restrizione degli IP nelle impostazioni di Brevo per autorizzare il cloud di Supabase.';
             } else if (raw.includes('sender') || raw.includes('verified') || raw.includes('invalid_parameter')) {
                 userMsg = 'L\'indirizzo mittente (appormescout@gmail.com) non è verificato nel tuo account Brevo.';
             } else if (raw.includes('Campi obbligatori')) {
@@ -1615,6 +1617,16 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                 <div className="flex-1">
                                                     <p className="font-bold">Dettagli errore invio email:</p>
                                                     <p className="text-[11px] leading-relaxed mt-0.5 opacity-90">{emailErrorDetails}</p>
+                                                    {(emailErrorDetails.includes('Brevo') && emailErrorDetails.includes('IP')) && (
+                                                        <a
+                                                            href="https://app.brevo.com/security/authorised_ips"
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="inline-flex items-center gap-1 mt-1.5 text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline"
+                                                        >
+                                                            Apri sicurezza Brevo (Disattiva restrizione IP) ↗
+                                                        </a>
+                                                    )}
                                                 </div>
                                             </div>
                                             <p className="text-[10px] text-gray-500 dark:text-gray-400 italic pt-1 border-t border-red-200/50 dark:border-red-800/40">
