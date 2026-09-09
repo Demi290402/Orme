@@ -325,14 +325,27 @@ export async function regenerateGroupPin(groupId: string): Promise<string> {
     return data.pin;
 }
 
-export async function getGroupPin(groupId: string): Promise<string | null> {
-    const { data, error } = await supabase
-        .from('gruppi_scout')
-        .select('join_code')
-        .eq('id', Number(groupId))
-        .maybeSingle();
-    if (error || !data) return null;
-    return data.join_code;
+export async function getGroupPin(groupId?: string | null, groupName?: string, scoutZone?: string, region?: string): Promise<string | null> {
+    if (!groupId && !groupName) return null;
+
+    if (groupId && !isNaN(Number(groupId))) {
+        const { data, error } = await supabase
+            .from('gruppi_scout')
+            .select('join_code')
+            .eq('id', Number(groupId))
+            .maybeSingle();
+        if (!error && data?.join_code) return data.join_code;
+    }
+
+    if (groupName) {
+        let query = supabase.from('gruppi_scout').select('join_code').eq('group_name', groupName);
+        if (scoutZone) query = query.eq('scout_zone', scoutZone);
+        if (region) query = query.eq('region', region);
+        const { data } = await query.maybeSingle();
+        if (data?.join_code) return data.join_code;
+    }
+
+    return null;
 }
 
 export async function toggleCapoGruppoRole(targetUserId: string, isCapoGruppo: boolean): Promise<void> {

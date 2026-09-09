@@ -313,6 +313,24 @@ Servire ed aiutare il prossimo con gioia è uno dei primi doveri di ogni scout.
 > *"Non esiste buono o cattivo tempo, ma solo buono o cattivo equipaggiamento!"* 🌧️☀️
 
 Prepara bene lo zaino, metti sempre in cima la mantellina per la pioggia ed un cambio asciutto, e sarai pronto ad affrontare qualsiasi sentiero! 🎒`
+    },
+    {
+        id: 'app_codice_coca',
+        title: 'Codice Comunità Capi e PIN di Gruppo',
+        keywords: [
+            'codice comunita capi', 'codice coca', 'pin coca', 'pin di gruppo', 'dove trovo il codice',
+            'dove trovo il pin', 'codice gruppo', 'accesso coca', 'approvazione capi', 'dove trovare il pin',
+            'dove trovare il codice', 'pin comunita capi', 'codice segreto coca'
+        ],
+        category: 'manuali_agesci',
+        summary: 'Dove trovare il codice di sicurezza della Comunità Capi e a cosa serve.',
+        content: `🐺 Fratellino, il **Codice / PIN di Comunità Capi** è la chiave segreta che tutela la privacy dei verbali, del bilancio e dei dati della Comunità Capi! 🔐
+
+Puoi trovarlo in due sezioni dell'app:
+1. ⚙️ **Nelle Impostazioni** (\`/settings\`): nella scheda **"Gruppo Scout & Comunità Capi"** trovi il PIN del tuo gruppo e puoi copiarlo con un clic.
+2. 👥 **In Verbali ➔ Membri CoCa** (\`/verbali/membri\`): aprendo la scheda **"Sicurezza & Accessi"**, da cui i Capi Gruppo possono anche rigenerarlo.
+
+💡 *A cosa serve?* Quando un nuovo capo entra nel gruppo, inserendo questo PIN ha bisogno dell'approvazione di soli **2 capi** anziché 4! [REDIRECT: /settings]`
     }
 ];
 

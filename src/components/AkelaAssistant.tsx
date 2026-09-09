@@ -454,6 +454,7 @@ export default function AkelaAssistant() {
         if (path === '/mappa') return 'Mappa Interattiva';
         if (path === '/add') return 'Aggiungi Luogo';
         if (path === '/verbali/nuovo') return 'Nuovo Verbale';
+        if (path === '/verbali/membri') return 'Membri CoCa & Sicurezza';
         if (path === '/verbali') return 'Archivio Verbali';
         if (path === '/calendario') return 'Calendario Eventi';
         if (path === '/lista-attesa') return 'Lista d\'Attesa';
@@ -607,6 +608,18 @@ export default function AkelaAssistant() {
                 intent: 'nuovo_verbale',
                 reply: 'Certo! Mettere nero su bianco le scelte e le discussioni della Comunità Capi è fondamentale per la democrazia scout e la memoria del gruppo. Ti porto alla pagina per redigere un nuovo verbale! 📝',
                 path: '/verbali/nuovo'
+            };
+        }
+
+        // 3.5 Codice Comunità Capi / PIN CoCa
+        if (
+            (has(['codic', 'pin']) && has(['coca', 'co.ca', 'comunit', 'capi', 'grupp'])) ||
+            has(['codice comunita capi', 'pin coca', 'codice gruppo', 'dove trovo il codice', 'dove trovo il pin'])
+        ) {
+            return {
+                intent: 'codice_coca',
+                reply: '🐺 Il **Codice / PIN di Comunità Capi** è la chiave segreta che tutela la privacy dei verbali e dei dati del tuo gruppo! 🔐\n\nPuoi trovarlo in **Impostazioni** (nella sezione "Gruppo Scout & Comunità Capi") oppure in **Verbali ➔ Membri CoCa** (nella scheda "Sicurezza & Accessi"). Ti porto subito nelle Impostazioni per visualizzarlo!',
+                path: '/settings'
             };
         }
 

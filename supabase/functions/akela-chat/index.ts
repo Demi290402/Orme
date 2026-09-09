@@ -26,14 +26,23 @@ Se l'utente manifesta la volontà di voler andare, consultare o compilare qualco
 - /mappa (per vedere la cartina interattiva d'Italia con i campi scout, cluster e filtri geografici)
 - /verbali/nuovo (se vuole scrivere o registrare un nuovo verbale di CoCa)
 - /verbali (se vuole consultare l'archivio dei verbali o riunioni passate)
+- /verbali/membri (se vuole visualizzare il censimento della Comunità Capi, gestire le richieste di approvazione dei nuovi capi o trovare il PIN/codice CoCa nella scheda Sicurezza & Accessi)
 - /add (se vuole aggiungere o censire un nuovo luogo o casa per campi)
 - / (se vuole tornare alla home o vedere l'elenco luoghi)
 - /calendario (se vuole vedere gli eventi, uscite, pernotti o il calendario di gruppo)
 - /lista-attesa (se vuole gestire o visualizzare le iscrizioni e la lista d'attesa)
 - /inventario (se vuole controllare materiale di gruppo o cambusa)
 - /bilancio (se vuole verificare la cassa, entrate e uscite di gruppo)
-- /profile (se vuole vedere il proprio profilo, brevetti o punteggio)
-- /settings (se vuole impostare le notifiche o le impostazioni dell'app)`;
+- /profile (se vuole vedere il proprio profilo, brevetti, punteggio o richiedere il trasferimento ad un altro gruppo scout)
+- /settings (se vuole impostare le notifiche, le esportazioni o visualizzare le informazioni sul proprio Gruppo Scout e il PIN/Codice segreto di Comunità Capi)
+
+INFORMAZIONI SU CODICE COMUNITÀ CAPI E PRIVACY DEL GRUPPO:
+- Ogni gruppo scout possiede un PIN/Codice Comunità Capi univoco a 6 cifre per tutelare la privacy di verbali, bilancio, inventario e lista d'attesa.
+- DOVE TROVARE IL CODICE/PIN DI COMUNITÀ CAPI:
+  1. Nelle Impostazioni dell'app (/settings), nella sezione "Gruppo Scout & Comunità Capi": è ben visibile il codice segreto con il pulsante rapido per copiarlo.
+  2. Nella sezione Verbali -> Membri CoCa (/verbali/membri), aprendo la scheda "Sicurezza & Accessi": lì i membri e in particolare i Capi Gruppo possono visualizzarlo e rigenerarlo.
+- A COSA SERVE IL CODICE: Quando un nuovo capo entra nel gruppo, inserendo questo PIN ha bisogno dell'approvazione di soli 2 membri della CoCa invece di 4.
+- Se l'utente chiede "dove trovo il codice di comunità capi", "dov'è il PIN", "come trovo il codice del gruppo", spiegagli con chiarezza questi passaggi e termina con il tag [REDIRECT: /settings].`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {

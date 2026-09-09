@@ -4,10 +4,10 @@ import {
     ChevronLeft, Sun, Moon, Bell, BellOff, User, Trash2,
     Download, RefreshCw, FolderOpen, Check,
     Shield, ChevronRight, MapPin, FileText, Users, BarChart2,
-    Archive, Trophy, Zap, Bus, Clock
+    Archive, Trophy, Zap, Bus, Clock, KeyRound, Copy, Crown, ShieldCheck, Compass
 } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
-import { getUser, deleteUserProfile } from '@/lib/data';
+import { getUser, deleteUserProfile, getGroupPin } from '@/lib/data';
 import { cn } from '@/lib/utils';
 import { User as UserType } from '@/types';
 import { playNotificationSound } from '@/lib/notifications';
@@ -109,6 +109,9 @@ export default function Settings() {
     const navigate = useNavigate();
     const { theme, toggleTheme } = useTheme();
     const [user, setUser] = useState<UserType | null>(null);
+    const [groupPin, setGroupPin] = useState<string | null>(null);
+    const [copiedPin, setCopiedPin] = useState(false);
+    const [loadingPin, setLoadingPin] = useState(false);
 
     // Notification settings
     const [notifiche, setNotifiche] = useState(true);
@@ -142,7 +145,16 @@ export default function Settings() {
     const [deleting, setDeleting] = useState(false);
 
     useEffect(() => {
-        getUser().then(setUser).catch(console.error);
+        getUser().then(u => {
+            setUser(u);
+            if (u && (u.groupId || u.groupName)) {
+                setLoadingPin(true);
+                getGroupPin(u.groupId, u.groupName, u.scoutZone, u.region)
+                    .then(pin => setGroupPin(pin))
+                    .catch(console.error)
+                    .finally(() => setLoadingPin(false));
+            }
+        }).catch(console.error);
         // Load saved preferences
         const saved = localStorage.getItem('orme_settings');
         if (saved) {
@@ -184,6 +196,13 @@ export default function Settings() {
     const savePrefs = (patch: object) => {
         const current = JSON.parse(localStorage.getItem('orme_settings') || '{}');
         localStorage.setItem('orme_settings', JSON.stringify({ ...current, ...patch }));
+    };
+
+    const handleCopyPin = () => {
+        if (!groupPin) return;
+        navigator.clipboard.writeText(groupPin);
+        setCopiedPin(true);
+        setTimeout(() => setCopiedPin(false), 2000);
     };
 
     const handlePickFolder = async () => {
@@ -284,6 +303,159 @@ export default function Settings() {
                     </button>
                 </div>
             )}
+
+            {/* GRUPPO SCOUT & COMUNITÀ CAPI */}
+            <div className="space-y-2">
+                <p className="text-[10px] font-black uppercase tracking-[0.15em] text-gray-400 dark:text-gray-500 px-1">
+                    Gruppo Scout & Comunità Capi
+                </p>
+                <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 space-y-4 shadow-sm">
+                    {user?.groupName ? (
+                        <>
+                            {/* Group Header Info */}
+                            <div className="flex items-start justify-between gap-3 pb-3 border-b border-gray-100 dark:border-gray-700">
+                                <div className="space-y-1">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <h2 className="text-base font-black text-gray-900 dark:text-white">
+                                            {user.groupName}
+                                        </h2>
+                                        {user.groupRole === 'capo_gruppo' ? (
+                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60">
+                                                <Crown size={11} className="text-amber-600 dark:text-amber-400" />
+                                                Capo Gruppo
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/50">
+                                                Capo
+                                            </span>
+                                        )}
+                                    </div>
+                                    {(user.scoutZone || user.region) && (
+                                        <p className="text-xs text-gray-400 dark:text-gray-400 flex items-center gap-1.5 font-medium">
+                                            <Compass size={13} className="text-scout-green shrink-0" />
+                                            {[user.scoutZone, user.region].filter(Boolean).join(' · ')}
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Status Badge */}
+                                <div>
+                                    {user.membershipStatus === 'attivo' && (
+                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[11px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">
+                                            <ShieldCheck size={13} className="text-emerald-600 dark:text-emerald-400" />
+                                            Membro CoCa
+                                        </span>
+                                    )}
+                                    {user.membershipStatus === 'in_attesa' && (
+                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[11px] font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60">
+                                            <Clock size={13} className="text-amber-600 dark:text-amber-400" />
+                                            In approvazione
+                                        </span>
+                                    )}
+                                    {user.membershipStatus === 'uscito' && (
+                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[11px] font-bold bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                                            Non attivo
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Codice / PIN Comunità Capi Card */}
+                            <div className="bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent dark:from-emerald-950/30 dark:via-emerald-900/10 border border-emerald-200/80 dark:border-emerald-800/60 rounded-2xl p-4 space-y-2.5">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300">
+                                        <KeyRound size={16} className="text-emerald-600 dark:text-emerald-400" />
+                                        <span className="text-xs font-black uppercase tracking-wider">Codice Segreto Comunità Capi</span>
+                                    </div>
+                                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-100/70 dark:bg-emerald-900/40 px-2 py-0.5 rounded-md">
+                                        PIN CoCa
+                                    </span>
+                                </div>
+
+                                <div className="flex items-center justify-between gap-3 bg-white dark:bg-gray-900 p-3 rounded-xl border border-emerald-100 dark:border-emerald-900/50">
+                                    <div className="flex items-center gap-3">
+                                        <div className="font-mono text-xl md:text-2xl font-black tracking-widest text-emerald-700 dark:text-emerald-400 select-all">
+                                            {loadingPin ? '••••••' : (groupPin || 'NON DEFINITO')}
+                                        </div>
+                                    </div>
+                                    {groupPin && (
+                                        <button
+                                            type="button"
+                                            onClick={handleCopyPin}
+                                            className={cn(
+                                                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer",
+                                                copiedPin
+                                                    ? "bg-emerald-600 text-white shadow-sm"
+                                                    : "bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-200 dark:hover:bg-emerald-800/60"
+                                            )}
+                                        >
+                                            {copiedPin ? <Check size={13} /> : <Copy size={13} />}
+                                            {copiedPin ? 'Copiato!' : 'Copia'}
+                                        </button>
+                                    )}
+                                </div>
+
+                                <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+                                    Condividi questo PIN con i nuovi capi che si uniscono al gruppo: permette loro di sbloccare l'accesso con <strong>2 approvazioni</strong> invece di 4.
+                                </p>
+                            </div>
+
+                            {/* Quick Navigation Links */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                                <button
+                                    type="button"
+                                    onClick={() => navigate('/verbali/membri')}
+                                    className="flex items-center justify-between p-3 rounded-xl border border-gray-150 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors text-left group cursor-pointer"
+                                >
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="w-7 h-7 rounded-lg bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+                                            <Users size={14} />
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-bold text-gray-900 dark:text-white">Membri & Approvazioni</p>
+                                            <p className="text-[10px] text-gray-400">Censimento e sicurezza CoCa</p>
+                                        </div>
+                                    </div>
+                                    <ChevronRight size={15} className="text-gray-300 dark:text-gray-600 group-hover:translate-x-0.5 transition-transform" />
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => navigate('/profile')}
+                                    className="flex items-center justify-between p-3 rounded-xl border border-gray-150 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors text-left group cursor-pointer"
+                                >
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                                            <Compass size={14} />
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-bold text-gray-900 dark:text-white">Cambia o Trasferisci Gruppo</p>
+                                            <p className="text-[10px] text-gray-400">Passaggio ad altra CoCa</p>
+                                        </div>
+                                    </div>
+                                    <ChevronRight size={15} className="text-gray-300 dark:text-gray-600 group-hover:translate-x-0.5 transition-transform" />
+                                </button>
+                            </div>
+                        </>
+                    ) : (
+                        <div className="text-center py-4 space-y-3">
+                            <p className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                                Nessun Gruppo Scout associato al tuo profilo
+                            </p>
+                            <p className="text-xs text-gray-400 max-w-sm mx-auto">
+                                Seleziona la tua Regione, Zona e Gruppo AGESCI per accedere a verbali, bilancio e attività di Comunità Capi.
+                            </p>
+                            <button
+                                type="button"
+                                onClick={() => navigate('/profile')}
+                                className="px-4 py-2 rounded-xl bg-scout-green text-white text-xs font-black shadow-md hover:bg-scout-green/90 transition-all cursor-pointer"
+                            >
+                                Scegli il tuo Gruppo nel Profilo →
+                            </button>
+                        </div>
+                    )}
+                </div>
+            </div>
 
             {/* ASPETTO */}
             <SettingsSection title="Aspetto">
