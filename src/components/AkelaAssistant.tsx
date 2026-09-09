@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Send, Sparkles } from 'lucide-react';
+import { X, Send, Sparkles, Maximize2, Minimize2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { matchScoutKnowledge, scoutKnowledgeBase } from '@/lib/scoutKnowledge';
 import { getLocations } from '@/lib/data';
@@ -20,6 +20,7 @@ interface Message {
 export default function AkelaAssistant() {
     const navigate = useNavigate();
     const [isOpen, setIsOpen] = useState(false);
+    const [isFullscreen, setIsFullscreen] = useState(false);
     const [input, setInput] = useState('');
     const [userName, setUserName] = useState(() => localStorage.getItem('akela_user_name') || '');
     const [customDict, setCustomDict] = useState<Record<string, string>>(() => {
@@ -53,6 +54,21 @@ export default function AkelaAssistant() {
             messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
         }
     }, [messages, isOpen]);
+
+    // Handle Escape key to minimize or close
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape' && isOpen) {
+                if (isFullscreen) {
+                    setIsFullscreen(false);
+                } else {
+                    setIsOpen(false);
+                }
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isOpen, isFullscreen]);
 
     // Dynamic random greeting based on userName
     useEffect(() => {
@@ -1069,32 +1085,51 @@ export default function AkelaAssistant() {
                     {/* Background Overlay for mobile */}
                     <div className="fixed inset-0 bg-black/20 backdrop-blur-xs z-50 md:hidden" onClick={() => setIsOpen(false)} />
                     
-                    <div className="fixed bottom-36 md:bottom-24 right-6 w-[340px] max-w-[90vw] h-[480px] bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border border-gray-200/50 dark:border-gray-800/50 rounded-[2rem] shadow-2xl z-50 flex flex-col overflow-hidden animate-in zoom-in-95 slide-in-from-bottom duration-200">
+                    <div className={cn(
+                        "fixed bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border border-gray-200/50 dark:border-gray-800/50 shadow-2xl z-[70] flex flex-col overflow-hidden transition-all duration-300 ease-out",
+                        isFullscreen 
+                            ? "inset-0 md:inset-4 lg:inset-8 w-auto h-auto rounded-none md:rounded-[2rem]" 
+                            : "bottom-36 md:bottom-24 right-4 md:right-6 w-[350px] max-w-[92vw] h-[500px] rounded-[2rem] animate-in zoom-in-95 slide-in-from-bottom"
+                    )}>
                         {/* Header */}
-                        <div className="bg-scout-green dark:bg-scout-green-dark text-white p-3.5 flex flex-col gap-2 shrink-0 transition-colors duration-200">
+                        <div className="bg-scout-green dark:bg-scout-green-dark text-white p-3.5 md:p-4 flex flex-col gap-2 shrink-0 transition-colors duration-200">
                             <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center text-lg shadow-inner shrink-0">
+                                <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-white/15 flex items-center justify-center text-lg md:text-xl shadow-inner shrink-0">
                                     🐺
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                    <h3 className="font-extrabold text-sm flex items-center gap-1.5 leading-tight">
+                                    <h3 className="font-extrabold text-sm md:text-base flex items-center gap-1.5 leading-tight">
                                         Akela 
-                                        <span className="flex items-center gap-0.5 text-[8px] bg-yellow-400 text-gray-900 px-1.5 py-0.5 rounded-full font-black uppercase tracking-wider shadow-xs">
+                                        <span className="flex items-center gap-0.5 text-[8px] md:text-[9px] bg-yellow-400 text-gray-900 px-1.5 py-0.5 rounded-full font-black uppercase tracking-wider shadow-xs">
                                             <Sparkles size={8} /> AI
                                         </span>
                                     </h3>
-                                    <p className="text-[10px] text-white/80 font-bold truncate">Saggio capobranco & guida</p>
+                                    <p className="text-[10px] md:text-xs text-white/80 font-bold truncate">Saggio capobranco & guida</p>
                                 </div>
+
+                                {/* Fullscreen Toggle Button */}
+                                <button
+                                    type="button"
+                                    onClick={() => setIsFullscreen(!isFullscreen)}
+                                    className="p-1.5 text-white/80 hover:text-white hover:bg-white/15 rounded-full transition-all shrink-0 cursor-pointer active:scale-90"
+                                    title={isFullscreen ? "Riduci a finestra" : "Ingrandisci a tutto schermo"}
+                                >
+                                    {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+                                </button>
+
+                                {/* Close Button */}
                                 <button 
-                                    onClick={() => setIsOpen(false)}
-                                    className="p-1 text-white/80 hover:text-white hover:bg-white/10 rounded-full transition-colors shrink-0"
+                                    type="button"
+                                    onClick={() => { setIsOpen(false); setIsFullscreen(false); }}
+                                    className="p-1.5 text-white/80 hover:text-white hover:bg-white/15 rounded-full transition-all shrink-0 cursor-pointer active:scale-90"
+                                    title="Chiudi Akela"
                                 >
                                     <X size={18} />
                                 </button>
                             </div>
 
                             {/* Token / Energy Quota Bar */}
-                            <div className="bg-black/15 dark:bg-black/25 rounded-xl px-2.5 py-1 flex items-center justify-between text-[10px]">
+                            <div className={cn("bg-black/15 dark:bg-black/25 rounded-xl px-3 py-1 flex items-center justify-between text-[10px] md:text-xs", isFullscreen && "max-w-3xl w-full mx-auto")}>
                                 <span className="font-medium text-white/90 flex items-center gap-1">
                                     🐾 Energia di oggi:
                                 </span>
@@ -1104,62 +1139,64 @@ export default function AkelaAssistant() {
                             </div>
                         </div>
 
-
                         {/* Messages Area */}
-                        <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50/50 dark:bg-gray-950/20">
-                            {messages.map(msg => (
-                                <div 
-                                    key={msg.id} 
-                                    className={cn(
-                                        "flex flex-col max-w-[85%] rounded-2xl p-3 text-xs leading-relaxed shadow-xs transition-all animate-in fade-in duration-200",
-                                        msg.sender === 'akela'
-                                            ? "bg-white dark:bg-gray-850 text-gray-850 dark:text-gray-100 rounded-tl-xs border border-gray-100 dark:border-gray-800"
-                                            : "bg-scout-green text-white rounded-tr-xs ml-auto"
-                                    )}
-                                >
-                                    <p className="whitespace-pre-line font-medium">{msg.text}</p>
-                                </div>
-                            ))}
-                            
-                            {isTyping && (
-                                <div className="bg-white dark:bg-gray-850 text-gray-400 rounded-2xl rounded-tl-xs p-3 text-xs max-w-[50px] flex items-center justify-center gap-1 border border-gray-100 dark:border-gray-800">
-                                    <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" />
-                                    <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0.2s]" />
-                                    <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0.4s]" />
-                                </div>
-                            )}
-                            <div ref={messagesEndRef} />
+                        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-3 bg-gray-50/50 dark:bg-gray-950/20">
+                            <div className={cn("space-y-3", isFullscreen && "max-w-3xl mx-auto w-full")}>
+                                {messages.map(msg => (
+                                    <div 
+                                        key={msg.id} 
+                                        className={cn(
+                                            "flex flex-col rounded-2xl p-3 md:p-3.5 text-xs md:text-sm leading-relaxed shadow-xs transition-all animate-in fade-in duration-200",
+                                            isFullscreen ? "max-w-[80%]" : "max-w-[85%]",
+                                            msg.sender === 'akela'
+                                                ? "bg-white dark:bg-gray-850 text-gray-850 dark:text-gray-100 rounded-tl-xs border border-gray-100 dark:border-gray-800"
+                                                : "bg-scout-green text-white rounded-tr-xs ml-auto"
+                                        )}
+                                    >
+                                        <p className="whitespace-pre-line font-medium">{msg.text}</p>
+                                    </div>
+                                ))}
+                                
+                                {isTyping && (
+                                    <div className="bg-white dark:bg-gray-850 text-gray-400 rounded-2xl rounded-tl-xs p-3 text-xs max-w-[50px] flex items-center justify-center gap-1 border border-gray-100 dark:border-gray-800">
+                                        <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" />
+                                        <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0.2s]" />
+                                        <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0.4s]" />
+                                    </div>
+                                )}
+                                <div ref={messagesEndRef} />
+                            </div>
                         </div>
 
                         {/* Quick Action Chips (Tutorial) */}
-                        <div className="p-3 border-t border-gray-100 dark:border-gray-800 flex gap-1.5 overflow-x-auto whitespace-nowrap shrink-0 bg-white dark:bg-gray-900 scrollbar-none">
+                        <div className={cn("p-3 border-t border-gray-100 dark:border-gray-800 flex gap-1.5 overflow-x-auto whitespace-nowrap shrink-0 bg-white dark:bg-gray-900 scrollbar-none", isFullscreen && "justify-center")}>
                             <button 
                                 onClick={() => triggerTutorialTopic('campi', '📍 Sentiero Campi')} 
-                                className="px-2.5 py-1.5 bg-scout-green/5 dark:bg-scout-green/10 border border-scout-green/20 text-scout-green rounded-full text-[10px] font-black hover:bg-scout-green/10 transition-colors"
+                                className="px-2.5 py-1.5 bg-scout-green/5 dark:bg-scout-green/10 border border-scout-green/20 text-scout-green rounded-full text-[10px] font-black hover:bg-scout-green/10 transition-colors cursor-pointer"
                             >
                                 📍 Luoghi
                             </button>
                             <button 
                                 onClick={() => triggerTutorialTopic('verbali', '📝 Sentiero Verbali')} 
-                                className="px-2.5 py-1.5 bg-scout-blue/5 dark:bg-scout-blue/10 border border-scout-blue/20 text-scout-blue rounded-full text-[10px] font-black hover:bg-scout-blue/10 transition-colors"
+                                className="px-2.5 py-1.5 bg-scout-blue/5 dark:bg-scout-blue/10 border border-scout-blue/20 text-scout-blue rounded-full text-[10px] font-black hover:bg-scout-blue/10 transition-colors cursor-pointer"
                             >
                                 📝 Verbali
                             </button>
                             <button 
                                 onClick={() => triggerTutorialTopic('trasporti', '🚌 Sentiero Trasporti')} 
-                                className="px-2.5 py-1.5 bg-purple-500/5 dark:bg-purple-500/10 border border-purple-500/20 text-purple-650 dark:text-purple-400 rounded-full text-[10px] font-black hover:bg-purple-500/10 transition-colors"
+                                className="px-2.5 py-1.5 bg-purple-500/5 dark:bg-purple-500/10 border border-purple-500/20 text-purple-650 dark:text-purple-400 rounded-full text-[10px] font-black hover:bg-purple-500/10 transition-colors cursor-pointer"
                             >
                                 🚌 Trasporti
                             </button>
                             <button 
                                 onClick={() => triggerTutorialTopic('punti', '🏆 Sentiero Classifica')} 
-                                className="px-2.5 py-1.5 bg-yellow-500/5 dark:bg-yellow-500/10 border border-yellow-500/20 text-yellow-650 dark:text-yellow-500 rounded-full text-[10px] font-black hover:bg-yellow-500/10 transition-colors"
+                                className="px-2.5 py-1.5 bg-yellow-500/5 dark:bg-yellow-500/10 border border-yellow-500/20 text-yellow-650 dark:text-yellow-500 rounded-full text-[10px] font-black hover:bg-yellow-500/10 transition-colors cursor-pointer"
                             >
                                 🏆 Classifica
                             </button>
                             <button 
                                 onClick={() => triggerTutorialTopic('lista', '📋 Sentiero Lista Attesa')} 
-                                className="px-2.5 py-1.5 bg-red-500/5 dark:bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 rounded-full text-[10px] font-black hover:bg-red-500/10 transition-colors"
+                                className="px-2.5 py-1.5 bg-red-500/5 dark:bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 rounded-full text-[10px] font-black hover:bg-red-500/10 transition-colors cursor-pointer"
                             >
                                 📋 Lista Attesa
                             </button>
@@ -1168,95 +1205,101 @@ export default function AkelaAssistant() {
                         {/* Learning Confirmation Overlay */}
                         {pendingLearning && (
                             <div className="p-3 bg-scout-green/10 dark:bg-emerald-950/20 border-t border-gray-150 dark:border-gray-800 flex flex-col gap-2 shrink-0 animate-in fade-in duration-200">
-                                <p className="text-[10px] text-gray-700 dark:text-gray-300 font-bold leading-normal">
-                                    Vuoi insegnarmi che <span className="text-scout-green-dark dark:text-scout-green-light">"{pendingLearning.term}"</span> significa <span className="font-medium italic">"{pendingLearning.definition}"</span>?
-                                </p>
-                                <div className="flex gap-2">
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            const updatedDict = {
-                                                ...customDict,
-                                                [pendingLearning.term.toLowerCase().trim()]: pendingLearning.definition
-                                            };
-                                            setCustomDict(updatedDict);
-                                            localStorage.setItem('akela_custom_dict', JSON.stringify(updatedDict));
-                                            
-                                            const confirmationMsg: Message = {
-                                                id: crypto.randomUUID(),
-                                                sender: 'akela',
-                                                text: `Ho imparato! Ho aggiunto "${pendingLearning.term}" alla mia mappa dei termini. 🐾`
-                                            };
-                                            setMessages(prev => [...prev, confirmationMsg]);
-                                            setPendingLearning(null);
-                                        }}
-                                        className="flex-1 py-1.5 bg-scout-green dark:bg-scout-green-dark text-white text-[10px] font-black rounded-lg hover:opacity-90 active:scale-95 transition-all text-center cursor-pointer"
-                                    >
-                                        Conferma
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setPendingLearning(null)}
-                                        className="px-3 py-1.5 bg-gray-150 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-[10px] font-black rounded-lg hover:bg-gray-205 dark:hover:bg-gray-705 active:scale-95 transition-all cursor-pointer"
-                                    >
-                                        Annulla
-                                    </button>
+                                <div className={cn("space-y-2", isFullscreen && "max-w-3xl mx-auto w-full")}>
+                                    <p className="text-[10px] md:text-xs text-gray-700 dark:text-gray-300 font-bold leading-normal">
+                                        Vuoi insegnarmi che <span className="text-scout-green-dark dark:text-scout-green-light">"{pendingLearning.term}"</span> significa <span className="font-medium italic">"{pendingLearning.definition}"</span>?
+                                    </p>
+                                    <div className="flex gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const updatedDict = {
+                                                    ...customDict,
+                                                    [pendingLearning.term.toLowerCase().trim()]: pendingLearning.definition
+                                                };
+                                                setCustomDict(updatedDict);
+                                                localStorage.setItem('akela_custom_dict', JSON.stringify(updatedDict));
+                                                
+                                                const confirmationMsg: Message = {
+                                                    id: crypto.randomUUID(),
+                                                    sender: 'akela',
+                                                    text: `Ho imparato! Ho aggiunto "${pendingLearning.term}" alla mia mappa dei termini. 🐾`
+                                                };
+                                                setMessages(prev => [...prev, confirmationMsg]);
+                                                setPendingLearning(null);
+                                            }}
+                                            className="flex-1 py-1.5 bg-scout-green dark:bg-scout-green-dark text-white text-[10px] md:text-xs font-black rounded-lg hover:opacity-90 active:scale-95 transition-all text-center cursor-pointer"
+                                        >
+                                            Conferma
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setPendingLearning(null)}
+                                            className="px-3 py-1.5 bg-gray-150 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-[10px] md:text-xs font-black rounded-lg hover:bg-gray-205 dark:hover:bg-gray-705 active:scale-95 transition-all cursor-pointer"
+                                        >
+                                            Annulla
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         )}
 
                         {pendingRedirect && (
                             <div className="p-3 bg-scout-green/10 dark:bg-emerald-955/20 border-t border-gray-150 dark:border-gray-800 flex flex-col gap-2 shrink-0 animate-in fade-in duration-200">
-                                <p className="text-[10px] text-gray-700 dark:text-gray-300 font-bold leading-normal">
-                                    🐺 Vuoi che ti accompagni alla sezione <span className="text-scout-green-dark dark:text-scout-green-light font-extrabold">"{pendingRedirect.label}"</span>?
-                                </p>
-                                <div className="flex gap-2">
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            navigate(pendingRedirect.path);
-                                            setPendingRedirect(null);
-                                        }}
-                                        className="flex-1 py-1.5 bg-scout-green dark:bg-scout-green-dark text-white text-[10px] font-black rounded-lg hover:opacity-90 active:scale-95 transition-all text-center cursor-pointer"
-                                    >
-                                        Sì, vai
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setPendingRedirect(null)}
-                                        className="px-3 py-1.5 bg-gray-150 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-[10px] font-black rounded-lg hover:bg-gray-205 dark:hover:bg-gray-705 active:scale-95 transition-all cursor-pointer"
-                                    >
-                                        No, rimani qui
-                                    </button>
+                                <div className={cn("space-y-2", isFullscreen && "max-w-3xl mx-auto w-full")}>
+                                    <p className="text-[10px] md:text-xs text-gray-700 dark:text-gray-300 font-bold leading-normal">
+                                        🐺 Vuoi che ti accompagni alla sezione <span className="text-scout-green-dark dark:text-scout-green-light font-extrabold">"{pendingRedirect.label}"</span>?
+                                    </p>
+                                    <div className="flex gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                navigate(pendingRedirect.path);
+                                                setPendingRedirect(null);
+                                            }}
+                                            className="flex-1 py-1.5 bg-scout-green dark:bg-scout-green-dark text-white text-[10px] md:text-xs font-black rounded-lg hover:opacity-90 active:scale-95 transition-all text-center cursor-pointer"
+                                        >
+                                            Sì, vai
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setPendingRedirect(null)}
+                                            className="px-3 py-1.5 bg-gray-150 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-[10px] md:text-xs font-black rounded-lg hover:bg-gray-205 dark:hover:bg-gray-705 active:scale-95 transition-all cursor-pointer"
+                                        >
+                                            No, rimani qui
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         )}
 
                         {/* Input Area */}
                         {dailyRemaining <= 0 ? (
-                            <div className="p-3 bg-amber-50/90 dark:bg-amber-950/30 border-t border-amber-200 dark:border-amber-900/40 text-center text-[11px] font-bold text-amber-800 dark:text-amber-200 shrink-0">
+                            <div className="p-3.5 md:p-4 bg-amber-50/90 dark:bg-amber-950/30 border-t border-amber-200 dark:border-amber-900/40 text-center text-xs md:text-sm font-bold text-amber-800 dark:text-amber-200 shrink-0">
                                 🌙 Akela sta riposando alla rupe. Energia ricaricata a mezzanotte!
                             </div>
                         ) : (
-                            <form 
-                                onSubmit={(e) => { e.preventDefault(); handleSend(input); }}
-                                className="p-3 bg-white dark:bg-gray-900 border-t border-gray-150 dark:border-gray-800 flex gap-2 items-center shrink-0"
-                            >
-                                <input 
-                                    type="text"
-                                    value={input}
-                                    onChange={(e) => setInput(e.target.value)}
-                                    placeholder="Chiedi ad Akela..."
-                                    className="flex-1 px-3 py-2 border border-gray-250 dark:border-gray-800 rounded-xl bg-gray-50 dark:bg-gray-950 text-xs font-bold outline-none focus:ring-1 focus:ring-scout-green dark:text-white"
-                                />
-                                <button 
-                                    type="submit"
-                                    disabled={!input.trim() || isTyping}
-                                    className="p-2 bg-scout-green dark:bg-scout-green-dark text-white rounded-xl hover:bg-scout-green-dark transition-all disabled:opacity-40 disabled:scale-100 active:scale-95 flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/20"
+                            <div className="p-3 md:p-4 bg-white dark:bg-gray-900 border-t border-gray-150 dark:border-gray-800 shrink-0">
+                                <form 
+                                    onSubmit={(e) => { e.preventDefault(); handleSend(input); }}
+                                    className={cn("flex gap-2 items-center", isFullscreen && "max-w-3xl mx-auto w-full")}
                                 >
-                                    <Send size={14} />
-                                </button>
-                            </form>
+                                    <input 
+                                        type="text"
+                                        value={input}
+                                        onChange={(e) => setInput(e.target.value)}
+                                        placeholder="Chiedi ad Akela..."
+                                        className="flex-1 px-3.5 py-2.5 border border-gray-250 dark:border-gray-800 rounded-xl bg-gray-50 dark:bg-gray-950 text-xs md:text-sm font-bold outline-none focus:ring-1 focus:ring-scout-green dark:text-white"
+                                    />
+                                    <button 
+                                        type="submit"
+                                        disabled={!input.trim() || isTyping}
+                                        className="p-2.5 bg-scout-green dark:bg-scout-green-dark text-white rounded-xl hover:bg-scout-green-dark transition-all disabled:opacity-40 disabled:scale-100 active:scale-95 flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/20 cursor-pointer"
+                                    >
+                                        <Send size={15} />
+                                    </button>
+                                </form>
+                            </div>
                         )}
                     </div>
                 </>
