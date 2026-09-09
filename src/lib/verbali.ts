@@ -6,7 +6,7 @@ import { syncVerbaleEventi } from './calendario';
 export async function getVerbali(): Promise<Verbale[]> {
     try {
         const currentUser = await getUser();
-        if (!currentUser) return [];
+        if (!currentUser || currentUser.membershipStatus !== 'attivo') return [];
 
         const userGroupId = currentUser.groupId ? String(currentUser.groupId).trim() : '';
         let verbaliData: any[] = [];
@@ -84,6 +84,7 @@ export async function getVerbali(): Promise<Verbale[]> {
 export async function getMembriCoCa(): Promise<MembroCoCa[]> {
     try {
         const currentUser = await getUser();
+        if (!currentUser || currentUser.membershipStatus !== 'attivo') return [];
         const userGroupId = currentUser.groupId ? String(currentUser.groupId).trim() : '';
         if (!userGroupId) return [];
 

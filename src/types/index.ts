@@ -38,11 +38,19 @@ export interface User {
     scoutZone?: string;
     groupName?: string;
     groupId?: string;
+    // CoCa Membership & Governance
+    membershipStatus?: MembershipStatus;
+    groupRole?: GroupRole;
+    cocaApprovals?: string[];
+    hasValidPin?: boolean;
     
     // Storico Formazione
     formazione?: CorsoFormazione[];
     hasNominaCapo?: boolean;
 }
+
+export type MembershipStatus = 'attivo' | 'in_attesa' | 'uscito';
+export type GroupRole = 'capo_gruppo' | 'capo';
 
 export type TipoCorso = 'CFT' | 'CFM LC' | 'CFM EG' | 'CFM RS' | 'CFA' | 'Campo Bibbia' | 'CAM LC' | 'CAM EG' | 'CAM RS';
 

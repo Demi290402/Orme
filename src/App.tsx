@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from '@/context/ThemeContext';
 import Layout from '@/components/Layout';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import GroupAccessGate from '@/components/GroupAccessGate';
 import Home from '@/pages/Home';
 import LocationDetail from '@/pages/LocationDetail';
 import AddLocation from '@/pages/AddLocation';
@@ -57,19 +58,19 @@ function App() {
           <Route path="/edit/:id" element={<ProtectedRoute><Layout><AddLocation /></Layout></ProtectedRoute>} />
           <Route path="/guide" element={<ProtectedRoute><Layout><Guide /></Layout></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Layout><Profile /></Layout></ProtectedRoute>} />
-          // Removed proposals route
-          <Route path="/calendario" element={<ProtectedRoute><Layout><Calendario /></Layout></ProtectedRoute>} />
-          <Route path="/inventario" element={<ProtectedRoute><Layout><Inventario /></Layout></ProtectedRoute>} />
-          <Route path="/bilancio" element={<ProtectedRoute><Layout><Bilancio /></Layout></ProtectedRoute>} />
-          <Route path="/lista-attesa" element={<ProtectedRoute><Layout><ListaAttesa /></Layout></ProtectedRoute>} />
-          <Route path="/verbali" element={<ProtectedRoute><Layout><VerbaliList /></Layout></ProtectedRoute>} />
-          <Route path="/verbali/nuovo" element={<ProtectedRoute><Layout><VerbaleEditor /></Layout></ProtectedRoute>} />
-          <Route path="/verbali/modifica/:id" element={<ProtectedRoute><Layout><VerbaleEditor /></Layout></ProtectedRoute>} />
-          <Route path="/verbali/visualizza/:id" element={<ProtectedRoute><Layout><VerbaleEditor viewMode={true} /></Layout></ProtectedRoute>} />
-          <Route path="/verbali/membri" element={<ProtectedRoute><Layout><MembriCoCa /></Layout></ProtectedRoute>} />
-          <Route path="/verbali/impostazioni" element={<ProtectedRoute><Layout><ImpostazioniVerbale /></Layout></ProtectedRoute>} />
-          <Route path="/verbali/statistiche" element={<ProtectedRoute><Layout><VerbaliStats /></Layout></ProtectedRoute>} />
-          <Route path="/storico" element={<ProtectedRoute><Layout><StoricoAttivita /></Layout></ProtectedRoute>} />
+          {/* Private Group Routes (Strictly Isolated to Active CoCa Members) */}
+          <Route path="/calendario" element={<ProtectedRoute><Layout><GroupAccessGate><Calendario /></GroupAccessGate></Layout></ProtectedRoute>} />
+          <Route path="/inventario" element={<ProtectedRoute><Layout><GroupAccessGate><Inventario /></GroupAccessGate></Layout></ProtectedRoute>} />
+          <Route path="/bilancio" element={<ProtectedRoute><Layout><GroupAccessGate><Bilancio /></GroupAccessGate></Layout></ProtectedRoute>} />
+          <Route path="/lista-attesa" element={<ProtectedRoute><Layout><GroupAccessGate><ListaAttesa /></GroupAccessGate></Layout></ProtectedRoute>} />
+          <Route path="/verbali" element={<ProtectedRoute><Layout><GroupAccessGate><VerbaliList /></GroupAccessGate></Layout></ProtectedRoute>} />
+          <Route path="/verbali/nuovo" element={<ProtectedRoute><Layout><GroupAccessGate><VerbaleEditor /></GroupAccessGate></Layout></ProtectedRoute>} />
+          <Route path="/verbali/modifica/:id" element={<ProtectedRoute><Layout><GroupAccessGate><VerbaleEditor /></GroupAccessGate></Layout></ProtectedRoute>} />
+          <Route path="/verbali/visualizza/:id" element={<ProtectedRoute><Layout><GroupAccessGate><VerbaleEditor viewMode={true} /></GroupAccessGate></Layout></ProtectedRoute>} />
+          <Route path="/verbali/membri" element={<ProtectedRoute><Layout><GroupAccessGate><MembriCoCa /></GroupAccessGate></Layout></ProtectedRoute>} />
+          <Route path="/verbali/impostazioni" element={<ProtectedRoute><Layout><GroupAccessGate><ImpostazioniVerbale /></GroupAccessGate></Layout></ProtectedRoute>} />
+          <Route path="/verbali/statistiche" element={<ProtectedRoute><Layout><GroupAccessGate><VerbaliStats /></GroupAccessGate></Layout></ProtectedRoute>} />
+          <Route path="/storico" element={<ProtectedRoute><Layout><GroupAccessGate><StoricoAttivita /></GroupAccessGate></Layout></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
         </Routes>
       </Router>

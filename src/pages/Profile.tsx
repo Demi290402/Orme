@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Camera, MapPin, Award, Trophy, Edit2, X, Save, Download, CheckCircle, Mail, AlertCircle, Trash2, Settings } from 'lucide-react';
-import { getUser, updateUser, logoutUser, deleteUserProfile } from '@/lib/data';
+import { Camera, MapPin, Award, Trophy, Edit2, X, Save, Download, CheckCircle, AlertCircle, Trash2, Settings, Crown, Clock, Compass, CheckCircle2 } from 'lucide-react';
+import { getUser, updateUser, logoutUser, deleteUserProfile, getGruppiScout, transferUserGroup, GruppoScout } from '@/lib/data';
 import { getLevelInfo, BADGES } from '@/lib/gamification';
 import { User } from '@/types';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import UserAvatar from '@/components/UserAvatar';
 import { cn, getDefaultCover } from '@/lib/utils';
 
@@ -85,6 +85,49 @@ export default function Profile() {
 
         loadData();
     }, []);
+
+    // Group transfer state
+    const [showTransfer, setShowTransfer] = useState(false);
+    const [gruppi, setGruppi] = useState<GruppoScout[]>([]);
+    const [selectedGroup, setSelectedGroup] = useState<GruppoScout | null>(null);
+    const [transferPin, setTransferPin] = useState('');
+    const [transferLoading, setTransferLoading] = useState(false);
+    const [transferError, setTransferError] = useState('');
+
+    const handleOpenTransfer = async () => {
+        setShowTransfer(true);
+        setTransferError('');
+        try {
+            const g = await getGruppiScout();
+            setGruppi(g);
+        } catch (e) {
+            console.error('Error fetching gruppi:', e);
+        }
+    };
+
+    const handleExecuteTransfer = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedGroup) return;
+        setTransferError('');
+        setTransferLoading(true);
+
+        try {
+            const updated = await transferUserGroup({
+                region: selectedGroup.region,
+                scoutZone: selectedGroup.scoutZone,
+                groupName: selectedGroup.groupName,
+                groupId: String(selectedGroup.id),
+                joinCodeInput: transferPin.trim() || undefined
+            });
+            setUser(updated);
+            setShowTransfer(false);
+            alert(`Richiesta inviata! Ora sei associato a ${selectedGroup.groupName} in attesa di approvazione.`);
+        } catch (err: any) {
+            setTransferError(err.message || 'Errore durante il trasferimento');
+        } finally {
+            setTransferLoading(false);
+        }
+    };
 
     const validateEdit = (): boolean => {
         const errors: Record<string, string> = {
@@ -225,42 +268,27 @@ export default function Profile() {
                                 />
                             </div>
 
-                            {/* Dati Gruppo */}
-                            <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-xl space-y-3 dark:border dark:border-gray-700">
-                                <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Dati Gruppo</p>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">Regione</label>
-                                        <input
-                                            type="text"
-                                            value={editForm.region}
-                                            onChange={e => setEditForm((prev: any) => ({ ...prev, region: e.target.value }))}
-                                            className={cn("w-full p-2 rounded-lg border text-sm dark:bg-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-scout-green", editErrors.region ? "border-red-300 bg-red-50 dark:bg-red-900/20" : "border-gray-200 dark:border-gray-700")}
-                                        />
-                                        {editErrors.region && <p className="text-red-500 text-[11px] mt-1 flex items-center gap-1"><AlertCircle size={11}/>{editErrors.region}</p>}
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">Zona</label>
-                                        <input
-                                            type="text"
-                                            value={editForm.scoutZone}
-                                            onChange={e => setEditForm((prev: any) => ({ ...prev, scoutZone: e.target.value }))}
-                                            className={cn("w-full p-2 rounded-lg border text-sm dark:bg-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-scout-green", editErrors.scoutZone ? "border-red-300 bg-red-50 dark:bg-red-900/20" : "border-gray-200 dark:border-gray-700")}
-                                        />
-                                        {editErrors.scoutZone && <p className="text-red-500 text-[11px] mt-1 flex items-center gap-1"><AlertCircle size={11}/>{editErrors.scoutZone}</p>}
-                                    </div>
+                            {/* Dati Gruppo Scout */}
+                            <div className="p-3.5 bg-gray-50 dark:bg-gray-900 rounded-xl space-y-2 dark:border dark:border-gray-700">
+                                <div className="flex items-center justify-between">
+                                    <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Gruppo Scout</p>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setIsEditing(false);
+                                            handleOpenTransfer();
+                                        }}
+                                        className="text-xs font-bold text-scout-green hover:underline cursor-pointer flex items-center gap-1"
+                                    >
+                                        <Compass size={12} /> Trasferimento
+                                    </button>
                                 </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">Nome Gruppo</label>
-                                    <input
-                                        type="text"
-                                        value={editForm.groupName}
-                                        onChange={e => setEditForm((prev: any) => ({ ...prev, groupName: e.target.value }))}
-                                        className={cn("w-full p-2 rounded-lg border text-sm dark:bg-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-scout-green", editErrors.groupName ? "border-red-300 bg-red-50 dark:bg-red-900/20" : "border-gray-200 dark:border-gray-700")}
-                                    />
-                                    {editErrors.groupName && <p className="text-red-500 text-[11px] mt-1 flex items-center gap-1"><AlertCircle size={11}/>{editErrors.groupName}</p>}
-                                </div>
-                                <p className="text-[9px] text-gray-400 dark:text-gray-500">Il cambio gruppo non sposta i dati già inseriti.</p>
+                                <p className="text-sm font-black text-gray-800 dark:text-gray-200">
+                                    {user.groupName || 'Nessun gruppo'} <span className="font-normal text-xs text-gray-500">({user.scoutZone} - {user.region})</span>
+                                </p>
+                                <p className="text-[10px] text-gray-400 leading-normal">
+                                    🔒 I verbali e i dati interni sono legati al gruppo. Per cambiare gruppo e tutelare la privacy, utilizza la procedura di <strong>Trasferimento</strong>.
+                                </p>
                             </div>
 
                             {/* Storico Formazione Capi */}
@@ -413,33 +441,50 @@ export default function Profile() {
                             <div>
                                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{user.firstName} {user.lastName}</h1>
                                 <p className="text-gray-500 dark:text-gray-400 font-medium">@{user.nickname || 'Nessun nickname'}</p>
-                                <div className="flex flex-wrap gap-2 mt-1">
+                                <div className="flex flex-wrap items-center gap-2 mt-1.5">
                                     {user.scoutCode && (
                                         <p className="text-[10px] text-scout-green dark:text-emerald-500 font-bold bg-green-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-full border border-green-100 dark:border-emerald-800/30">
                                             Socio: {user.scoutCode}
                                         </p>
                                     )}
                                     {user.groupName && (
-                                        <p className="text-[10px] text-scout-brown dark:text-orange-500 font-bold bg-orange-50 dark:bg-orange-950/20 px-2 py-0.5 rounded-full border border-orange-100 dark:border-orange-900/30 uppercase">
+                                        <p className="text-[10px] text-scout-brown dark:text-orange-500 font-bold bg-orange-50 dark:bg-orange-950/20 px-2 py-0.5 rounded-full border border-orange-100 dark:border-orange-900/30 uppercase flex items-center gap-1">
+                                            {user.groupRole === 'capo_gruppo' && <Crown size={10} className="text-amber-500" />}
                                             {user.groupName} ({user.scoutZone})
                                         </p>
+                                    )}
+                                    {user.membershipStatus === 'attivo' && (
+                                        <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/30 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
+                                            <CheckCircle2 size={10} /> Attivo in CoCa
+                                        </span>
+                                    )}
+                                    {user.membershipStatus === 'in_attesa' && (
+                                        <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/30 px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-800 flex items-center gap-1">
+                                            <Clock size={10} /> In attesa approvazione
+                                        </span>
+                                    )}
+                                    {user.membershipStatus === 'uscito' && (
+                                        <span className="text-[10px] font-bold text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full border border-gray-200 dark:border-gray-700">
+                                            Servizio Concluso
+                                        </span>
                                     )}
                                 </div>
                             </div>
 
-                        <div className="flex flex-col sm:flex-row gap-3">
-                            <Link
-                                to="/proposals"
-                                className="bg-scout-blue text-white px-4 py-2 rounded-xl font-medium shadow-sm hover:bg-scout-blue-dark flex items-center justify-center gap-2"
+                        <div className="flex flex-col sm:flex-row gap-2.5">
+                            <button
+                                onClick={handleOpenTransfer}
+                                className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 px-3.5 py-2 rounded-xl font-bold shadow-xs hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-center gap-1.5 text-xs transition-all cursor-pointer"
+                                title="Cambia Gruppo Scout o richiedi trasferimento"
                             >
-                                <Mail size={18} />
-                                Proposte in Attesa
-                            </Link>
+                                <Compass size={15} />
+                                Cambia Gruppo
+                            </button>
                             <button
                                 onClick={() => setIsEditing(true)}
-                                className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-xl font-medium shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-center gap-2"
+                                className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-xl font-bold shadow-xs hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-center gap-1.5 text-xs transition-all cursor-pointer"
                             >
-                                <Edit2 size={18} />
+                                <Edit2 size={15} />
                                 Modifica Profilo
                             </button>
                         </div>
@@ -673,6 +718,93 @@ export default function Profile() {
                                 {deleting ? 'Eliminazione...' : 'Elimina'}
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Group Transfer Modal */}
+            {showTransfer && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+                    <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 max-w-md w-full shadow-2xl border border-gray-150 dark:border-gray-700 space-y-4 animate-in fade-in zoom-in-95 duration-200">
+                        <div className="flex items-center justify-between">
+                            <h3 className="font-black text-lg text-gray-900 dark:text-white flex items-center gap-2">
+                                <Compass size={20} className="text-scout-green" />
+                                Trasferimento Gruppo Scout
+                            </h3>
+                            <button 
+                                type="button"
+                                onClick={() => setShowTransfer(false)}
+                                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 font-bold text-sm cursor-pointer"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        <div className="p-3 bg-amber-50/80 dark:bg-amber-950/30 rounded-2xl border border-amber-200 dark:border-amber-900/40 text-left text-xs text-amber-900 dark:text-amber-200 space-y-1">
+                            <p className="font-extrabold flex items-center gap-1">
+                                <AlertCircle size={14} /> Attenzione alla privacy:
+                            </p>
+                            <p className="text-[11px] leading-relaxed">
+                                Se ti trasferisci a un nuovo gruppo, perderai l'accesso ai verbali, bilancio, inventario e dati riservati di <strong>{user.groupName}</strong>. 
+                                Manterrai tutti i tuoi punti, i tuoi badge e i luoghi che hai censito.
+                            </p>
+                        </div>
+
+                        <form onSubmit={handleExecuteTransfer} className="space-y-4">
+                            <div>
+                                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Nuovo Gruppo Scout</label>
+                                <select
+                                    value={selectedGroup ? String(selectedGroup.id) : ''}
+                                    onChange={(e) => {
+                                        const found = gruppi.find(g => String(g.id) === e.target.value);
+                                        setSelectedGroup(found || null);
+                                    }}
+                                    className="w-full p-2.5 border border-gray-200 dark:border-gray-700 dark:bg-gray-900 rounded-xl text-xs md:text-sm font-bold text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-scout-green"
+                                >
+                                    <option value="">-- Seleziona Gruppo di Destinazione --</option>
+                                    {gruppi.filter(g => String(g.id) !== user.groupId).map(g => (
+                                        <option key={g.id} value={g.id}>
+                                            {g.groupName} ({g.scoutZone} - {g.region})
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">PIN del nuovo gruppo (opzionale)</label>
+                                <input 
+                                    type="text"
+                                    value={transferPin}
+                                    onChange={(e) => setTransferPin(e.target.value.toUpperCase())}
+                                    placeholder="Es: TRANI1"
+                                    className="w-full p-2.5 border border-gray-200 dark:border-gray-700 dark:bg-gray-900 rounded-xl text-xs font-bold uppercase tracking-wider text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-scout-green"
+                                />
+                                <p className="text-[10px] text-gray-400 mt-1">
+                                    Con il PIN serviranno 2 approvazioni di capi del nuovo gruppo per sbloccare i dati riservati; senza PIN ne serviranno 4.
+                                </p>
+                            </div>
+
+                            {transferError && (
+                                <p className="text-xs text-red-500 font-bold">{transferError}</p>
+                            )}
+
+                            <div className="flex gap-2 justify-end pt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowTransfer(false)}
+                                    className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs font-bold rounded-xl cursor-pointer"
+                                >
+                                    Annulla
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={!selectedGroup || transferLoading}
+                                    className="px-5 py-2 bg-scout-green text-white text-xs font-bold rounded-xl hover:bg-scout-green-dark disabled:opacity-50 cursor-pointer shadow-xs"
+                                >
+                                    {transferLoading ? 'Trasferimento...' : 'Conferma Trasferimento'}
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}

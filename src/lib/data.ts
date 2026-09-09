@@ -13,6 +13,7 @@ export interface GruppoScout {
     region: string;
     scoutZone: string;
     groupName: string;
+    joinCode?: string;
 }
 
 export async function getGruppiScout(): Promise<GruppoScout[]> {
@@ -31,6 +32,7 @@ export async function getGruppiScout(): Promise<GruppoScout[]> {
         region: g.region,
         scoutZone: g.scout_zone,
         groupName: g.group_name,
+        joinCode: g.join_code,
     }));
 }
 
@@ -50,11 +52,11 @@ export async function aggiungiGruppoScout(region: string, scoutZone: string, gro
             .eq('group_name', groupName)
             .single();
         if (existing.data) {
-            return { id: existing.data.id, region: existing.data.region, scoutZone: existing.data.scout_zone, groupName: existing.data.group_name };
+            return { id: existing.data.id, region: existing.data.region, scoutZone: existing.data.scout_zone, groupName: existing.data.group_name, joinCode: existing.data.join_code };
         }
         throw error;
     }
-    return { id: data.id, region: data.region, scoutZone: data.scout_zone, groupName: data.group_name };
+    return { id: data.id, region: data.region, scoutZone: data.scout_zone, groupName: data.group_name, joinCode: data.join_code };
 }
 
 // =====================================================
@@ -76,6 +78,8 @@ export async function registerUser(userData: {
     groupId: string; // numeric group id as string (e.g. "1", "2")
     formazione?: any[];
     hasNominaCapo?: boolean;
+    joinCodeInput?: string;
+    isGroupCreator?: boolean;
 }): Promise<User | null> {
     try {
         // 1. Create auth user in Supabase Auth
@@ -86,6 +90,27 @@ export async function registerUser(userData: {
 
         if (authError) throw authError;
         if (!authData.user) throw new Error('Failed to create user');
+
+        // Determine initial membership status & valid PIN flag
+        let membershipStatus = 'in_attesa';
+        let groupRole = 'capo';
+        let hasValidPin = false;
+
+        if (userData.isGroupCreator) {
+            membershipStatus = 'attivo';
+            groupRole = 'capo_gruppo';
+            hasValidPin = true;
+        } else if (userData.joinCodeInput && userData.joinCodeInput.trim()) {
+            try {
+                const { data: isValid } = await supabase.rpc('verify_group_pin', {
+                    target_group_id: userData.groupId,
+                    pin_input: userData.joinCodeInput.trim()
+                });
+                hasValidPin = !!isValid;
+            } catch (e) {
+                console.warn('verify_group_pin check failed:', e);
+            }
+        }
 
         // 2. Create user profile in users table
         const { data: profileData, error: profileError } = await supabase
@@ -105,6 +130,10 @@ export async function registerUser(userData: {
                 group_id: userData.groupId,
                 formazione: userData.formazione || [],
                 has_nomina_capo: userData.hasNominaCapo || false,
+                membership_status: membershipStatus,
+                group_role: groupRole,
+                has_valid_pin: hasValidPin,
+                coca_approvals: [],
             })
             .select()
             .single();
@@ -263,6 +292,103 @@ export async function getAllUsers(): Promise<User[]> {
     }
 }
 
+// =====================================================
+// CO.CA. GOVERNANCE & PRIVACY MANAGEMENT
+// =====================================================
+
+export async function submitGroupPin(pin: string): Promise<{ success: boolean; message?: string; membership_status?: string; approvals_count?: number; required_count?: number }> {
+    const { data, error } = await supabase.rpc('submit_my_group_pin', { pin_input: pin });
+    if (error) throw error;
+    if (data?.success) {
+        // Force refresh user profile
+        localStorage.removeItem('cache_currentUser');
+        await getUser();
+    }
+    return data;
+}
+
+export async function voteApproveMember(targetUserId: string): Promise<{ success: boolean; message?: string; membership_status?: string; approvals_count?: number; required_count?: number }> {
+    const { data, error } = await supabase.rpc('vote_approve_member', { target_user_id: targetUserId });
+    if (error) throw error;
+    return data;
+}
+
+export async function concludeMemberService(targetUserId: string): Promise<{ success: boolean; message?: string }> {
+    const { data, error } = await supabase.rpc('conclude_member_service', { target_user_id: targetUserId });
+    if (error) throw error;
+    return data;
+}
+
+export async function regenerateGroupPin(groupId: string): Promise<string> {
+    const { data, error } = await supabase.rpc('regenerate_group_pin', { target_group_id: String(groupId) });
+    if (error) throw error;
+    return data.pin;
+}
+
+export async function getGroupPin(groupId: string): Promise<string | null> {
+    const { data, error } = await supabase
+        .from('gruppi_scout')
+        .select('join_code')
+        .eq('id', Number(groupId))
+        .maybeSingle();
+    if (error || !data) return null;
+    return data.join_code;
+}
+
+export async function toggleCapoGruppoRole(targetUserId: string, isCapoGruppo: boolean): Promise<void> {
+    const { error } = await supabase
+        .from('users')
+        .update({ group_role: isCapoGruppo ? 'capo_gruppo' : 'capo' })
+        .eq('id', targetUserId);
+    if (error) throw error;
+}
+
+export async function transferUserGroup(params: {
+    region: string;
+    scoutZone: string;
+    groupName: string;
+    groupId: string;
+    joinCodeInput?: string;
+}): Promise<User> {
+    const currentUser = await getUser();
+    let hasValidPin = false;
+
+    if (params.joinCodeInput && params.joinCodeInput.trim()) {
+        try {
+            const { data: isValid } = await supabase.rpc('verify_group_pin', {
+                target_group_id: params.groupId,
+                pin_input: params.joinCodeInput.trim()
+            });
+            hasValidPin = !!isValid;
+        } catch (e) {
+            console.warn('verify_group_pin check failed:', e);
+        }
+    }
+
+    const updateData = {
+        region: params.region,
+        scout_zone: params.scoutZone,
+        group_name: params.groupName,
+        group_id: params.groupId,
+        membership_status: 'in_attesa',
+        group_role: 'capo',
+        has_valid_pin: hasValidPin,
+        coca_approvals: []
+    };
+
+    const { data, error } = await supabase
+        .from('users')
+        .update(updateData)
+        .eq('id', currentUser.id)
+        .select()
+        .single();
+
+    if (error) throw error;
+    localStorage.removeItem('cache_currentUser');
+    setCachedData('currentUser', data);
+    return mapSupabaseUserToUser(data);
+}
+
 export async function updateUser(user: User): Promise<User> {
     let resolvedGroupId = user.groupId ? String(user.groupId).trim() : '';
     if (!resolvedGroupId && user.groupName) {
@@ -314,6 +440,10 @@ export async function updateUser(user: User): Promise<User> {
         inventory_audits: user.inventoryAudits || 0,
         formazione: user.formazione || [],
         has_nomina_capo: user.hasNominaCapo || false,
+        membership_status: user.membershipStatus || 'attivo',
+        group_role: user.groupRole || 'capo',
+        has_valid_pin: user.hasValidPin || false,
+        coca_approvals: user.cocaApprovals || [],
     };
     if (!isOnline()) {
         enqueueOfflineWrite('update', 'users', updateData, { id: user.id });
@@ -791,6 +921,10 @@ function mapSupabaseUserToUser(data: any): User {
         groupId: data.group_id,
         formazione: data.formazione || [],
         hasNominaCapo: data.has_nomina_capo || false,
+        membershipStatus: data.membership_status || 'attivo',
+        groupRole: data.group_role || 'capo',
+        cocaApprovals: data.coca_approvals || [],
+        hasValidPin: data.has_valid_pin || false,
     };
 }
 

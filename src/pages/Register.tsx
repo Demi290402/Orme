@@ -226,6 +226,7 @@ export default function Register() {
     const [region, setRegion] = useState('');
     const [scoutZone, setScoutZone] = useState('');
     const [groupName, setGroupName] = useState('');
+    const [joinCodeInput, setJoinCodeInput] = useState('');
 
     const [formazione, setFormazione] = useState<{ corso: string; anno: string; mese: string }[]>([]);
     const [hasNominaCapo, setHasNominaCapo] = useState(false);
@@ -313,9 +314,11 @@ export default function Register() {
         setSubmitting(true);
         try {
             // Find numeric groupId from gruppi_scout, or create the group if new
+            let isGroupCreator = false;
             let gruppo = gruppi.find(g => g.region === region && g.scoutZone === scoutZone && g.groupName === groupName);
             if (!gruppo || gruppo.id === -1) {
                 gruppo = await aggiungiGruppoScout(region, scoutZone, groupName);
+                isGroupCreator = true;
             }
 
             await registerUser({
@@ -334,6 +337,8 @@ export default function Register() {
                     mese: f.mese ? parseInt(f.mese) : undefined
                 })).filter(f => !isNaN(f.anno)),
                 hasNominaCapo,
+                joinCodeInput: joinCodeInput.trim() || undefined,
+                isGroupCreator
             });
             alert('Registrazione completata! Controlla la tua email per confermare l\'account prima di accedere.');
             navigate('/login');
@@ -438,6 +443,25 @@ export default function Register() {
                                     addNewPlaceholder="Es: Turi 1"
                                     onAddNew={handleAddGroup}
                                 />
+
+                                {/* PIN di Gruppo */}
+                                {groupName && (
+                                    <div className="pt-2 border-t border-gray-200 dark:border-gray-600">
+                                        <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 mb-1">
+                                            Codice di Accesso CoCa (PIN del gruppo)
+                                        </label>
+                                        <input 
+                                            type="text"
+                                            value={joinCodeInput}
+                                            onChange={e => setJoinCodeInput(e.target.value.toUpperCase())}
+                                            placeholder="Es: TRANI1 (facoltativo)"
+                                            className="w-full p-2.5 rounded-lg border border-gray-200 dark:border-gray-600 dark:bg-gray-700 text-xs md:text-sm font-bold uppercase tracking-wider outline-none focus:border-scout-brown dark:text-white"
+                                        />
+                                        <p className="text-[11px] text-gray-400 mt-1">
+                                            💡 Se inserisci il PIN della CoCa, basteranno <strong>2 approvazioni</strong> di capi del gruppo per accedere alle sezioni riservate. Senza PIN, ne serviranno <strong>4</strong>.
+                                        </p>
+                                    </div>
+                                )}
                             </>
                         )}
                     </div>
