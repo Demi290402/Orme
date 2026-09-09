@@ -7,6 +7,7 @@ import { getLocations } from '@/lib/data';
 import { getVerbali } from '@/lib/verbali';
 import { getEventi } from '@/lib/calendario';
 import { getListaAttesa } from '@/lib/listaAttesa';
+import { askAkelaBot, AIMessage } from '@/lib/ai';
 
 interface Message {
     id: string;
@@ -15,29 +16,6 @@ interface Message {
     isSystem?: boolean;
 }
 
-const AKELA_SYSTEM_PROMPT = `Sei Akela, il vecchio e saggio lupo solitario del Branco della Rupe di Seeonee (dal Libro della Giungla di Kipling), ed ora sei l'assistente virtuale di "Orme", un'applicazione web per la gestione dei gruppi scout dell'AGESCI.
-Usa un tono estremamente caloroso, saggio, fraterno ed accogliente. Rivolgiti all'utente come "fratellino" o con formule di saluto scout come "Buona caccia!".
-Conosci la storia dello scautismo, la Legge e la Promessa scout, le opere di Sir Robert Baden-Powell (es: "Scautismo per Ragazzi", "Il Libro dei Capi", "La Strada verso il Successo"), e la totalità della terminologia scout (CoCa, branca L/C, E/G, R/S, cerchio, reparto, clan).
-Hai a disposizione una mappa interattiva d'Italia raggiungibile al percorso "/mappa" per visualizzare geograficamente tutti i luoghi scout censiti con un sistema di raggruppamento e segnaposto colorati. Se l'utente ti chiede di vedere i luoghi su una cartina o mappa, consigliala come ottimo supporto visivo e proponi il redirect a "/mappa".
-Rispondi in italiano in modo conciso e amichevole (massimo 3-4 frasi, tranne se serve una spiegazione approfondita), usando la formattazione markdown e icone a tema (🐺, ⛺, ⚜️, 📍).
-Non dire mai che sei un modello linguistico AI o che sei creato da OpenAI o altri. Sei Akela, programmato dai Capi di Orme.`;
-
-// Window AI Types
-interface WindowAI {
-    languageModel?: {
-        capabilities: () => Promise<{ available: 'readily' | 'after-download' | 'no' }>;
-        create: (options?: { systemPrompt?: string; temperature?: number }) => Promise<{
-            prompt: (input: string) => Promise<string>;
-            destroy: () => Promise<void>;
-        }>;
-    };
-}
-
-declare global {
-    interface Window {
-        ai?: WindowAI;
-    }
-}
 
 export default function AkelaAssistant() {
     const navigate = useNavigate();
@@ -56,6 +34,17 @@ export default function AkelaAssistant() {
     const [pendingRedirect, setPendingRedirect] = useState<{ path: string; label: string } | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
     const [isTyping, setIsTyping] = useState(false);
+    const [dailyRemaining, setDailyRemaining] = useState<number>(() => {
+        const saved = localStorage.getItem('akela_daily_remaining');
+        const savedDate = localStorage.getItem('akela_daily_date');
+        const today = new Date().toISOString().slice(0, 10);
+        if (savedDate === today && saved !== null) {
+            const parsed = Number(saved);
+            return isNaN(parsed) ? 25 : parsed;
+        }
+        return 25;
+    });
+    const dailyMax = 25;
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     // Auto-scroll to bottom of messages
@@ -784,6 +773,16 @@ export default function AkelaAssistant() {
     const handleSend = async (textToSend: string) => {
         if (!textToSend.trim()) return;
 
+        if (dailyRemaining <= 0) {
+            const quotaMsg: Message = {
+                id: crypto.randomUUID(),
+                sender: 'akela',
+                text: "🐺 La caccia per oggi è terminata, fratellino! Ho camminato a lungo sul sentiero e ora riposo alla rupe del consiglio. I miei lupi ricaricheranno le energie per domani: torna pure a trovarmi dopo la mezzanotte!"
+            };
+            setMessages(prev => [...prev, quotaMsg]);
+            return;
+        }
+
         let queryToProcess = textToSend;
         const cleanLower = textToSend.toLowerCase()
             .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
@@ -840,7 +839,7 @@ export default function AkelaAssistant() {
         setInput('');
         setIsTyping(true);
 
-        // 1. Asynchronously check if it matches a database query
+        // 1. Asynchronously check if it matches a quantitative database query
         const dbResult = await handleDatabaseSearch(queryToProcess, queryToProcess);
         if (dbResult) {
             setTimeout(() => {
@@ -856,59 +855,66 @@ export default function AkelaAssistant() {
                 if (dbResult.path) {
                     setPendingRedirect({ path: dbResult.path, label: getPageLabel(dbResult.path) });
                 }
-            }, 800);
+            }, 600);
             return;
         }
 
-        // 2. Fallback to NLP Intent Parser
-        const parsed = parseIntent(textToSend);
-        
-        // 3. If fallback and online, try Pollinations AI
-        if (parsed.intent === 'fallback' && typeof navigator !== 'undefined' && navigator.onLine) {
+        // 2. Main Conversational AI Engine: Google Gemini 2.5 Flash via Supabase Edge Function
+        if (typeof navigator !== 'undefined' && navigator.onLine) {
             try {
-                // Limit message history to last 6 messages (3 turns) to conserve bandwidth/context size
-                const historySlice = messages.slice(-6).map(m => ({
-                    role: m.sender === 'akela' ? 'assistant' : 'user',
-                    content: m.text
-                }));
+                const historyPayload: AIMessage[] = messages
+                    .filter(m => !m.isSystem && m.id !== 'welcome')
+                    .slice(-8)
+                    .map(m => ({
+                        role: (m.sender === 'akela' ? 'model' : 'user') as 'model' | 'user',
+                        text: m.text
+                    }));
 
-                const apiMessages = [
-                    { role: 'system', content: AKELA_SYSTEM_PROMPT },
-                    ...historySlice,
-                    { role: 'user', content: textToSend }
-                ];
+                const botRes = await askAkelaBot(historyPayload, textToSend);
 
-                const response = await fetch('https://text.pollinations.ai/', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        messages: apiMessages,
-                        model: 'openai', // GPT-4o-mini
-                        jsonMode: false
-                    })
-                });
+                // Update remaining quota
+                setDailyRemaining(botRes.remainingDaily);
+                localStorage.setItem('akela_daily_remaining', String(botRes.remainingDaily));
+                localStorage.setItem('akela_daily_date', new Date().toISOString().slice(0, 10));
 
-                if (response.ok) {
-                    const aiReply = await response.text();
-                    if (aiReply && aiReply.trim().length > 0) {
-                        setTimeout(() => {
-                            const akelaMsg: Message = {
-                                id: crypto.randomUUID(),
-                                sender: 'akela',
-                                text: aiReply.trim()
-                            };
-                            setMessages(prev => [...prev, akelaMsg]);
-                            setIsTyping(false);
-                            setPendingLearning(null);
-                        }, 800);
-                        return;
-                    }
+                const akelaMsg: Message = {
+                    id: crypto.randomUUID(),
+                    sender: 'akela',
+                    text: botRes.reply
+                };
+
+                setMessages(prev => [...prev, akelaMsg]);
+                setIsTyping(false);
+                setPendingLearning(null);
+
+                if (botRes.redirectPath) {
+                    setPendingRedirect({
+                        path: botRes.redirectPath,
+                        label: getPageLabel(botRes.redirectPath)
+                    });
                 }
-            } catch (err) {
-                console.error("Errore richiamando Pollinations AI:", err);
+                return;
+            } catch (aiErr: any) {
+                console.warn('Avviso: fallback locale attivo a causa di errore Edge Function:', aiErr);
+                if (aiErr?.message?.includes('QUOTA_EXCEEDED') || aiErr?.message?.includes('esaurito')) {
+                    setDailyRemaining(0);
+                    localStorage.setItem('akela_daily_remaining', '0');
+                    localStorage.setItem('akela_daily_date', new Date().toISOString().slice(0, 10));
+                    const akelaMsg: Message = {
+                        id: crypto.randomUUID(),
+                        sender: 'akela',
+                        text: "🐺 La caccia per oggi è terminata, fratellino! Ho camminato a lungo sul sentiero e ora riposo alla rupe del consiglio. I miei lupi ricaricheranno le energie per domani: torna pure a trovarmi dopo la mezzanotte!"
+                    };
+                    setMessages(prev => [...prev, akelaMsg]);
+                    setIsTyping(false);
+                    return;
+                }
             }
+        }
 
-            // 3.b Fallback to Wikipedia search if Pollinations AI failed or returned empty
+        // 3. Fallback to NLP Intent Parser (offline or key not yet set)
+        const parsed = parseIntent(textToSend);
+        if (parsed.intent === 'fallback' && typeof navigator !== 'undefined' && navigator.onLine) {
             const wikiReply = await fetchWikipediaSummary(textToSend);
             if (wikiReply) {
                 setTimeout(() => {
@@ -920,7 +926,7 @@ export default function AkelaAssistant() {
                     setMessages(prev => [...prev, akelaMsg]);
                     setIsTyping(false);
                     setPendingLearning(null);
-                }, 800);
+                }, 500);
                 return;
             }
         }
@@ -1065,25 +1071,37 @@ export default function AkelaAssistant() {
                     
                     <div className="fixed bottom-36 md:bottom-24 right-6 w-[340px] max-w-[90vw] h-[480px] bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border border-gray-200/50 dark:border-gray-800/50 rounded-[2rem] shadow-2xl z-50 flex flex-col overflow-hidden animate-in zoom-in-95 slide-in-from-bottom duration-200">
                         {/* Header */}
-                        <div className="bg-scout-green dark:bg-scout-green-dark text-white p-4 flex items-center gap-3 shrink-0 transition-colors duration-200">
-                            <div className="w-10 h-10 rounded-full bg-white/15 flex items-center justify-center text-xl shadow-inner">
-                                🐺
+                        <div className="bg-scout-green dark:bg-scout-green-dark text-white p-3.5 flex flex-col gap-2 shrink-0 transition-colors duration-200">
+                            <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center text-lg shadow-inner shrink-0">
+                                    🐺
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <h3 className="font-extrabold text-sm flex items-center gap-1.5 leading-tight">
+                                        Akela 
+                                        <span className="flex items-center gap-0.5 text-[8px] bg-yellow-400 text-gray-900 px-1.5 py-0.5 rounded-full font-black uppercase tracking-wider shadow-xs">
+                                            <Sparkles size={8} /> AI
+                                        </span>
+                                    </h3>
+                                    <p className="text-[10px] text-white/80 font-bold truncate">Saggio capobranco & guida</p>
+                                </div>
+                                <button 
+                                    onClick={() => setIsOpen(false)}
+                                    className="p-1 text-white/80 hover:text-white hover:bg-white/10 rounded-full transition-colors shrink-0"
+                                >
+                                    <X size={18} />
+                                </button>
                             </div>
-                            <div>
-                                <h3 className="font-extrabold text-sm flex items-center gap-1.5 leading-tight">
-                                    Akela 
-                                    <span className="flex items-center gap-0.5 text-[9px] bg-yellow-400 text-gray-900 px-1.5 py-0.5 rounded-full font-black uppercase tracking-wider">
-                                        <Sparkles size={8} /> Guide
-                                    </span>
-                                </h3>
-                                <p className="text-[10px] text-white/80 font-bold">Il tuo saggio assistente di branca</p>
+
+                            {/* Token / Energy Quota Bar */}
+                            <div className="bg-black/15 dark:bg-black/25 rounded-xl px-2.5 py-1 flex items-center justify-between text-[10px]">
+                                <span className="font-medium text-white/90 flex items-center gap-1">
+                                    🐾 Energia di oggi:
+                                </span>
+                                <span className={cn("font-black tracking-wide", dailyRemaining <= 5 ? "text-amber-300 animate-pulse" : "text-yellow-300")}>
+                                    {dailyRemaining}/{dailyMax} messaggi
+                                </span>
                             </div>
-                            <button 
-                                onClick={() => setIsOpen(false)}
-                                className="ml-auto p-1 text-white/80 hover:text-white hover:bg-white/10 rounded-full transition-colors"
-                            >
-                                <X size={18} />
-                            </button>
                         </div>
 
 
@@ -1215,25 +1233,31 @@ export default function AkelaAssistant() {
                         )}
 
                         {/* Input Area */}
-                        <form 
-                            onSubmit={(e) => { e.preventDefault(); handleSend(input); }}
-                            className="p-3 bg-white dark:bg-gray-900 border-t border-gray-150 dark:border-gray-800 flex gap-2 items-center shrink-0"
-                        >
-                            <input 
-                                type="text"
-                                value={input}
-                                onChange={(e) => setInput(e.target.value)}
-                                placeholder="Chiedi: 'Scrivi un verbale'..."
-                                className="flex-1 px-3 py-2 border border-gray-250 dark:border-gray-800 rounded-xl bg-gray-50 dark:bg-gray-950 text-xs font-bold outline-none focus:ring-1 focus:ring-scout-green dark:text-white"
-                            />
-                            <button 
-                                type="submit"
-                                disabled={!input.trim()}
-                                className="p-2 bg-scout-green dark:bg-scout-green-dark text-white rounded-xl hover:bg-scout-green-dark transition-all disabled:opacity-40 disabled:scale-100 active:scale-95 flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/20"
+                        {dailyRemaining <= 0 ? (
+                            <div className="p-3 bg-amber-50/90 dark:bg-amber-950/30 border-t border-amber-200 dark:border-amber-900/40 text-center text-[11px] font-bold text-amber-800 dark:text-amber-200 shrink-0">
+                                🌙 Akela sta riposando alla rupe. Energia ricaricata a mezzanotte!
+                            </div>
+                        ) : (
+                            <form 
+                                onSubmit={(e) => { e.preventDefault(); handleSend(input); }}
+                                className="p-3 bg-white dark:bg-gray-900 border-t border-gray-150 dark:border-gray-800 flex gap-2 items-center shrink-0"
                             >
-                                <Send size={14} />
-                            </button>
-                        </form>
+                                <input 
+                                    type="text"
+                                    value={input}
+                                    onChange={(e) => setInput(e.target.value)}
+                                    placeholder="Chiedi ad Akela..."
+                                    className="flex-1 px-3 py-2 border border-gray-250 dark:border-gray-800 rounded-xl bg-gray-50 dark:bg-gray-950 text-xs font-bold outline-none focus:ring-1 focus:ring-scout-green dark:text-white"
+                                />
+                                <button 
+                                    type="submit"
+                                    disabled={!input.trim() || isTyping}
+                                    className="p-2 bg-scout-green dark:bg-scout-green-dark text-white rounded-xl hover:bg-scout-green-dark transition-all disabled:opacity-40 disabled:scale-100 active:scale-95 flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/20"
+                                >
+                                    <Send size={14} />
+                                </button>
+                            </form>
+                        )}
                     </div>
                 </>
             )}
