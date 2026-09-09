@@ -839,27 +839,7 @@ export default function AkelaAssistant() {
         setInput('');
         setIsTyping(true);
 
-        // 1. Asynchronously check if it matches a quantitative database query
-        const dbResult = await handleDatabaseSearch(queryToProcess, queryToProcess);
-        if (dbResult) {
-            setTimeout(() => {
-                const akelaMsg: Message = {
-                    id: crypto.randomUUID(),
-                    sender: 'akela',
-                    text: dbResult.reply
-                };
-                setMessages(prev => [...prev, akelaMsg]);
-                setIsTyping(false);
-                setPendingLearning(null);
-
-                if (dbResult.path) {
-                    setPendingRedirect({ path: dbResult.path, label: getPageLabel(dbResult.path) });
-                }
-            }, 600);
-            return;
-        }
-
-        // 2. Main Conversational AI Engine: Google Gemini 2.5 Flash via Supabase Edge Function
+        // 1. Primary Conversational AI Engine: Google Gemini via Supabase Edge Function
         if (typeof navigator !== 'undefined' && navigator.onLine) {
             try {
                 const historyPayload: AIMessage[] = messages
@@ -910,6 +890,26 @@ export default function AkelaAssistant() {
                     return;
                 }
             }
+        }
+
+        // 2. Fallback to Local Database Search (offline mode)
+        const dbResult = await handleDatabaseSearch(queryToProcess, queryToProcess);
+        if (dbResult) {
+            setTimeout(() => {
+                const akelaMsg: Message = {
+                    id: crypto.randomUUID(),
+                    sender: 'akela',
+                    text: dbResult.reply
+                };
+                setMessages(prev => [...prev, akelaMsg]);
+                setIsTyping(false);
+                setPendingLearning(null);
+
+                if (dbResult.path) {
+                    setPendingRedirect({ path: dbResult.path, label: getPageLabel(dbResult.path) });
+                }
+            }, 600);
+            return;
         }
 
         // 3. Fallback to NLP Intent Parser (offline or key not yet set)
