@@ -396,8 +396,27 @@ export default function Register() {
 
                     {/* Dati Gruppo Scout */}
                     <div className="p-4 bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600 rounded-2xl space-y-4">
-                        <h3 className="text-xs font-bold text-scout-brown dark:text-amber-400 uppercase tracking-wider">Dati Gruppo Scout</h3>
-                        <p className="text-[11px] text-gray-400 dark:text-gray-400">Seleziona la tua regione, zona e gruppo. Se non trovi il tuo, aggiungilo.</p>
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-xs font-bold text-scout-brown dark:text-amber-400 uppercase tracking-wider">
+                                Gruppo Scout di Appartenenza
+                            </h3>
+                            <span className="text-[10px] font-bold text-scout-green dark:text-emerald-400 bg-scout-green/10 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full">
+                                Censisci o Scegli
+                            </span>
+                        </div>
+
+                        {/* Banner Informativo per Invitati e Nuovi Capi */}
+                        <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 rounded-xl p-3.5 text-[11px] text-emerald-900 dark:text-emerald-200 leading-relaxed space-y-1.5 shadow-xs">
+                            <p className="font-black text-emerald-950 dark:text-emerald-300 flex items-center gap-1.5">
+                                <span>⚜️</span> Sei stato invitato su Orme da un altro capo?
+                            </p>
+                            <p className="text-[11px] text-emerald-800/90 dark:text-emerald-300/90">
+                                Scegli liberamente la tua <strong>Regione, Zona e Gruppo AGESCI</strong>. Se il tuo gruppo non è presente nell'elenco, aprilo e seleziona <em>"+ Aggiungi nuovo gruppo"</em> per crearlo e diventarne il capo fondatore!
+                            </p>
+                            <p className="text-[10px] text-gray-500 dark:text-gray-400 pt-0.5">
+                                *Se fai parte dello stesso gruppo di chi ti ha mandato l'invito, puoi inserire anche il PIN di CoCa qui sotto per accelerare l'approvazione (bastano 2 voti invece di 4).
+                            </p>
+                        </div>
 
                         {loadingGruppi ? (
                             <div className="text-center text-sm text-gray-400 py-4">Caricamento gruppi...</div>
@@ -443,6 +462,10 @@ export default function Register() {
                                     addNewPlaceholder="Es: Turi 1"
                                     onAddNew={handleAddGroup}
                                 />
+
+                                <p className="text-[11px] text-gray-400 dark:text-gray-400">
+                                    💡 <em>Il tuo gruppo non compare?</em> Seleziona <strong>"+ Aggiungi nuovo gruppo"</strong> per crearlo subito.
+                                </p>
 
                                 {/* PIN di Gruppo */}
                                 {groupName && (

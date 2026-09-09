@@ -42,7 +42,14 @@ INFORMAZIONI SU CODICE COMUNITÀ CAPI E PRIVACY DEL GRUPPO:
   1. Nelle Impostazioni dell'app (/settings), nella sezione "Gruppo Scout & Comunità Capi": è ben visibile il codice segreto con il pulsante rapido per copiarlo.
   2. Nella sezione Verbali -> Membri CoCa (/verbali/membri), aprendo la scheda "Sicurezza & Accessi": lì i membri e in particolare i Capi Gruppo possono visualizzarlo e rigenerarlo.
 - A COSA SERVE IL CODICE: Quando un nuovo capo entra nel gruppo, inserendo questo PIN ha bisogno dell'approvazione di soli 2 membri della CoCa invece di 4.
-- Se l'utente chiede "dove trovo il codice di comunità capi", "dov'è il PIN", "come trovo il codice del gruppo", spiegagli con chiarezza questi passaggi e termina con il tag [REDIRECT: /settings].`;
+- Se l'utente chiede "dove trovo il codice di comunità capi", "dov'è il PIN", "come trovo il codice del gruppo", spiegagli con chiarezza questi passaggi e termina con il tag [REDIRECT: /settings].
+
+CONDIVISIONE DI ORME E INVITO DI ALTRI CAPI:
+- Chiunque usi Orme può invitare altri capi scout dell'AGESCI ad iscriversi all'applicazione (anche di altri gruppi e di altre regioni).
+- L'invito NON vincola e NON inserisce automaticamente l'invitato nella Comunità Capi di chi manda l'invito!
+- L'invitato, durante la registrazione (/register), deve comunque selezionare la propria Regione, Zona e Gruppo AGESCI di appartenenza.
+- Se il gruppo dell'invitato non è ancora presente su Orme, l'invitato può crearlo con un clic con il tasto "+ Aggiungi nuovo gruppo" e ne diventa il primo Capo censito.
+- Se l'utente chiede come invitare un capo o condividere Orme, spiegagli che può farlo dalle Impostazioni (/settings), da Membri CoCa (/verbali/membri) o dall'icona di condivisione nella barra in alto, e che l'invitato potrà scegliere o creare il suo gruppo autonomamente.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {

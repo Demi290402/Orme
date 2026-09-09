@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Trophy, HelpCircle, FileText, CalendarDays, LogIn, UserPlus, Archive, Settings, Package, Menu, X, ChevronRight, Wallet, Clock, WifiOff, RefreshCw } from 'lucide-react';
+import { Home, Trophy, HelpCircle, FileText, CalendarDays, LogIn, UserPlus, Archive, Settings, Package, Menu, X, ChevronRight, Wallet, Clock, WifiOff, RefreshCw, Share2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Logo from '@/components/Logo';
 import PWAInstallPrompt from './PWAInstallPrompt';
@@ -10,11 +10,13 @@ import UserAvatar from '@/components/UserAvatar';
 import NotificationBell from '@/components/NotificationBell';
 import { isOnline as checkOnline, getOfflineQueue, syncOfflineQueue } from '@/lib/offline';
 import AkelaAssistant from './AkelaAssistant';
+import ShareAppModal from '@/components/ShareAppModal';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
     const location = useLocation();
     const [currentUser, setCurrentUser] = useState<UserType | null>(null);
     const [showAltroMenu, setShowAltroMenu] = useState(false);
+    const [showShareModal, setShowShareModal] = useState(false);
     const [online, setOnline] = useState(checkOnline());
     const [queueLength, setQueueLength] = useState(0);
     const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'error' | 'done'>('idle');
@@ -102,6 +104,18 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
                         {/* Notification Bell */}
                         {currentUser && <NotificationBell />}
+
+                        {/* Invita un Capo / Share */}
+                        {currentUser && (
+                            <button
+                                type="button"
+                                onClick={() => setShowShareModal(true)}
+                                className="p-2 text-gray-500 dark:text-gray-400 hover:text-scout-green dark:hover:text-scout-green transition-colors rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                                title="Invita un Capo Scout su Orme"
+                            >
+                                <Share2 size={19} />
+                            </button>
+                        )}
 
                         {/* Offline / Sync Indicator */}
                         {!online ? (
@@ -308,10 +322,42 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                                     </Link>
                                 );
                             })}
+                            {currentUser && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setShowAltroMenu(false);
+                                        setShowShareModal(true);
+                                    }}
+                                    className="w-full flex items-center justify-between p-3.5 rounded-2xl border border-gray-100 dark:border-gray-700/50 bg-gray-50 dark:bg-gray-900/50 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all active:scale-[0.98] cursor-pointer text-left"
+                                >
+                                    <div className="flex items-center gap-3.5">
+                                        <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                                            <Share2 size={20} />
+                                        </div>
+                                        <div className="flex flex-col text-left">
+                                            <span className="text-xs font-bold leading-none">Invita un Capo Scout</span>
+                                            <span className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 font-medium leading-tight">
+                                                Condividi Orme con capi di qualsiasi gruppo
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <ChevronRight size={16} className="text-gray-400 dark:text-gray-500 shrink-0" />
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
             )}
+
+            {/* Share App Modal */}
+            <ShareAppModal
+                isOpen={showShareModal}
+                onClose={() => setShowShareModal(false)}
+                inviterName={currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : undefined}
+                inviterGroup={currentUser?.groupName}
+            />
+
             <AkelaAssistant />
         </div>
     );

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { 
     Users, Plus, Trash2, ArrowLeft, ShieldCheck, KeyRound, Copy, Check, 
-    RefreshCw, CheckCircle2, UserX, Crown, Clock 
+    RefreshCw, CheckCircle2, UserX, Crown, Clock, Share2 
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getMembriCoCa, saveMembroCoCa, deleteMembroCoCa } from '@/lib/verbali';
@@ -12,6 +12,7 @@ import {
 import { MembroCoCa, User } from '@/types';
 import { cn } from '@/lib/utils';
 import UserAvatar from '@/components/UserAvatar';
+import ShareAppModal from '@/components/ShareAppModal';
 
 export default function MembriCoCaPage() {
     const navigate = useNavigate();
@@ -36,6 +37,7 @@ export default function MembriCoCaPage() {
     const [copiedPin, setCopiedPin] = useState(false);
     const [loadingUsers, setLoadingUsers] = useState(true);
     const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+    const [showShareModal, setShowShareModal] = useState(false);
 
     useEffect(() => {
         loadData();
@@ -441,6 +443,29 @@ L'utente perderà immediatamente l'accesso a verbali, bilancio, inventario e lis
                         </div>
                     </div>
 
+                    {/* Share App Action Card */}
+                    <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-150 dark:border-gray-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+                                <Share2 size={18} />
+                            </div>
+                            <div>
+                                <h4 className="text-xs md:text-sm font-black text-gray-900 dark:text-white">Invita Capi Scout su Orme</h4>
+                                <p className="text-[11px] text-gray-400 leading-tight mt-0.5">
+                                    Condividi l'app con capi di qualsiasi gruppo o zona: potranno registrarsi autonomamente e scegliere il loro gruppo.
+                                </p>
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setShowShareModal(true)}
+                            className="w-full sm:w-auto px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer active:scale-95 shrink-0"
+                        >
+                            <Share2 size={14} />
+                            Invita su Orme
+                        </button>
+                    </div>
+
                     {/* Pending Approvals Section */}
                     <div className="space-y-3">
                         <h3 className="font-extrabold text-sm text-gray-900 dark:text-white flex items-center gap-2">
@@ -630,6 +655,14 @@ L'utente perderà immediatamente l'accesso a verbali, bilancio, inventario e lis
                     )}
                 </div>
             )}
+
+            {/* Share App Modal */}
+            <ShareAppModal
+                isOpen={showShareModal}
+                onClose={() => setShowShareModal(false)}
+                inviterName={currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : undefined}
+                inviterGroup={currentUser?.groupName}
+            />
         </div>
     );
 }

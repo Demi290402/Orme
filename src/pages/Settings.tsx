@@ -4,10 +4,11 @@ import {
     ChevronLeft, Sun, Moon, Bell, BellOff, User, Trash2,
     Download, RefreshCw, FolderOpen, Check,
     Shield, ChevronRight, MapPin, FileText, Users, BarChart2,
-    Archive, Trophy, Zap, Bus, Clock, KeyRound, Copy, Crown, ShieldCheck, Compass
+    Archive, Trophy, Zap, Bus, Clock, KeyRound, Copy, Crown, ShieldCheck, Compass, Share2
 } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
 import { getUser, deleteUserProfile, getGroupPin } from '@/lib/data';
+import ShareAppModal from '@/components/ShareAppModal';
 import { cn } from '@/lib/utils';
 import { User as UserType } from '@/types';
 import { playNotificationSound } from '@/lib/notifications';
@@ -112,6 +113,7 @@ export default function Settings() {
     const [groupPin, setGroupPin] = useState<string | null>(null);
     const [copiedPin, setCopiedPin] = useState(false);
     const [loadingPin, setLoadingPin] = useState(false);
+    const [showShareModal, setShowShareModal] = useState(false);
 
     // Notification settings
     const [notifiche, setNotifiche] = useState(true);
@@ -435,6 +437,25 @@ export default function Settings() {
                                     </div>
                                     <ChevronRight size={15} className="text-gray-300 dark:text-gray-600 group-hover:translate-x-0.5 transition-transform" />
                                 </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setShowShareModal(true)}
+                                    className="col-span-full flex items-center justify-between p-3 rounded-xl border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/40 dark:bg-emerald-950/20 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-colors text-left group cursor-pointer"
+                                >
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="w-7 h-7 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 flex items-center justify-center">
+                                            <Share2 size={14} />
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-bold text-gray-900 dark:text-white">Invita un Capo Scout su Orme</p>
+                                            <p className="text-[10px] text-emerald-700 dark:text-emerald-400">
+                                                Condividi l'app (l'invitato potrà scegliere o creare il suo gruppo)
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <ChevronRight size={15} className="text-emerald-500 group-hover:translate-x-0.5 transition-transform" />
+                                </button>
                             </div>
                         </>
                     ) : (
@@ -454,6 +475,39 @@ export default function Settings() {
                             </button>
                         </div>
                     )}
+                </div>
+            </div>
+
+            {/* CONDIVISIONE & COMMUNITY */}
+            <div className="space-y-2">
+                <p className="text-[10px] font-black uppercase tracking-[0.15em] text-gray-400 dark:text-gray-500 px-1">
+                    Condivisione & Community
+                </p>
+                <div className="bg-gradient-to-br from-scout-green/10 via-emerald-500/5 to-transparent dark:from-emerald-950/30 dark:via-emerald-900/10 rounded-2xl border border-emerald-200/80 dark:border-emerald-800/60 p-4 space-y-3 shadow-xs">
+                    <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-scout-green text-white flex items-center justify-center shrink-0 shadow-sm">
+                                <Share2 size={20} />
+                            </div>
+                            <div>
+                                <h3 className="text-sm font-black text-gray-900 dark:text-white">Invita altri Capi Scout su Orme</h3>
+                                <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                                    Fai conoscere Orme ai capi di qualsiasi gruppo: potranno registrarsi liberamente e scegliere o fondare il proprio gruppo.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex gap-2 pt-1">
+                        <button
+                            type="button"
+                            onClick={() => setShowShareModal(true)}
+                            className="w-full py-2.5 px-4 bg-scout-green hover:bg-scout-green/90 text-white rounded-xl text-xs font-black flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer active:scale-95"
+                        >
+                            <Share2 size={14} />
+                            Condividi Invito ad Orme
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -833,6 +887,14 @@ export default function Settings() {
                     </div>
                 </div>
             )}
+
+            {/* Share App Modal */}
+            <ShareAppModal
+                isOpen={showShareModal}
+                onClose={() => setShowShareModal(false)}
+                inviterName={user ? `${user.firstName} ${user.lastName}` : undefined}
+                inviterGroup={user?.groupName}
+            />
 
             {/* Version */}
             <p className="text-center text-[10px] font-bold text-gray-300 dark:text-gray-600 uppercase tracking-widest py-4">

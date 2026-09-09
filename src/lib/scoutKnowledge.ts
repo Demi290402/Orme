@@ -331,6 +331,24 @@ Puoi trovarlo in due sezioni dell'app:
 2. 👥 **In Verbali ➔ Membri CoCa** (\`/verbali/membri\`): aprendo la scheda **"Sicurezza & Accessi"**, da cui i Capi Gruppo possono anche rigenerarlo.
 
 💡 *A cosa serve?* Quando un nuovo capo entra nel gruppo, inserendo questo PIN ha bisogno dell'approvazione di soli **2 capi** anziché 4! [REDIRECT: /settings]`
+    },
+    {
+        id: 'app_invita_capi',
+        title: 'Invitare altri Capi Scout e Condividere Orme',
+        keywords: [
+            'invita capi', 'invitare capi', 'condividi orme', 'condividere orme', 'invito orme',
+            'invitare altri', 'invitare amici', 'invitare un capo', 'posso invitare', 'come invito', 'invitare'
+        ],
+        category: 'manuali_agesci',
+        summary: 'Come invitare altri capi scout su Orme e come funziona la scelta del gruppo.',
+        content: `🐺 Puoi condividere Orme con **qualsiasi capo scout dell'AGESCI**! ⚜️
+
+Puoi inviare l'invito:
+1. ⚙️ Dalle **Impostazioni** (\`/settings\`), cliccando su *"Condividi Invito ad Orme"*.
+2. 👥 Da **Verbali ➔ Membri CoCa** (\`/verbali/membri\`), cliccando su *"Invita Capi su Orme"*.
+3. 🔗 Oppure condividendo direttamente il link di registrazione \`/register\` via WhatsApp o Telegram.
+
+🛡️ **Importante sulla Privacy**: L'invitato **non** entra automaticamente nella tua Comunità Capi. Durante l'iscrizione potrà scegliere liberamente il proprio gruppo, oppure **creare un nuovo gruppo** se non è ancora presente! Se fa parte della tua stessa CoCa, ricordagli di inserire anche il vostro PIN di gruppo. [REDIRECT: /settings]`
     }
 ];
 
