@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ChevronLeft, Save, MapPin, Plus, Trash2, Phone, MessageCircle, User, Building, AlertTriangle, Sparkles, Loader2, Check, Mail, ExternalLink, ArrowRight, Eye, X, ShieldAlert, Globe, Facebook, Instagram, Truck } from 'lucide-react';
+import { ChevronLeft, Save, MapPin, Plus, Trash2, Phone, MessageCircle, User, Building, AlertTriangle, Sparkles, Loader2, Check, Mail, ExternalLink, ArrowRight, Eye, X, ShieldAlert, Globe, Facebook, Instagram, Truck, BedDouble, Home } from 'lucide-react';
 import { addLocation, getLocations, updateLocation } from '@/lib/data';
 import { Location, LocationContact } from '@/types';
 import { extractCoordsFromMapsUrl, resolveLocationCoordinates, isShortMapsUrl } from '@/lib/geo';
@@ -96,6 +96,7 @@ export default function AddLocation() {
 
         // Logistics
         beds: '',
+        accantonamentoCapacity: '',
         bathrooms: '',
         hasTents: false,
         hasRS: false,
@@ -303,6 +304,7 @@ export default function AddLocation() {
                         instagram: found.instagram || found.contacts?.find(c => c.type === 'instagram')?.value || '',
                         email: found.email || '',
                         beds: found.beds?.toString() || '',
+                        accantonamentoCapacity: found.accantonamentoCapacity?.toString() || '',
                         bathrooms: found.bathrooms?.toString() || '',
                         hasTents: found.hasTents,
                         hasRS: found.hasRoverService,
@@ -553,6 +555,7 @@ export default function AddLocation() {
             email: validEmails.length > 0 ? validEmails.join(', ') : formData.email,
             emails: validEmails,
             beds: formData.beds ? parseInt(formData.beds) : 0,
+            accantonamentoCapacity: formData.accantonamentoCapacity ? parseInt(formData.accantonamentoCapacity) : undefined,
             bathrooms: formData.bathrooms ? parseInt(formData.bathrooms) : 0,
             hasTents: formData.hasTents,
             hasRefectory: formData.hasRefectory,
@@ -1282,21 +1285,50 @@ export default function AddLocation() {
                         />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium mb-1">Posti Letto</label>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="p-3 bg-gray-50 dark:bg-gray-750/50 rounded-2xl border border-gray-200 dark:border-gray-700">
+                            <label className="block text-sm font-bold text-gray-900 dark:text-white mb-0.5 flex items-center gap-1.5">
+                                <BedDouble size={16} className="text-scout-blue" />
+                                Posti Letto
+                            </label>
+                            <span className="block text-[11px] text-gray-500 dark:text-gray-400 mb-2 leading-tight">
+                                Brandine o letti con materasso forniti
+                            </span>
                             <input
-                                type="number" name="beds"
+                                type="number" min="0" name="beds"
+                                placeholder="Es. 15"
                                 value={formData.beds} onChange={handleChange}
-                                className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                className="w-full p-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white font-medium"
                             />
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium mb-1">Bagni (quantità)</label>
+                        <div className="p-3 bg-gray-50 dark:bg-gray-750/50 rounded-2xl border border-gray-200 dark:border-gray-700">
+                            <label className="block text-sm font-bold text-gray-900 dark:text-white mb-0.5 flex items-center gap-1.5">
+                                <Home size={16} className="text-amber-600 dark:text-amber-400" />
+                                Posti in Accantonamento
+                            </label>
+                            <span className="block text-[11px] text-gray-500 dark:text-gray-400 mb-2 leading-tight">
+                                A terra con stuoino e sacco a pelo
+                            </span>
                             <input
-                                type="number" name="bathrooms"
+                                type="number" min="0" name="accantonamentoCapacity"
+                                placeholder="Es. 40"
+                                value={formData.accantonamentoCapacity} onChange={handleChange}
+                                className="w-full p-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white font-medium"
+                            />
+                        </div>
+                        <div className="p-3 bg-gray-50 dark:bg-gray-750/50 rounded-2xl border border-gray-200 dark:border-gray-700">
+                            <label className="block text-sm font-bold text-gray-900 dark:text-white mb-0.5 flex items-center gap-1.5">
+                                <span>🚿</span>
+                                Bagni (quantità)
+                            </label>
+                            <span className="block text-[11px] text-gray-500 dark:text-gray-400 mb-2 leading-tight">
+                                Numero servizi igienici disponibili
+                            </span>
+                            <input
+                                type="number" min="0" name="bathrooms"
+                                placeholder="Es. 3"
                                 value={formData.bathrooms} onChange={handleChange}
-                                className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                className="w-full p-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white font-medium"
                             />
                         </div>
                     </div>

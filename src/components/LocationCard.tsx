@@ -1,5 +1,5 @@
 
-import { MapPin, Tent, BedDouble, AlertCircle, Wrench, Ban, Star, Eye } from 'lucide-react';
+import { MapPin, Tent, BedDouble, AlertCircle, Wrench, Ban, Star, Eye, Home } from 'lucide-react';
 import { Location } from '@/types';
 import { Link } from 'react-router-dom';
 import { getStalenessInfo } from '@/lib/utils';
@@ -108,9 +108,14 @@ export default function LocationCard({ location, unreadModificationsCount }: Loc
                     </div>
 
                     <div className="flex flex-wrap gap-2 text-xs text-gray-600 dark:text-gray-300">
-                        {location.beds !== undefined && (
-                            <span className="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-md flex items-center gap-1">
-                                <BedDouble size={12} /> {location.beds} max
+                        {location.beds !== undefined && location.beds > 0 && (
+                            <span className="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-md flex items-center gap-1 border border-blue-100 dark:border-blue-800" title="Posti letto (brandina/materasso)">
+                                <BedDouble size={12} /> {location.beds} letti
+                            </span>
+                        )}
+                        {location.accantonamentoCapacity !== undefined && location.accantonamentoCapacity > 0 && (
+                            <span className="bg-amber-50 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 px-2 py-1 rounded-md flex items-center gap-1 border border-amber-200 dark:border-amber-800" title="Posti in accantonamento (a terra con stuoino)">
+                                <Home size={12} /> {location.accantonamentoCapacity} accantonamento
                             </span>
                         )}
                         {location.hasTents && (

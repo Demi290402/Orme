@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Phone, MessageCircle, Map, ArrowLeft, BedDouble, Tent, Coffee, ShieldAlert, Edit, Euro, Wrench, Ban, Star, Footprints, MessageSquare, X, Droplets, Flame, Wind, ShieldCheck, Users, ChevronLeft, ChevronRight, Globe, Mail, Copy, Check, Building, Facebook, Instagram, Truck, Eye } from 'lucide-react';
+import { Phone, MessageCircle, Map, ArrowLeft, BedDouble, Tent, Coffee, ShieldAlert, Edit, Euro, Wrench, Ban, Star, Footprints, MessageSquare, X, Droplets, Flame, Wind, ShieldCheck, Users, ChevronLeft, ChevronRight, Globe, Mail, Copy, Check, Building, Facebook, Instagram, Truck, Eye, Home } from 'lucide-react';
 import { getLocations, getUser, getReviews, saveReview, deleteLocation, getLocationHistory, upsertLocationView, getUserLocationViews, recordLocationVisit } from '@/lib/data';
 import { Location, LocationReview } from '@/types';
 import { getStalenessInfo, cn } from '@/lib/utils';
@@ -1079,8 +1079,12 @@ export default function LocationDetail() {
                     <h2 className="font-black text-xs uppercase tracking-widest mb-4">Caratteristiche</h2>
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex items-center gap-2 text-xs font-bold text-gray-700 dark:text-gray-300">
-                            <BedDouble size={18} className="text-gray-400" />
+                            <BedDouble size={18} className={location.beds ? "text-scout-blue" : "text-gray-400"} />
                             <span>{location.beds ? `${location.beds} posti letto` : 'No posti letto'}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs font-bold text-gray-700 dark:text-gray-300">
+                            <Home size={18} className={location.accantonamentoCapacity ? "text-amber-600 dark:text-amber-400" : "text-gray-400"} />
+                            <span>{location.accantonamentoCapacity ? `${location.accantonamentoCapacity} accantonamento` : 'No accantonamento'}</span>
                         </div>
                         <div className="flex items-center gap-2 text-xs font-bold text-gray-700 dark:text-gray-300">
                             <Tent size={18} className={location.hasTents ? "text-green-600" : "text-gray-400"} />

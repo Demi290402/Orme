@@ -580,6 +580,7 @@ export async function addLocation(location: Omit<Location, 'id' | 'lastUpdatedAt
             quick_note: location.quickNote,
             coordinates: location.coordinates,
             beds: location.beds,
+            accantonamento_capacity: location.accantonamentoCapacity,
             bathrooms: location.bathrooms,
             has_tents: location.hasTents,
             has_refectory: location.hasRefectory,
@@ -1136,6 +1137,7 @@ function convertLocationToSupabaseFormat(location: Partial<Location>): any {
     if (location.quickNote !== undefined) data.quick_note = location.quickNote;
     if (location.coordinates !== undefined) data.coordinates = location.coordinates;
     if (location.beds !== undefined) data.beds = location.beds;
+    if (location.accantonamentoCapacity !== undefined) data.accantonamento_capacity = location.accantonamentoCapacity;
     if (location.bathrooms !== undefined) data.bathrooms = location.bathrooms;
     if (location.hasTents !== undefined) data.has_tents = location.hasTents;
     if (location.hasRefectory !== undefined) data.has_refectory = location.hasRefectory;
@@ -1253,6 +1255,7 @@ function mapSupabaseLocationToLocation(data: any): Location {
             return { lat, lng };
         })(),
         beds: data.beds,
+        accantonamentoCapacity: data.accantonamento_capacity,
         bathrooms: data.bathrooms,
         hasTents: data.has_tents,
         hasRefectory: data.has_refectory,

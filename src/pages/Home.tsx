@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Search, Filter, Plus, X, Check, Clock, Tent, BedDouble, Bus, Flame, Droplets } from 'lucide-react';
+import { Search, Filter, Plus, X, Check, Clock, Tent, BedDouble, Bus, Flame, Droplets, Home as HomeIcon } from 'lucide-react';
 import { getLocations, getUser, getUserLocationViews, getAllLocationHistory } from '@/lib/data';
 import { Location, User as UserType } from '@/types';
 import LocationCard from '@/components/LocationCard';
@@ -47,6 +47,8 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
     const [hasTents, setHasTents] = useState(false);
     const [hasBeds, setHasBeds] = useState(false);
     const [minBeds, setMinBeds] = useState<number | null>(null);
+    const [hasAccantonamento, setHasAccantonamento] = useState(false);
+    const [minAccantonamento, setMinAccantonamento] = useState<number | null>(null);
     const [hasHeating, setHasHeating] = useState(false);
     const [hasWaterPoints, setHasWaterPoints] = useState(false);
     const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
@@ -98,7 +100,7 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
             loc.commune.toLowerCase().includes(searchTerm.toLowerCase()) ||
             loc.region.toLowerCase().includes(searchTerm.toLowerCase());
 
-        // 2. Tents, Beds, Heating & Water Points
+        // 2. Tents, Beds, Accantonamento, Heating & Water Points
         const matchesTents = hasTents ? loc.hasTents : true;
         let matchesBeds = true;
         if (minBeds !== null && minBeds > 0) {
@@ -106,6 +108,14 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
         } else if (hasBeds) {
             matchesBeds = (loc.beds || 0) > 0;
         }
+
+        let matchesAccantonamento = true;
+        if (minAccantonamento !== null && minAccantonamento > 0) {
+            matchesAccantonamento = (loc.accantonamentoCapacity || 0) >= minAccantonamento;
+        } else if (hasAccantonamento) {
+            matchesAccantonamento = (loc.accantonamentoCapacity || 0) > 0;
+        }
+
         const matchesHeating = hasHeating ? !!loc.hasHeating : true;
         const matchesWaterPoints = hasWaterPoints ? !!loc.hasWaterPoints : true;
 
@@ -131,7 +141,7 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
             matchesStaleness = selectedStaleness.includes(info.level);
         }
 
-        return matchesSearch && matchesTents && matchesBeds && matchesHeating && matchesWaterPoints && matchesRegion && 
+        return matchesSearch && matchesTents && matchesBeds && matchesAccantonamento && matchesHeating && matchesWaterPoints && matchesRegion && 
                matchesBranch && matchesActivity && matchesStaleness;
     });
 
@@ -142,6 +152,7 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
         selectedStaleness.length +
         (hasTents ? 1 : 0) +
         ((minBeds !== null && minBeds > 0) || hasBeds ? 1 : 0) +
+        ((minAccantonamento !== null && minAccantonamento > 0) || hasAccantonamento ? 1 : 0) +
         (hasHeating ? 1 : 0) +
         (hasWaterPoints ? 1 : 0);
 
@@ -280,16 +291,24 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                             </div>
                         </div>
 
-                        {/* 2. Logistica & Numero Posti Letto */}
+                        {/* 2. Logistica, Posti Letto & Accantonamento */}
                         <div className="space-y-3">
                             <div className="flex justify-between items-center">
                                 <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 text-sm">
-                                    <BedDouble size={18} className="text-scout-blue" /> Logistica e Posti Letto
+                                    <BedDouble size={18} className="text-scout-blue" /> Logistica e Posti al Chiuso
                                 </h3>
-                                {(minBeds !== null || hasBeds || hasTents || hasHeating || hasWaterPoints) && (
+                                {(minBeds !== null || hasBeds || minAccantonamento !== null || hasAccantonamento || hasTents || hasHeating || hasWaterPoints) && (
                                     <button
                                         type="button"
-                                        onClick={() => { setMinBeds(null); setHasBeds(false); setHasTents(false); setHasHeating(false); setHasWaterPoints(false); }}
+                                        onClick={() => { 
+                                            setMinBeds(null); 
+                                            setHasBeds(false); 
+                                            setMinAccantonamento(null); 
+                                            setHasAccantonamento(false); 
+                                            setHasTents(false); 
+                                            setHasHeating(false); 
+                                            setHasWaterPoints(false); 
+                                        }}
                                         className="text-xs text-red-500 font-bold hover:underline cursor-pointer"
                                     >
                                         Azzera
@@ -297,8 +316,8 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                                 )}
                             </div>
 
-                            {/* Checkbox Tende / Letti / Riscaldamento / Punti d'acqua */}
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                            {/* Checkbox Tende / Letti / Accantonamento / Riscaldamento / Punti d'acqua */}
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
                                 <label className={cn(
                                     "flex items-center justify-center gap-1.5 p-2.5 border rounded-xl cursor-pointer transition-all text-xs font-bold",
                                     hasTents 
@@ -324,6 +343,23 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                                         className="hidden"
                                     />
                                     <span>🛏️ Letti</span>
+                                </label>
+                                <label className={cn(
+                                    "flex items-center justify-center gap-1.5 p-2.5 border rounded-xl cursor-pointer transition-all text-xs font-bold",
+                                    hasAccantonamento || (minAccantonamento !== null && minAccantonamento > 0)
+                                        ? "bg-amber-50 dark:bg-amber-950/30 border-amber-500 text-amber-800 dark:text-amber-300" 
+                                        : "bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-650 text-gray-700 dark:text-gray-300"
+                                )}>
+                                    <input
+                                        type="checkbox"
+                                        checked={hasAccantonamento || (minAccantonamento !== null && minAccantonamento > 0)}
+                                        onChange={e => {
+                                            setHasAccantonamento(e.target.checked);
+                                            if (!e.target.checked) setMinAccantonamento(null);
+                                        }}
+                                        className="hidden"
+                                    />
+                                    <span>🏠 Accantonamento</span>
                                 </label>
                                 <label className={cn(
                                     "flex items-center justify-center gap-1.5 p-2.5 border rounded-xl cursor-pointer transition-all text-xs font-bold",
@@ -358,8 +394,9 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                             {/* Filtro specifico per Numero Posti Letto Minimi */}
                             <div className="p-3.5 bg-gray-50 dark:bg-gray-700/40 rounded-2xl border border-gray-150 dark:border-gray-650 space-y-2.5">
                                 <div className="flex justify-between items-center">
-                                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
-                                        Posti letto minimi richiesti:
+                                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                                        <BedDouble size={15} className="text-scout-blue" />
+                                        Posti letto minimi (brandina/materasso):
                                     </span>
                                     {minBeds !== null && minBeds > 0 && (
                                         <span className="text-[11px] font-black text-scout-blue bg-blue-50 dark:bg-blue-950/40 px-2.5 py-0.5 rounded-full border border-blue-200 dark:border-blue-800/40">
@@ -406,7 +443,7 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                                 {/* Stepper numerico personalizzato */}
                                 <div className="flex items-center justify-between gap-3 pt-1">
                                     <span className="text-[11px] text-gray-500 dark:text-gray-400">
-                                        Oppure imposta un numero esatto:
+                                        Oppure imposta numero esatto letti:
                                     </span>
                                     <div className="flex items-center gap-1.5 shrink-0">
                                         <button
@@ -446,6 +483,107 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                                                 const next = current + 5;
                                                 setMinBeds(next);
                                                 setHasBeds(true);
+                                            }}
+                                            className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 flex items-center justify-center font-bold text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                                        >
+                                            +
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Filtro specifico per Numero Posti Accantonamento Minimi */}
+                            <div className="p-3.5 bg-amber-50/50 dark:bg-amber-950/20 rounded-2xl border border-amber-200/70 dark:border-amber-800/40 space-y-2.5">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                                        <HomeIcon size={15} className="text-amber-600 dark:text-amber-400" />
+                                        Posti accantonamento minimi (a terra):
+                                    </span>
+                                    {minAccantonamento !== null && minAccantonamento > 0 && (
+                                        <span className="text-[11px] font-black text-amber-800 dark:text-amber-200 bg-amber-100 dark:bg-amber-900/50 px-2.5 py-0.5 rounded-full border border-amber-300 dark:border-amber-700">
+                                            Almeno {minAccantonamento} a terra
+                                        </span>
+                                    )}
+                                </div>
+
+                                {/* Preset rapidi accantonamento */}
+                                <div className="grid grid-cols-5 gap-1.5">
+                                    {[
+                                        { label: 'Tutti', val: null },
+                                        { label: '15+', val: 15 },
+                                        { label: '25+', val: 25 },
+                                        { label: '40+', val: 40 },
+                                        { label: '60+', val: 60 },
+                                    ].map(preset => {
+                                        const isSelected = preset.val === null ? (minAccantonamento === null) : minAccantonamento === preset.val;
+                                        return (
+                                            <button
+                                                key={preset.label}
+                                                type="button"
+                                                onClick={() => {
+                                                    if (preset.val === null) {
+                                                        setMinAccantonamento(null);
+                                                    } else {
+                                                        setMinAccantonamento(preset.val);
+                                                        setHasAccantonamento(true);
+                                                    }
+                                                }}
+                                                className={cn(
+                                                    "py-2 px-1 rounded-xl text-xs font-bold border transition-all text-center cursor-pointer",
+                                                    isSelected
+                                                        ? "bg-amber-600 text-white border-amber-600 shadow-sm"
+                                                        : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-amber-500/40"
+                                                )}
+                                            >
+                                                {preset.label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Stepper numerico personalizzato per accantonamento */}
+                                <div className="flex items-center justify-between gap-3 pt-1">
+                                    <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                                        Oppure imposta numero esatto accantonamento:
+                                    </span>
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const current = minAccantonamento || 0;
+                                                const next = Math.max(0, current - 5);
+                                                setMinAccantonamento(next === 0 ? null : next);
+                                                if (next === 0) setHasAccantonamento(false);
+                                            }}
+                                            disabled={!minAccantonamento || minAccantonamento <= 0}
+                                            className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 flex items-center justify-center font-bold text-sm disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                                        >
+                                            -
+                                        </button>
+                                        <input
+                                            type="number"
+                                            min={0}
+                                            max={500}
+                                            placeholder="0"
+                                            value={minAccantonamento ?? ''}
+                                            onChange={e => {
+                                                const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
+                                                if (val === null || isNaN(val) || val <= 0) {
+                                                    setMinAccantonamento(null);
+                                                } else {
+                                                    setMinAccantonamento(val);
+                                                    setHasAccantonamento(true);
+                                                }
+                                            }}
+                                            className="w-16 py-1 px-1.5 text-center font-mono font-bold text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const current = minAccantonamento || 0;
+                                                const next = current + 5;
+                                                setMinAccantonamento(next);
+                                                setHasAccantonamento(true);
                                             }}
                                             className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 flex items-center justify-center font-bold text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
                                         >
@@ -528,6 +666,10 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                                         setHasTents(false);
                                         setHasBeds(false);
                                         setMinBeds(null);
+                                        setHasAccantonamento(false);
+                                        setMinAccantonamento(null);
+                                        setHasHeating(false);
+                                        setHasWaterPoints(false);
                                     }}
                                     className="w-full mt-3 text-gray-500 dark:text-gray-400 font-medium py-2 hover:text-gray-900 dark:hover:text-white"
                                 >
@@ -566,6 +708,32 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                                 type="button"
                                 onClick={() => setHasBeds(false)}
                                 className="hover:bg-green-200/50 rounded-full p-0.5 cursor-pointer"
+                            >
+                                <X size={12} />
+                            </button>
+                        </span>
+                    )}
+                    {minAccantonamento !== null && minAccantonamento > 0 && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/50 whitespace-nowrap">
+                            <HomeIcon size={13} />
+                            ≥ {minAccantonamento} a terra
+                            <button
+                                type="button"
+                                onClick={() => { setMinAccantonamento(null); setHasAccantonamento(false); }}
+                                className="hover:bg-amber-200/50 rounded-full p-0.5 cursor-pointer"
+                            >
+                                <X size={12} />
+                            </button>
+                        </span>
+                    )}
+                    {hasAccantonamento && (minAccantonamento === null || minAccantonamento === 0) && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/50 whitespace-nowrap">
+                            <HomeIcon size={13} />
+                            Accantonamento
+                            <button
+                                type="button"
+                                onClick={() => setHasAccantonamento(false)}
+                                className="hover:bg-amber-200/50 rounded-full p-0.5 cursor-pointer"
                             >
                                 <X size={12} />
                             </button>
@@ -656,6 +824,8 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                             setHasTents(false);
                             setHasBeds(false);
                             setMinBeds(null);
+                            setHasAccantonamento(false);
+                            setMinAccantonamento(null);
                             setHasHeating(false);
                             setHasWaterPoints(false);
                         }}
@@ -746,6 +916,8 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                                         setHasTents(false);
                                         setHasBeds(false);
                                         setMinBeds(null);
+                                        setHasAccantonamento(false);
+                                        setMinAccantonamento(null);
                                         setHasHeating(false);
                                         setHasWaterPoints(false);
                                     }}

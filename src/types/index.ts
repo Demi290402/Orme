@@ -226,7 +226,8 @@ export interface Location {
 
     // Optional
     coordinates?: { lat: number; lng: number };
-    beds?: number;
+    beds?: number; // Posti letto effettivi (brandine/letti con materasso forniti)
+    accantonamentoCapacity?: number; // Posti in accantonamento a terra con stuoino e sacco a pelo
     bathrooms?: number;
     hasTents: boolean;
     hasRefectory: boolean;

@@ -305,7 +305,7 @@ export default function AkelaAssistant() {
                 if (matches.length > 0) {
                     const bestMatch = matches[0];
                     return {
-                        reply: `🐺 Ho trovato il luogo perfetto nella nostra mappa delle Orme!\n\n📍 **${bestMatch.name}** (${bestMatch.commune || 'Comune non indicato'}, ${bestMatch.region})\n🏠 Posti letto: ${bestMatch.beds || 0} | ⛺ Posti tenda: ${bestMatch.hasTents ? 'Disponibili' : 'Non disponibili'}\n📝 Note rapide: ${bestMatch.quickNote || 'Nessuna nota'}\n\nTi porto al dettaglio del luogo... [REDIRECT: /location/${bestMatch.id}]`,
+                        reply: `🐺 Ho trovato il luogo perfetto nella nostra mappa delle Orme!\n\n📍 **${bestMatch.name}** (${bestMatch.commune || 'Comune non indicato'}, ${bestMatch.region})\n🛏️ Posti letto: ${bestMatch.beds || 0} | 🏠 Accantonamento: ${bestMatch.accantonamentoCapacity || 0} | ⛺ Posti tenda: ${bestMatch.hasTents ? 'Disponibili' : 'Non disponibili'}\n📝 Note rapide: ${bestMatch.quickNote || 'Nessuna nota'}\n\nTi porto al dettaglio del luogo... [REDIRECT: /location/${bestMatch.id}]`,
                         path: `/location/${bestMatch.id}`
                     };
                 } else {
@@ -394,7 +394,7 @@ export default function AkelaAssistant() {
                 setLastTopic('locations');
                 const bestMatch = locMatches[0];
                 return {
-                    reply: `🐺 Ho trovato questo luogo con lo stesso nome!\n\n📍 **${bestMatch.name}** (${bestMatch.commune || 'Comune non specificato'})\n🏠 Posti letto: ${bestMatch.beds || 0} | ⛺ Posti tenda: ${bestMatch.hasTents ? 'Sì' : 'No'}\n\nTi porto al dettaglio... [REDIRECT: /location/${bestMatch.id}]`,
+                    reply: `🐺 Ho trovato questo luogo con lo stesso nome!\n\n📍 **${bestMatch.name}** (${bestMatch.commune || 'Comune non specificato'})\n🛏️ Posti letto: ${bestMatch.beds || 0} | 🏠 Accantonamento: ${bestMatch.accantonamentoCapacity || 0} | ⛺ Posti tenda: ${bestMatch.hasTents ? 'Sì' : 'No'}\n\nTi porto al dettaglio... [REDIRECT: /location/${bestMatch.id}]`,
                     path: `/location/${bestMatch.id}`
                 };
             }

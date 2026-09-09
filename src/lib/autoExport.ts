@@ -61,6 +61,7 @@ export function flattenResource(key: string, rawData: any[]): any[] {
                 Comune: loc.commune,
                 Indirizzo: loc.address,
                 PostiLetto: loc.beds || 0,
+                PostiAccantonamento: loc.accantonamentoCapacity || 0,
                 Bagni: loc.bathrooms || 0,
                 Tende: loc.hasTents ? 'Sì' : 'No',
                 Refettorio: loc.hasRefectory ? 'Sì' : 'No',

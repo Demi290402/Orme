@@ -57,7 +57,10 @@ function buildPopupHtml(item: MappedLocation): string {
         badgesHtml += `<span class="inline-flex items-center gap-1 text-[10px] font-bold bg-green-50 text-green-700 dark:bg-emerald-950/40 dark:text-emerald-300 px-2 py-0.5 rounded-md border border-green-200 dark:border-emerald-800">🏕️ Tende</span>`;
     }
     if (loc.beds && loc.beds > 0) {
-        badgesHtml += `<span class="inline-flex items-center gap-1 text-[10px] font-bold bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300 px-2 py-0.5 rounded-md border border-red-200 dark:border-red-800">🏠 ${loc.beds} letti</span>`;
+        badgesHtml += `<span class="inline-flex items-center gap-1 text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 px-2 py-0.5 rounded-md border border-blue-200 dark:border-blue-800">🛏️ ${loc.beds} letti</span>`;
+    }
+    if (loc.accantonamentoCapacity && loc.accantonamentoCapacity > 0) {
+        badgesHtml += `<span class="inline-flex items-center gap-1 text-[10px] font-bold bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 px-2 py-0.5 rounded-md border border-amber-200 dark:border-amber-800">🏠 ${loc.accantonamentoCapacity} accantonamento</span>`;
     }
     if (loc.hasDisabledAccess) {
         badgesHtml += `<span class="inline-flex items-center gap-1 text-[10px] font-bold bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 px-2 py-0.5 rounded-md border border-purple-200 dark:border-purple-800">♿ Disabili</span>`;
