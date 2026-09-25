@@ -6,7 +6,10 @@ import {
     updateIscritto, 
     deleteIscritto,
     getImpostazioniIscrizione,
-    saveImpostazioniIscrizione 
+    saveImpostazioniIscrizione,
+    CLASSI,
+    calculateAge,
+    getClasseAttuale
 } from '@/lib/listaAttesa';
 import { ListaAttesa as IscrittoType } from '@/types';
 import { getUser } from '@/lib/data';
@@ -32,34 +35,6 @@ import {
     Clock
 } from 'lucide-react';
 
-const CLASSI = [
-    'Asilo',
-    '1a Elementare',
-    '2a Elementare',
-    '3a Elementare',
-    '4a Elementare',
-    '5a Elementare',
-    '1a Media',
-    '2a Media',
-    '3a Media',
-    '1a Superiore',
-    '2a Superiore',
-    '3a Superiore',
-    '4a Superiore',
-    '5a Superiore'
-];
-
-function calculateAge(birthDateStr: string): number {
-    const birthDate = new Date(birthDateStr);
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-        age--;
-    }
-    return isNaN(age) ? 0 : age;
-}
-
 function calculateDaysInList(registrationDateStr: string): number {
     const regDate = new Date(registrationDateStr);
     const today = new Date();
@@ -78,6 +53,7 @@ export default function ListaAttesa() {
     // Filters
     const [searchTerm, setSearchTerm] = useState('');
     const [filterClasse, setFilterClasse] = useState<string>('Tutti');
+    const [filterEta, setFilterEta] = useState<string>('Tutti');
 
     // Modals
     const [showAddModal, setShowAddModal] = useState(false);
@@ -498,13 +474,32 @@ export default function ListaAttesa() {
         }
     };
 
+    // Calcolo delle età presenti in lista per il filtro età
+    const availableAges = Array.from(
+        new Set(lista.map(i => calculateAge(i.dataNascita)).filter(a => a > 0))
+    ).sort((a, b) => a - b);
+
+    // Opzioni classi dinamiche per il filtro
+    const filterClassOptions = ['Tutti', ...CLASSI];
+    if (lista.some(i => getClasseAttuale(i) === 'Superiori concluse')) {
+        filterClassOptions.push('Superiori concluse');
+    }
+
     // Filter Logic
     const filteredLista = lista.filter(item => {
         const fullChildName = `${item.nomeRagazzo} ${item.cognomeRagazzo}`.toLowerCase();
         const parentName = item.nomeGenitore.toLowerCase();
-        const matchesSearch = fullChildName.includes(searchTerm.toLowerCase()) || parentName.includes(searchTerm.toLowerCase()) || item.telefonoGenitore.includes(searchTerm);
-        const matchesClasse = filterClasse === 'Tutti' || item.classe === filterClasse;
-        return matchesSearch && matchesClasse;
+        const matchesSearch = fullChildName.includes(searchTerm.toLowerCase()) || 
+                              parentName.includes(searchTerm.toLowerCase()) || 
+                              item.telefonoGenitore.includes(searchTerm);
+
+        const currentClasse = getClasseAttuale(item);
+        const matchesClasse = filterClasse === 'Tutti' || currentClasse === filterClasse;
+
+        const age = calculateAge(item.dataNascita);
+        const matchesEta = filterEta === 'Tutti' || age.toString() === filterEta;
+
+        return matchesSearch && matchesClasse && matchesEta;
     });
 
     const publicUrl = currentUser?.groupId ? `${window.location.origin}/iscrizione/${currentUser.groupId}` : '';
@@ -582,31 +577,49 @@ export default function ListaAttesa() {
                 <div className="bg-white dark:bg-gray-800 rounded-3xl p-5 border border-gray-150 dark:border-gray-750 text-center space-y-1.5">
                     <span className="text-[10px] uppercase font-black tracking-wider text-emerald-500">Asilo / Elementari</span>
                     <h2 className="text-3xl font-black text-emerald-500">
-                        {lista.filter(i => i.classe.includes('Asilo') || i.classe.includes('Elementare')).length}
+                        {lista.filter(i => {
+                            const c = getClasseAttuale(i);
+                            return c.includes('Asilo') || c.includes('Elementare');
+                        }).length}
                     </h2>
                 </div>
                 <div className="bg-white dark:bg-gray-800 rounded-3xl p-5 border border-gray-150 dark:border-gray-750 text-center space-y-1.5">
                     <span className="text-[10px] uppercase font-black tracking-wider text-amber-500">Medie</span>
                     <h2 className="text-3xl font-black text-amber-500">
-                        {lista.filter(i => i.classe.includes('Media')).length}
+                        {lista.filter(i => getClasseAttuale(i).includes('Media')).length}
                     </h2>
                 </div>
                 <div className="bg-white dark:bg-gray-800 rounded-3xl p-5 border border-gray-150 dark:border-gray-750 text-center space-y-1.5">
                     <span className="text-[10px] uppercase font-black tracking-wider text-indigo-500">Superiori</span>
                     <h2 className="text-3xl font-black text-indigo-500">
-                        {lista.filter(i => i.classe.includes('Superiore')).length}
+                        {lista.filter(i => getClasseAttuale(i).includes('Superiore')).length}
                     </h2>
                 </div>
             </div>
 
             {/* Filters panel */}
             <div className="bg-white dark:bg-gray-800 rounded-3xl p-5 border border-gray-150 dark:border-gray-750 shadow-xs space-y-4">
-                <div className="flex items-center gap-2 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-                    <Filter className="w-3.5 h-3.5" />
-                    Filtra & Cerca
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                        <Filter className="w-3.5 h-3.5" />
+                        Filtra & Cerca
+                    </div>
+                    {(searchTerm || filterClasse !== 'Tutti' || filterEta !== 'Tutti') && (
+                        <button
+                            onClick={() => {
+                                setSearchTerm('');
+                                setFilterClasse('Tutti');
+                                setFilterEta('Tutti');
+                            }}
+                            className="text-xs font-bold text-scout-green hover:underline flex items-center gap-1 cursor-pointer transition-colors"
+                        >
+                            <X className="w-3.5 h-3.5" />
+                            Azzera filtri
+                        </button>
+                    )}
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="relative">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    <div className="relative sm:col-span-2 md:col-span-1">
                         <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
                         <input
                             type="text"
@@ -624,9 +637,32 @@ export default function ListaAttesa() {
                             className="w-full px-3 py-2.5 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-xs focus:outline-hidden focus:ring-2 focus:ring-scout-green transition-all"
                         >
                             <option value="Tutti">Tutte le classi</option>
-                            {CLASSI.map((c) => (
-                                <option key={c} value={c}>{c}</option>
-                            ))}
+                            {filterClassOptions.filter(c => c !== 'Tutti').map((c) => {
+                                const count = lista.filter(i => getClasseAttuale(i) === c).length;
+                                return (
+                                    <option key={c} value={c}>
+                                        {c} {count > 0 ? `(${count})` : ''}
+                                    </option>
+                                );
+                            })}
+                        </select>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <label className="text-[10px] font-bold text-gray-400 shrink-0 uppercase">Età:</label>
+                        <select
+                            value={filterEta}
+                            onChange={(e) => setFilterEta(e.target.value)}
+                            className="w-full px-3 py-2.5 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-xs focus:outline-hidden focus:ring-2 focus:ring-scout-green transition-all"
+                        >
+                            <option value="Tutti">Tutte le età</option>
+                            {availableAges.map((age) => {
+                                const count = lista.filter(i => calculateAge(i.dataNascita) === age).length;
+                                return (
+                                    <option key={age} value={age.toString()}>
+                                        {age} anni ({count})
+                                    </option>
+                                );
+                            })}
                         </select>
                     </div>
                 </div>
@@ -658,6 +694,7 @@ export default function ListaAttesa() {
                                 {filteredLista.map((item) => {
                                     const age = calculateAge(item.dataNascita);
                                     const days = calculateDaysInList(item.dataIscrizione);
+                                    const currentClasse = getClasseAttuale(item);
                                     return (
                                         <tr key={item.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-750/30 transition-colors">
                                             <td className="p-4 pl-6 font-bold text-gray-900 dark:text-white">
@@ -669,8 +706,19 @@ export default function ListaAttesa() {
                                                 )}
                                             </td>
                                             <td className="p-4">
-                                                <span className="font-semibold text-gray-700 dark:text-gray-300">{age} anni</span>
-                                                <span className="block text-[10px] text-gray-400 dark:text-gray-500">{item.classe}</span>
+                                                <div className="font-bold text-gray-800 dark:text-gray-200">
+                                                    {age} anni
+                                                </div>
+                                                <div className="flex items-center gap-1.5 flex-wrap">
+                                                    <span className="text-xs font-semibold text-scout-green dark:text-emerald-400">
+                                                        {currentClasse}
+                                                    </span>
+                                                    {currentClasse !== item.classe && (
+                                                        <span className="text-[10px] text-gray-400 dark:text-gray-500" title={`Iscritto originariamente in ${item.classe}`}>
+                                                            (iscr. in {item.classe})
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td className="p-4">
                                                 <div className="font-medium text-gray-800 dark:text-gray-200 flex items-center gap-1">
@@ -761,7 +809,14 @@ export default function ListaAttesa() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Classe *</label>
+                                    <div className="flex justify-between items-center mb-1">
+                                        <label className="block text-[10px] font-bold text-gray-400 uppercase">Classe all'iscrizione *</label>
+                                        {dataNascita && classe && (
+                                            <span className="text-[9px] text-scout-green font-bold">
+                                                Attuale: {getClasseAttuale({ dataNascita, classe, dataIscrizione })}
+                                            </span>
+                                        )}
+                                    </div>
                                     <select
                                         required
                                         value={classe}

@@ -3,6 +3,139 @@ import { ListaAttesa, ImpostazioniIscrizione } from '@/types';
 import { getUser } from './data';
 import { isOnline, getCachedData, setCachedData, enqueueOfflineWrite } from './offline';
 
+export const CLASSI = [
+    'Asilo',
+    '1a Elementare',
+    '2a Elementare',
+    '3a Elementare',
+    '4a Elementare',
+    '5a Elementare',
+    '1a Media',
+    '2a Media',
+    '3a Media',
+    '1a Superiore',
+    '2a Superiore',
+    '3a Superiore',
+    '4a Superiore',
+    '5a Superiore'
+];
+
+/**
+ * Calcola l'età esatta in anni compiuti rispetto a oggi.
+ */
+export function calculateAge(birthDateStr: string): number {
+    if (!birthDateStr) return 0;
+    const birthDate = new Date(birthDateStr);
+    if (isNaN(birthDate.getTime())) return 0;
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+    }
+    return isNaN(age) ? 0 : Math.max(0, age);
+}
+
+/**
+ * Restituisce l'anno di inizio dell'anno scolastico per una certa data (es. 2026 per Settembre 2026 o Maggio 2027).
+ * L'anno scolastico in Italia inizia il 1° settembre (mese 8 con indice 0..11).
+ */
+export function getSchoolYear(dateStrOrObj?: string | Date): number {
+    const d = dateStrOrObj ? (typeof dateStrOrObj === 'string' ? new Date(dateStrOrObj) : dateStrOrObj) : new Date();
+    if (isNaN(d.getTime())) return new Date().getFullYear();
+    const year = d.getFullYear();
+    const month = d.getMonth(); // 0 = Gen ... 8 = Set ... 11 = Dic
+    return month >= 8 ? year : year - 1;
+}
+
+/**
+ * Calcola dinamicamente la classe scolastica attuale di un iscritto in base a:
+ * - Data di nascita (e anno di nascita / coorte scolastica)
+ * - Classe registrata all'iscrizione
+ * - Data di iscrizione (o createdAt)
+ * 
+ * Ogni 1° settembre (inizio nuovo anno scolastico), la classe avanza automaticamente di 1 anno.
+ * Gestisce l'Asilo (fino a 6 anni nell'anno solare) e riconcilia eventuali anomalie rispetto all'età.
+ */
+export function getClasseAttuale(item: {
+    dataNascita: string;
+    classe: string;
+    dataIscrizione?: string;
+    createdAt?: string;
+}): string {
+    if (!item) return '';
+    const registeredClass = (item.classe || '').trim();
+    if (!registeredClass) return '';
+
+    const currentSchoolYear = getSchoolYear(new Date());
+
+    // 1. Estrazione anno di nascita se presente
+    let birthYear: number | null = null;
+    if (item.dataNascita) {
+        const bDate = new Date(item.dataNascita);
+        if (!isNaN(bDate.getTime())) {
+            birthYear = bDate.getFullYear();
+        }
+    }
+
+    // 2. Anno scolastico al momento dell'iscrizione
+    const regDateStr = item.dataIscrizione || item.createdAt;
+    const regSchoolYear = regDateStr ? getSchoolYear(regDateStr) : currentSchoolYear;
+    const elapsedSchoolYears = Math.max(0, currentSchoolYear - regSchoolYear);
+
+    // Indice della classe registrata nell'array standard CLASSI
+    const regIndex = CLASSI.findIndex(c => c.toLowerCase() === registeredClass.toLowerCase());
+
+    // Se la classe registrata non appartiene allo standard CLASSI (es. testo libero o personalizzato)
+    if (regIndex === -1) {
+        return registeredClass;
+    }
+
+    // 3. Caso Asilo:
+    // In Italia la scuola dell'infanzia dura fino all'anno in cui il bambino compie 6 anni.
+    // L'ingresso in 1a Elementare avviene nel settembre dell'anno solare in cui compie 6 anni.
+    if (regIndex === 0 || registeredClass.toLowerCase() === 'asilo') {
+        if (birthYear !== null) {
+            const ageInSchoolYear = currentSchoolYear - birthYear;
+            if (ageInSchoolYear < 6) {
+                return 'Asilo';
+            }
+            const targetIndex = 1 + (ageInSchoolYear - 6);
+            if (targetIndex >= CLASSI.length) {
+                return 'Superiori concluse';
+            }
+            return CLASSI[targetIndex];
+        } else {
+            const targetIndex = regIndex + elapsedSchoolYears;
+            if (targetIndex >= CLASSI.length) return 'Superiori concluse';
+            return CLASSI[targetIndex];
+        }
+    }
+
+    // 4. Per elementari, medie e superiori:
+    // Avanza di 1 anno per ogni anno scolastico trascorso dalla data di iscrizione
+    let updatedIndex = regIndex + elapsedSchoolYears;
+
+    // 5. Coerenza con la data di nascita:
+    // Se un bambino è stato registrato in passato o importato con classe non allineata
+    // (es. bimbo di 8 anni ancora in 1a elementare), riallineiamo alla sua età teorica
+    if (birthYear !== null) {
+        const ageInSchoolYear = currentSchoolYear - birthYear;
+        if (ageInSchoolYear >= 6) {
+            const theoreticalIndex = 1 + (ageInSchoolYear - 6);
+            if (updatedIndex < theoreticalIndex - 1) {
+                updatedIndex = theoreticalIndex;
+            }
+        }
+    }
+
+    if (updatedIndex >= CLASSI.length) {
+        return 'Superiori concluse';
+    }
+
+    return CLASSI[updatedIndex];
+}
+
 /**
  * Recupera tutti gli iscritti in lista d'attesa associati al gruppo dell'utente corrente.
  */

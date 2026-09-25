@@ -1,4 +1,5 @@
 import { getLocations, getAllLocationHistory, getAllUsers } from './data';
+import { calculateAge, getClasseAttuale } from './listaAttesa';
 import * as XLSX from 'xlsx';
 
 // ─── TYPES ───────────────────────────────────────────
@@ -136,16 +137,30 @@ export function flattenResource(key: string, rawData: any[]): any[] {
             }));
             
         case 'lista_attesa':
-            return rawData.map((l: any) => ({
-                'Nome Ragazzo': l.nomeRagazzo || '',
-                'Cognome Ragazzo': l.cognomeRagazzo || '',
-                'Data Nascita': l.dataNascita ? new Date(l.dataNascita).toLocaleDateString('it-IT') : '',
-                'Classe Scolastica': l.classe || '',
-                'Genitore Referente': l.nomeGenitore || '',
-                'Telefono Genitore': l.telefonoGenitore || '',
-                'Note': l.note || '',
-                'Data Iscrizione': l.dataIscrizione ? new Date(l.dataIscrizione).toLocaleDateString('it-IT') : (l.createdAt ? new Date(l.createdAt).toLocaleDateString('it-IT') : '')
-            }));
+            return rawData.map((l: any) => {
+                const birthStr = l.dataNascita || l.data_nascita;
+                const age = birthStr ? calculateAge(birthStr) : 0;
+                const currentClasse = getClasseAttuale({
+                    dataNascita: birthStr,
+                    classe: l.classe || '',
+                    dataIscrizione: l.dataIscrizione || l.data_iscrizione,
+                    createdAt: l.createdAt || l.created_at
+                });
+                return {
+                    'Nome Ragazzo': l.nomeRagazzo || l.nome_ragazzo || '',
+                    'Cognome Ragazzo': l.cognomeRagazzo || l.cognome_ragazzo || '',
+                    'Data Nascita': birthStr ? new Date(birthStr).toLocaleDateString('it-IT') : '',
+                    'Età': age > 0 ? `${age} anni` : '',
+                    'Classe Attuale': currentClasse,
+                    'Classe all\'Iscrizione': l.classe || '',
+                    'Genitore Referente': l.nomeGenitore || l.nome_genitore || '',
+                    'Telefono Genitore': l.telefonoGenitore || l.telefono_genitore || '',
+                    'Note': l.note || '',
+                    'Data Iscrizione': (l.dataIscrizione || l.data_iscrizione) 
+                        ? new Date(l.dataIscrizione || l.data_iscrizione).toLocaleDateString('it-IT') 
+                        : (l.createdAt || l.created_at ? new Date(l.createdAt || l.created_at).toLocaleDateString('it-IT') : '')
+                };
+            });
             
         case 'trasporti':
             return rawData.map((t: any) => ({

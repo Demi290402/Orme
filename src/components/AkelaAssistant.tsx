@@ -6,7 +6,7 @@ import { matchScoutKnowledge, scoutKnowledgeBase } from '@/lib/scoutKnowledge';
 import { getLocations } from '@/lib/data';
 import { getVerbali } from '@/lib/verbali';
 import { getEventi } from '@/lib/calendario';
-import { getListaAttesa } from '@/lib/listaAttesa';
+import { getListaAttesa, getClasseAttuale, calculateAge } from '@/lib/listaAttesa';
 import { askAkelaBot, AIMessage } from '@/lib/ai';
 
 interface Message {
@@ -117,19 +117,19 @@ export default function AkelaAssistant() {
                     
                     if (has(['lc', 'l/c', 'lupett', 'coccinell', 'elementar', 'primari'])) {
                         filtered = lista.filter(item => {
-                            const cl = item.classe.toLowerCase();
+                            const cl = getClasseAttuale(item).toLowerCase();
                             return cl.includes('elem') || cl.includes('prim') || ['1a', '2a', '3a', '4a', '5a'].some(k => cl.includes(k));
                         });
                         filterDesc = 'della branca L/C (Lupetti e Coccinelle)';
                     } else if (has(['eg', 'e/g', 'esplorator', 'guid', 'medi'])) {
                         filtered = lista.filter(item => {
-                            const cl = item.classe.toLowerCase();
+                            const cl = getClasseAttuale(item).toLowerCase();
                             return cl.includes('med') || ['1a media', '2a media', '3a media'].some(k => cl.includes(k));
                         });
                         filterDesc = 'della branca E/G (Esploratori e Guide)';
                     } else if (has(['rs', 'r/s', 'rover', 'scolt'])) {
                         filtered = lista.filter(item => {
-                            const cl = item.classe.toLowerCase();
+                            const cl = getClasseAttuale(item).toLowerCase();
                             return cl.includes('rs') || cl.includes('rover') || cl.includes('scolt') || cl.includes('sup') || cl.includes('univ');
                         });
                         filterDesc = 'della branca R/S (Rover e Scolte)';
@@ -333,9 +333,12 @@ export default function AkelaAssistant() {
                 });
                 
                 if (matches.length > 0) {
-                    const list = matches.slice(0, 3).map(item =>
-                        `👦 **${item.nomeRagazzo} ${item.cognomeRagazzo}** (Classe scolastica: ${item.classe})\n📞 Genitore: ${item.nomeGenitore} (${item.telefonoGenitore})\n📝 Note: ${item.note || 'Nessuna nota'}`
-                    ).join('\n\n');
+                    const list = matches.slice(0, 3).map(item => {
+                        const age = calculateAge(item.dataNascita);
+                        const cl = getClasseAttuale(item);
+                        const origNotice = cl !== item.classe ? `, iscr. in ${item.classe}` : '';
+                        return `👦 **${item.nomeRagazzo} ${item.cognomeRagazzo}** (${age} anni - Classe attuale: ${cl}${origNotice})\n📞 Genitore: ${item.nomeGenitore} (${item.telefonoGenitore})\n📝 Note: ${item.note || 'Nessuna nota'}`;
+                    }).join('\n\n');
                     return {
                         reply: `🐺 Ho cercato nel registro della lista d'attesa! Ecco chi corrisponde a "${searchTermStr}":\n\n${list}\n\nTi reindirizzo alla gestione iscrizioni. [REDIRECT: /lista-attesa]`,
                         path: '/lista-attesa'
