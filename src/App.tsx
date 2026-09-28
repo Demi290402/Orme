@@ -26,6 +26,7 @@ import PrivacyPolicy from '@/pages/PrivacyPolicy';
 import Inventario from '@/pages/Inventario';
 import Bilancio from '@/pages/Bilancio';
 import ListaAttesa from '@/pages/ListaAttesa/ListaAttesa';
+import PersonalizzaFormIscrizione from '@/pages/ListaAttesa/PersonalizzaFormIscrizione';
 import IscrizionePubblica from '@/pages/Public/IscrizionePubblica';
 
 function App() {
@@ -63,6 +64,7 @@ function App() {
           <Route path="/inventario" element={<ProtectedRoute><Layout><GroupAccessGate><Inventario /></GroupAccessGate></Layout></ProtectedRoute>} />
           <Route path="/bilancio" element={<ProtectedRoute><Layout><GroupAccessGate><Bilancio /></GroupAccessGate></Layout></ProtectedRoute>} />
           <Route path="/lista-attesa" element={<ProtectedRoute><Layout><GroupAccessGate><ListaAttesa /></GroupAccessGate></Layout></ProtectedRoute>} />
+          <Route path="/lista-attesa/personalizza" element={<ProtectedRoute><Layout><GroupAccessGate><PersonalizzaFormIscrizione /></GroupAccessGate></Layout></ProtectedRoute>} />
           <Route path="/verbali" element={<ProtectedRoute><Layout><GroupAccessGate><VerbaliList /></GroupAccessGate></Layout></ProtectedRoute>} />
           <Route path="/verbali/nuovo" element={<ProtectedRoute><Layout><GroupAccessGate><VerbaleEditor /></GroupAccessGate></Layout></ProtectedRoute>} />
           <Route path="/verbali/modifica/:id" element={<ProtectedRoute><Layout><GroupAccessGate><VerbaleEditor /></GroupAccessGate></Layout></ProtectedRoute>} />

@@ -1,12 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
     getListaAttesa, 
     addIscritto, 
     addIscrittiBatch,
     updateIscritto, 
     deleteIscritto,
-    getImpostazioniIscrizione,
-    saveImpostazioniIscrizione,
     CLASSI,
     calculateAge,
     getClasseAttuale
@@ -46,6 +45,7 @@ function calculateDaysInList(registrationDateStr: string): number {
 }
 
 export default function ListaAttesa() {
+    const navigate = useNavigate();
     const [lista, setLista] = useState<IscrittoType[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentUser, setCurrentUser] = useState<any>(null);
@@ -59,19 +59,6 @@ export default function ListaAttesa() {
     const [showAddModal, setShowAddModal] = useState(false);
     const [showImportModal, setShowImportModal] = useState(false);
     const [showAutoModal, setShowAutoModal] = useState(false);
-    const [showSettingsModal, setShowSettingsModal] = useState(false);
-    const [settingsLoading, setSettingsLoading] = useState(false);
-    const [settingsSaving, setSettingsSaving] = useState(false);
-
-    // Settings fields states
-    const [formTitle, setFormTitle] = useState('');
-    const [welcomeTitle, setWelcomeTitle] = useState('');
-    const [descriptionText, setDescriptionText] = useState('');
-    const [footerText, setFooterText] = useState('');
-    const [bannerUrl, setBannerUrl] = useState('');
-    const [successTitle, setSuccessTitle] = useState('');
-    const [successMessage, setSuccessMessage] = useState('');
-    const [disclaimerText, setDisclaimerText] = useState('');
 
     const [editingIscritto, setEditingIscritto] = useState<IscrittoType | null>(null);
 
@@ -120,89 +107,6 @@ export default function ListaAttesa() {
         getUser().then(setCurrentUser).catch(console.error);
         fetchLista();
     }, []);
-
-    const handleBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            const maxSize = 800 * 1024; // max 800 KB
-            if (file.size > maxSize) {
-                alert('L\'immagine inserita è troppo grande (max 800 KB).\n\nCONSIGLIO: riduci le dimensioni dell\'immagine o fai uno screenshot.');
-                e.target.value = '';
-                return;
-            }
-
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const result = reader.result as string;
-                setBannerUrl(result);
-            };
-            reader.readAsDataURL(file);
-        }
-    };
-
-    const openSettingsModal = async () => {
-        if (!currentUser?.groupId) {
-            showToast('Errore: ID gruppo non trovato.', 'error');
-            return;
-        }
-        setShowSettingsModal(true);
-        setSettingsLoading(true);
-        try {
-            const settings = await getImpostazioniIscrizione(currentUser.groupId);
-            if (settings) {
-                setFormTitle(settings.formTitle);
-                setWelcomeTitle(settings.welcomeTitle);
-                setDescriptionText(settings.descriptionText);
-                setFooterText(settings.footerText);
-                setBannerUrl(settings.bannerUrl);
-                setSuccessTitle(settings.successTitle);
-                setSuccessMessage(settings.successMessage);
-                setDisclaimerText(settings.disclaimerText);
-            } else {
-                setFormTitle('Modulo richiesta inserimento negli scout');
-                setWelcomeTitle('🎉 Benvenuti nel grande gioco dello scoutismo! 🌲⛺');
-                setDescriptionText(`Ciao! Siamo felici che tu stia pensando di far vivere a tuo/a figlio/a l’avventura più bella di tutte: quella scout! 🐾\n\nCompilando questo modulo ci aiuterai a raccogliere le informazioni necessarie per organizzare al meglio le iscrizioni e per conoscerci un po’ prima di iniziare il cammino insieme.\n\nLo scoutismo è un mondo fatto di amicizia, natura, sorrisi e crescita personale — e non vediamo l’ora di accogliervi nella nostra grande famiglia! 💚✨`);
-                setFooterText('Pronti a partire?\n👉 Compila il modulo e... Buona Caccia! 🦊');
-                setBannerUrl('/scout_banner.png');
-                setSuccessTitle('Iscrizione Ricevuta!');
-                setSuccessMessage('Grazie per aver espresso la volontà di iscrivere {nomeRagazzo} {cognomeRagazzo} nel gruppo {groupName}.');
-                setDisclaimerText('Inviando questo modulo, acconsenti al trattamento dei dati personali forniti al fine di gestire l\'inserimento del minore nella lista d\'attesa del gruppo scout indicato, in conformità con le policy di privacy vigenti.');
-            }
-        } catch (err) {
-            console.error('Errore nel caricamento delle impostazioni:', err);
-        } finally {
-            setSettingsLoading(false);
-        }
-    };
-
-    const handleSaveSettings = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setSettingsSaving(true);
-        try {
-            const success = await saveImpostazioniIscrizione({
-                formTitle,
-                welcomeTitle,
-                descriptionText,
-                footerText,
-                bannerUrl,
-                successTitle,
-                successMessage,
-                disclaimerText
-            });
-
-            if (success) {
-                showToast('Impostazioni salvate con successo!');
-                setShowSettingsModal(false);
-            } else {
-                showToast('Errore durante il salvataggio.', 'error');
-            }
-        } catch (err) {
-            console.error('Errore nel salvataggio impostazioni:', err);
-            showToast('Errore di connessione', 'error');
-        } finally {
-            setSettingsSaving(false);
-        }
-    };
 
     const openEditModal = (iscritto: IscrittoType) => {
         setEditingIscritto(iscritto);
@@ -538,10 +442,10 @@ export default function ListaAttesa() {
                 </div>
                 <div className="flex flex-wrap gap-2 w-full md:w-auto">
                     <button
-                        onClick={openSettingsModal}
-                        className="flex-1 md:flex-initial px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/30 dark:hover:bg-indigo-950/50 dark:text-indigo-300 rounded-xl text-xs font-bold flex items-center justify-center gap-2 border border-indigo-100 dark:border-indigo-900/30 transition-all cursor-pointer animate-pulse"
+                        onClick={() => navigate('/lista-attesa/personalizza')}
+                        className="flex-1 md:flex-initial px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/30 dark:hover:bg-indigo-950/50 dark:text-indigo-300 rounded-xl text-xs font-bold flex items-center justify-center gap-2 border border-indigo-100 dark:border-indigo-900/30 transition-all cursor-pointer"
                     >
-                        <Sparkles className="w-4 h-4" />
+                        <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                         Personalizza Form
                     </button>
                     <button
@@ -1132,174 +1036,7 @@ export default function ListaAttesa() {
                 </div>
             )}
 
-            {/* Modal: Personalizza Form */}
-            {showSettingsModal && (
-                <div className="fixed inset-0 z-55 flex items-center justify-center p-4">
-                    <div className="fixed inset-0 bg-black/60 backdrop-blur-xs" onClick={() => setShowSettingsModal(false)} />
-                    <div className="bg-white dark:bg-gray-800 w-full max-w-2xl rounded-3xl p-6 md:p-8 z-10 border border-gray-150 dark:border-gray-750 shadow-2xl relative space-y-6 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
-                        <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-700 pb-3">
-                            <h3 className="font-extrabold text-base text-gray-900 dark:text-white flex items-center gap-2">
-                                <Sparkles className="w-5 h-5 text-indigo-500" />
-                                Personalizza Modulo Iscrizione
-                            </h3>
-                            <button onClick={() => setShowSettingsModal(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full dark:text-gray-400">
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
 
-                        {settingsLoading ? (
-                            <div className="py-12 text-center text-gray-500 dark:text-gray-400 text-xs">
-                                Caricamento impostazioni in corso...
-                            </div>
-                        ) : (
-                            <form onSubmit={handleSaveSettings} className="space-y-4 text-xs">
-                                <div className="space-y-3">
-                                    <h4 className="font-bold text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700 pb-1">
-                                        1. Intestazione & Copertina
-                                    </h4>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-gray-700 dark:text-gray-300 mb-1">Titolo Principale del Form</label>
-                                            <input
-                                                type="text"
-                                                required
-                                                value={formTitle}
-                                                onChange={(e) => setFormTitle(e.target.value)}
-                                                className="w-full px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-xs focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-gray-700 dark:text-gray-300 mb-1">Immagine Banner (Copertina)</label>
-                                            <div className="flex flex-col gap-2">
-                                                <div className="flex items-center gap-2">
-                                                    <input
-                                                        type="file"
-                                                        accept="image/*"
-                                                        onChange={handleBannerUpload}
-                                                        className="hidden"
-                                                        id="banner-upload"
-                                                    />
-                                                    <label
-                                                        htmlFor="banner-upload"
-                                                        className="px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/20 dark:text-indigo-300 rounded-xl text-xs font-bold border border-indigo-100 dark:border-indigo-900/30 transition-all cursor-pointer flex items-center gap-1.5"
-                                                    >
-                                                        Seleziona Immagine
-                                                    </label>
-                                                    {bannerUrl !== '/scout_banner.png' && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setBannerUrl('/scout_banner.png')}
-                                                            className="px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-950/20 dark:text-red-400 rounded-xl text-xs font-bold border border-red-100 dark:border-red-900/30 transition-all cursor-pointer"
-                                                        >
-                                                            Ripristina Default
-                                                        </button>
-                                                    )}
-                                                </div>
-                                                {bannerUrl && (
-                                                    <div className="relative w-full h-16 rounded-lg overflow-hidden border border-gray-250 dark:border-gray-700 bg-gray-100 dark:bg-gray-900">
-                                                        <img
-                                                            src={bannerUrl}
-                                                            alt="Banner Preview"
-                                                            className="w-full h-full object-cover"
-                                                        />
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-3">
-                                    <h4 className="font-bold text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700 pb-1">
-                                        2. Messaggi di Benvenuto
-                                    </h4>
-                                    <div>
-                                        <label className="block text-[10px] font-bold text-gray-700 dark:text-gray-300 mb-1">Titolo Benvenuto (es: emoji + testo)</label>
-                                        <input
-                                            type="text"
-                                            required
-                                            value={welcomeTitle}
-                                            onChange={(e) => setWelcomeTitle(e.target.value)}
-                                            className="w-full px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-xs focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
-                                        />
-                                    </div>
-                                    <div className="grid grid-cols-1 gap-3">
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-gray-700 dark:text-gray-300 mb-1">Descrizione Modulo (unico paragrafo, supporta a capo)</label>
-                                            <textarea
-                                                required
-                                                value={descriptionText}
-                                                onChange={(e) => setDescriptionText(e.target.value)}
-                                                rows={5}
-                                                className="w-full px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-xs focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
-                                            />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-[10px] font-bold text-gray-700 dark:text-gray-300 mb-1">Call to Action finale (Buona Caccia / Avvio)</label>
-                                        <textarea
-                                            required
-                                            value={footerText}
-                                            onChange={(e) => setFooterText(e.target.value)}
-                                            rows={2}
-                                            className="w-full px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-xs resize-none focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="space-y-3">
-                                    <h4 className="font-bold text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700 pb-1">
-                                        3. Schermata di Successo & Privacy
-                                    </h4>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-gray-700 dark:text-gray-300 mb-1">Titolo Successo (Iscrizione Ricevuta)</label>
-                                            <input
-                                                type="text"
-                                                required
-                                                value={successTitle}
-                                                onChange={(e) => setSuccessTitle(e.target.value)}
-                                                className="w-full px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-xs focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-gray-700 dark:text-gray-300 mb-1">Messaggio Successo</label>
-                                            <textarea
-                                                required
-                                                value={successMessage}
-                                                onChange={(e) => setSuccessMessage(e.target.value)}
-                                                rows={2}
-                                                className="w-full px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-xs resize-none focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
-                                            />
-                                            <span className="text-[9px] text-gray-400 font-normal block mt-1">
-                                                Usa segnaposto: {"{nomeRagazzo}"}, {"{cognomeRagazzo}"}, {"{groupName}"}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-[10px] font-bold text-gray-700 dark:text-gray-300 mb-1">Nota sulla Privacy / GDPR (in fondo)</label>
-                                        <textarea
-                                            required
-                                            value={disclaimerText}
-                                            onChange={(e) => setDisclaimerText(e.target.value)}
-                                            rows={2}
-                                            className="w-full px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-xs resize-none focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
-                                        />
-                                    </div>
-                                </div>
-
-                                <button
-                                    type="submit"
-                                    disabled={settingsSaving}
-                                    className="w-full bg-indigo-600 hover:bg-indigo-750 text-white font-extrabold py-3.5 rounded-xl text-xs transition-all shadow-md cursor-pointer disabled:opacity-50"
-                                >
-                                    {settingsSaving ? 'Salvataggio in corso...' : 'Salva Impostazioni'}
-                                </button>
-                            </form>
-                        )}
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

@@ -358,6 +358,48 @@ export interface ListaAttesa {
     createdAt?: string;
 }
 
+export type FormBlockType = 'question' | 'title_desc' | 'image' | 'section';
+export type QuestionType = 'short_text' | 'paragraph' | 'multiple_choice' | 'checkboxes' | 'dropdown' | 'date';
+
+export type CoreFieldKey = 'nomeRagazzo' | 'cognomeRagazzo' | 'dataNascita' | 'classe' | 'nomeGenitore' | 'telefonoGenitore' | 'note';
+
+export interface FormQuestion {
+    id: string;
+    type: 'question';
+    questionType: QuestionType;
+    title: string;
+    description?: string;
+    required: boolean;
+    options?: string[];
+    hasOtherOption?: boolean;
+    imageUrl?: string;
+    isCoreField?: boolean;
+    coreMapping?: CoreFieldKey;
+}
+
+export interface FormTitleDesc {
+    id: string;
+    type: 'title_desc';
+    title: string;
+    description: string;
+}
+
+export interface FormImage {
+    id: string;
+    type: 'image';
+    imageUrl: string;
+    title?: string;
+}
+
+export interface FormSection {
+    id: string;
+    type: 'section';
+    title: string;
+    description?: string;
+}
+
+export type FormBlock = FormQuestion | FormTitleDesc | FormImage | FormSection;
+
 export interface ImpostazioniIscrizione {
     groupId: string;
     formTitle: string;
@@ -368,6 +410,7 @@ export interface ImpostazioniIscrizione {
     successTitle: string;
     successMessage: string;
     disclaimerText: string;
+    formSchema?: FormBlock[];
     createdAt?: string;
 }
 

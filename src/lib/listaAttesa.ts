@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { ListaAttesa, ImpostazioniIscrizione } from '@/types';
+import { ListaAttesa, ImpostazioniIscrizione, FormBlock, FormQuestion } from '@/types';
 import { getUser } from './data';
 import { isOnline, getCachedData, setCachedData, enqueueOfflineWrite } from './offline';
 
@@ -433,7 +433,7 @@ export async function saveImpostazioniIscrizione(
         const currentUser = await getUser();
         if (!currentUser.groupId) throw new Error('Utente non associato a un gruppo scout');
 
-        const upsertData = {
+        const upsertData: any = {
             group_id: currentUser.groupId,
             form_title: settings.formTitle.trim(),
             welcome_title: settings.welcomeTitle.trim(),
@@ -444,6 +444,10 @@ export async function saveImpostazioniIscrizione(
             success_message: settings.successMessage.trim(),
             disclaimer_text: settings.disclaimerText.trim()
         };
+
+        if (settings.formSchema !== undefined) {
+            upsertData.form_schema = settings.formSchema;
+        }
 
         if (!isOnline()) {
             enqueueOfflineWrite('upsert', 'impostazioni_iscrizione', upsertData, { group_id: currentUser.groupId });
@@ -460,23 +464,50 @@ export async function saveImpostazioniIscrizione(
         if (selectError) throw selectError;
 
         let result;
-        if (existing) {
-            const { data, error: updateError } = await supabase
-                .from('impostazioni_iscrizione')
-                .update(upsertData)
-                .eq('group_id', currentUser.groupId)
-                .select()
-                .single();
-            if (updateError) throw updateError;
-            result = data;
-        } else {
-            const { data, error: insertError } = await supabase
-                .from('impostazioni_iscrizione')
-                .insert(upsertData)
-                .select()
-                .single();
-            if (insertError) throw insertError;
-            result = data;
+        try {
+            if (existing) {
+                const { data, error: updateError } = await supabase
+                    .from('impostazioni_iscrizione')
+                    .update(upsertData)
+                    .eq('group_id', currentUser.groupId)
+                    .select()
+                    .single();
+                if (updateError) throw updateError;
+                result = data;
+            } else {
+                const { data, error: insertError } = await supabase
+                    .from('impostazioni_iscrizione')
+                    .insert(upsertData)
+                    .select()
+                    .single();
+                if (insertError) throw insertError;
+                result = data;
+            }
+        } catch (dbError: any) {
+            // Se la colonna form_schema non esiste ancora su Supabase (errore 42703),
+            // salva i campi standard sul database e mantieni form_schema in cache locale
+            if (dbError?.code === '42703' || dbError?.message?.includes('form_schema')) {
+                console.warn('Colonna form_schema non ancora presente in Supabase. Salvataggio fallback...');
+                delete upsertData.form_schema;
+                if (existing) {
+                    const { data } = await supabase
+                        .from('impostazioni_iscrizione')
+                        .update(upsertData)
+                        .eq('group_id', currentUser.groupId)
+                        .select()
+                        .single();
+                    result = { ...data, form_schema: settings.formSchema };
+                } else {
+                    const { data } = await supabase
+                        .from('impostazioni_iscrizione')
+                        .insert(upsertData)
+                        .select()
+                        .single();
+                    result = { ...data, form_schema: settings.formSchema };
+                }
+            } else {
+                throw dbError;
+            }
         }
 
         setCachedData(`impostazioni_iscrizione_${currentUser.groupId}`, result);
@@ -488,6 +519,19 @@ export async function saveImpostazioniIscrizione(
 }
 
 function mapDbRowToImpostazioni(row: any): ImpostazioniIscrizione {
+    let formSchema: FormBlock[] | undefined = undefined;
+    if (row.form_schema) {
+        if (typeof row.form_schema === 'string') {
+            try {
+                formSchema = JSON.parse(row.form_schema);
+            } catch (e) {
+                console.warn('Errore parsing form_schema JSON:', e);
+            }
+        } else if (Array.isArray(row.form_schema)) {
+            formSchema = row.form_schema;
+        }
+    }
+
     return {
         groupId: row.group_id,
         formTitle: row.form_title,
@@ -498,6 +542,200 @@ function mapDbRowToImpostazioni(row: any): ImpostazioniIscrizione {
         successTitle: row.success_title,
         successMessage: row.success_message,
         disclaimerText: row.disclaimer_text,
+        formSchema: formSchema,
         createdAt: row.created_at
     };
 }
+
+/**
+ * Blocchi standard del modulo iscrizione predefinito
+ */
+export const DEFAULT_FORM_BLOCKS: FormBlock[] = [
+    {
+        id: 'sec-famiglia',
+        type: 'section',
+        title: 'Dati di Contatto Famiglia',
+        description: 'I recapiti del genitore o tutore per le comunicazioni di gruppo.'
+    },
+    {
+        id: 'core-genitore',
+        type: 'question',
+        questionType: 'short_text',
+        title: 'Nome e Cognome Genitore / Tutore',
+        description: 'Referente principale per le comunicazioni.',
+        required: true,
+        isCoreField: true,
+        coreMapping: 'nomeGenitore'
+    },
+    {
+        id: 'core-telefono',
+        type: 'question',
+        questionType: 'short_text',
+        title: 'Numero di Telefono (WhatsApp)',
+        description: 'Numero cellulare su cui ricevere comunicazioni e avvisi.',
+        required: true,
+        isCoreField: true,
+        coreMapping: 'telefonoGenitore'
+    },
+    {
+        id: 'sec-ragazzo',
+        type: 'section',
+        title: 'Dati del Bambino / Ragazzo',
+        description: 'Informazioni anagrafiche del futuro lupetto, coccinella, esploratore o guida.'
+    },
+    {
+        id: 'core-nome',
+        type: 'question',
+        questionType: 'short_text',
+        title: 'Nome del Ragazzo / Bambino',
+        required: true,
+        isCoreField: true,
+        coreMapping: 'nomeRagazzo'
+    },
+    {
+        id: 'core-cognome',
+        type: 'question',
+        questionType: 'short_text',
+        title: 'Cognome del Ragazzo / Bambino',
+        required: true,
+        isCoreField: true,
+        coreMapping: 'cognomeRagazzo'
+    },
+    {
+        id: 'core-nascita',
+        type: 'question',
+        questionType: 'date',
+        title: 'Data di Nascita',
+        description: 'Indispensabile per verificare l\'annata di ingresso nella branca corretta.',
+        required: true,
+        isCoreField: true,
+        coreMapping: 'dataNascita'
+    },
+    {
+        id: 'core-classe',
+        type: 'question',
+        questionType: 'dropdown',
+        title: 'Classe Scolastica frequentata',
+        description: 'Classe frequentata nell\'anno scolastico in corso.',
+        required: true,
+        isCoreField: true,
+        coreMapping: 'classe',
+        options: [...CLASSI]
+    },
+    {
+        id: 'core-note',
+        type: 'question',
+        questionType: 'paragraph',
+        title: 'Note o Informazioni Aggiuntive',
+        description: 'Segnala eventuali fratelli già in gruppo, preferenze di contatto o altre note.',
+        required: false,
+        isCoreField: true,
+        coreMapping: 'note'
+    }
+];
+
+export interface ScoutQuestionTemplate {
+    category: string;
+    questions: FormQuestion[];
+}
+
+export const SCOUT_QUESTION_TEMPLATES: ScoutQuestionTemplate[] = [
+    {
+        category: 'Famiglia & Fratelli',
+        questions: [
+            {
+                id: 'tmpl-fratelli',
+                type: 'question',
+                questionType: 'multiple_choice',
+                title: 'Ci sono altri fratelli o sorelle già iscritti in questo gruppo scout?',
+                required: false,
+                options: ['Sì', 'No'],
+                hasOtherOption: true
+            },
+            {
+                id: 'tmpl-genitori-scout',
+                type: 'question',
+                questionType: 'multiple_choice',
+                title: 'Uno dei genitori o parenti è stato scout in passato?',
+                required: false,
+                options: ['Sì, nello stesso gruppo', 'Sì, in un altro gruppo scout', 'No']
+            },
+            {
+                id: 'tmpl-aiuto-genitori',
+                type: 'question',
+                questionType: 'checkboxes',
+                title: 'Come genitori, avete disponibilità o competenze per dare una mano al gruppo in caso di bisogno?',
+                required: false,
+                options: [
+                    'Trasporti e passaggi con auto/furgone',
+                    'Lavori manuali, manutenzione sede e falegnameria',
+                    'Cucina per eventi o campi',
+                    'Supporto organizzativo o logistico'
+                ],
+                hasOtherOption: true
+            }
+        ]
+    },
+    {
+        category: 'Salute & Attenzioni',
+        questions: [
+            {
+                id: 'tmpl-allergie',
+                type: 'question',
+                questionType: 'multiple_choice',
+                title: 'Il ragazzo/a presenta allergie o intolleranze alimentari?',
+                required: true,
+                options: ['Nessuna allergia nota', 'Sì, allergia o intolleranza (specificare)'],
+                hasOtherOption: true
+            },
+            {
+                id: 'tmpl-nuoto',
+                type: 'question',
+                questionType: 'multiple_choice',
+                title: 'Capacità di nuotare',
+                required: false,
+                options: ['Sa nuotare con sicurezza', 'Galleggia / poco sicuro', 'Non sa nuotare']
+            },
+            {
+                id: 'tmpl-salute-note',
+                type: 'question',
+                questionType: 'paragraph',
+                title: 'Ci sono attenzioni particolari o indicazioni che i capi dovrebbero conoscere?',
+                required: false
+            }
+        ]
+    },
+    {
+        category: 'Fede & Sacramenti',
+        questions: [
+            {
+                id: 'tmpl-battesimo',
+                type: 'question',
+                questionType: 'multiple_choice',
+                title: 'Sacramenti ricevuti',
+                required: false,
+                options: [
+                    'Battesimo',
+                    'Battesimo e Prima Comunione',
+                    'Cresima',
+                    'Nessun sacramento / Altro percorso'
+                ],
+                hasOtherOption: true
+            }
+        ]
+    },
+    {
+        category: 'Privacy & Consensi',
+        questions: [
+            {
+                id: 'tmpl-foto',
+                type: 'question',
+                questionType: 'multiple_choice',
+                title: 'Consenso all\'uso di foto e video per attività interne di gruppo',
+                description: 'Foto per diari di bordo, cartelloni di sede e giornalino di gruppo.',
+                required: true,
+                options: ['Acconsento', 'Non acconsento']
+            }
+        ]
+    }
+];
