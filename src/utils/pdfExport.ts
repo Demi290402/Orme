@@ -16,6 +16,122 @@ if (pdfMakeAny && !pdfMakeAny.vfs && vfs) {
 }
 
 /**
+ * Sanitizza ricorsivamente l'albero AST generato da html-to-pdfmake
+ * per garantire che pdfMake non fallisca in nessun caso limite:
+ * - Rimuove proprietà `font` non registrate nel VFS (es. 'Inherit', 'Sans-serif', 'Arial')
+ * - Normalizza e bilancia tutte le tabelle (evita "Malformed table row, a cell is undefined" o righe vuote)
+ * - Sostituisce immagini remote non caricate nel VFS per evitare crash di pdfMake
+ */
+function sanitizePdfMakeDoc(node: any): any {
+    if (!node) return node;
+
+    if (Array.isArray(node)) {
+        return node.map(sanitizePdfMakeDoc).filter(Boolean);
+    }
+
+    if (typeof node === 'object') {
+        // 1. Rimuovi font non definiti nel VFS di pdfMake (supporta nativamente Roboto)
+        if (node.font && node.font !== 'Roboto') {
+            delete node.font;
+        }
+
+        // 2. Normalizza e convalida le tabelle
+        if (node.table) {
+            if (!Array.isArray(node.table.body) || node.table.body.length === 0) {
+                // Tabella senza righe: riga neutra valida per evitare TypeError di pdfMake
+                node.table.body = [[{ text: '' }]];
+            } else {
+                let maxCols = 0;
+                node.table.body.forEach((row: any) => {
+                    if (Array.isArray(row)) {
+                        maxCols = Math.max(maxCols, row.length);
+                    }
+                });
+
+                if (maxCols === 0) {
+                    node.table.body = [[{ text: '' }]];
+                    maxCols = 1;
+                } else {
+                    node.table.body = node.table.body.map((row: any) => {
+                        if (!Array.isArray(row)) return Array(maxCols).fill({ text: '' });
+                        const newRow = [...row];
+                        while (newRow.length < maxCols) {
+                            newRow.push({ text: '' });
+                        }
+                        return newRow.map((cell: any) => sanitizePdfMakeDoc(cell));
+                    });
+                }
+
+                // Assicura che widths sia sincronizzato con maxCols
+                if (!node.table.widths || !Array.isArray(node.table.widths) || node.table.widths.length !== maxCols) {
+                    node.table.widths = Array(maxCols).fill('*');
+                }
+            }
+        }
+
+        // 3. Gestisci immagini: se non sono dataURL e non sono presenti nel VFS, sostituiscile con placeholder
+        if (node.image && typeof node.image === 'string') {
+            if (!node.image.startsWith('data:image/')) {
+                if (!pdfMakeAny.vfs || !pdfMakeAny.vfs[node.image]) {
+                    return { text: '[Immagine]', italics: true, color: '#666666' };
+                }
+            }
+        }
+
+        // 4. Ricorsione sui contenitori annidati
+        if (Array.isArray(node.stack)) {
+            node.stack = node.stack.map(sanitizePdfMakeDoc).filter(Boolean);
+        }
+        if (Array.isArray(node.columns)) {
+            node.columns = node.columns.map(sanitizePdfMakeDoc).filter(Boolean);
+        }
+        if (Array.isArray(node.text)) {
+            node.text = node.text.map(sanitizePdfMakeDoc);
+        }
+    }
+
+    return node;
+}
+
+/**
+ * Fallback di emergenza basato su html2pdf.js nel caso in cui la generazione vettoriale pdfMake fallisca.
+ */
+async function fallbackExportWithHtml2Pdf(contentHtml: string, filename: string): Promise<void> {
+    console.warn("PDF Export Engine: Attivazione fallback robusto con html2pdf.js...");
+    const container = document.createElement('div');
+    container.style.position = 'fixed';
+    container.style.left = '-9999px';
+    container.style.top = '0';
+    container.style.width = '750px';
+    container.style.background = '#ffffff';
+    container.style.color = '#111111';
+    container.style.padding = '30px';
+    container.style.fontFamily = 'Arial, sans-serif';
+    container.style.fontSize = '12px';
+    container.style.lineHeight = '1.5';
+    container.innerHTML = contentHtml;
+    document.body.appendChild(container);
+
+    try {
+        const html2pdfModule = await import('html2pdf.js');
+        const html2pdf = (html2pdfModule.default || html2pdfModule) as any;
+        const opt = {
+            margin: [10, 10, 10, 10],
+            filename: filename,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true, logging: false },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+        await html2pdf().set(opt).from(container).save();
+        console.log("PDF Export Fallback: Generato e scaricato con successo!");
+    } finally {
+        if (container.parentNode) {
+            container.parentNode.removeChild(container);
+        }
+    }
+}
+
+/**
  * Genera e scarica un PDF vettoriale (testo selezionabile e multi-pagina) del verbale
  * usando pdfmake e html-to-pdfmake. Questo aggira qualsiasi limitazione del rendering CSS su Canvas.
  */
@@ -115,22 +231,34 @@ export async function exportVerbaleToPdf(
         }
     } catch(e) { console.error("Could not fetch images for PDF", e); }
 
+    const dateObj = verbale.data ? new Date(verbale.data) : new Date();
+    const dd = String(dateObj.getDate()).padStart(2, '0');
+    const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const yy = String(dateObj.getFullYear()).slice(-2);
+    const filename = `Verbale ${dd}-${mm}-${yy}.pdf`;
+
     try {
         console.log("PDF Export Engine: parsing HTML with html-to-pdfmake...");
         
-        // Impostiamo defaultStyles per evitare margini doppi tra paragrafi e liste
+        // Impostiamo defaultStyles per evitare margini doppi tra paragrafi e liste ed ignoriamo font-family
         const parsedContent = htmlToPdfmake(contentHtml, { 
             window: window as any,
+            ignoreStyles: ['font-family'],
             defaultStyles: {
                 p: { margin: [0, 0, 0, 4] },
                 div: { margin: [0, 0, 0, 2] },
                 ul: { margin: [0, 0, 0, 5] },
-                li: { margin: [0, 0, 0, 2] }
+                li: { margin: [0, 0, 0, 2] },
+                table: { margin: [0, 6, 0, 6] },
+                th: { bold: true, fillColor: '#EEEEEE' }
             }
         });
 
+        // Sanificazione profonda dell'AST per prevenire crash di pdfMake (tabelle asimmetriche, font non caricati, immagini remote)
+        const sanitizedContent = sanitizePdfMakeDoc(parsedContent);
+
         const docDefinition = {
-            content: parsedContent,
+            content: sanitizedContent,
             header: {
                 margin: [40, 20, 40, 0] as [number, number, number, number],
                 stack: [
@@ -207,19 +335,18 @@ export async function exportVerbaleToPdf(
             }
         };
 
-        const dateObj = verbale.data ? new Date(verbale.data) : new Date();
-        const dd = String(dateObj.getDate()).padStart(2, '0');
-        const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
-        const yy = String(dateObj.getFullYear()).slice(-2);
-        const filename = `Verbale ${dd}-${mm}-${yy}.pdf`;
-
         console.log("PDF Export Engine: Generating vectorial PDF with pdfMake...");
         // Usa pdfMake per generare e scaricare nativamente il PDF (senza dipendere dal canvas)
-        pdfMake.createPdf(docDefinition).download(filename);
+        await (pdfMake.createPdf(docDefinition) as any).download(filename);
         
         console.log("PDF Export Engine: Vectorial PDF generated successfully!");
     } catch (error) {
-        console.error("PDF Export Error Detailed:", error);
-        throw error;
+        console.warn("PDF Export Engine (pdfMake) encountered an error, falling back to html2pdf:", error);
+        try {
+            await fallbackExportWithHtml2Pdf(contentHtml, filename);
+        } catch (fallbackErr) {
+            console.error("PDF Export Fallback Error Detailed:", fallbackErr);
+            throw fallbackErr;
+        }
     }
 }

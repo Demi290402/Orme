@@ -420,8 +420,8 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                             isExporting ? "opacity-50 cursor-not-allowed" : "hover:bg-red-700 active:scale-95"
                         )}
                     >
-                        <FileDown size={16} />
-                        Scarica PDF
+                        {isExporting ? <RotateCw size={16} className="animate-spin" /> : <FileDown size={16} />}
+                        {isExporting ? "Generazione PDF..." : "Scarica PDF"}
                     </button>)}
                 </div>
 
