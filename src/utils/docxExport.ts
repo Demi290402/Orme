@@ -1,7 +1,7 @@
 import { 
     Document, Packer, Paragraph, TextRun, AlignmentType, 
     Table, TableRow, TableCell, WidthType, BorderStyle,
-    ImageRun, Header, Footer, VerticalAlign
+    ImageRun, Header, Footer, VerticalAlign, UnderlineType, PageNumber
 } from 'docx';
 import { saveAs } from 'file-saver';
 import { Verbale, MembroCoCa, User } from '@/types';
@@ -20,6 +20,37 @@ async function fetchImageAsBuffer(url: string): Promise<ArrayBuffer> {
 }
 
 /**
+ * Strips XML invalid control characters that corrupt DOCX files
+ */
+function sanitizeDocxText(text: string): string {
+    if (!text) return "";
+    return text.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
+}
+
+/**
+ * Parses CSS colors into 6-digit hex string without '#'
+ */
+function parseColorToHex(colorStr?: string): string | undefined {
+    if (!colorStr) return undefined;
+    const s = colorStr.trim();
+    if (s.startsWith('#')) {
+        const hex = s.replace('#', '').toUpperCase();
+        if (hex.length === 3) {
+            return hex.split('').map(c => c + c).join('');
+        }
+        if (hex.length === 6) return hex;
+    }
+    const rgbMatch = s.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+    if (rgbMatch) {
+        const r = parseInt(rgbMatch[1], 10).toString(16).padStart(2, '0');
+        const g = parseInt(rgbMatch[2], 10).toString(16).padStart(2, '0');
+        const b = parseInt(rgbMatch[3], 10).toString(16).padStart(2, '0');
+        return `${r}${g}${b}`.toUpperCase();
+    }
+    return undefined;
+}
+
+/**
  * Strips HTML tags and sanitizes text for XML (DOCX)
  */
 function cleanText(html: string): string {
@@ -27,111 +58,311 @@ function cleanText(html: string): string {
     const tmp = document.createElement("DIV");
     tmp.innerHTML = html;
     const text = tmp.textContent || tmp.innerText || "";
-    // Remove control characters that might corrupt DOCX XML
-    return text.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
+    return sanitizeDocxText(text);
+}
+
+interface InlineStyle {
+    bold?: boolean;
+    italics?: boolean;
+    underline?: boolean;
+    strike?: boolean;
+    color?: string;
+    size?: number; // half-points (20 = 10pt)
+    font?: string;
 }
 
 /**
- * Parses basic HTML to an array of DOCX Paragraphs to preserve line breaks
+ * Recursively parses inline formatting (bold, italics, underline, color, breaks) into TextRun[]
  */
-function parseHtmlToDocxParagraphs(html: string, baseOptions: any = {}): (Paragraph | Table)[] {
-    if (!html) return [];
+function parseInlineRuns(node: Node, currentStyle: InlineStyle = {}): TextRun[] {
+    const runs: TextRun[] = [];
 
-    // Check if HTML contains tables
-    if (html.includes('<table')) {
-        const container = document.createElement("DIV");
-        container.innerHTML = html;
-        const result: (Paragraph | Table)[] = [];
+    if (node.nodeType === Node.TEXT_NODE) {
+        const text = sanitizeDocxText(node.textContent || "");
+        if (text) {
+            runs.push(new TextRun({
+                text: text,
+                bold: currentStyle.bold,
+                italics: currentStyle.italics,
+                underline: currentStyle.underline ? { type: UnderlineType.SINGLE } : undefined,
+                strike: currentStyle.strike,
+                color: currentStyle.color,
+                size: currentStyle.size || 20,
+                font: currentStyle.font || "Roboto"
+            }));
+        }
+        return runs;
+    }
 
-        Array.from(container.childNodes).forEach(node => {
-            if (node.nodeType === Node.ELEMENT_NODE && (node as Element).tagName.toLowerCase() === 'table') {
-                const tableEl = node as HTMLTableElement;
-                const docxRows: TableRow[] = [];
+    if (node.nodeType === Node.ELEMENT_NODE) {
+        const el = node as HTMLElement;
+        const tag = el.tagName.toLowerCase();
 
-                Array.from(tableEl.rows).forEach(row => {
-                    const isHeader = row.closest('thead') !== null || row.querySelector('th') !== null;
-                    const docxCells: TableCell[] = [];
+        if (tag === 'br') {
+            runs.push(new TextRun({ break: 1, size: currentStyle.size || 20, font: currentStyle.font || "Roboto" }));
+            return runs;
+        }
 
-                    Array.from(row.cells).forEach(cell => {
-                        const cellText = cleanText(cell.innerHTML.replace(/<br\s*\/?>/gi, '\n'));
-                        let fillHex = isHeader ? "F3F4F6" : undefined;
-                        const bg = cell.style.backgroundColor;
-                        if (bg && bg.startsWith('#')) {
-                            fillHex = bg.replace('#', '').toUpperCase();
-                        }
+        const nextStyle: InlineStyle = { ...currentStyle };
 
-                        const lines = cellText.split('\n').filter(Boolean);
-                        const cellParagraphs = lines.length > 0 
-                            ? lines.map(line => new Paragraph({
-                                children: [new TextRun({ 
-                                    text: line, 
-                                    bold: isHeader, 
-                                    size: baseOptions.textRun?.size || 20, 
-                                    font: baseOptions.textRun?.font || "Roboto" 
-                                })],
-                                spacing: { before: 40, after: 40 }
-                            }))
-                            : [new Paragraph({ children: [new TextRun({ text: " ", size: 20 })] })];
+        if (tag === 'strong' || tag === 'b' || el.style.fontWeight === 'bold' || parseInt(el.style.fontWeight, 10) >= 600) {
+            nextStyle.bold = true;
+        }
+        if (tag === 'em' || tag === 'i' || el.style.fontStyle === 'italic') {
+            nextStyle.italics = true;
+        }
+        if (tag === 'u' || el.style.textDecoration?.includes('underline')) {
+            nextStyle.underline = true;
+        }
+        if (tag === 's' || tag === 'del' || tag === 'strike' || el.style.textDecoration?.includes('line-through')) {
+            nextStyle.strike = true;
+        }
+        if (el.style.color) {
+            const hex = parseColorToHex(el.style.color);
+            if (hex) nextStyle.color = hex;
+        }
 
-                        docxCells.push(new TableCell({
-                            children: cellParagraphs,
-                            shading: fillHex ? { fill: fillHex } : undefined,
-                            margins: { top: 120, bottom: 120, left: 160, right: 160 }
-                        }));
-                    });
+        Array.from(el.childNodes).forEach(child => {
+            runs.push(...parseInlineRuns(child, nextStyle));
+        });
+    }
 
-                    if (docxCells.length > 0) {
-                        docxRows.push(new TableRow({ children: docxCells }));
-                    }
-                });
+    return runs;
+}
 
-                if (docxRows.length > 0) {
-                    result.push(new Table({
-                        width: { size: 100, type: WidthType.PERCENTAGE },
-                        borders: {
-                            top: { style: BorderStyle.SINGLE, size: 4, color: "CCCCCC" },
-                            bottom: { style: BorderStyle.SINGLE, size: 4, color: "CCCCCC" },
-                            left: { style: BorderStyle.SINGLE, size: 4, color: "CCCCCC" },
-                            right: { style: BorderStyle.SINGLE, size: 4, color: "CCCCCC" },
-                            insideHorizontal: { style: BorderStyle.SINGLE, size: 4, color: "CCCCCC" },
-                            insideVertical: { style: BorderStyle.SINGLE, size: 4, color: "CCCCCC" },
-                        },
-                        rows: docxRows
-                    }));
-                }
-            } else {
-                const text = cleanText((node as Element).innerHTML || node.textContent || "");
-                if (text.trim()) {
-                    result.push(new Paragraph({
-                        children: [new TextRun({ text: text.trim(), ...baseOptions.textRun })],
-                        ...(baseOptions.paragraph || {}),
-                        spacing: { before: 100, after: 50 }
-                    }));
-                }
+/**
+ * Parses an HTML table element into a fully compliant docx.Table
+ */
+function parseHtmlTable(tableEl: HTMLTableElement, baseOptions: any = {}): Table | null {
+    const rows = Array.from(tableEl.rows);
+    if (rows.length === 0) return null;
+
+    let maxCols = 0;
+    rows.forEach(r => {
+        let cols = 0;
+        Array.from(r.cells).forEach(c => cols += (c.colSpan || 1));
+        maxCols = Math.max(maxCols, cols);
+    });
+    if (maxCols === 0) return null;
+
+    let tableBorderColor = "D1D5DB";
+    let isHorizontalOnly = false;
+    let isNone = false;
+
+    const presetAttr = tableEl.getAttribute('data-table-preset');
+    if (presetAttr === 'horizontal_only') isHorizontalOnly = true;
+    if (presetAttr === 'none') isNone = true;
+
+    const borderStyleStr = tableEl.style.border || (rows[0]?.cells[0]?.style.border) || "";
+    if (borderStyleStr.includes('none') || borderStyleStr.includes('transparent')) {
+        if (!borderStyleStr.includes('solid')) isNone = true;
+    }
+    const colorMatch = borderStyleStr.match(/#([0-9a-fA-F]{3,6})/);
+    if (colorMatch) {
+        tableBorderColor = colorMatch[1].toUpperCase();
+    }
+
+    // A4 net content width with 800 dxa margins: 11906 - 1600 = 10306 dxa
+    const totalTableWidthDxa = 10306;
+    const colWidthDxa = Math.floor(totalTableWidthDxa / maxCols);
+
+    const docxRows: TableRow[] = [];
+
+    rows.forEach(row => {
+        const isHeaderRow = row.closest('thead') !== null || Array.from(row.cells).every(c => c.tagName.toLowerCase() === 'th');
+        const docxCells: TableCell[] = [];
+
+        Array.from(row.cells).forEach(cell => {
+            const isTh = cell.tagName.toLowerCase() === 'th';
+            const isHeader = isHeaderRow || isTh;
+
+            let fillHex: string | undefined = undefined;
+            if (cell.style.backgroundColor) {
+                fillHex = parseColorToHex(cell.style.backgroundColor);
+            } else if (row.style.backgroundColor) {
+                fillHex = parseColorToHex(row.style.backgroundColor);
             }
+
+            if (!fillHex && isHeader) {
+                fillHex = "F3F4F6";
+            }
+
+            const cellParagraphs: Paragraph[] = [];
+            const blockChildren = Array.from(cell.children).filter(c => ['P', 'DIV', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'LI'].includes(c.tagName));
+
+            if (blockChildren.length > 0) {
+                blockChildren.forEach(child => {
+                    const runs = parseInlineRuns(child, {
+                        bold: isHeader ? true : undefined,
+                        size: baseOptions.textRun?.size || 18,
+                        font: baseOptions.textRun?.font || "Roboto"
+                    });
+                    cellParagraphs.push(new Paragraph({
+                        children: runs.length > 0 ? runs : [new TextRun({ text: " ", size: 18 })],
+                        spacing: { before: 40, after: 40 }
+                    }));
+                });
+            } else {
+                const runs = parseInlineRuns(cell, {
+                    bold: isHeader ? true : undefined,
+                    size: baseOptions.textRun?.size || 18,
+                    font: baseOptions.textRun?.font || "Roboto"
+                });
+                cellParagraphs.push(new Paragraph({
+                    children: runs.length > 0 ? runs : [new TextRun({ text: " ", size: 18 })],
+                    spacing: { before: 40, after: 40 }
+                }));
+            }
+
+            const colSpan = cell.colSpan || 1;
+            const cellWidthDxa = colWidthDxa * colSpan;
+
+            docxCells.push(new TableCell({
+                columnSpan: colSpan > 1 ? colSpan : undefined,
+                width: { size: cellWidthDxa, type: WidthType.DXA },
+                children: cellParagraphs.length > 0 ? cellParagraphs : [new Paragraph({ children: [new TextRun({ text: " ", size: 18 })] })],
+                shading: fillHex ? { fill: fillHex } : undefined,
+                margins: { top: 120, bottom: 120, left: 160, right: 160 }
+            }));
         });
 
-        if (result.length > 0) return result;
+        if (docxCells.length > 0) {
+            docxRows.push(new TableRow({
+                children: docxCells,
+                tableHeader: isHeaderRow
+            }));
+        }
+    });
+
+    if (docxRows.length === 0) return null;
+
+    const bordersConfig = isNone ? {
+        top: { style: BorderStyle.NONE },
+        bottom: { style: BorderStyle.NONE },
+        left: { style: BorderStyle.NONE },
+        right: { style: BorderStyle.NONE },
+        insideHorizontal: { style: BorderStyle.NONE },
+        insideVertical: { style: BorderStyle.NONE },
+    } : isHorizontalOnly ? {
+        top: { style: BorderStyle.SINGLE, size: 4, color: tableBorderColor },
+        bottom: { style: BorderStyle.SINGLE, size: 4, color: tableBorderColor },
+        left: { style: BorderStyle.NONE },
+        right: { style: BorderStyle.NONE },
+        insideHorizontal: { style: BorderStyle.SINGLE, size: 4, color: tableBorderColor },
+        insideVertical: { style: BorderStyle.NONE },
+    } : {
+        top: { style: BorderStyle.SINGLE, size: 4, color: tableBorderColor },
+        bottom: { style: BorderStyle.SINGLE, size: 4, color: tableBorderColor },
+        left: { style: BorderStyle.SINGLE, size: 4, color: tableBorderColor },
+        right: { style: BorderStyle.SINGLE, size: 4, color: tableBorderColor },
+        insideHorizontal: { style: BorderStyle.SINGLE, size: 4, color: tableBorderColor },
+        insideVertical: { style: BorderStyle.SINGLE, size: 4, color: tableBorderColor },
+    };
+
+    return new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        columnWidths: Array(maxCols).fill(colWidthDxa),
+        borders: bordersConfig,
+        rows: docxRows
+    });
+}
+
+/**
+ * Recursively parses DOM nodes into DOCX Paragraphs and Tables
+ */
+function parseNodeToDocxBlocks(node: Node, baseOptions: any = {}): (Paragraph | Table)[] {
+    const result: (Paragraph | Table)[] = [];
+
+    if (node.nodeType === Node.TEXT_NODE) {
+        const text = sanitizeDocxText(node.textContent || "").trim();
+        if (text) {
+            result.push(new Paragraph({
+                children: [new TextRun({ text, ...baseOptions.textRun })],
+                ...(baseOptions.paragraph || {}),
+                spacing: { before: 80, after: 80 }
+            }));
+        }
+        return result;
     }
-    
-    // Replace <br> and </p> with a unique separator
-    let processed = html.replace(/<br\s*\/?>/gi, '|||');
-    processed = processed.replace(/<\/p>/gi, '|||');
-    
-    const tmp = document.createElement("DIV");
-    tmp.innerHTML = processed;
-    let text = tmp.textContent || tmp.innerText || "";
-    text = text.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
-    
-    const chunks = text.split('|||').map(s => s.trim()).filter(Boolean);
-    
-    if (chunks.length === 0) return [];
-    
-    return chunks.map((chunk, i) => new Paragraph({
-        children: [new TextRun({ text: chunk, ...baseOptions.textRun })],
-        ...(baseOptions.paragraph || {}),
-        spacing: { before: i === 0 ? (baseOptions.paragraph?.spacing?.before || 150) : 50 }
-    }));
+
+    if (node.nodeType !== Node.ELEMENT_NODE) return result;
+
+    const el = node as HTMLElement;
+    const tag = el.tagName.toLowerCase();
+
+    if (tag === 'table') {
+        const table = parseHtmlTable(el as HTMLTableElement, baseOptions);
+        if (table) result.push(table);
+        return result;
+    }
+
+    if (tag === 'ul' || tag === 'ol') {
+        Array.from(el.children).forEach((li, idx) => {
+            if (li.tagName.toLowerCase() === 'li') {
+                const runs = parseInlineRuns(li, baseOptions.textRun);
+                result.push(new Paragraph({
+                    children: [
+                        new TextRun({ text: tag === 'ol' ? `${idx + 1}. ` : "• ", bold: true, ...baseOptions.textRun }),
+                        ...runs
+                    ],
+                    indent: { left: 400 },
+                    spacing: { before: 40, after: 40 }
+                }));
+            }
+        });
+        return result;
+    }
+
+    // Check if element contains any nested tables or lists or headings
+    const hasNestedBlock = el.querySelector('table, ul, ol, h1, h2, h3, h4, h5, h6');
+    if (hasNestedBlock) {
+        Array.from(el.childNodes).forEach(child => {
+            result.push(...parseNodeToDocxBlocks(child, baseOptions));
+        });
+        return result;
+    }
+
+    // Leaf block
+    const runs = parseInlineRuns(el, baseOptions.textRun);
+    if (runs.length > 0) {
+        let beforeSpacing = 80;
+        let afterSpacing = 80;
+        let isHeading = false;
+        let headingSize = 20;
+
+        if (tag === 'h1') { isHeading = true; headingSize = 28; beforeSpacing = 240; afterSpacing = 120; }
+        else if (tag === 'h2') { isHeading = true; headingSize = 24; beforeSpacing = 200; afterSpacing = 100; }
+        else if (tag === 'h3') { isHeading = true; headingSize = 22; beforeSpacing = 160; afterSpacing = 80; }
+
+        if (isHeading) {
+            runs.forEach(r => { (r as any).options.size = headingSize; (r as any).options.bold = true; });
+        }
+
+        result.push(new Paragraph({
+            children: runs,
+            ...(baseOptions.paragraph || {}),
+            spacing: { before: beforeSpacing, after: afterSpacing }
+        }));
+    }
+
+    return result;
+}
+
+/**
+ * Parses basic HTML to an array of DOCX Paragraphs and Tables
+ */
+function parseHtmlToDocxParagraphs(html: string, baseOptions: any = {}): (Paragraph | Table)[] {
+    if (!html || !html.trim()) return [];
+
+    const container = document.createElement("DIV");
+    container.innerHTML = html;
+
+    const result: (Paragraph | Table)[] = [];
+    Array.from(container.childNodes).forEach(child => {
+        result.push(...parseNodeToDocxBlocks(child, baseOptions));
+    });
+
+    return result;
 }
 
 export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[], currentUser: User) => {
@@ -156,10 +387,12 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
             properties: {
                 page: {
                     margin: {
-                        top: 400,
-                        right: 720,
-                        bottom: 720,
-                        left: 720,
+                        top: 1800,      // 90pt (dxa): leaves comfortable room for header without colliding with body
+                        right: 800,     // 40pt (dxa): matches PDF export margin
+                        bottom: 1500,   // 75pt (dxa): room for footer
+                        left: 800,      // 40pt (dxa): matches PDF export margin
+                        header: 500,    // 25pt (dxa): header offset from top edge
+                        footer: 500,    // 25pt (dxa): footer offset from bottom edge
                     },
                 },
             },
@@ -170,7 +403,7 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                             width: { size: 100, type: WidthType.PERCENTAGE },
                             borders: {
                                 top: { style: BorderStyle.NONE },
-                                bottom: { style: BorderStyle.SINGLE, size: 6, color: "45387E", space: 4 },
+                                bottom: { style: BorderStyle.SINGLE, size: 12, color: "45387E" },
                                 left: { style: BorderStyle.NONE },
                                 right: { style: BorderStyle.NONE },
                                 insideHorizontal: { style: BorderStyle.NONE },
@@ -184,18 +417,19 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                                             children: [
                                                 ...(logoBuffer ? [
                                                     new Paragraph({
-                                                        alignment: AlignmentType.CENTER,
+                                                        alignment: AlignmentType.LEFT,
                                                         children: [
                                                             new ImageRun({
                                                                 data: new Uint8Array(logoBuffer),
                                                                 transformation: { width: 60, height: 60 },
-                                                            } as any),
+                                                                type: 'png',
+                                                            }),
                                                         ],
                                                     })
                                                 ] : [
                                                     new Paragraph({ 
-                                                        children: [new TextRun({ text: "AGESCI TURI 1", bold: true, color: "45387E", font: "Georgia" })],
-                                                        alignment: AlignmentType.CENTER 
+                                                        children: [new TextRun({ text: "AGESCI TURI 1", bold: true, color: "45387E", font: "Georgia", size: 28 })],
+                                                        alignment: AlignmentType.LEFT 
                                                     })
                                                 ])
                                             ],
@@ -205,27 +439,33 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                                             children: [
                                                 new Paragraph({
                                                     alignment: AlignmentType.RIGHT,
-                                                    children: [new TextRun({ text: `Gruppo ${currentUser.groupName || 'Turi 1'}`, bold: true, size: 16, font: "Tahoma", color: "45387E" })],
+                                                    children: [new TextRun({ text: `Gruppo ${currentUser.groupName || 'Turi 1'}`, bold: true, size: 22, font: "Tahoma", color: "45387E" })],
+                                                    spacing: { after: 20 }
                                                 }),
                                                 new Paragraph({
                                                     alignment: AlignmentType.RIGHT,
-                                                    children: [new TextRun({ text: "Associazione Guide e Scouts Cattolici Italiani", bold: true, size: 16, font: "Tahoma", color: "45387E" })],
+                                                    children: [new TextRun({ text: "Associazione Guide e Scouts Cattolici Italiani", bold: true, size: 20, font: "Tahoma", color: "45387E" })],
+                                                    spacing: { after: 20 }
                                                 }),
                                                 new Paragraph({
                                                     alignment: AlignmentType.RIGHT,
-                                                    children: [new TextRun({ text: "Strada Mola 4 – 70010 Turi BA", size: 16, font: "Tahoma", color: "45387E" })],
+                                                    children: [new TextRun({ text: "Strada Mola 4 – 70010 Turi BA", size: 18, font: "Tahoma", color: "45387E" })],
+                                                    spacing: { after: 20 }
                                                 }),
                                                 new Paragraph({
                                                     alignment: AlignmentType.RIGHT,
-                                                    children: [new TextRun({ text: "turi1@puglia.agesci.it", size: 16, font: "Tahoma", color: "45387E", underline: { type: BorderStyle.SINGLE } })],
+                                                    children: [new TextRun({ text: "turi1@puglia.agesci.it", size: 18, font: "Tahoma", color: "45387E", underline: { type: UnderlineType.SINGLE } })],
+                                                    spacing: { after: 20 }
                                                 }),
                                                 new Paragraph({
                                                     alignment: AlignmentType.RIGHT,
-                                                    children: [new TextRun({ text: "Codice fiscale: 91120250724", size: 16, font: "Tahoma", color: "45387E" })],
+                                                    children: [new TextRun({ text: "Codice fiscale: 91120250724", size: 18, font: "Tahoma", color: "45387E" })],
+                                                    spacing: { after: 20 }
                                                 }),
                                                 new Paragraph({
                                                     alignment: AlignmentType.RIGHT,
-                                                    children: [new TextRun({ text: "N. Iscr. R.U.N.T.S.: 64984", size: 16, font: "Tahoma", color: "45387E" })],
+                                                    children: [new TextRun({ text: "N. Iscr. R.U.N.T.S.: 64984", size: 18, font: "Tahoma", color: "45387E" })],
+                                                    spacing: { after: 40 }
                                                 }),
                                             ],
                                         }),
@@ -235,17 +475,17 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                         }),
                         new Paragraph({
                             children: [
-                                new TextRun({ text: "WOSM / WAGGGS Member - Iscritta al Registro Nazionale APS n.72", size: 12, color: "999999", italics: true, font: "Tahoma" }),
+                                new TextRun({ text: "WOSM / WAGGGS Member - Iscritta al Registro Nazionale APS n.72", size: 16, color: "999999", italics: true, font: "Tahoma" }),
                             ],
-                            spacing: { before: 50 },
+                            spacing: { before: 80, after: 60 },
                         }),
                     ],
                 }),
             },
             children: [
-                new Paragraph({ text: "", spacing: { before: 400 } }),
+                new Paragraph({ text: "", spacing: { before: 100 } }),
                 
-                // LINEAR METADATA (MATCHING SCREEN 2)
+                // LINEAR METADATA (MATCHING SCREEN 2 & PDF)
                 new Paragraph({
                     children: [new TextRun({ text: verbale.data || '', bold: true, font: "Roboto", size: 20 })],
                     spacing: { after: 100 },
@@ -315,7 +555,7 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                     });
                 }).filter(Boolean) as Paragraph[],
 
-                new Paragraph({ text: "", spacing: { before: 600 } }),
+                new Paragraph({ text: "", spacing: { before: 400 } }),
 
                 // ODG CONTENT
                 ...verbale.odg.map((punto) => [
@@ -323,11 +563,11 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                         children: [
                             new TextRun({ text: `• ${cleanText(punto.titolo)}`, bold: true, size: 20, font: "Roboto" })
                         ],
-                        spacing: { before: 400 },
+                        spacing: { before: 400, after: 100 },
                     }),
                     ...parseHtmlToDocxParagraphs(punto.contenuto, {
                         textRun: { size: 20, font: "Roboto" },
-                        paragraph: { alignment: AlignmentType.BOTH, indent: { left: 720 }, spacing: { before: 150 } }
+                        paragraph: { alignment: AlignmentType.BOTH, indent: { left: 720 }, spacing: { before: 100, after: 100 } }
                     })
                 ]).flat(),
 
@@ -368,7 +608,7 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                                 new TextRun({ 
                                     text: `${new Date(d.dataInizio).toLocaleDateString('it-IT')}${d.dataFine ? ' - ' + new Date(d.dataFine).toLocaleDateString('it-IT') : ''}${d.luogo ? ' • ' + cleanText(d.luogo) : ''}`, 
                                     font: "Georgia", 
-                                    color: "666666",
+                                    color: "666666", 
                                     size: 18 
                                 })
                             ],
@@ -388,26 +628,36 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                 ...(verbale.cassa && verbale.cassa.length > 0 ? [
                     new Paragraph({
                         children: [new TextRun({ text: "MOVIMENTI DI CASSA DI GRUPPO", bold: true, size: 20, color: "45387E", font: "Georgia" })],
-                        spacing: { before: 800 },
+                        spacing: { before: 800, after: 200 },
                         border: { bottom: { style: BorderStyle.SINGLE, size: 1, color: "EEEEEE" } },
                     }),
                     new Table({
                         width: { size: 100, type: WidthType.PERCENTAGE },
+                        columnWidths: [2200, 2200, 3906, 2000],
+                        borders: {
+                            top: { style: BorderStyle.SINGLE, size: 4, color: "D1D5DB" },
+                            bottom: { style: BorderStyle.SINGLE, size: 4, color: "D1D5DB" },
+                            left: { style: BorderStyle.SINGLE, size: 4, color: "D1D5DB" },
+                            right: { style: BorderStyle.SINGLE, size: 4, color: "D1D5DB" },
+                            insideHorizontal: { style: BorderStyle.SINGLE, size: 4, color: "E5E7EB" },
+                            insideVertical: { style: BorderStyle.SINGLE, size: 4, color: "E5E7EB" },
+                        },
                         rows: [
                             new TableRow({
+                                tableHeader: true,
                                 children: [
-                                    new TableCell({ shading: { fill: "FFFFFF" }, children: [new Paragraph({ children: [new TextRun({ text: "Branca", bold: true })] })] }),
-                                    new TableCell({ shading: { fill: "FFFFFF" }, children: [new Paragraph({ children: [new TextRun({ text: "Tipo", bold: true })] })] }),
-                                    new TableCell({ shading: { fill: "FFFFFF" }, children: [new Paragraph({ children: [new TextRun({ text: "Causale", bold: true })] })] }),
-                                    new TableCell({ shading: { fill: "FFFFFF" }, children: [new Paragraph({ children: [new TextRun({ text: "Importo", bold: true })], alignment: AlignmentType.RIGHT })] }),
+                                    new TableCell({ width: { size: 2200, type: WidthType.DXA }, shading: { fill: "F3F4F6" }, margins: { top: 120, bottom: 120, left: 160, right: 160 }, children: [new Paragraph({ children: [new TextRun({ text: "Branca", bold: true, size: 18 })] })] }),
+                                    new TableCell({ width: { size: 2200, type: WidthType.DXA }, shading: { fill: "F3F4F6" }, margins: { top: 120, bottom: 120, left: 160, right: 160 }, children: [new Paragraph({ children: [new TextRun({ text: "Tipo", bold: true, size: 18 })] })] }),
+                                    new TableCell({ width: { size: 3906, type: WidthType.DXA }, shading: { fill: "F3F4F6" }, margins: { top: 120, bottom: 120, left: 160, right: 160 }, children: [new Paragraph({ children: [new TextRun({ text: "Causale", bold: true, size: 18 })] })] }),
+                                    new TableCell({ width: { size: 2000, type: WidthType.DXA }, shading: { fill: "F3F4F6" }, margins: { top: 120, bottom: 120, left: 160, right: 160 }, children: [new Paragraph({ children: [new TextRun({ text: "Importo", bold: true, size: 18 })], alignment: AlignmentType.RIGHT })] }),
                                 ],
                             }),
                             ...verbale.cassa.map(m => new TableRow({
                                 children: [
-                                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: cleanText(m.branca), font: "Georgia" })] })] }),
-                                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: cleanText(m.tipo || 'Versamento'), font: "Georgia" })] })] }),
-                                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: cleanText(m.note), italics: true, font: "Georgia" })] })] }),
-                                    new TableCell({ children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: `€ ${m.importo.toFixed(2)}`, bold: true, font: "Georgia" })] })] }),
+                                    new TableCell({ width: { size: 2200, type: WidthType.DXA }, margins: { top: 120, bottom: 120, left: 160, right: 160 }, children: [new Paragraph({ children: [new TextRun({ text: cleanText(m.branca), font: "Georgia", size: 18 })] })] }),
+                                    new TableCell({ width: { size: 2200, type: WidthType.DXA }, margins: { top: 120, bottom: 120, left: 160, right: 160 }, children: [new Paragraph({ children: [new TextRun({ text: cleanText(m.tipo || 'Versamento'), font: "Georgia", size: 18 })] })] }),
+                                    new TableCell({ width: { size: 3906, type: WidthType.DXA }, margins: { top: 120, bottom: 120, left: 160, right: 160 }, children: [new Paragraph({ children: [new TextRun({ text: cleanText(m.note), italics: true, font: "Georgia", size: 18 })] })] }),
+                                    new TableCell({ width: { size: 2000, type: WidthType.DXA }, margins: { top: 120, bottom: 120, left: 160, right: 160 }, children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: `€ ${m.importo.toFixed(2)}`, bold: true, font: "Georgia", size: 18 })] })] }),
                                 ],
                             })),
                         ],
@@ -472,7 +722,7 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                         new Table({
                             width: { size: 100, type: WidthType.PERCENTAGE },
                             borders: {
-                                top: { style: BorderStyle.SINGLE, size: 6, color: "E5E7EB", space: 4 },
+                                top: { style: BorderStyle.SINGLE, size: 6, color: "E5E7EB" },
                                 bottom: { style: BorderStyle.NONE },
                                 left: { style: BorderStyle.NONE },
                                 right: { style: BorderStyle.NONE },
@@ -490,7 +740,7 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                                                     children: [
                                                         new TextRun({ 
                                                             text: "WAGGGS / WOSM Member • Iscritta al Registro Nazionale delle Associazioni di Promozione Sociale n.72 - Legge 383/2000", 
-                                                            size: 14, 
+                                                            size: 16, 
                                                             color: "999999",
                                                             font: "Tahoma"
                                                         })
@@ -508,8 +758,9 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                                                         children: [
                                                             new ImageRun({
                                                                 data: new Uint8Array(footerLogosBuffer),
-                                                                transformation: { width: 120, height: 40 },
-                                                            } as any)
+                                                                transformation: { width: 100, height: 33 },
+                                                                type: 'png',
+                                                            })
                                                         ],
                                                     })
                                                 ] : []),
@@ -520,17 +771,27 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                             ],
                         }),
                         new Paragraph({
+                            alignment: AlignmentType.RIGHT,
+                            children: [
+                                new TextRun({ text: "Pagina ", size: 16, color: "999999", font: "Tahoma" }),
+                                new TextRun({ children: [PageNumber.CURRENT], size: 16, color: "999999", font: "Tahoma" }),
+                                new TextRun({ text: " di ", size: 16, color: "999999", font: "Tahoma" }),
+                                new TextRun({ children: [PageNumber.TOTAL_PAGES], size: 16, color: "999999", font: "Tahoma" }),
+                            ],
+                            spacing: { before: 80, after: 40 },
+                        }),
+                        new Paragraph({
                             alignment: AlignmentType.CENTER,
                             children: [
                                 new TextRun({ 
                                     text: `Verbale ufficiale di Comunità Capi - Certificato il ${new Date().toLocaleDateString('it-IT')}`, 
-                                    size: 12, 
+                                    size: 14, 
                                     italics: true, 
                                     color: "CCCCCC",
                                     font: "Tahoma"
                                 })
                             ],
-                            spacing: { before: 200 },
+                            spacing: { before: 40 },
                         }),
                     ],
                 }),

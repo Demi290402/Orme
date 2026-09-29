@@ -1079,7 +1079,7 @@ export default function AkelaAssistant() {
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className={cn(
-                    "fixed bottom-20 md:bottom-6 right-6 z-[60] flex items-center justify-center cursor-pointer transition-all duration-300 select-none outline-none border-none",
+                    "fixed bottom-20 md:bottom-6 left-5 md:left-auto md:right-6 z-[60] flex items-center justify-center cursor-pointer transition-all duration-300 select-none outline-none border-none",
                     isOpen 
                         ? "bg-red-500 hover:bg-red-650 text-white p-3.5 rounded-full shadow-lg border-2 border-white dark:border-gray-800 rotate-90 scale-100 hover:scale-105 active:scale-95" 
                         : "bg-transparent shadow-none p-0 scale-100 hover:scale-110 active:scale-90 animate-wolf-float"
@@ -1105,7 +1105,7 @@ export default function AkelaAssistant() {
                         "fixed bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border border-gray-200/50 dark:border-gray-800/50 shadow-2xl z-[70] flex flex-col overflow-hidden transition-all duration-300 ease-out",
                         isFullscreen 
                             ? "inset-0 md:inset-4 lg:inset-8 w-auto h-auto rounded-none md:rounded-[2rem]" 
-                            : "bottom-36 md:bottom-24 right-4 md:right-6 w-[350px] max-w-[92vw] h-[500px] rounded-[2rem] animate-in zoom-in-95 slide-in-from-bottom"
+                            : "bottom-36 md:bottom-24 left-4 md:left-auto right-auto md:right-6 w-[350px] max-w-[92vw] h-[500px] rounded-[2rem] animate-in zoom-in-95 slide-in-from-bottom"
                     )}>
                         {/* Header */}
                         <div className="bg-scout-green dark:bg-scout-green-dark text-white p-3.5 md:p-4 flex flex-col gap-2 shrink-0 transition-colors duration-200">
