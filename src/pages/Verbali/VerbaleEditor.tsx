@@ -259,7 +259,6 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                 const { data, error } = await supabase.functions.invoke('send-email-notification', {
                     body: {
                         groupId: targetGroupId,
-                        excludeUserId: currentUser.id,
                         subject: emailSubject,
                         body: emailBody,
                     }
@@ -292,7 +291,6 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                         },
                         body: JSON.stringify({
                             groupId: targetGroupId,
-                            excludeUserId: currentUser.id,
                             subject: emailSubject,
                             body: emailBody,
                         }),
@@ -1451,7 +1449,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                                 <span className="font-black break-words">• {punto.titolo}</span>
                                                             </div>
                                                             <div 
-                                                                className="text-[12px] leading-relaxed text-justify pl-6 prose prose-sm max-w-none prose-p:m-0 overflow-hidden break-words"
+                                                                className="text-[12px] leading-relaxed text-justify pl-6 prose prose-sm max-w-none prose-p:m-0 overflow-x-auto break-words"
                                                                 dangerouslySetInnerHTML={{ __html: punto.contenuto }}
                                                             />
                                                         </div>

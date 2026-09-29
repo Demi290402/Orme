@@ -34,8 +34,85 @@ function cleanText(html: string): string {
 /**
  * Parses basic HTML to an array of DOCX Paragraphs to preserve line breaks
  */
-function parseHtmlToDocxParagraphs(html: string, baseOptions: any = {}): Paragraph[] {
+function parseHtmlToDocxParagraphs(html: string, baseOptions: any = {}): (Paragraph | Table)[] {
     if (!html) return [];
+
+    // Check if HTML contains tables
+    if (html.includes('<table')) {
+        const container = document.createElement("DIV");
+        container.innerHTML = html;
+        const result: (Paragraph | Table)[] = [];
+
+        Array.from(container.childNodes).forEach(node => {
+            if (node.nodeType === Node.ELEMENT_NODE && (node as Element).tagName.toLowerCase() === 'table') {
+                const tableEl = node as HTMLTableElement;
+                const docxRows: TableRow[] = [];
+
+                Array.from(tableEl.rows).forEach(row => {
+                    const isHeader = row.closest('thead') !== null || row.querySelector('th') !== null;
+                    const docxCells: TableCell[] = [];
+
+                    Array.from(row.cells).forEach(cell => {
+                        const cellText = cleanText(cell.innerHTML.replace(/<br\s*\/?>/gi, '\n'));
+                        let fillHex = isHeader ? "F3F4F6" : undefined;
+                        const bg = cell.style.backgroundColor;
+                        if (bg && bg.startsWith('#')) {
+                            fillHex = bg.replace('#', '').toUpperCase();
+                        }
+
+                        const lines = cellText.split('\n').filter(Boolean);
+                        const cellParagraphs = lines.length > 0 
+                            ? lines.map(line => new Paragraph({
+                                children: [new TextRun({ 
+                                    text: line, 
+                                    bold: isHeader, 
+                                    size: baseOptions.textRun?.size || 20, 
+                                    font: baseOptions.textRun?.font || "Roboto" 
+                                })],
+                                spacing: { before: 40, after: 40 }
+                            }))
+                            : [new Paragraph({ children: [new TextRun({ text: " ", size: 20 })] })];
+
+                        docxCells.push(new TableCell({
+                            children: cellParagraphs,
+                            shading: fillHex ? { fill: fillHex } : undefined,
+                            margins: { top: 120, bottom: 120, left: 160, right: 160 }
+                        }));
+                    });
+
+                    if (docxCells.length > 0) {
+                        docxRows.push(new TableRow({ children: docxCells }));
+                    }
+                });
+
+                if (docxRows.length > 0) {
+                    result.push(new Table({
+                        width: { size: 100, type: WidthType.PERCENTAGE },
+                        borders: {
+                            top: { style: BorderStyle.SINGLE, size: 4, color: "CCCCCC" },
+                            bottom: { style: BorderStyle.SINGLE, size: 4, color: "CCCCCC" },
+                            left: { style: BorderStyle.SINGLE, size: 4, color: "CCCCCC" },
+                            right: { style: BorderStyle.SINGLE, size: 4, color: "CCCCCC" },
+                            insideHorizontal: { style: BorderStyle.SINGLE, size: 4, color: "CCCCCC" },
+                            insideVertical: { style: BorderStyle.SINGLE, size: 4, color: "CCCCCC" },
+                        },
+                        rows: docxRows
+                    }));
+                }
+            } else {
+                const text = cleanText((node as Element).innerHTML || node.textContent || "");
+                if (text.trim()) {
+                    result.push(new Paragraph({
+                        children: [new TextRun({ text: text.trim(), ...baseOptions.textRun })],
+                        ...(baseOptions.paragraph || {}),
+                        spacing: { before: 100, after: 50 }
+                    }));
+                }
+            }
+        });
+
+        if (result.length > 0) return result;
+    }
     
     // Replace <br> and </p> with a unique separator
     let processed = html.replace(/<br\s*\/?>/gi, '|||');
