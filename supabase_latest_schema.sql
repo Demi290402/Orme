@@ -94,22 +94,59 @@ BEGIN
     END IF;
 END $$;
 
--- 6. Funzione per incremento automatico visite / visualizzazioni schede
-DROP FUNCTION IF EXISTS increment_location_views(UUID);
-CREATE OR REPLACE FUNCTION increment_location_views(loc_id UUID)
+-- 6. Funzione per incremento automatico visite / visualizzazioni univoche per scheda
+CREATE OR REPLACE FUNCTION record_unique_location_view(loc_id UUID, u_id UUID DEFAULT NULL)
 RETURNS integer AS $$
 DECLARE
-    new_count integer;
+    actual_user_id UUID;
+    already_viewed boolean := false;
+    current_count integer;
 BEGIN
-    UPDATE locations
-    SET views_count = COALESCE(views_count, 0) + 1
-    WHERE id = loc_id
-    RETURNING views_count INTO new_count;
-    RETURN new_count;
+    actual_user_id := COALESCE(u_id, auth.uid());
+
+    IF actual_user_id IS NOT NULL THEN
+        SELECT EXISTS (
+            SELECT 1 FROM user_location_views
+            WHERE location_id = loc_id AND user_id = actual_user_id
+        ) INTO already_viewed;
+
+        IF NOT already_viewed THEN
+            INSERT INTO user_location_views (user_id, location_id, last_viewed_at)
+            VALUES (actual_user_id, loc_id, timezone('utc'::text, now()))
+            ON CONFLICT (user_id, location_id) DO UPDATE
+            SET last_viewed_at = EXCLUDED.last_viewed_at;
+
+            UPDATE locations
+            SET views_count = COALESCE(views_count, 0) + 1
+            WHERE id = loc_id
+            RETURNING views_count INTO current_count;
+        ELSE
+            UPDATE user_location_views
+            SET last_viewed_at = timezone('utc'::text, now())
+            WHERE location_id = loc_id AND user_id = actual_user_id;
+
+            SELECT COALESCE(views_count, 0) INTO current_count
+            FROM locations
+            WHERE id = loc_id;
+        END IF;
+    ELSE
+        SELECT COALESCE(views_count, 0) INTO current_count
+        FROM locations
+        WHERE id = loc_id;
+    END IF;
+
+    RETURN COALESCE(current_count, 0);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Permetti l'esecuzione della funzione per tutti gli utenti autenticati e anonimi
+CREATE OR REPLACE FUNCTION increment_location_views(loc_id UUID)
+RETURNS integer AS $$
+BEGIN
+    RETURN record_unique_location_view(loc_id, auth.uid());
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+GRANT EXECUTE ON FUNCTION record_unique_location_view(UUID, UUID) TO authenticated, anon;
 GRANT EXECUTE ON FUNCTION increment_location_views(UUID) TO authenticated, anon;
 
 -- ==========================================================

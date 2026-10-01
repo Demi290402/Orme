@@ -236,21 +236,28 @@ export default function LocationDetail() {
                     const history = await getLocationHistory(found.id);
                     setHistoryList(history);
 
-                    // Fetch views map
-                    const views = await getUserLocationViews();
-                    const lastViewed = views[found.id];
-                    setOldLastViewedAt(lastViewed || null);
+                    // Fetch views map for current user
+                    let lastViewed: string | null = null;
+                    let isFirstTime = false;
+                    try {
+                        const views = await getUserLocationViews();
+                        lastViewed = views[found.id] || null;
+                        setOldLastViewedAt(lastViewed);
+                        isFirstTime = !lastViewed;
+                    } catch (e) {
+                        console.warn("Could not determine user view history:", e);
+                    }
 
-                    // Track current view read state
-                    await upsertLocationView(found.id);
-
-                    // Track overall location views count on Orme (nice to have)
-                    recordLocationVisit(found.id).then(newCount => {
+                    // Track overall unique location views count on Orme (incrementa SOLO se è la prima visualizzazione dell'utente)
+                    recordLocationVisit(found.id, isFirstTime).then(newCount => {
                         if (newCount > 0) {
                             setViewsCount(newCount);
                             setLocation(prev => prev ? { ...prev, viewsCount: newCount } : prev);
                         }
                     }).catch(console.error);
+
+                    // Track current view read state in user_location_views
+                    await upsertLocationView(found.id);
                 }
                 const user = await getUser();
                 setCurrentUser(user);
