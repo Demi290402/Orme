@@ -51,6 +51,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
     const [emailErrorDetails, setEmailErrorDetails] = useState<string | null>(null);
     const [_savedVerbaleForModal, setSavedVerbaleForModal] = useState<Verbale | null>(null);
     const [isNewVerbale, setIsNewVerbale] = useState(false);
+    const [showHistoricMembers, setShowHistoricMembers] = useState(false);
 
     const [verbale, setVerbale] = useState<Partial<Verbale>>({
         numero: 1,
@@ -63,6 +64,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
         presenti: [],
         assenti: [],
         ritardi: [],
+        presentiNomi: {},
         usciteAnticipate: [],
         ospiti: [],
         odg: [],
@@ -92,7 +94,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
         const fetchData = async () => {
             try {
                 const [membriData, userData] = await Promise.all([
-                    getMembriCoCa(),
+                    getMembriCoCa(true), // Carica tutti i membri (attivi e storici) per risolvere tutti i nomi passati
                     getUser()
                 ]);
                 setMembri(membriData);
@@ -189,7 +191,28 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
     const handleSave = async (silent = false) => {
         setSaving(true);
         try {
-            const saved = await saveVerbale(verbale);
+            // Genera snapshot dei nomi di tutti i membri associati a questo verbale
+            const snapshotNomi: Record<string, string> = { ...(verbale.presentiNomi || {}) };
+            const allReferencedMemberIds = [
+                ...(verbale.presenti || []),
+                ...(verbale.assenti || []),
+                ...(verbale.ritardi || []),
+                ...(verbale.usciteAnticipate || []).map(u => u.membroId),
+                ...(verbale.postiAzione || []).flatMap(pa => pa.chiIds || [])
+            ];
+            for (const mid of allReferencedMemberIds) {
+                const found = membri.find(m => m.id === mid);
+                if (found) {
+                    snapshotNomi[mid] = found.nome;
+                }
+            }
+
+            const verbaleToSave = {
+                ...verbale,
+                presentiNomi: snapshotNomi
+            };
+
+            const saved = await saveVerbale(verbaleToSave);
             setVerbale(saved);
             
             if (!id) {
@@ -560,8 +583,34 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                 <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden min-h-[500px]">
                 {(!viewMode && activeTab === 'presenze') && (
                     <div className="p-6 space-y-8">
+                        {/* Header Presenze con toggle Capi Storici */}
+                        <div className="flex items-center justify-between gap-4 flex-wrap pb-3 border-b border-gray-100 dark:border-gray-700">
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                                Segna presenze (P) o assenze (A) per ciascun capo della Comunità Capi.
+                            </p>
+                            {membri.some(m => m.attivo === false) && (
+                                <button
+                                    type="button"
+                                    onClick={() => setShowHistoricMembers(!showHistoricMembers)}
+                                    className={cn(
+                                        "px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border",
+                                        showHistoricMembers 
+                                            ? "bg-amber-50 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-700" 
+                                            : "bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:text-gray-800"
+                                    )}
+                                >
+                                    <span>{showHistoricMembers ? 'Nascondi Capi Storici' : 'Mostra anche Capi Storici'}</span>
+                                </button>
+                            )}
+                        </div>
+
                         {BRANCHE.map(branca => {
-                            const membriBranca = membri.filter(m => m.branca === branca || (m.brancheSecondarie || []).includes(branca));
+                            const membriBranca = membri.filter(m => {
+                                const matchesBranca = m.branca === branca || (m.brancheSecondarie || []).includes(branca);
+                                if (!matchesBranca) return false;
+                                const isRecordedInVerbale = verbale.presenti?.includes(m.id) || verbale.assenti?.includes(m.id) || verbale.ritardi?.includes(m.id);
+                                return m.attivo !== false || isRecordedInVerbale || showHistoricMembers;
+                            });
                             if (membriBranca.length === 0) return null;
                             
                             return (
@@ -588,7 +637,14 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                 )}>
                                                     <div className="flex justify-between items-start mb-3">
                                                         <div>
-                                                            <p className="font-serif font-black text-sm text-gray-800 dark:text-gray-100">{m.nome}</p>
+                                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                                                <p className="font-serif font-black text-sm text-gray-800 dark:text-gray-100">{m.nome}</p>
+                                                                {m.attivo === false && (
+                                                                    <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-md bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300">
+                                                                        Storico
+                                                                    </span>
+                                                                )}
+                                                            </div>
                                                             <p className="text-[10px] text-gray-400 italic line-clamp-1">{m.ruoli.join(', ')}</p>
                                                         </div>
                                                         <div className="flex gap-1">
@@ -1393,23 +1449,29 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                     <div>
                                                         <span className="font-black">Presenti: </span>
                                                         <span className="italic">
-                                                            {membri.filter(m => verbale.presenti?.includes(m.id))
-                                                                .map(m => {
-                                                                    const isLate = verbale.ritardi?.includes(m.id);
-                                                                    const exit = verbale.usciteAnticipate?.find(u => u.membroId === m.id);
+                                                            {(verbale.presenti || [])
+                                                                .map(id => {
+                                                                    const m = membri.find(x => x.id === id);
+                                                                    const nome = m?.nome || verbale.presentiNomi?.[id] || 'Capo';
+                                                                    const isLate = verbale.ritardi?.includes(id);
+                                                                    const exit = verbale.usciteAnticipate?.find(u => u.membroId === id);
                                                                     let suffix = "";
                                                                     if (isLate && exit) suffix = ` (R e esc. ore ${exit.ora})`;
                                                                     else if (isLate) suffix = " (R)";
                                                                     else if (exit) suffix = ` (esc. ore ${exit.ora})`;
-                                                                    return m.nome + suffix;
-                                                                }).join(', ')}
+                                                                    return nome + suffix;
+                                                                }).join(', ') || 'Nessuno'}
                                                             {verbale.ospiti && verbale.ospiti.length > 0 && 
                                                                 ", " + verbale.ospiti.map(o => `${o.nome} (${o.ruolo})`).join(', ')}
                                                         </span>
                                                     </div>
                                                     <div>
                                                         <span className="font-black">Assenti: </span>
-                                                        <span className="italic">{membri.filter(m => verbale.assenti?.includes(m.id)).map(m => m.nome).join(', ') || 'Nessuno'}</span>
+                                                        <span className="italic">
+                                                            {(verbale.assenti || [])
+                                                                .map(id => membri.find(x => x.id === id)?.nome || verbale.presentiNomi?.[id] || 'Capo')
+                                                                .join(', ') || 'Nessuno'}
+                                                        </span>
                                                     </div>
                                                     {verbale.odg && verbale.odg.length > 0 && (
                                                         <div className="pt-2">
@@ -1499,7 +1561,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                                     <li key={i} className="text-[12px] space-y-0.5">
                                                                         <div><span className="font-bold">🎯 {pa.cosa}</span></div>
                                                                         <div className="opacity-60 text-[11px]">
-                                                                            Resp: {(pa.chiIds || []).map(id => membri.find(m => m.id === id)?.nome || id).join(', ') || '—'}
+                                                                            Resp: {(pa.chiIds || []).map(id => membri.find(m => m.id === id)?.nome || verbale.presentiNomi?.[id] || id).join(', ') || '—'}
                                                                             {pa.quando && ` (${pa.quando})`}
                                                                         </div>
                                                                     </li>

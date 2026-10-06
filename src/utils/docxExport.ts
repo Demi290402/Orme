@@ -379,8 +379,17 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
         console.error("Could not load footer logos for DOCX", e);
     }
 
-    const presentMembri = membri.filter(m => verbale.presenti?.includes(m.id)).sort((a,b) => a.nome.localeCompare(b.nome));
-    const absentMembri = membri.filter(m => verbale.assenti?.includes(m.id)).sort((a,b) => a.nome.localeCompare(b.nome));
+    const getMembroNome = (id: string) => membri.find(m => m.id === id)?.nome || verbale.presentiNomi?.[id] || 'Capo';
+
+    const presentMembri = (verbale.presenti || []).map(id => ({
+        id,
+        nome: getMembroNome(id)
+    })).sort((a,b) => a.nome.localeCompare(b.nome));
+
+    const absentMembri = (verbale.assenti || []).map(id => ({
+        id,
+        nome: getMembroNome(id)
+    })).sort((a,b) => a.nome.localeCompare(b.nome));
     
     const doc = new Document({
         sections: [{
@@ -674,7 +683,7 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                         children: [
                             new TextRun({ text: `• ${cleanText(pa.cosa)}`, bold: true, font: "Georgia", size: 22 }),
                             new TextRun({ 
-                                text: ` — Resp: ${(pa.chiIds || []).map(id => cleanText(membri.find(m => m.id === id)?.nome || id)).join(', ') || '—'}${pa.quando ? ` (${cleanText(pa.quando)})` : ''}`, 
+                                text: ` — Resp: ${(pa.chiIds || []).map(id => cleanText(getMembroNome(id))).join(', ') || '—'}${pa.quando ? ` (${cleanText(pa.quando)})` : ''}`, 
                                 font: "Georgia", color: "666666", size: 20 
                             }),
                         ],

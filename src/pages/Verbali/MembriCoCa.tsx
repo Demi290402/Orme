@@ -1,15 +1,19 @@
 import { useState, useEffect } from 'react';
 import { 
     Users, Plus, Trash2, ArrowLeft, ShieldCheck, KeyRound, Copy, Check, 
-    RefreshCw, CheckCircle2, UserX, Crown, Clock, Share2 
+    RefreshCw, CheckCircle2, UserX, Crown, Clock, Share2,
+    Archive, RotateCcw, Sparkles, AlertTriangle, UserCheck
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { getMembriCoCa, saveMembroCoCa, deleteMembroCoCa } from '@/lib/verbali';
+import { 
+    getMembriCoCa, saveMembroCoCa, deleteMembroCoCa, 
+    getVerbali, findOrphanedMemberIds, OrphanedMemberInfo 
+} from '@/lib/verbali';
 import { 
     getUser, getAllUsers, getGroupPin, regenerateGroupPin, 
     voteApproveMember, concludeMemberService, toggleCapoGruppoRole 
 } from '@/lib/data';
-import { MembroCoCa, User } from '@/types';
+import { MembroCoCa, User, Verbale } from '@/types';
 import { cn } from '@/lib/utils';
 import UserAvatar from '@/components/UserAvatar';
 import ShareAppModal from '@/components/ShareAppModal';
@@ -17,9 +21,14 @@ import ShareAppModal from '@/components/ShareAppModal';
 export default function MembriCoCaPage() {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<'censimento' | 'sicurezza'>('censimento');
+    const [censimentoSubTab, setCensimentoSubTab] = useState<'attivi' | 'storici'>('attivi');
 
     // Censimento State
     const [membri, setMembri] = useState<MembroCoCa[]>([]);
+    const [verbaliList, setVerbaliList] = useState<Verbale[]>([]);
+    const [orphanedMembers, setOrphanedMembers] = useState<OrphanedMemberInfo[]>([]);
+    const [recoveringId, setRecoveringId] = useState<string | null>(null);
+    const [recoverForm, setRecoverForm] = useState<{ nome: string; branca: string }>({ nome: '', branca: 'COCA' });
     const [loadingMembri, setLoadingMembri] = useState(true);
     const [isAdding, setIsAdding] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -27,7 +36,8 @@ export default function MembriCoCaPage() {
         nome: '',
         branca: 'COCA',
         brancheSecondarie: [],
-        ruoli: []
+        ruoli: [],
+        attivo: true,
     });
 
     // Sicurezza & Accessi State
@@ -45,12 +55,18 @@ export default function MembriCoCaPage() {
 
     const loadData = async () => {
         try {
-            const [u, m] = await Promise.all([
+            const [u, m, v] = await Promise.all([
                 getUser().catch(() => null),
-                getMembriCoCa()
+                getMembriCoCa(true), // Carica tutti i membri (sia attivi che storici)
+                getVerbali().catch(() => [])
             ]);
             setCurrentUser(u);
             setMembri(m);
+            setVerbaliList(v);
+
+            // Trova ID orfani presenti nei verbali passati ma non più in anagrafica
+            const orphans = findOrphanedMemberIds(v, m);
+            setOrphanedMembers(orphans);
 
             if (u && u.groupId) {
                 const [pin, allU] = await Promise.all([
@@ -71,26 +87,96 @@ export default function MembriCoCaPage() {
     // Censimento Handlers
     const handleSaveMembro = async (membro: Partial<MembroCoCa>) => {
         try {
-            const saved = await saveMembroCoCa(membro);
+            const isHistoric = censimentoSubTab === 'storici';
+            const memberToSave = {
+                ...membro,
+                attivo: membro.attivo !== undefined ? membro.attivo : !isHistoric
+            };
+            const saved = await saveMembroCoCa(memberToSave);
             setIsAdding(false);
             setEditingId(null);
-            setNewMembro({ nome: '', branca: 'COCA', brancheSecondarie: [], ruoli: [] });
-            setMembri(prev => {
-                const filtered = prev.filter(x => x.id !== saved.id);
-                return [...filtered, saved].sort((a, b) => a.nome.localeCompare(b.nome));
-            });
-        } catch (err) {
-            alert('Errore durante il salvataggio del membro');
+            setNewMembro({ nome: '', branca: 'COCA', brancheSecondarie: [], ruoli: [], attivo: true });
+            
+            const updatedMembri = [...membri.filter(x => x.id !== saved.id), saved].sort((a, b) => a.nome.localeCompare(b.nome));
+            setMembri(updatedMembri);
+            setOrphanedMembers(findOrphanedMemberIds(verbaliList, updatedMembri));
+        } catch (err: any) {
+            alert(err?.message || 'Errore durante il salvataggio del membro');
         }
     };
 
-    const handleDeleteMembro = async (id: string) => {
-        if (!confirm('Sei sicuro di voler eliminare questo membro dal censimento?')) return;
+    const handleSoftDelete = async (membro: MembroCoCa) => {
+        const confirmMsg = `Vuoi archiviare ${membro.nome} come Capo Storico?\n\nIl membro non apparirà più nell'appello dei nuovi verbali, ma tutti i verbali passati e le statistiche di presenza dell'anno rimarranno perfettamente conservati.`;
+        if (!confirm(confirmMsg)) return;
+
         try {
-            await deleteMembroCoCa(id);
-            setMembri(prev => prev.filter(m => m.id !== id));
-        } catch (err) {
-            alert('Errore durante l\'eliminazione');
+            await deleteMembroCoCa(membro.id, false);
+            const updated = membri.map(m => m.id === membro.id ? { ...m, attivo: false } : m);
+            setMembri(updated);
+        } catch (err: any) {
+            alert(err?.message || 'Errore durante l\'archiviazione');
+        }
+    };
+
+    const handleReactivate = async (membro: MembroCoCa) => {
+        try {
+            const updatedMember = await saveMembroCoCa({ ...membro, attivo: true });
+            const updated = membri.map(m => m.id === membro.id ? updatedMember : m);
+            setMembri(updated);
+            alert(`${membro.nome} è stato riattivato nel Censimento Attivo.`);
+        } catch (err: any) {
+            alert(err?.message || 'Errore durante la riattivazione');
+        }
+    };
+
+    const handleHardDelete = async (membro: MembroCoCa) => {
+        const isInVerbali = verbaliList.some(v => 
+            v.presenti?.includes(membro.id) || 
+            v.assenti?.includes(membro.id) || 
+            v.ritardi?.includes(membro.id)
+        );
+
+        let confirmMsg = `Vuoi davvero eliminare definitivamente ${membro.nome}?`;
+        if (isInVerbali) {
+            confirmMsg = `ATTENZIONE: ${membro.nome} è registrato in alcuni verbali passati!\n\nEliminarlo definitivamente farà sparire il suo nome da tali verbali.\nTi consigliamo di mantenerlo come "Capo Storico" per preservare l'archivio.\n\nVuoi davvero procedere con l'eliminazione definitiva?`;
+        }
+
+        if (!confirm(confirmMsg)) return;
+
+        try {
+            await deleteMembroCoCa(membro.id, true);
+            const updated = membri.filter(m => m.id !== membro.id);
+            setMembri(updated);
+            setOrphanedMembers(findOrphanedMemberIds(verbaliList, updated));
+        } catch (err: any) {
+            alert(err?.message || 'Errore durante l\'eliminazione');
+        }
+    };
+
+    const handleRecoverOrphan = async (orphanId: string) => {
+        if (!recoverForm.nome.trim()) {
+            alert('Inserisci il nome e cognome del capo');
+            return;
+        }
+
+        try {
+            const restored = await saveMembroCoCa({
+                id: orphanId,
+                nome: recoverForm.nome.trim(),
+                branca: recoverForm.branca,
+                brancheSecondarie: [],
+                ruoli: [],
+                attivo: false // Ripristinato come storico per preservare i vecchi verbali senza sporcare il censimento attivo
+            });
+
+            const updatedMembri = [...membri.filter(m => m.id !== orphanId), restored].sort((a, b) => a.nome.localeCompare(b.nome));
+            setMembri(updatedMembri);
+            setOrphanedMembers(findOrphanedMemberIds(verbaliList, updatedMembri));
+            setRecoveringId(null);
+            setRecoverForm({ nome: '', branca: 'COCA' });
+            alert(`Capo "${restored.nome}" ripristinato con successo come Capo Storico!\nTutti i verbali passati e le statistiche hanno riacquisito il suo nome.`);
+        } catch (err: any) {
+            alert(err?.message || 'Errore durante il ripristino del capo');
         }
     };
 
@@ -187,6 +273,10 @@ L'utente perderà immediatamente l'accesso a verbali, bilancio, inventario e lis
     const activeUsers = registeredUsers.filter(u => u.membershipStatus === 'attivo');
     const exitedUsers = registeredUsers.filter(u => u.membershipStatus === 'uscito');
 
+    const activeMembri = membri.filter(m => m.attivo !== false);
+    const inactiveMembri = membri.filter(m => m.attivo === false);
+    const displayedMembri = censimentoSubTab === 'attivi' ? activeMembri : inactiveMembri;
+
     return (
         <div className="space-y-6 pb-20 max-w-5xl mx-auto px-2 sm:px-4">
             {/* Header */}
@@ -221,7 +311,10 @@ L'utente perderà immediatamente l'accesso a verbali, bilancio, inventario e lis
                         )}
                     >
                         <Users size={15} />
-                        <span>Censimento ({membri.length})</span>
+                        <span>Censimento ({activeMembri.length})</span>
+                        {orphanedMembers.length > 0 && (
+                            <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                        )}
                     </button>
                     <button
                         onClick={() => setActiveTab('sicurezza')}
@@ -245,30 +338,148 @@ L'utente perderà immediatamente l'accesso a verbali, bilancio, inventario e lis
 
             {/* TAB 1: CENSIMENTO BRANCHE & RUOLI */}
             {activeTab === 'censimento' && (
-                <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                            Elenco dei capi della CoCa utilizzato per l'appello e le presenze nei verbali.
-                        </p>
+                <div className="space-y-5">
+                    {/* BANNER RECUPERO CAPI RIMOSSI DAI VECCHI VERBALI */}
+                    {orphanedMembers.length > 0 && (
+                        <div className="bg-amber-50/80 dark:bg-amber-950/40 border-2 border-amber-300 dark:border-amber-700/80 rounded-3xl p-4 sm:p-5 space-y-3 shadow-sm animate-in fade-in">
+                            <div className="flex items-start gap-3">
+                                <AlertTriangle className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" size={22} />
+                                <div className="flex-1">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <h3 className="font-extrabold text-sm text-amber-900 dark:text-amber-200">
+                                            {orphanedMembers.length} {orphanedMembers.length === 1 ? 'Capo rimosso rilevato' : 'Capi rimossi rilevati'} nei verbali passati
+                                        </h3>
+                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-200/60 dark:bg-amber-800/60 text-amber-900 dark:text-amber-100">
+                                            Azione consigliata
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-amber-800/90 dark:text-amber-300/80 mt-1 leading-relaxed">
+                                        Nei verbali già salvati risultano registrati dei capi che non sono più presenti nel censimento. 
+                                        Assegna il loro nome per <strong>ripristinare immediatamente la visualizzazione di chi c'era</strong> in tutti i verbali passati e nelle statistiche annuali!
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="divide-y divide-amber-200/60 dark:divide-amber-800/50 pt-1">
+                                {orphanedMembers.map((orphan, idx) => (
+                                    <div key={orphan.id} className="py-3 first:pt-2 last:pb-1 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                                        <div className="text-xs">
+                                            <div className="font-bold text-amber-950 dark:text-amber-100 flex items-center gap-1.5">
+                                                <span>Capo #{idx + 1}</span>
+                                                <span className="text-[10px] font-normal text-amber-700 dark:text-amber-300">
+                                                    (presente in {orphan.occurrences} {orphan.occurrences === 1 ? 'riunione' : 'riunioni'}: {orphan.verbaleTitles.join(', ')})
+                                                </span>
+                                            </div>
+                                            <p className="text-[10px] text-gray-500 font-mono mt-0.5 truncate max-w-sm">
+                                                ID: {orphan.id}
+                                            </p>
+                                        </div>
+
+                                        {recoveringId === orphan.id ? (
+                                            <div className="flex flex-wrap items-center gap-2 bg-white dark:bg-gray-900 p-2 rounded-2xl border border-amber-300 dark:border-amber-700">
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="Nome e Cognome..."
+                                                    value={recoverForm.nome}
+                                                    onChange={e => setRecoverForm(prev => ({ ...prev, nome: e.target.value }))}
+                                                    className="p-1.5 text-xs font-bold border border-gray-200 dark:border-gray-700 rounded-xl dark:bg-gray-800 dark:text-white outline-none focus:ring-1 focus:ring-scout-green w-44"
+                                                    autoFocus
+                                                />
+                                                <select
+                                                    value={recoverForm.branca}
+                                                    onChange={e => setRecoverForm(prev => ({ ...prev, branca: e.target.value }))}
+                                                    className="p-1.5 text-xs font-bold border border-gray-200 dark:border-gray-700 rounded-xl dark:bg-gray-800 dark:text-white outline-none"
+                                                >
+                                                    <option value="COCA">CoCa</option>
+                                                    <option value="L/C">L/C</option>
+                                                    <option value="E/G">E/G</option>
+                                                    <option value="R/S">R/S</option>
+                                                </select>
+                                                <button
+                                                    onClick={() => handleRecoverOrphan(orphan.id)}
+                                                    className="bg-scout-green hover:bg-scout-green-dark text-white text-xs font-bold px-3 py-1.5 rounded-xl cursor-pointer shadow-xs"
+                                                >
+                                                    Ripristina
+                                                </button>
+                                                <button
+                                                    onClick={() => { setRecoveringId(null); setRecoverForm({ nome: '', branca: 'COCA' }); }}
+                                                    className="text-gray-400 hover:text-gray-600 text-xs px-2 py-1.5 rounded-xl cursor-pointer"
+                                                >
+                                                    Annulla
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <button
+                                                onClick={() => {
+                                                    setRecoveringId(orphan.id);
+                                                    setRecoverForm({ nome: '', branca: 'COCA' });
+                                                }}
+                                                className="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs shrink-0 self-start md:self-auto"
+                                            >
+                                                <Sparkles size={14} />
+                                                <span>Assegna Nome e Ripristina</span>
+                                            </button>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Sub-Tabs: Censimento Attivo vs Capi Storici / Usciti */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex bg-gray-100 dark:bg-gray-800/70 p-1 rounded-2xl w-fit">
+                            <button
+                                onClick={() => setCensimentoSubTab('attivi')}
+                                className={cn(
+                                    "px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5",
+                                    censimentoSubTab === 'attivi'
+                                        ? "bg-white dark:bg-gray-900 text-scout-green shadow-xs"
+                                        : "text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
+                                )}
+                            >
+                                <UserCheck size={14} />
+                                <span>Censimento Attivo ({activeMembri.length})</span>
+                            </button>
+                            <button
+                                onClick={() => setCensimentoSubTab('storici')}
+                                className={cn(
+                                    "px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5",
+                                    censimentoSubTab === 'storici'
+                                        ? "bg-white dark:bg-gray-900 text-scout-brown dark:text-amber-400 shadow-xs"
+                                        : "text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
+                                )}
+                            >
+                                <Archive size={14} />
+                                <span>Capi Storici / Usciti ({inactiveMembri.length})</span>
+                            </button>
+                        </div>
+
                         {!isAdding && (
                             <button 
                                 onClick={() => {
-                                    setNewMembro({ nome: '', branca: 'COCA', brancheSecondarie: [], ruoli: [] });
+                                    setNewMembro({ nome: '', branca: 'COCA', brancheSecondarie: [], ruoli: [], attivo: censimentoSubTab === 'attivi' });
                                     setEditingId(null);
                                     setIsAdding(true);
                                 }}
-                                className="bg-scout-green text-white px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm hover:bg-scout-green-dark transition-all cursor-pointer shrink-0"
+                                className="bg-scout-green text-white px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm hover:bg-scout-green-dark transition-all cursor-pointer shrink-0 self-start sm:self-auto"
                             >
                                 <Plus size={15} />
-                                <span>Nuovo Membro</span>
+                                <span>{censimentoSubTab === 'attivi' ? 'Nuovo Membro Attivo' : 'Aggiungi Capo Storico'}</span>
                             </button>
                         )}
                     </div>
 
+                    <p className="text-xs text-gray-400 dark:text-gray-500">
+                        {censimentoSubTab === 'attivi' 
+                            ? "Capi attualmente in servizio, proposti di default per l'appello presenze nei nuovi verbali."
+                            : "Capi che hanno concluso il servizio. I loro nomi sono preservati in tutti i verbali passati e nelle statistiche storiche."}
+                    </p>
+
                     {isAdding && (
                         <div className="bg-white dark:bg-gray-800 p-5 rounded-3xl border-2 border-scout-green shadow-lg space-y-4 max-w-2xl animate-in fade-in duration-200">
                             <h3 className="font-extrabold text-sm text-gray-900 dark:text-white">
-                                {editingId ? 'Modifica Membro Censito' : 'Aggiungi Nuovo Membro al Censimento'}
+                                {editingId ? 'Modifica Membro Censito' : (censimentoSubTab === 'attivi' ? 'Aggiungi Nuovo Membro Attivo' : 'Aggiungi Capo Storico')}
                             </h3>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="col-span-2 sm:col-span-1">
@@ -348,12 +559,14 @@ L'utente perderà immediatamente l'accesso a verbali, bilancio, inventario e lis
                             <div className="col-span-full p-8 text-center text-xs text-gray-400 font-bold">
                                 Caricamento censimento...
                             </div>
-                        ) : membri.length === 0 ? (
+                        ) : displayedMembri.length === 0 ? (
                             <div className="col-span-full bg-white dark:bg-gray-800 p-8 rounded-3xl border border-dashed border-gray-200 dark:border-gray-700 text-center text-gray-400 text-xs font-medium">
-                                Nessun membro censito. Clicca su "Nuovo Membro" per iniziare.
+                                {censimentoSubTab === 'attivi'
+                                    ? 'Nessun membro attivo censito. Clicca su "Nuovo Membro Attivo" per iniziare.'
+                                    : 'Nessun capo storico o concluso archiviato.'}
                             </div>
                         ) : (
-                            membri.map(m => (
+                            displayedMembri.map(m => (
                                 <div 
                                     key={m.id} 
                                     onClick={() => {
@@ -366,6 +579,7 @@ L'utente perderà immediatamente l'accesso a verbali, bilancio, inventario e lis
                                     <div className="flex items-center gap-3 min-w-0">
                                         <div className={cn(
                                             "w-9 h-9 rounded-full flex items-center justify-center font-black text-xs text-white shrink-0 shadow-xs",
+                                            m.attivo === false ? "bg-gray-400 dark:bg-gray-600" :
                                             m.branca === 'COCA' ? 'bg-scout-brown' : 
                                             m.branca === 'L/C' ? 'bg-yellow-400 text-gray-900' : 
                                             m.branca === 'E/G' ? 'bg-scout-green' : 'bg-scout-red'
@@ -373,7 +587,14 @@ L'utente perderà immediatamente l'accesso a verbali, bilancio, inventario e lis
                                             {m.nome.charAt(0)}
                                         </div>
                                         <div className="min-w-0">
-                                            <p className="font-bold text-gray-900 dark:text-white text-xs sm:text-sm truncate">{m.nome}</p>
+                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                                <p className="font-bold text-gray-900 dark:text-white text-xs sm:text-sm truncate">{m.nome}</p>
+                                                {m.attivo === false && (
+                                                    <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-md bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300">
+                                                        Storico
+                                                    </span>
+                                                )}
+                                            </div>
                                             <div className="flex items-center gap-1 mt-0.5 flex-wrap">
                                                 <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
                                                     {m.branca}
@@ -386,14 +607,39 @@ L'utente perderà immediatamente l'accesso a verbali, bilancio, inventario e lis
                                             </div>
                                         </div>
                                     </div>
-                                    <button 
-                                        type="button"
-                                        onClick={(e) => { e.stopPropagation(); handleDeleteMembro(m.id); }}
-                                        className="p-1.5 text-gray-300 hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-all opacity-0 group-hover:opacity-100 cursor-pointer shrink-0"
-                                        title="Elimina dal censimento"
-                                    >
-                                        <Trash2 size={16} />
-                                    </button>
+
+                                    {/* Action buttons */}
+                                    <div className="flex items-center gap-1 shrink-0">
+                                        {censimentoSubTab === 'attivi' ? (
+                                            <button 
+                                                type="button"
+                                                onClick={(e) => { e.stopPropagation(); handleSoftDelete(m); }}
+                                                className="p-1.5 text-gray-400 hover:text-amber-600 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
+                                                title="Archivia come Capo Storico (conserva verbali e presenze)"
+                                            >
+                                                <Archive size={16} />
+                                            </button>
+                                        ) : (
+                                            <>
+                                                <button 
+                                                    type="button"
+                                                    onClick={(e) => { e.stopPropagation(); handleReactivate(m); }}
+                                                    className="p-1.5 text-scout-green hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-all cursor-pointer"
+                                                    title="Riattiva nel Censimento Attivo"
+                                                >
+                                                    <RotateCcw size={16} />
+                                                </button>
+                                                <button 
+                                                    type="button"
+                                                    onClick={(e) => { e.stopPropagation(); handleHardDelete(m); }}
+                                                    className="p-1.5 text-gray-300 hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
+                                                    title="Elimina definitivamente"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
                             ))
                         )}

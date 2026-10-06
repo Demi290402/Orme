@@ -81,7 +81,7 @@ export async function getVerbali(): Promise<Verbale[]> {
     }
 }
 
-export async function getMembriCoCa(): Promise<MembroCoCa[]> {
+export async function getMembriCoCa(includeInactive: boolean = false): Promise<MembroCoCa[]> {
     try {
         const currentUser = await getUser();
         if (!currentUser || currentUser.membershipStatus !== 'attivo') return [];
@@ -95,12 +95,17 @@ export async function getMembriCoCa(): Promise<MembroCoCa[]> {
             .order('nome', { ascending: true });
 
         if (error) throw error;
-        return (data || []).map(mapSupabaseMembroToMembro);
+        const allMembri = (data || []).map(mapSupabaseMembroToMembro);
+        if (!includeInactive) {
+            return allMembri.filter(m => m.attivo !== false);
+        }
+        return allMembri;
     } catch (error) {
         console.error('Error fetching membri:', error);
         return [];
     }
 }
+
 
 /**
  * Calcola l'anno associativo scout a partire da una data (YYYY-MM-DD).
@@ -142,6 +147,7 @@ export async function saveVerbale(verbale: Partial<Verbale>): Promise<Verbale> {
         presenti: verbale.presenti || [],
         assenti: verbale.assenti || [],
         ritardi: verbale.ritardi || [],
+        presenti_nomi: verbale.presentiNomi || {},
         ospiti: verbale.ospiti || [],
         odg: verbale.odg || [],
         cassa: verbale.cassa || [],
@@ -179,10 +185,15 @@ export async function saveVerbale(verbale: Partial<Verbale>): Promise<Verbale> {
             result = data;
         }
     } catch (err: any) {
-        // Fallback: se la colonna anno_scout non è ancora stata creata in Supabase, salva comunque senza bloccare l'utente
-        if (err?.message?.includes('anno_scout') || err?.code === '42703') {
-            console.warn('Colonna anno_scout non ancora presente in Supabase, salvataggio fallback senza anno_scout:', err);
-            delete dataToSave.anno_scout;
+        // Fallback: se colonne opzionali (anno_scout o presenti_nomi) non sono ancora migrate in Supabase
+        if (err?.message?.includes('anno_scout') || err?.message?.includes('presenti_nomi') || err?.code === '42703') {
+            console.warn('Colonne opzionali non ancora presenti in Supabase, salvataggio fallback:', err);
+            if (err?.message?.includes('anno_scout')) delete dataToSave.anno_scout;
+            if (err?.message?.includes('presenti_nomi')) delete dataToSave.presenti_nomi;
+            if (err?.code === '42703') {
+                delete dataToSave.anno_scout;
+                delete dataToSave.presenti_nomi;
+            }
             if (verbale.id) {
                 const { data, error } = await supabase
                     .from('verbali')
@@ -240,6 +251,7 @@ function mapSupabaseVerbaleToVerbale(data: any): Verbale {
         presenti: data.presenti || [],
         assenti: data.assenti || [],
         ritardi: data.ritardi || [],
+        presentiNomi: (data.presenti_nomi && typeof data.presenti_nomi === 'object') ? data.presenti_nomi : {},
         ospiti: data.ospiti || [],
         odg: data.odg || [],
         cassa: data.cassa || [],
@@ -259,11 +271,12 @@ function mapSupabaseVerbaleToVerbale(data: any): Verbale {
 export async function saveMembroCoCa(membro: Partial<MembroCoCa>): Promise<MembroCoCa> {
     const currentUser = await getUser();
     const dataToSave: any = {
-        group_id: currentUser.groupId,
+        group_id: (currentUser?.groupId ? String(currentUser.groupId).trim() : '') || membro.groupId,
         nome: membro.nome,
         branca: membro.branca,
         branche_secondarie: membro.brancheSecondarie || [],
         ruoli: membro.ruoli || [],
+        attivo: membro.attivo !== undefined ? membro.attivo : true,
     };
 
     if (membro.userId) {
@@ -271,34 +284,73 @@ export async function saveMembroCoCa(membro: Partial<MembroCoCa>): Promise<Membr
     }
 
     let result;
-    if (membro.id) {
-        const { data, error } = await supabase
-            .from('membri')
-            .update(dataToSave)
-            .eq('id', membro.id)
-            .select()
-            .single();
-        if (error) throw error;
-        result = data;
-    } else {
-        const { data, error } = await supabase
-            .from('membri')
-            .insert(dataToSave)
-            .select()
-            .single();
-        if (error) throw error;
-        result = data;
+    const executeSave = async (payload: any) => {
+        if (membro.id) {
+            // Upsert supporta sia l'aggiornamento di un membro esistente, sia il ripristino di un ID orfano con il suo UUID originario
+            const { data, error } = await supabase
+                .from('membri')
+                .upsert({ id: membro.id, ...payload })
+                .select()
+                .single();
+            if (error) throw error;
+            return data;
+        } else {
+            const { data, error } = await supabase
+                .from('membri')
+                .insert(payload)
+                .select()
+                .single();
+            if (error) throw error;
+            return data;
+        }
+    };
+
+    try {
+        result = await executeSave(dataToSave);
+    } catch (err: any) {
+        // Fallback: se la colonna attivo non è ancora presente su Supabase, riprova senza di essa
+        if (err?.message?.includes('attivo') || err?.code === '42703') {
+            console.warn("Colonna 'attivo' non ancora presente in Supabase, salvataggio membro senza attivo:", err);
+            const retryPayload = { ...dataToSave };
+            delete retryPayload.attivo;
+            result = await executeSave(retryPayload);
+        } else {
+            throw err;
+        }
     }
 
     return mapSupabaseMembroToMembro(result);
 }
 
-export async function deleteMembroCoCa(id: string): Promise<void> {
-    const { error } = await supabase
-        .from('membri')
-        .delete()
-        .eq('id', id);
-    if (error) throw error;
+/**
+ * Se hardDelete è true, cancella fisicamente la riga dal database.
+ * Di default esegue un SOFT DELETE (attivo = false), preservando
+ * così tutti i verbali passati, le presenze storiche e le statistiche dell'anno scout.
+ */
+export async function deleteMembroCoCa(id: string, hardDelete: boolean = false): Promise<void> {
+    if (hardDelete) {
+        const { error } = await supabase
+            .from('membri')
+            .delete()
+            .eq('id', id);
+        if (error) throw error;
+        return;
+    }
+
+    // Soft delete predefinito
+    try {
+        const { error } = await supabase
+            .from('membri')
+            .update({ attivo: false })
+            .eq('id', id);
+        if (error) throw error;
+    } catch (err: any) {
+        if (err?.message?.includes('attivo') || err?.code === '42703') {
+            console.warn("Colonna 'attivo' non ancora presente in Supabase per il soft-delete:", err);
+            throw new Error("Per archiviare i membri storici è necessario eseguire lo script SQL di migrazione su Supabase.");
+        }
+        throw err;
+    }
 }
 
 function mapSupabaseMembroToMembro(data: any): MembroCoCa {
@@ -310,7 +362,51 @@ function mapSupabaseMembroToMembro(data: any): MembroCoCa {
         brancheSecondarie: data.branche_secondarie || [],
         ruoli: data.ruoli || [],
         userId: data.user_id,
+        attivo: data.attivo !== undefined && data.attivo !== null ? data.attivo : true,
     };
+}
+
+export interface OrphanedMemberInfo {
+    id: string;
+    occurrences: number;
+    verbaleTitles: string[];
+    sampleDates: string[];
+}
+
+/**
+ * Individua gli ID dei membri presenti nei verbali passati
+ * che non corrispondono più ad alcun membro presente nell'anagrafica (né attivo né storico).
+ */
+export function findOrphanedMemberIds(verbali: Verbale[], membri: MembroCoCa[]): OrphanedMemberInfo[] {
+    const knownIds = new Set(membri.map(m => m.id));
+    const orphanedMap = new Map<string, { count: number; titles: Set<string>; dates: Set<string> }>();
+
+    for (const v of verbali) {
+        const candidateIds = new Set<string>([
+            ...(v.presenti || []),
+            ...(v.assenti || []),
+            ...(v.ritardi || []),
+            ...(v.usciteAnticipate || []).map(u => u.membroId),
+            ...(v.postiAzione || []).flatMap(pa => pa.chiIds || [])
+        ]);
+
+        for (const id of candidateIds) {
+            if (!id || knownIds.has(id)) continue;
+
+            const existing = orphanedMap.get(id) || { count: 0, titles: new Set<string>(), dates: new Set<string>() };
+            existing.count += 1;
+            if (v.titolo) existing.titles.add(`N.${v.numero || ''} ${v.titolo}`);
+            if (v.data) existing.dates.add(v.data);
+            orphanedMap.set(id, existing);
+        }
+    }
+
+    return Array.from(orphanedMap.entries()).map(([id, info]) => ({
+        id,
+        occurrences: info.count,
+        verbaleTitles: Array.from(info.titles).slice(0, 3),
+        sampleDates: Array.from(info.dates).slice(0, 3)
+    }));
 }
 
 export interface ImpostazioniVerbali {

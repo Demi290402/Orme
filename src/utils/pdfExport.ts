@@ -142,9 +142,18 @@ export async function exportVerbaleToPdf(
     _piePaginaHtml: string = ''
 ): Promise<void> {
     const formatDate = (d?: string) => d ? new Date(d).toLocaleDateString('it-IT') : '-';
-    const membroNome = (id: string) => membri.find(m => m.id === id)?.nome || id;
+    const membroNome = (id: string) => membri.find(m => m.id === id)?.nome || verbale.presentiNomi?.[id] || 'Capo';
 
-    const presenti = (verbale.presenti || []).map(membroNome).join(', ') || '-';
+    const presenti = (verbale.presenti || []).map(id => {
+        const nome = membroNome(id);
+        const isLate = verbale.ritardi?.includes(id);
+        const exit = verbale.usciteAnticipate?.find(u => u.membroId === id);
+        let suffix = "";
+        if (isLate && exit) suffix = ` (R e esc. ore ${exit.ora})`;
+        else if (isLate) suffix = " (R)";
+        else if (exit) suffix = ` (esc. ore ${exit.ora})`;
+        return nome + suffix;
+    }).join(', ') || '-';
     const assenti = (verbale.assenti || []).map(membroNome).join(', ') || '-';
     const ritardi = (verbale.ritardi || []).map(membroNome).join(', ') || '';
 

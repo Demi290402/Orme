@@ -68,6 +68,7 @@ export interface MembroCoCa {
     brancheSecondarie?: string[]; // additional branche (e.g. ['CoCa'] for CG serving in branca)
     ruoli: string[];
     userId?: string;
+    attivo?: boolean; // true = censimento attivo, false = capo storico/servizio concluso
 }
 
 export interface Ospite {
@@ -127,6 +128,7 @@ export interface Verbale {
     presenti: string[]; // IDs di MembroCoCa
     assenti: string[];
     ritardi: string[]; // IDs di MembroCoCa
+    presentiNomi?: Record<string, string>; // Snapshot storico { [id]: nome } immutabile
     usciteAnticipate: { membroId: string; ora: string }[];
     ospiti: Ospite[];
     odg: PuntoODG[];
