@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Search, Filter, Plus, X, Check, Clock, Tent, BedDouble, Bus, Flame, Droplets, Home as HomeIcon } from 'lucide-react';
+import { useEffect, useState, useMemo } from 'react';
+import { Search, Filter, Plus, X, Check, Clock, Tent, BedDouble, Bus, Flame, Droplets, Home as HomeIcon, MapPin } from 'lucide-react';
 import { getLocations, getUser, getUserLocationViews, getAllLocationHistory } from '@/lib/data';
 import { Location, User as UserType } from '@/types';
 import LocationCard from '@/components/LocationCard';
@@ -8,13 +8,7 @@ import TransportModal from '@/components/TransportModal';
 import { Link } from 'react-router-dom';
 import { cn, getStalenessInfo } from '@/lib/utils';
 import { addPointsWithStats } from '@/lib/gamification';
-
-const ITALIAN_REGIONS = [
-    "Abruzzo", "Basilicata", "Calabria", "Campania", "Emilia-Romagna",
-    "Friuli-Venezia Giulia", "Lazio", "Liguria", "Lombardia", "Marche",
-    "Molise", "Piemonte", "Puglia", "Sardegna", "Sicilia", "Toscana",
-    "Trentino-Alto Adige", "Umbria", "Valle d'Aosta", "Veneto"
-];
+import { ITALIAN_PROVINCIAL_DATA, ITALIAN_REGIONS, PROVINCE_TO_CODE, ALL_ITALIAN_PROVINCES } from '@/lib/constants';
 
 const BRANCH_ACTIVITIES: Record<string, string[]> = {
     'L/C': ['Caccia giungla', 'Caccia primaverile', 'Caccia di Accettazione', 'Caccia invernale', 'Vacanze di Branco'],
@@ -44,6 +38,8 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
     // Advanced Filters State
     const [selectedBranches, setSelectedBranches] = useState<string[]>([]);
     const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
+    const [selectedProvinces, setSelectedProvinces] = useState<string[]>([]);
+    const [provinceSearch, setProvinceSearch] = useState('');
     const [hasTents, setHasTents] = useState(false);
     const [hasBeds, setHasBeds] = useState(false);
     const [minBeds, setMinBeds] = useState<number | null>(null);
@@ -94,11 +90,56 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
         }
     };
 
+    const toggleRegion = (region: string) => {
+        const next = selectedRegions.includes(region)
+            ? selectedRegions.filter(r => r !== region)
+            : [...selectedRegions, region];
+        setSelectedRegions(next);
+
+        // Se sono selezionate regioni specifiche, rimuovi eventuali province che non vi appartengono
+        if (next.length > 0) {
+            const allowed = new Set([
+                ...next.flatMap(r => (ITALIAN_PROVINCIAL_DATA[r] || []).map(p => p.toLowerCase())),
+                ...locations.filter(l => next.includes(l.region)).map(l => (l.province || '').trim().toLowerCase())
+            ]);
+            setSelectedProvinces(prev => prev.filter(p => allowed.has(p.toLowerCase())));
+        }
+    };
+
+    // Calcolo delle province disponibili in base alle regioni selezionate (o tutte se nessuna regione è filtrata)
+    const availableProvinces = useMemo(() => {
+        let list: string[] = [];
+        if (selectedRegions.length > 0) {
+            list = selectedRegions.flatMap(r => ITALIAN_PROVINCIAL_DATA[r] || []);
+        } else {
+            list = ALL_ITALIAN_PROVINCES;
+        }
+
+        // Aggiungi anche eventuali province custom già censite nei luoghi caricati
+        const fromLocs = locations
+            .filter(l => selectedRegions.length === 0 || selectedRegions.includes(l.region))
+            .map(l => (l.province || '').trim())
+            .filter(p => p.length > 0);
+
+        const unique = Array.from(new Set([...list, ...fromLocs]));
+        return unique.sort((a, b) => a.localeCompare(b, 'it', { sensitivity: 'base' }));
+    }, [selectedRegions, locations]);
+
+    const filteredAvailableProvinces = useMemo(() => {
+        if (!provinceSearch.trim()) return availableProvinces;
+        const q = provinceSearch.trim().toLowerCase();
+        return availableProvinces.filter(p => {
+            const code = (PROVINCE_TO_CODE[p] || '').toLowerCase();
+            return p.toLowerCase().includes(q) || code.includes(q);
+        });
+    }, [availableProvinces, provinceSearch]);
+
     const filteredLocations = locations.filter(loc => {
-        // 1. Search
+        // 1. Search (nome, comune, regione o provincia)
         const matchesSearch = loc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             loc.commune.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            loc.region.toLowerCase().includes(searchTerm.toLowerCase());
+            loc.region.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (loc.province && loc.province.toLowerCase().includes(searchTerm.toLowerCase()));
 
         // 2. Tents, Beds, Accantonamento, Heating & Water Points
         const matchesTents = hasTents ? loc.hasTents : true;
@@ -119,10 +160,19 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
         const matchesHeating = hasHeating ? !!loc.hasHeating : true;
         const matchesWaterPoints = hasWaterPoints ? !!loc.hasWaterPoints : true;
 
-        // 3. Regions
+        // 3. Regioni & Province
         const matchesRegion = selectedRegions.length > 0 ? selectedRegions.includes(loc.region) : true;
+        const matchesProvince = selectedProvinces.length > 0 ? (
+            loc.province ? selectedProvinces.some(p => {
+                const pNorm = p.trim().toLowerCase();
+                const locNorm = loc.province.trim().toLowerCase();
+                const pCode = (PROVINCE_TO_CODE[p] || '').toLowerCase();
+                const locCode = (PROVINCE_TO_CODE[loc.province] || '').toLowerCase();
+                return locNorm === pNorm || (pCode && locNorm === pCode) || (locCode && pNorm === locCode);
+            }) : false
+        ) : true;
 
-        // 4. Branches & Activities
+        // 4. Branche & Attività
         let matchesBranch = true;
         if (selectedBranches.length > 0) {
             const validActivitiesForBranches = selectedBranches.flatMap(branch => BRANCH_ACTIVITIES[branch]);
@@ -141,13 +191,14 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
             matchesStaleness = selectedStaleness.includes(info.level);
         }
 
-        return matchesSearch && matchesTents && matchesBeds && matchesAccantonamento && matchesHeating && matchesWaterPoints && matchesRegion && 
-               matchesBranch && matchesActivity && matchesStaleness;
+        return matchesSearch && matchesTents && matchesBeds && matchesAccantonamento && matchesHeating && matchesWaterPoints && 
+               matchesRegion && matchesProvince && matchesBranch && matchesActivity && matchesStaleness;
     });
 
     const activeFiltersCount =
         selectedBranches.length +
         selectedRegions.length +
+        selectedProvinces.length +
         selectedActivities.length +
         selectedStaleness.length +
         (hasTents ? 1 : 0) +
@@ -608,7 +659,7 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                                 {ITALIAN_REGIONS.map(region => (
                                     <label
                                         key={region}
-                                        onClick={() => toggleSelection(selectedRegions, region, setSelectedRegions)}
+                                        onClick={() => toggleRegion(region)}
                                         className={cn(
                                             "flex items-center gap-2 p-3 rounded-xl cursor-pointer text-sm border transition-all duration-200",
                                             selectedRegions.includes(region)
@@ -626,6 +677,88 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                                         <span className="font-semibold">{region}</span>
                                     </label>
                                 ))}
+                            </div>
+                        </div>
+
+                        {/* 4. Province */}
+                        <div>
+                            <div className="flex justify-between items-center mb-2">
+                                <div className="flex items-center gap-2">
+                                    <h3 className="font-bold text-gray-900 dark:text-white">Province</h3>
+                                    {selectedRegions.length > 0 && (
+                                        <span className="text-[10px] bg-scout-green/10 dark:bg-emerald-950/40 text-scout-green-dark dark:text-emerald-400 font-bold px-2 py-0.5 rounded-full">
+                                            {selectedRegions.length === 1 ? selectedRegions[0] : `${selectedRegions.length} regioni`}
+                                        </span>
+                                    )}
+                                </div>
+                                {selectedProvinces.length > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedProvinces([])}
+                                        className="text-xs text-red-500 font-bold hover:underline cursor-pointer"
+                                    >
+                                        Resetta ({selectedProvinces.length})
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Campo ricerca provincia */}
+                            <div className="relative mb-2">
+                                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                <input
+                                    type="text"
+                                    placeholder={selectedRegions.length > 0 ? "Filtra province della regione..." : "Cerca provincia (es. Roma, Bari, Trento)..."}
+                                    value={provinceSearch}
+                                    onChange={(e) => setProvinceSearch(e.target.value)}
+                                    className="w-full pl-8 pr-7 py-2 text-xs rounded-xl bg-gray-50 dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-scout-green placeholder:text-gray-400 dark:placeholder:text-gray-500"
+                                />
+                                {provinceSearch && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setProvinceSearch('')}
+                                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-0.5"
+                                    >
+                                        <X size={12} />
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Griglia province selezionabili */}
+                            <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-1 border border-gray-100 dark:border-gray-700/60 rounded-xl bg-gray-50/50 dark:bg-gray-900/20">
+                                {filteredAvailableProvinces.length > 0 ? (
+                                    filteredAvailableProvinces.map(prov => {
+                                        const code = PROVINCE_TO_CODE[prov];
+                                        const isSelected = selectedProvinces.includes(prov);
+                                        return (
+                                            <label
+                                                key={prov}
+                                                onClick={() => toggleSelection(selectedProvinces, prov, setSelectedProvinces)}
+                                                className={cn(
+                                                    "flex items-center gap-2 p-2.5 rounded-xl cursor-pointer text-xs border transition-all duration-200 select-none",
+                                                    isSelected
+                                                        ? "bg-scout-green/10 dark:bg-emerald-950/30 border-scout-green text-scout-green-dark dark:text-emerald-400 font-bold"
+                                                        : "bg-white dark:bg-gray-700 border-gray-150 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-650"
+                                                )}
+                                            >
+                                                <div className={cn(
+                                                    "w-3.5 h-3.5 rounded-md border flex items-center justify-center shrink-0 transition-all",
+                                                    isSelected 
+                                                        ? "bg-scout-green border-scout-green" 
+                                                        : "border-gray-300 dark:border-gray-500 bg-white dark:bg-gray-800"
+                                                )}>
+                                                    {isSelected && <Check size={10} className="text-white" />}
+                                                </div>
+                                                <span className="font-semibold truncate">
+                                                    {prov} {code && <span className="text-[10px] opacity-75 font-mono">({code})</span>}
+                                                </span>
+                                            </label>
+                                        );
+                                    })
+                                ) : (
+                                    <div className="col-span-2 py-4 text-center text-xs text-gray-400 dark:text-gray-500">
+                                        Nessuna provincia trovata
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -661,6 +794,8 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                                     onClick={() => {
                                         setSelectedBranches([]);
                                         setSelectedRegions([]);
+                                        setSelectedProvinces([]);
+                                        setProvinceSearch('');
                                         setSelectedActivities([]);
                                         setSelectedStaleness([]);
                                         setHasTents(false);
@@ -795,8 +930,21 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                             {r}
                             <button
                                 type="button"
-                                onClick={() => toggleSelection(selectedRegions, r, setSelectedRegions)}
+                                onClick={() => toggleRegion(r)}
                                 className="hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full p-0.5 cursor-pointer"
+                            >
+                                <X size={12} />
+                            </button>
+                        </span>
+                    ))}
+                    {selectedProvinces.map(p => (
+                        <span key={p} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/40 text-scout-green-dark dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50 whitespace-nowrap">
+                            <MapPin size={13} />
+                            {p}{PROVINCE_TO_CODE[p] ? ` (${PROVINCE_TO_CODE[p]})` : ''}
+                            <button
+                                type="button"
+                                onClick={() => toggleSelection(selectedProvinces, p, setSelectedProvinces)}
+                                className="hover:bg-emerald-200/50 dark:hover:bg-emerald-800/60 rounded-full p-0.5 cursor-pointer"
                             >
                                 <X size={12} />
                             </button>
@@ -819,6 +967,8 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                         onClick={() => {
                             setSelectedBranches([]);
                             setSelectedRegions([]);
+                            setSelectedProvinces([]);
+                            setProvinceSearch('');
                             setSelectedActivities([]);
                             setSelectedStaleness([]);
                             setHasTents(false);
@@ -911,6 +1061,8 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                                         setSearchTerm('');
                                         setSelectedBranches([]);
                                         setSelectedRegions([]);
+                                        setSelectedProvinces([]);
+                                        setProvinceSearch('');
                                         setSelectedActivities([]);
                                         setSelectedStaleness([]);
                                         setHasTents(false);

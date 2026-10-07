@@ -58,7 +58,7 @@ export default function LocationCard({ location, unreadModificationsCount }: Loc
 
                     <div className="text-gray-500 dark:text-gray-400 text-sm mb-3 flex items-center gap-1">
                         <MapPin size={14} className="text-scout-green dark:text-emerald-500" />
-                        <span className="truncate">{location.commune}</span>
+                        <span className="truncate">{location.commune}{location.province ? ` (${location.province})` : ''}</span>
                     </div>
 
                     <p className="text-sm text-gray-600 dark:text-gray-300 mb-3 line-clamp-2 italic">

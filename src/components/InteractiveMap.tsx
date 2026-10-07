@@ -85,7 +85,7 @@ function buildPopupHtml(item: MappedLocation): string {
     return `
         <div class="p-2 font-sans w-56 text-gray-900 dark:text-gray-100">
             <h4 class="font-black text-sm text-gray-900 dark:text-white mb-0.5 leading-tight">${loc.name}</h4>
-            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-bold mb-2">${loc.commune}, ${loc.region}</p>
+            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-bold mb-2">${loc.commune}${loc.province ? ` (${loc.province})` : ''}, ${loc.region}</p>
             
             ${estimatedNotice}
 
