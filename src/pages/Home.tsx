@@ -29,30 +29,158 @@ interface HomeProps {
     defaultView?: 'list' | 'map';
 }
 
+interface StoredLocationFilters {
+    searchTerm?: string;
+    viewMode?: 'list' | 'map';
+    selectedBranches?: string[];
+    selectedRegions?: string[];
+    selectedProvinces?: string[];
+    hasTents?: boolean;
+    hasBeds?: boolean;
+    minBeds?: number | null;
+    hasAccantonamento?: boolean;
+    minAccantonamento?: number | null;
+    hasHeating?: boolean;
+    hasWaterPoints?: boolean;
+    selectedActivities?: string[];
+    selectedStaleness?: number[];
+}
+
+const getInitialFilters = (): StoredLocationFilters => {
+    try {
+        const raw = sessionStorage.getItem('orme_location_filters');
+        if (raw) return JSON.parse(raw);
+    } catch (e) {
+        console.error("Errore lettura filtri da sessionStorage:", e);
+    }
+    return {};
+};
+
 export default function Home({ defaultView = 'list' }: HomeProps) {
     const [locations, setLocations] = useState<Location[]>([]);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [viewMode, setViewMode] = useState<'list' | 'map'>(defaultView);
+    const [initialFilters] = useState<StoredLocationFilters>(getInitialFilters);
+
+    const [searchTerm, setSearchTerm] = useState(() => initialFilters.searchTerm || '');
+    const [viewMode, setViewMode] = useState<'list' | 'map'>(() => defaultView || initialFilters.viewMode || 'list');
     const [showFilters, setShowFilters] = useState(false);
 
     // Advanced Filters State
-    const [selectedBranches, setSelectedBranches] = useState<string[]>([]);
-    const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
-    const [selectedProvinces, setSelectedProvinces] = useState<string[]>([]);
+    const [selectedBranches, setSelectedBranches] = useState<string[]>(() => initialFilters.selectedBranches || []);
+    const [selectedRegions, setSelectedRegions] = useState<string[]>(() => initialFilters.selectedRegions || []);
+    const [selectedProvinces, setSelectedProvinces] = useState<string[]>(() => initialFilters.selectedProvinces || []);
     const [provinceSearch, setProvinceSearch] = useState('');
-    const [hasTents, setHasTents] = useState(false);
-    const [hasBeds, setHasBeds] = useState(false);
-    const [minBeds, setMinBeds] = useState<number | null>(null);
-    const [hasAccantonamento, setHasAccantonamento] = useState(false);
-    const [minAccantonamento, setMinAccantonamento] = useState<number | null>(null);
-    const [hasHeating, setHasHeating] = useState(false);
-    const [hasWaterPoints, setHasWaterPoints] = useState(false);
-    const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
-    const [selectedStaleness, setSelectedStaleness] = useState<number[]>([]);
+    const [hasTents, setHasTents] = useState(() => initialFilters.hasTents || false);
+    const [hasBeds, setHasBeds] = useState(() => initialFilters.hasBeds || false);
+    const [minBeds, setMinBeds] = useState<number | null>(() => initialFilters.minBeds ?? null);
+    const [hasAccantonamento, setHasAccantonamento] = useState(() => initialFilters.hasAccantonamento || false);
+    const [minAccantonamento, setMinAccantonamento] = useState<number | null>(() => initialFilters.minAccantonamento ?? null);
+    const [hasHeating, setHasHeating] = useState(() => initialFilters.hasHeating || false);
+    const [hasWaterPoints, setHasWaterPoints] = useState(() => initialFilters.hasWaterPoints || false);
+    const [selectedActivities, setSelectedActivities] = useState<string[]>(() => initialFilters.selectedActivities || []);
+    const [selectedStaleness, setSelectedStaleness] = useState<number[]>(() => initialFilters.selectedStaleness || []);
     const [currentUser, setCurrentUser] = useState<UserType | null>(null);
     const [locationViews, setLocationViews] = useState<Record<string, string>>({});
     const [histories, setHistories] = useState<any[]>([]);
     const [showTransportModal, setShowTransportModal] = useState(false);
+
+    const resetAllFilters = () => {
+        setSearchTerm('');
+        setSelectedBranches([]);
+        setSelectedRegions([]);
+        setSelectedProvinces([]);
+        setProvinceSearch('');
+        setSelectedActivities([]);
+        setSelectedStaleness([]);
+        setHasTents(false);
+        setHasBeds(false);
+        setMinBeds(null);
+        setHasAccantonamento(false);
+        setMinAccantonamento(null);
+        setHasHeating(false);
+        setHasWaterPoints(false);
+        sessionStorage.removeItem('orme_location_filters');
+        sessionStorage.removeItem('orme_location_scroll_y');
+    };
+
+    // Salva automaticamente lo stato dei filtri in sessionStorage per ripristinarli quando si torna indietro da una scheda
+    useEffect(() => {
+        const hasAnyActiveFilter = 
+            Boolean(searchTerm.trim()) ||
+            selectedBranches.length > 0 ||
+            selectedRegions.length > 0 ||
+            selectedProvinces.length > 0 ||
+            selectedActivities.length > 0 ||
+            selectedStaleness.length > 0 ||
+            hasTents ||
+            hasBeds ||
+            (minBeds !== null && minBeds > 0) ||
+            hasAccantonamento ||
+            (minAccantonamento !== null && minAccantonamento > 0) ||
+            hasHeating ||
+            hasWaterPoints ||
+            viewMode !== defaultView;
+
+        if (hasAnyActiveFilter) {
+            const dataToSave: StoredLocationFilters = {
+                searchTerm,
+                viewMode,
+                selectedBranches,
+                selectedRegions,
+                selectedProvinces,
+                selectedActivities,
+                selectedStaleness,
+                hasTents,
+                hasBeds,
+                minBeds,
+                hasAccantonamento,
+                minAccantonamento,
+                hasHeating,
+                hasWaterPoints,
+            };
+            sessionStorage.setItem('orme_location_filters', JSON.stringify(dataToSave));
+        } else {
+            sessionStorage.removeItem('orme_location_filters');
+        }
+    }, [
+        searchTerm,
+        viewMode,
+        defaultView,
+        selectedBranches,
+        selectedRegions,
+        selectedProvinces,
+        selectedActivities,
+        selectedStaleness,
+        hasTents,
+        hasBeds,
+        minBeds,
+        hasAccantonamento,
+        minAccantonamento,
+        hasHeating,
+        hasWaterPoints,
+    ]);
+
+    // Salva e ripristina la posizione di scroll quando si torna indietro da un luogo
+    useEffect(() => {
+        const handleScroll = () => {
+            sessionStorage.setItem('orme_location_scroll_y', String(window.scrollY));
+        };
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
+    useEffect(() => {
+        if (locations.length > 0) {
+            const savedScroll = sessionStorage.getItem('orme_location_scroll_y');
+            if (savedScroll) {
+                const y = parseInt(savedScroll, 10);
+                if (!isNaN(y) && y > 0) {
+                    setTimeout(() => {
+                        window.scrollTo({ top: y, behavior: 'instant' });
+                    }, 60);
+                }
+            }
+        }
+    }, [locations.length]);
 
     useEffect(() => {
         getLocations().then(setLocations).catch(console.error);
@@ -791,21 +919,7 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                             </button>
                             {activeFiltersCount > 0 && (
                                 <button
-                                    onClick={() => {
-                                        setSelectedBranches([]);
-                                        setSelectedRegions([]);
-                                        setSelectedProvinces([]);
-                                        setProvinceSearch('');
-                                        setSelectedActivities([]);
-                                        setSelectedStaleness([]);
-                                        setHasTents(false);
-                                        setHasBeds(false);
-                                        setMinBeds(null);
-                                        setHasAccantonamento(false);
-                                        setMinAccantonamento(null);
-                                        setHasHeating(false);
-                                        setHasWaterPoints(false);
-                                    }}
+                                    onClick={resetAllFilters}
                                     className="w-full mt-3 text-gray-500 dark:text-gray-400 font-medium py-2 hover:text-gray-900 dark:hover:text-white"
                                 >
                                     Cancella tutto
@@ -964,21 +1078,7 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                     ))}
                     <button
                         type="button"
-                        onClick={() => {
-                            setSelectedBranches([]);
-                            setSelectedRegions([]);
-                            setSelectedProvinces([]);
-                            setProvinceSearch('');
-                            setSelectedActivities([]);
-                            setSelectedStaleness([]);
-                            setHasTents(false);
-                            setHasBeds(false);
-                            setMinBeds(null);
-                            setHasAccantonamento(false);
-                            setMinAccantonamento(null);
-                            setHasHeating(false);
-                            setHasWaterPoints(false);
-                        }}
+                        onClick={resetAllFilters}
                         className="text-xs text-red-500 dark:text-red-400 font-bold hover:underline whitespace-nowrap ml-1 cursor-pointer"
                     >
                         Azzera tutti
@@ -1057,23 +1157,8 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                             <p className="text-gray-500 dark:text-gray-400 max-w-xs mx-auto">Prova a modificare i filtri o cerca qualcosa di diverso.</p>
                             {activeFiltersCount > 0 && (
                                 <button
-                                    onClick={() => {
-                                        setSearchTerm('');
-                                        setSelectedBranches([]);
-                                        setSelectedRegions([]);
-                                        setSelectedProvinces([]);
-                                        setProvinceSearch('');
-                                        setSelectedActivities([]);
-                                        setSelectedStaleness([]);
-                                        setHasTents(false);
-                                        setHasBeds(false);
-                                        setMinBeds(null);
-                                        setHasAccantonamento(false);
-                                        setMinAccantonamento(null);
-                                        setHasHeating(false);
-                                        setHasWaterPoints(false);
-                                    }}
-                                    className="mt-6 text-scout-blue font-bold hover:underline"
+                                    onClick={resetAllFilters}
+                                    className="mt-6 text-scout-blue font-bold hover:underline cursor-pointer"
                                 >
                                     Resetta ricerca
                                 </button>

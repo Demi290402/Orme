@@ -481,9 +481,20 @@ export default function LocationDetail() {
         <div className="space-y-6 pb-20">
             {/* Header */}
             <div className="flex items-center gap-2 mb-4">
-                <Link to="/" className="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                <button
+                    type="button"
+                    onClick={() => {
+                        if (window.history.length > 1) {
+                            navigate(-1);
+                        } else {
+                            navigate('/');
+                        }
+                    }}
+                    className="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+                    title="Torna indietro"
+                >
                     <ArrowLeft size={24} className="dark:text-white" />
-                </Link>
+                </button>
                 <div>
                     <h1 className="text-2xl font-black leading-tight text-gray-900 dark:text-white">{location.name}</h1>
                     <p className="text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-widest">{location.commune}, {location.region}</p>
