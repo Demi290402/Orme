@@ -31,7 +31,8 @@ import {
     Copy,
     Compass,
     Share2,
-    Clock
+    Clock,
+    Loader2
 } from 'lucide-react';
 
 function calculateDaysInList(registrationDateStr: string): number {
@@ -71,6 +72,11 @@ export default function ListaAttesa() {
     const [classe, setClasse] = useState('');
     const [dataIscrizione, setDataIscrizione] = useState(new Date().toISOString().split('T')[0]);
     const [note, setNote] = useState('');
+
+    // Stato di salvataggio per evitare doppi click ed elementi duplicati
+    const [saving, setSaving] = useState(false);
+    const isSavingRef = useRef(false);
+    const [deletingId, setDeletingId] = useState<string | null>(null);
 
     // Import Excel Mapping states
     const [importData, setImportData] = useState<any[]>([]);
@@ -122,6 +128,7 @@ export default function ListaAttesa() {
     };
 
     const closeAddModal = () => {
+        if (saving || isSavingRef.current) return;
         setShowAddModal(false);
         setEditingIscritto(null);
         setNomeGenitore('');
@@ -136,51 +143,101 @@ export default function ListaAttesa() {
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!nomeGenitore || !telefonoGenitore || !nomeRagazzo || !cognomeRagazzo || !dataNascita || !classe) {
+        if (isSavingRef.current || saving) return;
+
+        if (!nomeGenitore.trim() || !telefonoGenitore.trim() || !nomeRagazzo.trim() || !cognomeRagazzo.trim() || !dataNascita || !classe) {
             showToast('Compila tutti i campi obbligatori', 'error');
             return;
         }
 
+        const trimmedNome = nomeRagazzo.trim();
+        const trimmedCognome = cognomeRagazzo.trim();
+
+        // Controllo preventivo duplicati (stesso nome, cognome e data di nascita)
+        if (editingIscritto) {
+            const isDuplicate = lista.some(item =>
+                item.id !== editingIscritto.id &&
+                item.nomeRagazzo.trim().toLowerCase() === trimmedNome.toLowerCase() &&
+                item.cognomeRagazzo.trim().toLowerCase() === trimmedCognome.toLowerCase() &&
+                item.dataNascita === dataNascita
+            );
+            if (isDuplicate) {
+                showToast('Attenzione: un altro bambino con questo nome, cognome e data di nascita è già presente in lista!', 'error');
+                return;
+            }
+        } else {
+            const isDuplicate = lista.some(item =>
+                item.nomeRagazzo.trim().toLowerCase() === trimmedNome.toLowerCase() &&
+                item.cognomeRagazzo.trim().toLowerCase() === trimmedCognome.toLowerCase() &&
+                item.dataNascita === dataNascita
+            );
+            if (isDuplicate) {
+                showToast('Attenzione: un ragazzo/a con questo nome, cognome e data di nascita è già presente in lista d\'attesa!', 'error');
+                return;
+            }
+        }
+
+        isSavingRef.current = true;
+        setSaving(true);
+
         const payload = {
-            nomeGenitore,
-            telefonoGenitore,
-            nomeRagazzo,
-            cognomeRagazzo,
+            nomeGenitore: nomeGenitore.trim(),
+            telefonoGenitore: telefonoGenitore.trim(),
+            nomeRagazzo: trimmedNome,
+            cognomeRagazzo: trimmedCognome,
             dataNascita,
             classe,
             dataIscrizione,
-            note
+            note: note.trim()
         };
 
-        if (editingIscritto) {
-            const updated = await updateIscritto({ ...editingIscritto, ...payload });
-            if (updated) {
-                showToast('Iscritto aggiornato con successo!');
-                fetchLista();
-                closeAddModal();
+        try {
+            if (editingIscritto) {
+                const updated = await updateIscritto({ ...editingIscritto, ...payload });
+                if (updated) {
+                    showToast('Iscritto aggiornato con successo!');
+                    await fetchLista();
+                    closeAddModal();
+                } else {
+                    showToast('Errore nell\'aggiornamento', 'error');
+                }
             } else {
-                showToast('Errore nell\'aggiornamento', 'error');
+                const added = await addIscritto(payload);
+                if (added) {
+                    showToast('Nuovo iscritto aggiunto alla lista!');
+                    await fetchLista();
+                    closeAddModal();
+                } else {
+                    showToast('Errore nell\'inserimento', 'error');
+                }
             }
-        } else {
-            const added = await addIscritto(payload);
-            if (added) {
-                showToast('Nuovo iscritto aggiunto alla lista!');
-                fetchLista();
-                closeAddModal();
+        } catch (err: any) {
+            console.error('Errore nel salvataggio iscritto:', err);
+            if (err?.message === 'DUPLICATE_ENTRY') {
+                showToast('Questo nominativo con la stessa data di nascita è già presente in lista d\'attesa!', 'error');
             } else {
-                showToast('Errore nell\'inserimento', 'error');
+                showToast('Errore durante il salvataggio', 'error');
             }
+        } finally {
+            isSavingRef.current = false;
+            setSaving(false);
         }
     };
 
     const handleDelete = async (id: string) => {
+        if (deletingId) return;
         if (confirm('Sei sicuro di voler rimuovere questo iscritto?')) {
-            const success = await deleteIscritto(id);
-            if (success) {
-                showToast('Iscritto rimosso con successo!');
-                fetchLista();
-            } else {
-                showToast('Errore nell\'eliminazione', 'error');
+            setDeletingId(id);
+            try {
+                const success = await deleteIscritto(id);
+                if (success) {
+                    showToast('Iscritto rimosso con successo!');
+                    await fetchLista();
+                } else {
+                    showToast('Errore nell\'eliminazione', 'error');
+                }
+            } finally {
+                setDeletingId(null);
             }
         }
     };
@@ -668,119 +725,137 @@ export default function ListaAttesa() {
             {/* Modal: Aggiungi / Modifica */}
             {showAddModal && (
                 <div className="fixed inset-0 z-55 flex items-center justify-center p-4">
-                    <div className="fixed inset-0 bg-black/60 backdrop-blur-xs" onClick={closeAddModal} />
+                    <div 
+                        className="fixed inset-0 bg-black/60 backdrop-blur-xs" 
+                        onClick={() => { if (!saving) closeAddModal(); }} 
+                    />
                     <div className="bg-white dark:bg-gray-800 w-full max-w-lg rounded-3xl p-6 md:p-8 z-10 border border-gray-150 dark:border-gray-750 shadow-2xl relative space-y-6 animate-in zoom-in-95 duration-200">
                         <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-700 pb-3">
                             <h3 className="font-extrabold text-base text-gray-900 dark:text-white">
                                 {editingIscritto ? 'Modifica Iscritto' : 'Nuovo Iscritto Manuale'}
                             </h3>
-                            <button onClick={closeAddModal} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full dark:text-gray-400">
+                            <button 
+                                type="button"
+                                onClick={closeAddModal} 
+                                disabled={saving}
+                                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full dark:text-gray-400 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                            >
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
                         <form onSubmit={handleSave} className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Nome Bambino/a *</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={nomeRagazzo}
-                                        onChange={(e) => setNomeRagazzo(e.target.value)}
-                                        className="w-full px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-xs"
-                                    />
+                            <fieldset disabled={saving} className="space-y-4 disabled:opacity-80">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Nome Bambino/a *</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={nomeRagazzo}
+                                            onChange={(e) => setNomeRagazzo(e.target.value)}
+                                            className="w-full px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-xs"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Cognome Bambino/a *</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={cognomeRagazzo}
+                                            onChange={(e) => setCognomeRagazzo(e.target.value)}
+                                            className="w-full px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-xs"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Data Nascita *</label>
+                                        <input
+                                            type="date"
+                                            required
+                                            value={dataNascita}
+                                            onChange={(e) => setDataNascita(e.target.value)}
+                                            className="w-full px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-xs"
+                                        />
+                                    </div>
+                                    <div>
+                                        <div className="flex justify-between items-center mb-1">
+                                            <label className="block text-[10px] font-bold text-gray-400 uppercase">Classe all'iscrizione *</label>
+                                            {dataNascita && classe && (
+                                                <span className="text-[9px] text-scout-green font-bold">
+                                                    Attuale: {getClasseAttuale({ dataNascita, classe, dataIscrizione })}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <select
+                                            required
+                                            value={classe}
+                                            onChange={(e) => setClasse(e.target.value)}
+                                            className="w-full px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-xs"
+                                        >
+                                            <option value="">Seleziona classe...</option>
+                                            {CLASSI.map((c) => (
+                                                <option key={c} value={c}>{c}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Nome Genitore *</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={nomeGenitore}
+                                            onChange={(e) => setNomeGenitore(e.target.value)}
+                                            className="w-full px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-xs"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Telefono Riferimento *</label>
+                                        <input
+                                            type="tel"
+                                            required
+                                            value={telefonoGenitore}
+                                            onChange={(e) => setTelefonoGenitore(e.target.value)}
+                                            className="w-full px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-xs"
+                                        />
+                                    </div>
                                 </div>
                                 <div>
-                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Cognome Bambino/a *</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={cognomeRagazzo}
-                                        onChange={(e) => setCognomeRagazzo(e.target.value)}
-                                        className="w-full px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-xs"
-                                    />
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Data Nascita *</label>
+                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Data Iscrizione *</label>
                                     <input
                                         type="date"
                                         required
-                                        value={dataNascita}
-                                        onChange={(e) => setDataNascita(e.target.value)}
+                                        value={dataIscrizione}
+                                        onChange={(e) => setDataIscrizione(e.target.value)}
                                         className="w-full px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-xs"
                                     />
                                 </div>
                                 <div>
-                                    <div className="flex justify-between items-center mb-1">
-                                        <label className="block text-[10px] font-bold text-gray-400 uppercase">Classe all'iscrizione *</label>
-                                        {dataNascita && classe && (
-                                            <span className="text-[9px] text-scout-green font-bold">
-                                                Attuale: {getClasseAttuale({ dataNascita, classe, dataIscrizione })}
-                                            </span>
-                                        )}
-                                    </div>
-                                    <select
-                                        required
-                                        value={classe}
-                                        onChange={(e) => setClasse(e.target.value)}
-                                        className="w-full px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-xs"
-                                    >
-                                        <option value="">Seleziona classe...</option>
-                                        {CLASSI.map((c) => (
-                                            <option key={c} value={c}>{c}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Nome Genitore *</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={nomeGenitore}
-                                        onChange={(e) => setNomeGenitore(e.target.value)}
-                                        className="w-full px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-xs"
+                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Note (Opzionale)</label>
+                                    <textarea
+                                        value={note}
+                                        onChange={(e) => setNote(e.target.value)}
+                                        rows={2}
+                                        className="w-full px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-xs resize-none"
                                     />
                                 </div>
-                                <div>
-                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Telefono Riferimento *</label>
-                                    <input
-                                        type="tel"
-                                        required
-                                        value={telefonoGenitore}
-                                        onChange={(e) => setTelefonoGenitore(e.target.value)}
-                                        className="w-full px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-xs"
-                                    />
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Data Iscrizione *</label>
-                                <input
-                                    type="date"
-                                    required
-                                    value={dataIscrizione}
-                                    onChange={(e) => setDataIscrizione(e.target.value)}
-                                    className="w-full px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-xs"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Note (Opzionale)</label>
-                                <textarea
-                                    value={note}
-                                    onChange={(e) => setNote(e.target.value)}
-                                    rows={2}
-                                    className="w-full px-3 py-2 rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-xs resize-none"
-                                />
-                            </div>
-                            <button
-                                type="submit"
-                                className="w-full bg-scout-green hover:bg-scout-green-dark text-white font-extrabold py-3.5 rounded-2xl text-xs transition-all shadow-md cursor-pointer"
-                            >
-                                Salva Dati
-                            </button>
+                                <button
+                                    type="submit"
+                                    disabled={saving}
+                                    className="w-full bg-scout-green hover:bg-scout-green-dark disabled:opacity-50 text-white font-extrabold py-3.5 rounded-2xl text-xs transition-all shadow-md cursor-pointer disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                >
+                                    {saving ? (
+                                        <>
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                            <span>Salvataggio in corso...</span>
+                                        </>
+                                    ) : (
+                                        <span>{editingIscritto ? 'Salva Modifiche' : 'Salva Dati'}</span>
+                                    )}
+                                </button>
+                            </fieldset>
                         </form>
                     </div>
                 </div>

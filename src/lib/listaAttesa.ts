@@ -196,6 +196,21 @@ export async function addIscritto(
             return mapDbRowToListaAttesa({ ...insertData, id, created_at: new Date().toISOString() });
         }
 
+        // Controllo preventivo anti-duplicati: verifica se esiste già un iscritto con stesso nome, cognome e data di nascita per questo gruppo
+        const { data: existingDups } = await supabase
+            .from('lista_attesa')
+            .select('id')
+            .eq('group_id', currentUser.groupId)
+            .ilike('nome_ragazzo', insertData.nome_ragazzo)
+            .ilike('cognome_ragazzo', insertData.cognome_ragazzo)
+            .eq('data_nascita', insertData.data_nascita)
+            .limit(1);
+
+        if (existingDups && existingDups.length > 0) {
+            console.warn('Iscritto già presente in lista d\'attesa per questo gruppo:', insertData);
+            throw new Error('DUPLICATE_ENTRY');
+        }
+
         const { data, error } = await supabase
             .from('lista_attesa')
             .insert(insertData)
@@ -208,8 +223,11 @@ export async function addIscritto(
         await getListaAttesa();
         
         return mapDbRowToListaAttesa(data);
-    } catch (error) {
+    } catch (error: any) {
         console.error("Errore nell'aggiunta dell'iscritto:", error);
+        if (error?.message === 'DUPLICATE_ENTRY') {
+            throw error;
+        }
         return null;
     }
 }
@@ -288,6 +306,21 @@ export async function addIscrittoPubblico(
 
         if (!isOnline()) {
             enqueueOfflineWrite('insert', 'lista_attesa', { ...insertData, id: crypto.randomUUID() });
+            return true;
+        }
+
+        // Controllo preventivo anti-duplicati (idempotenza invio genitori)
+        const { data: existingDups } = await supabase
+            .from('lista_attesa')
+            .select('id')
+            .eq('group_id', groupId)
+            .ilike('nome_ragazzo', insertData.nome_ragazzo)
+            .ilike('cognome_ragazzo', insertData.cognome_ragazzo)
+            .eq('data_nascita', insertData.data_nascita)
+            .limit(1);
+
+        if (existingDups && existingDups.length > 0) {
+            console.warn('Iscritto già presente in lista d\'attesa, salvataggio idempotente:', insertData);
             return true;
         }
 
