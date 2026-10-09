@@ -32,6 +32,12 @@ const SEZIONI_DISPONIBILI = [
     { id: 'varie', label: 'Varie', icon: '💬', color: 'text-gray-500 dark:text-gray-300' },
 ];
 
+function formatSafeDate(dStr?: string): string {
+    if (!dStr) return '';
+    const dt = new Date(dStr);
+    return isNaN(dt.getTime()) ? dStr : dt.toLocaleDateString('it-IT');
+}
+
 export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean }) {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -1436,11 +1442,18 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                     <tr>
                                         <td>
                                             <div className="space-y-8 font-serif px-4 md:px-[80px] py-5 md:py-10 break-words">
-                                                {/* LINEAR METADATA (MATCHING SCREEN 2) */}
+                                                {/* LINEAR METADATA (MATCHING SCREEN 2, PDF & DOCX) */}
                                                 <div className="space-y-1.5 text-[12px]">
                                                     <div className="flex justify-between items-center font-bold">
-                                                        <span>{new Date(verbale.data || '').toLocaleDateString('it-IT')}</span>
+                                                        <span>{formatSafeDate(verbale.data)}</span>
                                                         <span className="text-gray-500 font-normal text-[11px]">A.A. {formatScoutYear(verbale.annoScout ?? calculateScoutYear(verbale.data || ''))}</span>
+                                                    </div>
+                                                    <div className="font-bold text-[12px] text-gray-700 dark:text-gray-300">
+                                                        <span>Verbale N° {verbale.numero || '-'}</span>
+                                                        {verbale.luogo && <span> • {verbale.luogo}</span>}
+                                                        {(verbale.oraInizio || verbale.oraFine) && (
+                                                            <span> • ore {verbale.oraInizio || '?'} – {verbale.oraFine || '?'}</span>
+                                                        )}
                                                     </div>
                                                     <div>
                                                         <span className="font-black">Oggetto: </span>
@@ -1462,7 +1475,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                                     return nome + suffix;
                                                                 }).join(', ') || 'Nessuno'}
                                                             {verbale.ospiti && verbale.ospiti.length > 0 && 
-                                                                ", " + verbale.ospiti.map(o => `${o.nome} (${o.ruolo})`).join(', ')}
+                                                                ", " + verbale.ospiti.map(o => `${o.nome}${o.ruolo ? ` (${o.ruolo})` : ''}`).join(', ')}
                                                         </span>
                                                     </div>
                                                     <div>
@@ -1481,19 +1494,19 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                                 {(verbale.sezioniAttive || []).map((sezId) => {
                                                                     const SEZIONI_LABELS: Record<string, string> = {
                                                                         ritorni: 'Ritorni dalle branche',
-                                                                        posti_azione: "Posti d'Azione",
-                                                                        prossimi_impegni: 'Prossimi impegni',
-                                                                        cassa: 'Aggiornamento cassa',
-                                                                        varie: 'Varie ed eventuali',
                                                                         date_importanti: 'Date importanti',
+                                                                        posti_azione: "Posti d'Azione",
+                                                                        cassa: 'Movimenti di cassa di gruppo',
+                                                                        prossimi_impegni: 'Prossimi impegni',
+                                                                        varie: 'Varie ed eventuali',
                                                                     };
                                                                     const hasContent =
                                                                         (sezId === 'ritorni' && (verbale.ritorni?.length || 0) > 0) ||
-                                                                        (sezId === 'posti_azione' && (verbale.postiAzione?.length || 0) > 0) ||
-                                                                        (sezId === 'prossimi_impegni' && (verbale.prossimiImpegni?.length || 0) > 0) ||
                                                                         (sezId === 'date_importanti' && (verbale.dateImportanti?.length || 0) > 0) ||
+                                                                        (sezId === 'posti_azione' && (verbale.postiAzione?.length || 0) > 0) ||
                                                                         (sezId === 'cassa' && (verbale.cassa?.length || 0) > 0) ||
-                                                                        (sezId === 'varie' && !!verbale.varie);
+                                                                        (sezId === 'prossimi_impegni' && (verbale.prossimiImpegni?.length || 0) > 0) ||
+                                                                        (sezId === 'varie' && !!verbale.varie && verbale.varie.trim().length > 0);
                                                                     if (!hasContent || !SEZIONI_LABELS[sezId]) return null;
                                                                     return <li key={sezId} className="font-bold italic text-gray-500 dark:text-gray-300">{SEZIONI_LABELS[sezId]}</li>;
                                                                 })}
@@ -1517,96 +1530,116 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                         </div>
                                                     ))}
 
-                                                    {/* Additional Sections */}
-                                                    {verbale.sezioniAttive?.includes('ritorni') && verbale.ritorni && verbale.ritorni.length > 0 && (
-                                                        <div className="space-y-4">
-                                                            <div className="font-black border-b border-gray-100 dark:border-gray-700 pb-1 uppercase text-[10px] tracking-widest text-[#45387E]">Ritorni</div>
-                                                            {verbale.ritorni.map((r, i) => (
-                                                                <div key={i} className="pl-6 space-y-1">
-                                                                    <div className="font-bold text-[11px]">- {r.branca}</div>
-                                                                    <div 
-                                                                        className="text-[12px] leading-relaxed text-justify pl-4 italic opacity-80 prose prose-sm max-w-none prose-p:m-0"
-                                                                        dangerouslySetInnerHTML={{ __html: r.contenuto }}
-                                                                    />
+                                                    {/* Additional Sections (Dynamic Order Matching PDF & Word) */}
+                                                    {(verbale.sezioniAttive || ['ritorni', 'date_importanti', 'posti_azione', 'cassa', 'prossimi_impegni', 'varie']).map(sezId => {
+                                                        if (sezId === 'ritorni' && verbale.ritorni && verbale.ritorni.length > 0) {
+                                                            return (
+                                                                <div key="ritorni" className="space-y-4">
+                                                                    <div className="font-black border-b border-gray-100 dark:border-gray-700 pb-1 uppercase text-[10px] tracking-widest text-[#45387E]">Ritorni dalle branche</div>
+                                                                    {verbale.ritorni.map((r, i) => (
+                                                                        <div key={i} className="pl-6 space-y-1">
+                                                                            <div className="font-bold text-[11px]">- {r.branca}</div>
+                                                                            <div 
+                                                                                className="text-[12px] leading-relaxed text-justify pl-4 italic opacity-80 prose prose-sm max-w-none prose-p:m-0"
+                                                                                dangerouslySetInnerHTML={{ __html: r.contenuto }}
+                                                                            />
+                                                                        </div>
+                                                                    ))}
                                                                 </div>
-                                                            ))}
-                                                        </div>
-                                                    )}
-
-                                                    {verbale.sezioniAttive?.includes('date_importanti') && verbale.dateImportanti && verbale.dateImportanti.length > 0 && (
-                                                        <div className="space-y-4">
-                                                            <div className="font-black border-b border-gray-100 dark:border-gray-700 pb-1 uppercase text-[10px] tracking-widest text-scout-blue">Date Importanti</div>
-                                                            <div className="pl-6 space-y-3">
-                                                                {verbale.dateImportanti.map((d, i) => (
-                                                                    <div key={i} className="text-[12px] flex flex-col border-l-2 border-scout-blue/20 pl-3 py-0.5">
-                                                                        <div className="font-bold uppercase tracking-tight">{d.evento}</div>
-                                                                        <div className="flex items-center gap-2 text-[10px] text-gray-400">
-                                                                            <Calendar size={10} />
-                                                                            <span>{new Date(d.dataInizio).toLocaleDateString('it-IT')}</span>
-                                                                            {d.dataFine && <span> - {new Date(d.dataFine).toLocaleDateString('it-IT')}</span>}
-                                                                            {d.luogo && <span className="italic">• {d.luogo}</span>}
-                                                                        </div>
-                                                                        {d.note && <div className="text-[11px] italic mt-1 opacity-70">{d.note}</div>}
+                                                            );
+                                                        }
+                                                        if (sezId === 'date_importanti' && verbale.dateImportanti && verbale.dateImportanti.length > 0) {
+                                                            return (
+                                                                <div key="date_importanti" className="space-y-4">
+                                                                    <div className="font-black border-b border-gray-100 dark:border-gray-700 pb-1 uppercase text-[10px] tracking-widest text-scout-blue">Date Importanti</div>
+                                                                    <div className="pl-6 space-y-3">
+                                                                        {verbale.dateImportanti.map((d, i) => (
+                                                                            <div key={i} className="text-[12px] flex flex-col border-l-2 border-scout-blue/20 pl-3 py-0.5">
+                                                                                <div className="font-bold uppercase tracking-tight">
+                                                                                    {d.evento}
+                                                                                    {d.branca && d.branca !== 'CoCa' && (
+                                                                                        <span className="text-[10px] bg-scout-blue/10 text-scout-blue px-1.5 py-0.5 rounded font-normal ml-2">{d.branca}</span>
+                                                                                    )}
+                                                                                </div>
+                                                                                <div className="flex items-center gap-2 text-[10px] text-gray-400">
+                                                                                    <Calendar size={10} />
+                                                                                    <span>{formatSafeDate(d.dataInizio)}</span>
+                                                                                    {d.dataFine && <span> - {formatSafeDate(d.dataFine)}</span>}
+                                                                                    {d.luogo && <span className="italic">• {d.luogo}</span>}
+                                                                                </div>
+                                                                                {d.note && <div className="text-[11px] italic mt-1 opacity-70">{d.note}</div>}
+                                                                            </div>
+                                                                        ))}
                                                                     </div>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                    )}
-
-                                                    {verbale.sezioniAttive?.includes('posti_azione') && verbale.postiAzione && verbale.postiAzione.length > 0 && (
-                                                        <div className="space-y-4">
-                                                            <div className="font-black border-b border-gray-100 dark:border-gray-700 pb-1 uppercase text-[10px] tracking-widest text-orange-600">Posti d'Azione</div>
-                                                            <ul className="space-y-2 pl-6">
-                                                                {verbale.postiAzione.map((pa, i) => (
-                                                                    <li key={i} className="text-[12px] space-y-0.5">
-                                                                        <div><span className="font-bold">🎯 {pa.cosa}</span></div>
-                                                                        <div className="opacity-60 text-[11px]">
-                                                                            Resp: {(pa.chiIds || []).map(id => membri.find(m => m.id === id)?.nome || verbale.presentiNomi?.[id] || id).join(', ') || '—'}
-                                                                            {pa.quando && ` (${pa.quando})`}
-                                                                        </div>
-                                                                    </li>
-                                                                ))}
-                                                            </ul>
-                                                        </div>
-                                                    )}
-
-                                                    {verbale.sezioniAttive?.includes('cassa') && verbale.cassa && verbale.cassa.length > 0 && (
-                                                        <div className="space-y-4">
-                                                            <div className="font-black border-b border-gray-100 dark:border-gray-700 pb-1 uppercase text-[10px] tracking-widest text-emerald-700">Movimenti di cassa di gruppo</div>
-                                                            <div className="pl-6 text-[12px]">
-                                                                {verbale.cassa.map((m, i) => (
-                                                                    <div key={i} className="flex justify-between border-b border-gray-50 py-1 italic">
-                                                                        <span>{m.branca}: {m.note}</span>
-                                                                        <span className="font-bold">€ {m.importo.toFixed(2)}</span>
+                                                                </div>
+                                                            );
+                                                        }
+                                                        if (sezId === 'posti_azione' && verbale.postiAzione && verbale.postiAzione.length > 0) {
+                                                            return (
+                                                                <div key="posti_azione" className="space-y-4">
+                                                                    <div className="font-black border-b border-gray-100 dark:border-gray-700 pb-1 uppercase text-[10px] tracking-widest text-orange-600">Posti d'Azione</div>
+                                                                    <ul className="space-y-2 pl-6">
+                                                                        {verbale.postiAzione.map((pa, i) => (
+                                                                            <li key={i} className="text-[12px] space-y-0.5">
+                                                                                <div><span className="font-bold">🎯 {pa.cosa}</span></div>
+                                                                                <div className="opacity-60 text-[11px]">
+                                                                                    Resp: {(pa.chiIds || []).map(id => membri.find(m => m.id === id)?.nome || verbale.presentiNomi?.[id] || id).join(', ') || '—'}
+                                                                                    {pa.quando && ` (${formatSafeDate(pa.quando)})`}
+                                                                                </div>
+                                                                            </li>
+                                                                        ))}
+                                                                    </ul>
+                                                                </div>
+                                                            );
+                                                        }
+                                                        if (sezId === 'cassa' && verbale.cassa && verbale.cassa.length > 0) {
+                                                            return (
+                                                                <div key="cassa" className="space-y-4">
+                                                                    <div className="font-black border-b border-gray-100 dark:border-gray-700 pb-1 uppercase text-[10px] tracking-widest text-emerald-700">Movimenti di cassa di gruppo</div>
+                                                                    <div className="pl-6 text-[12px]">
+                                                                        {verbale.cassa.map((m, i) => (
+                                                                            <div key={i} className="flex justify-between border-b border-gray-50 py-1 italic">
+                                                                                <span>{m.branca}: {m.note}</span>
+                                                                                <span className="font-bold">€ {(Number(m.importo) || 0).toFixed(2)}</span>
+                                                                            </div>
+                                                                        ))}
                                                                     </div>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                    )}
-
-                                                    {verbale.sezioniAttive?.includes('prossimi_impegni') && verbale.prossimiImpegni && verbale.prossimiImpegni.length > 0 && (
-                                                        <div className="space-y-4">
-                                                            <div className="font-black border-b border-gray-100 dark:border-gray-700 pb-1 uppercase text-[10px] tracking-widest text-scout-purple">Prossimi impegni</div>
-                                                            <div className="pl-6 space-y-2">
-                                                                {verbale.prossimiImpegni.map((imp, i) => (
-                                                                    <div key={i} className="text-[12px] flex justify-between border-b border-gray-50 py-1">
-                                                                        <span><span className="font-bold">{imp.evento}</span></span>
-                                                                        <span className="opacity-60 italic">
-                                                                            {imp.dataInizio && new Date(imp.dataInizio).toLocaleDateString('it-IT')} 
-                                                                            {imp.note && ` ore ${imp.note}`}
-                                                                        </span>
+                                                                </div>
+                                                            );
+                                                        }
+                                                        if (sezId === 'prossimi_impegni' && verbale.prossimiImpegni && verbale.prossimiImpegni.length > 0) {
+                                                            return (
+                                                                <div key="prossimi_impegni" className="space-y-4">
+                                                                    <div className="font-black border-b border-gray-100 dark:border-gray-700 pb-1 uppercase text-[10px] tracking-widest text-scout-purple">Prossimi impegni</div>
+                                                                    <div className="pl-6 space-y-2">
+                                                                        {verbale.prossimiImpegni.map((imp, i) => (
+                                                                            <div key={i} className="text-[12px] flex justify-between border-b border-gray-50 py-1">
+                                                                                <span>
+                                                                                    <span className="font-bold">{imp.evento}</span>
+                                                                                    {imp.branca && imp.branca !== 'CoCa' && (
+                                                                                        <span className="text-[10px] bg-scout-purple/10 text-scout-purple px-1.5 py-0.5 rounded font-normal ml-2">{imp.branca}</span>
+                                                                                    )}
+                                                                                </span>
+                                                                                <span className="opacity-60 italic">
+                                                                                    {imp.dataInizio && formatSafeDate(imp.dataInizio)} 
+                                                                                    {imp.note && ` ore ${imp.note}`}
+                                                                                </span>
+                                                                            </div>
+                                                                        ))}
                                                                     </div>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                    )}
-
-                                                    {verbale.sezioniAttive?.includes('varie') && verbale.varie && (
-                                                        <div className="space-y-2">
-                                                            <div className="font-black border-b border-gray-100 dark:border-gray-700 pb-1 uppercase text-[10px] tracking-widest text-gray-400">Varie ed Eventuali</div>
-                                                            <div className="pl-6 text-[12px] italic leading-relaxed">{verbale.varie}</div>
-                                                        </div>
-                                                    )}
+                                                                </div>
+                                                            );
+                                                        }
+                                                        if (sezId === 'varie' && verbale.varie && verbale.varie.trim().length > 0) {
+                                                            return (
+                                                                <div key="varie" className="space-y-2">
+                                                                    <div className="font-black border-b border-gray-100 dark:border-gray-700 pb-1 uppercase text-[10px] tracking-widest text-gray-400">Varie ed Eventuali</div>
+                                                                    <div className="pl-6 text-[12px] italic leading-relaxed">{verbale.varie}</div>
+                                                                </div>
+                                                            );
+                                                        }
+                                                        return null;
+                                                    })}
                                                 </div>
                                             </div>
                                         </td>

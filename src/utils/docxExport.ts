@@ -1,10 +1,17 @@
 import { 
     Document, Packer, Paragraph, TextRun, AlignmentType, 
     Table, TableRow, TableCell, WidthType, BorderStyle,
-    ImageRun, Header, Footer, VerticalAlign, UnderlineType, PageNumber
+    ImageRun, Header, Footer, VerticalAlign, UnderlineType, PageNumber, TabStopType, TabStopPosition
 } from 'docx';
 import { saveAs } from 'file-saver';
 import { Verbale, MembroCoCa, User } from '@/types';
+import { calculateScoutYear, formatScoutYear } from '@/lib/verbali';
+
+function formatSafeDate(dStr?: string): string {
+    if (!dStr) return '';
+    const dt = new Date(dStr);
+    return isNaN(dt.getTime()) ? dStr : dt.toLocaleDateString('it-IT');
+}
 
 /**
  * Fetches an image from a URL and returns it as an ArrayBuffer
@@ -496,8 +503,25 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                 
                 // LINEAR METADATA (MATCHING SCREEN 2 & PDF)
                 new Paragraph({
-                    children: [new TextRun({ text: verbale.data || '', bold: true, font: "Roboto", size: 20 })],
-                    spacing: { after: 100 },
+                    children: [
+                        new TextRun({ text: formatSafeDate(verbale.data), bold: true, font: "Roboto", size: 20 }),
+                        new TextRun({ 
+                            text: `\tA.A. ${formatScoutYear(verbale.annoScout ?? calculateScoutYear(verbale.data || ''))}`, 
+                            color: "666666", 
+                            font: "Roboto", 
+                            size: 18 
+                        }),
+                    ],
+                    tabStops: [{ type: TabStopType.RIGHT, position: TabStopPosition.MAX }],
+                    spacing: { after: 80 },
+                }),
+                new Paragraph({
+                    children: [
+                        new TextRun({ text: `Verbale N° ${verbale.numero || '-'}`, bold: true, font: "Roboto", size: 20 }),
+                        ...(verbale.luogo ? [new TextRun({ text: ` • ${cleanText(verbale.luogo)}`, font: "Roboto", size: 20 })] : []),
+                        ...((verbale.oraInizio || verbale.oraFine) ? [new TextRun({ text: ` • ore ${cleanText(verbale.oraInizio || '?')} – ${cleanText(verbale.oraFine || '?')}`, font: "Roboto", size: 20 })] : []),
+                    ],
+                    spacing: { after: 80 },
                 }),
                 new Paragraph({
                     children: [
@@ -580,150 +604,185 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                     })
                 ]).flat(),
 
-                // SECTIONS
-                ...(verbale.sezioniAttive?.includes('ritorni') && verbale.ritorni && verbale.ritorni.length > 0 ? [
-                    new Paragraph({
-                        children: [new TextRun({ text: "RITORNI DALLE BRANCHE", bold: true, size: 20, color: "45387E", font: "Georgia" })],
-                        spacing: { before: 800 },
-                        border: { bottom: { style: BorderStyle.SINGLE, size: 1, color: "EEEEEE" } },
-                    }),
-                    ...verbale.ritorni.map(r => [
-                        new Paragraph({
-                            children: [new TextRun({ text: `- ${r.branca}`, bold: true, font: "Georgia" })],
-                            spacing: { before: 200 },
-                            indent: { left: 400 },
-                        }),
-                        ...parseHtmlToDocxParagraphs(r.contenuto, {
-                            textRun: { italics: true, font: "Georgia", size: 22 },
-                            paragraph: { alignment: AlignmentType.BOTH, indent: { left: 800 }, spacing: { before: 100 } }
-                        })
-                    ]).flat(),
-                ] : []),
+                // SECTIONS (DYNAMIC ORDER MATCHING PDF AND ACTIVE SECTIONS)
+                ...(() => {
+                    const activeSectionOrder = (verbale.sezioniAttive && verbale.sezioniAttive.length > 0)
+                        ? verbale.sezioniAttive
+                        : ['ritorni', 'date_importanti', 'posti_azione', 'cassa', 'prossimi_impegni', 'varie'];
 
-                ...(verbale.sezioniAttive?.includes('date_importanti') && verbale.dateImportanti && verbale.dateImportanti.length > 0 ? [
-                    new Paragraph({
-                        children: [new TextRun({ text: "DATE IMPORTANTI", bold: true, size: 20, color: "45387E", font: "Georgia" })],
-                        spacing: { before: 800 },
-                        border: { bottom: { style: BorderStyle.SINGLE, size: 1, color: "EEEEEE" } },
-                    }),
-                    ...verbale.dateImportanti.map(d => [
-                        new Paragraph({
-                            children: [new TextRun({ text: `${d.evento}`, bold: true, font: "Georgia", size: 22 })],
-                            spacing: { before: 200 },
-                            indent: { left: 400 },
-                        }),
-                        new Paragraph({
-                            children: [
-                                new TextRun({ 
-                                    text: `${new Date(d.dataInizio).toLocaleDateString('it-IT')}${d.dataFine ? ' - ' + new Date(d.dataFine).toLocaleDateString('it-IT') : ''}${d.luogo ? ' • ' + cleanText(d.luogo) : ''}`, 
-                                    font: "Georgia", 
-                                    color: "666666", 
-                                    size: 18 
-                                })
-                            ],
-                            spacing: { before: 50 },
-                            indent: { left: 800 },
-                        }),
-                        ...(d.note ? [
-                           new Paragraph({
-                               children: [new TextRun({ text: cleanText(d.note), italics: true, font: "Georgia", size: 20 })],
-                               spacing: { before: 50 },
-                               indent: { left: 800 },
-                           })
-                        ] : []),
-                    ]).flat(),
-                ] : []),
-
-                ...(verbale.cassa && verbale.cassa.length > 0 ? [
-                    new Paragraph({
-                        children: [new TextRun({ text: "MOVIMENTI DI CASSA DI GRUPPO", bold: true, size: 20, color: "45387E", font: "Georgia" })],
-                        spacing: { before: 800, after: 200 },
-                        border: { bottom: { style: BorderStyle.SINGLE, size: 1, color: "EEEEEE" } },
-                    }),
-                    new Table({
-                        width: { size: 100, type: WidthType.PERCENTAGE },
-                        columnWidths: [2200, 2200, 3906, 2000],
-                        borders: {
-                            top: { style: BorderStyle.SINGLE, size: 4, color: "D1D5DB" },
-                            bottom: { style: BorderStyle.SINGLE, size: 4, color: "D1D5DB" },
-                            left: { style: BorderStyle.SINGLE, size: 4, color: "D1D5DB" },
-                            right: { style: BorderStyle.SINGLE, size: 4, color: "D1D5DB" },
-                            insideHorizontal: { style: BorderStyle.SINGLE, size: 4, color: "E5E7EB" },
-                            insideVertical: { style: BorderStyle.SINGLE, size: 4, color: "E5E7EB" },
+                    const sectionGenerators: Record<string, () => (Paragraph | Table)[]> = {
+                        ritorni: () => {
+                            if (!verbale.sezioniAttive?.includes('ritorni') || !verbale.ritorni || verbale.ritorni.length === 0) return [];
+                            return [
+                                new Paragraph({
+                                    children: [new TextRun({ text: "RITORNI DALLE BRANCHE", bold: true, size: 20, color: "45387E", font: "Georgia" })],
+                                    spacing: { before: 800 },
+                                    border: { bottom: { style: BorderStyle.SINGLE, size: 1, color: "EEEEEE" } },
+                                }),
+                                ...verbale.ritorni.map(r => [
+                                    new Paragraph({
+                                        children: [new TextRun({ text: `- ${r.branca}`, bold: true, font: "Georgia" })],
+                                        spacing: { before: 200 },
+                                        indent: { left: 400 },
+                                    }),
+                                    ...parseHtmlToDocxParagraphs(r.contenuto, {
+                                        textRun: { italics: true, font: "Georgia", size: 22 },
+                                        paragraph: { alignment: AlignmentType.BOTH, indent: { left: 800 }, spacing: { before: 100 } }
+                                    })
+                                ]).flat()
+                            ];
                         },
-                        rows: [
-                            new TableRow({
-                                tableHeader: true,
-                                children: [
-                                    new TableCell({ width: { size: 2200, type: WidthType.DXA }, shading: { fill: "F3F4F6" }, margins: { top: 120, bottom: 120, left: 160, right: 160 }, children: [new Paragraph({ children: [new TextRun({ text: "Branca", bold: true, size: 18 })] })] }),
-                                    new TableCell({ width: { size: 2200, type: WidthType.DXA }, shading: { fill: "F3F4F6" }, margins: { top: 120, bottom: 120, left: 160, right: 160 }, children: [new Paragraph({ children: [new TextRun({ text: "Tipo", bold: true, size: 18 })] })] }),
-                                    new TableCell({ width: { size: 3906, type: WidthType.DXA }, shading: { fill: "F3F4F6" }, margins: { top: 120, bottom: 120, left: 160, right: 160 }, children: [new Paragraph({ children: [new TextRun({ text: "Causale", bold: true, size: 18 })] })] }),
-                                    new TableCell({ width: { size: 2000, type: WidthType.DXA }, shading: { fill: "F3F4F6" }, margins: { top: 120, bottom: 120, left: 160, right: 160 }, children: [new Paragraph({ children: [new TextRun({ text: "Importo", bold: true, size: 18 })], alignment: AlignmentType.RIGHT })] }),
-                                ],
-                            }),
-                            ...verbale.cassa.map(m => new TableRow({
-                                children: [
-                                    new TableCell({ width: { size: 2200, type: WidthType.DXA }, margins: { top: 120, bottom: 120, left: 160, right: 160 }, children: [new Paragraph({ children: [new TextRun({ text: cleanText(m.branca), font: "Georgia", size: 18 })] })] }),
-                                    new TableCell({ width: { size: 2200, type: WidthType.DXA }, margins: { top: 120, bottom: 120, left: 160, right: 160 }, children: [new Paragraph({ children: [new TextRun({ text: cleanText(m.tipo || 'Versamento'), font: "Georgia", size: 18 })] })] }),
-                                    new TableCell({ width: { size: 3906, type: WidthType.DXA }, margins: { top: 120, bottom: 120, left: 160, right: 160 }, children: [new Paragraph({ children: [new TextRun({ text: cleanText(m.note), italics: true, font: "Georgia", size: 18 })] })] }),
-                                    new TableCell({ width: { size: 2000, type: WidthType.DXA }, margins: { top: 120, bottom: 120, left: 160, right: 160 }, children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: `€ ${m.importo.toFixed(2)}`, bold: true, font: "Georgia", size: 18 })] })] }),
-                                ],
-                            })),
-                        ],
-                    }),
-                ] : []),
+                        date_importanti: () => {
+                            if (!verbale.sezioniAttive?.includes('date_importanti') || !verbale.dateImportanti || verbale.dateImportanti.length === 0) return [];
+                            return [
+                                new Paragraph({
+                                    children: [new TextRun({ text: "DATE IMPORTANTI", bold: true, size: 20, color: "45387E", font: "Georgia" })],
+                                    spacing: { before: 800 },
+                                    border: { bottom: { style: BorderStyle.SINGLE, size: 1, color: "EEEEEE" } },
+                                }),
+                                ...verbale.dateImportanti.map(d => {
+                                    const dateInizioStr = formatSafeDate(d.dataInizio);
+                                    const dateFineStr = d.dataFine ? formatSafeDate(d.dataFine) : '';
+                                    const dateRange = dateFineStr ? `${dateInizioStr} – ${dateFineStr}` : dateInizioStr;
+                                    const brancaStr = (d.branca && d.branca !== 'CoCa') ? ` [${d.branca}]` : '';
 
-                ...(verbale.sezioniAttive?.includes('posti_azione') && verbale.postiAzione && verbale.postiAzione.length > 0 ? [
-                    new Paragraph({
-                        children: [new TextRun({ text: "POSTI D'AZIONE", bold: true, size: 20, color: "45387E", font: "Georgia" })],
-                        spacing: { before: 800 },
-                        border: { bottom: { style: BorderStyle.SINGLE, size: 1, color: "EEEEEE" } },
-                    }),
-                    ...verbale.postiAzione.map(pa => new Paragraph({
-                        children: [
-                            new TextRun({ text: `• ${cleanText(pa.cosa)}`, bold: true, font: "Georgia", size: 22 }),
-                            new TextRun({ 
-                                text: ` — Resp: ${(pa.chiIds || []).map(id => cleanText(getMembroNome(id))).join(', ') || '—'}${pa.quando ? ` (${cleanText(pa.quando)})` : ''}`, 
-                                font: "Georgia", color: "666666", size: 20 
-                            }),
-                        ],
-                        indent: { left: 720 },
-                        spacing: { before: 200 },
-                    })),
-                ] : []),
+                                    return [
+                                        new Paragraph({
+                                            children: [
+                                                new TextRun({ text: `${cleanText(d.evento)}${brancaStr}`, bold: true, font: "Georgia", size: 22 })
+                                            ],
+                                            spacing: { before: 200 },
+                                            indent: { left: 400 },
+                                        }),
+                                        new Paragraph({
+                                            children: [
+                                                new TextRun({ 
+                                                    text: `${dateRange ? '📅 ' + dateRange : ''}${d.luogo ? ' • ' + cleanText(d.luogo) : ''}`, 
+                                                    font: "Georgia", 
+                                                    color: "666666", 
+                                                    size: 18 
+                                                })
+                                            ],
+                                            spacing: { before: 50 },
+                                            indent: { left: 800 },
+                                        }),
+                                        ...(d.note ? [
+                                           new Paragraph({
+                                               children: [new TextRun({ text: cleanText(d.note), italics: true, font: "Georgia", size: 20 })],
+                                               spacing: { before: 50 },
+                                               indent: { left: 800 },
+                                           })
+                                        ] : []),
+                                    ];
+                                }).flat()
+                            ];
+                        },
+                        posti_azione: () => {
+                            if (!verbale.sezioniAttive?.includes('posti_azione') || !verbale.postiAzione || verbale.postiAzione.length === 0) return [];
+                            return [
+                                new Paragraph({
+                                    children: [new TextRun({ text: "POSTI D'AZIONE", bold: true, size: 20, color: "45387E", font: "Georgia" })],
+                                    spacing: { before: 800 },
+                                    border: { bottom: { style: BorderStyle.SINGLE, size: 1, color: "EEEEEE" } },
+                                }),
+                                ...verbale.postiAzione.map(pa => new Paragraph({
+                                    children: [
+                                        new TextRun({ text: `• ${cleanText(pa.cosa)}`, bold: true, font: "Georgia", size: 22 }),
+                                        new TextRun({ 
+                                            text: ` — Resp: ${(pa.chiIds || []).map(id => cleanText(getMembroNome(id))).join(', ') || '—'}${pa.quando ? ` (${cleanText(formatSafeDate(pa.quando))})` : ''}`, 
+                                            font: "Georgia", color: "666666", size: 20 
+                                        }),
+                                    ],
+                                    indent: { left: 720 },
+                                    spacing: { before: 200 },
+                                }))
+                            ];
+                        },
+                        cassa: () => {
+                            if (!verbale.sezioniAttive?.includes('cassa') || !verbale.cassa || verbale.cassa.length === 0) return [];
+                            return [
+                                new Paragraph({
+                                    children: [new TextRun({ text: "MOVIMENTI DI CASSA DI GRUPPO", bold: true, size: 20, color: "45387E", font: "Georgia" })],
+                                    spacing: { before: 800, after: 200 },
+                                    border: { bottom: { style: BorderStyle.SINGLE, size: 1, color: "EEEEEE" } },
+                                }),
+                                new Table({
+                                    width: { size: 100, type: WidthType.PERCENTAGE },
+                                    columnWidths: [2200, 2200, 3906, 2000],
+                                    borders: {
+                                        top: { style: BorderStyle.SINGLE, size: 4, color: "D1D5DB" },
+                                        bottom: { style: BorderStyle.SINGLE, size: 4, color: "D1D5DB" },
+                                        left: { style: BorderStyle.SINGLE, size: 4, color: "D1D5DB" },
+                                        right: { style: BorderStyle.SINGLE, size: 4, color: "D1D5DB" },
+                                        insideHorizontal: { style: BorderStyle.SINGLE, size: 4, color: "E5E7EB" },
+                                        insideVertical: { style: BorderStyle.SINGLE, size: 4, color: "E5E7EB" },
+                                    },
+                                    rows: [
+                                        new TableRow({
+                                            tableHeader: true,
+                                            children: [
+                                                new TableCell({ width: { size: 2200, type: WidthType.DXA }, shading: { fill: "F3F4F6" }, margins: { top: 120, bottom: 120, left: 160, right: 160 }, children: [new Paragraph({ children: [new TextRun({ text: "Branca", bold: true, size: 18 })] })] }),
+                                                new TableCell({ width: { size: 2200, type: WidthType.DXA }, shading: { fill: "F3F4F6" }, margins: { top: 120, bottom: 120, left: 160, right: 160 }, children: [new Paragraph({ children: [new TextRun({ text: "Tipo", bold: true, size: 18 })] })] }),
+                                                new TableCell({ width: { size: 3906, type: WidthType.DXA }, shading: { fill: "F3F4F6" }, margins: { top: 120, bottom: 120, left: 160, right: 160 }, children: [new Paragraph({ children: [new TextRun({ text: "Causale", bold: true, size: 18 })] })] }),
+                                                new TableCell({ width: { size: 2000, type: WidthType.DXA }, shading: { fill: "F3F4F6" }, margins: { top: 120, bottom: 120, left: 160, right: 160 }, children: [new Paragraph({ children: [new TextRun({ text: "Importo", bold: true, size: 18 })], alignment: AlignmentType.RIGHT })] }),
+                                            ],
+                                        }),
+                                        ...verbale.cassa.map(m => new TableRow({
+                                            children: [
+                                                new TableCell({ width: { size: 2200, type: WidthType.DXA }, margins: { top: 120, bottom: 120, left: 160, right: 160 }, children: [new Paragraph({ children: [new TextRun({ text: cleanText(m.branca || '-'), font: "Georgia", size: 18 })] })] }),
+                                                new TableCell({ width: { size: 2200, type: WidthType.DXA }, margins: { top: 120, bottom: 120, left: 160, right: 160 }, children: [new Paragraph({ children: [new TextRun({ text: cleanText(m.tipo || 'Versamento'), font: "Georgia", size: 18 })] })] }),
+                                                new TableCell({ width: { size: 3906, type: WidthType.DXA }, margins: { top: 120, bottom: 120, left: 160, right: 160 }, children: [new Paragraph({ children: [new TextRun({ text: cleanText(m.note || '-'), italics: true, font: "Georgia", size: 18 })] })] }),
+                                                new TableCell({ width: { size: 2000, type: WidthType.DXA }, margins: { top: 120, bottom: 120, left: 160, right: 160 }, children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: `€ ${(Number(m.importo) || 0).toFixed(2)}`, bold: true, font: "Georgia", size: 18 })] })] }),
+                                            ],
+                                        })),
+                                    ],
+                                }),
+                            ];
+                        },
+                        prossimi_impegni: () => {
+                            if (!verbale.sezioniAttive?.includes('prossimi_impegni') || !verbale.prossimiImpegni || verbale.prossimiImpegni.length === 0) return [];
+                            return [
+                                new Paragraph({
+                                    children: [new TextRun({ text: "PROSSIMI IMPEGNI", bold: true, size: 20, color: "45387E", font: "Georgia" })],
+                                    spacing: { before: 800 },
+                                    border: { bottom: { style: BorderStyle.SINGLE, size: 1, color: "EEEEEE" } },
+                                }),
+                                ...verbale.prossimiImpegni.map(imp => {
+                                    const brancaStr = (imp.branca && imp.branca !== 'CoCa') ? ` [${imp.branca}]` : '';
+                                    return new Paragraph({
+                                        children: [
+                                            new TextRun({ text: `• ${cleanText(imp.evento)}${brancaStr}`, bold: true, font: "Georgia", size: 22 }),
+                                            new TextRun({ 
+                                                text: ` — ${imp.dataInizio ? formatSafeDate(imp.dataInizio) : ''}${imp.note ? ' ore ' + cleanText(imp.note) : ''}`, 
+                                                font: "Georgia", 
+                                                color: "666666", 
+                                                size: 20 
+                                            }),
+                                        ],
+                                        indent: { left: 720 },
+                                        spacing: { before: 200 },
+                                    });
+                                })
+                            ];
+                        },
+                        varie: () => {
+                            if (!verbale.sezioniAttive?.includes('varie') || !verbale.varie || verbale.varie.trim().length === 0) return [];
+                            return [
+                                new Paragraph({
+                                    children: [new TextRun({ text: "VARIE ED EVENTUALI", bold: true, size: 20, color: "45387E", font: "Georgia" })],
+                                    spacing: { before: 800 },
+                                    border: { bottom: { style: BorderStyle.SINGLE, size: 1, color: "EEEEEE" } },
+                                }),
+                                ...parseHtmlToDocxParagraphs(verbale.varie, {
+                                    textRun: { size: 20, font: "Roboto" },
+                                    paragraph: { alignment: AlignmentType.BOTH, indent: { left: 400 }, spacing: { before: 200 } }
+                                })
+                            ];
+                        }
+                    };
 
-                ...(verbale.sezioniAttive?.includes('prossimi_impegni') && verbale.prossimiImpegni && verbale.prossimiImpegni.length > 0 ? [
-                    new Paragraph({
-                        children: [new TextRun({ text: "PROSSIMI IMPEGNI", bold: true, size: 20, color: "45387E", font: "Georgia" })],
-                        spacing: { before: 800 },
-                        border: { bottom: { style: BorderStyle.SINGLE, size: 1, color: "EEEEEE" } },
-                    }),
-                    ...verbale.prossimiImpegni.map(imp => new Paragraph({
-                        children: [
-                            new TextRun({ text: `• ${cleanText(imp.evento)}`, bold: true, font: "Georgia", size: 22 }),
-                            new TextRun({ 
-                                text: ` — ${imp.dataInizio ? new Date(imp.dataInizio).toLocaleDateString('it-IT') : ''}${imp.note ? ' ore ' + cleanText(imp.note) : ''}`, 
-                                font: "Georgia", 
-                                color: "666666", 
-                                size: 20 
-                            }),
-                        ],
-                        indent: { left: 720 },
-                        spacing: { before: 200 },
-                    })),
-                ] : []),
-
-                ...(verbale.sezioniAttive?.includes('varie') && verbale.varie && verbale.varie.trim().length > 0 ? [
-                    new Paragraph({
-                        children: [new TextRun({ text: "VARIE ED EVENTUALI", bold: true, size: 20, color: "45387E", font: "Georgia" })],
-                        spacing: { before: 800 },
-                        border: { bottom: { style: BorderStyle.SINGLE, size: 1, color: "EEEEEE" } },
-                    }),
-                    ...parseHtmlToDocxParagraphs(verbale.varie, {
-                        textRun: { size: 20, font: "Roboto" },
-                        paragraph: { alignment: AlignmentType.BOTH, indent: { left: 400 }, spacing: { before: 200 } }
-                    })
-                ] : []),
+                    return activeSectionOrder.map(s => sectionGenerators[s]?.() || []).flat();
+                })(),
             ],
             footers: {
                 default: new Footer({

@@ -2,6 +2,7 @@ import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 import htmlToPdfmake from 'html-to-pdfmake';
 import { Verbale, MembroCoCa } from '@/types';
+import { calculateScoutYear, formatScoutYear } from '@/lib/verbali';
 
 // Inizializza i font virtuali per pdfMake (Roboto by default)
 const pdfMakeAny = pdfMake as any;
@@ -141,7 +142,11 @@ export async function exportVerbaleToPdf(
     _intestazioneHtml: string = '',
     _piePaginaHtml: string = ''
 ): Promise<void> {
-    const formatDate = (d?: string) => d ? new Date(d).toLocaleDateString('it-IT') : '-';
+    const formatSafeDate = (d?: string) => {
+        if (!d) return '-';
+        const dt = new Date(d);
+        return isNaN(dt.getTime()) ? d : dt.toLocaleDateString('it-IT');
+    };
     const membroNome = (id: string) => membri.find(m => m.id === id)?.nome || verbale.presentiNomi?.[id] || 'Capo';
 
     const presenti = (verbale.presenti || []).map(id => {
@@ -154,73 +159,234 @@ export async function exportVerbaleToPdf(
         else if (exit) suffix = ` (esc. ore ${exit.ora})`;
         return nome + suffix;
     }).join(', ') || '-';
-    const assenti = (verbale.assenti || []).map(membroNome).join(', ') || '-';
+
+    const ospitiStr = (verbale.ospiti && verbale.ospiti.length > 0)
+        ? `, ${verbale.ospiti.map(o => `${o.nome}${o.ruolo ? ` (${o.ruolo})` : ''}`).join(', ')}`
+        : '';
+    const presentiConOspiti = presenti !== '-' ? `${presenti}${ospitiStr}` : (ospitiStr ? ospitiStr.slice(2) : '-');
+    const assenti = (verbale.assenti || []).map(membroNome).join(', ') || 'Nessuno';
     const ritardi = (verbale.ritardi || []).map(membroNome).join(', ') || '';
 
-    const odgHtml = (verbale.odg || []).map((p, i) => `
-        <div style="margin-bottom:6pt">
-            <strong>${i + 1}. ${p.titolo}</strong>
-            ${p.contenuto ? `<div style="margin-top:2pt;color:#333">${p.contenuto}</div>` : ''}
+    const scoutYearText = formatScoutYear(verbale.annoScout ?? calculateScoutYear(verbale.data || ''));
+
+    const isSectionActive = (secId: string) => {
+        if (!verbale.sezioniAttive) return true;
+        return verbale.sezioniAttive.includes(secId);
+    };
+
+    // Sommario Ordine del Giorno
+    const SEZIONI_LABELS: Record<string, string> = {
+        ritorni: 'Ritorni dalle branche',
+        date_importanti: 'Date importanti',
+        posti_azione: "Posti d'Azione",
+        cassa: 'Movimenti di cassa di gruppo',
+        prossimi_impegni: 'Prossimi impegni',
+        varie: 'Varie ed eventuali',
+    };
+
+    const activeSectionsWithContent = (verbale.sezioniAttive || ['ritorni', 'date_importanti', 'posti_azione', 'cassa', 'prossimi_impegni', 'varie']).filter(sezId => {
+        if (!isSectionActive(sezId)) return false;
+        if (sezId === 'ritorni') return (verbale.ritorni?.length || 0) > 0;
+        if (sezId === 'date_importanti') return (verbale.dateImportanti?.length || 0) > 0;
+        if (sezId === 'posti_azione') return (verbale.postiAzione?.length || 0) > 0;
+        if (sezId === 'cassa') return (verbale.cassa?.length || 0) > 0;
+        if (sezId === 'prossimi_impegni') return (verbale.prossimiImpegni?.length || 0) > 0;
+        if (sezId === 'varie') return !!verbale.varie && verbale.varie.trim().length > 0;
+        return false;
+    });
+
+    const odgSummaryItems = [
+        ...(verbale.odg || []).map(p => `<li><strong>${p.titolo}</strong></li>`),
+        ...activeSectionsWithContent.map(s => `<li><span style="color:#666; font-style:italic;">${SEZIONI_LABELS[s] || s}</span></li>`)
+    ];
+
+    const odgSummaryHtml = odgSummaryItems.length > 0 ? `
+        <div style="margin-top:6pt; margin-bottom:12pt; font-size:10pt;">
+            <strong>ODG:</strong>
+            <ul style="margin-top:3pt; margin-bottom:4pt; padding-left:20pt;">
+                ${odgSummaryItems.join('')}
+            </ul>
+        </div>
+    ` : '';
+
+    // Dettaglio punti ODG
+    const odgDetailsHtml = (verbale.odg || []).map((p) => `
+        <div style="margin-top:10pt; margin-bottom:12pt;">
+            <div style="font-size:11pt; margin-bottom:3pt;">
+                <strong>• ${p.titolo}</strong>
+            </div>
+            ${p.contenuto ? `<div style="font-size:10pt; line-height:1.45; text-align:justify; margin-left:14pt; color:#222;">${p.contenuto}</div>` : ''}
         </div>
     `).join('');
 
-    const postiAzioneHtml = (verbale.sezioniAttive || []).includes('posti_azione') && (verbale.postiAzione || []).length > 0
-        ? `<div style="margin-top:10pt">
-            <strong>🎯 Posti d'Azione</strong>
-            <ul style="margin-top:4pt;">
+    // Sezione: Ritorni dalle branche
+    const ritornoHtml = isSectionActive('ritorni') && (verbale.ritorni || []).length > 0
+        ? `<div style="margin-top:14pt; margin-bottom:12pt;">
+            <div style="font-size:10pt; font-weight:bold; text-transform:uppercase; color:#45387E; border-bottom:1px solid #EEEEEE; padding-bottom:2pt; margin-bottom:6pt; letter-spacing:0.5pt;">
+                RITORNI DALLE BRANCHE
+            </div>
+            ${(verbale.ritorni || []).map(r => `
+                <div style="margin-bottom:8pt; margin-left:8pt;">
+                    <div style="font-size:10pt; font-weight:bold;">- ${r.branca}</div>
+                    <div style="font-size:10pt; line-height:1.45; font-style:italic; color:#333; margin-left:10pt; text-align:justify;">
+                        ${r.contenuto}
+                    </div>
+                </div>
+            `).join('')}
+          </div>`
+        : '';
+
+    // Sezione: Date importanti
+    const dateImportantiHtml = isSectionActive('date_importanti') && (verbale.dateImportanti || []).length > 0
+        ? `<div style="margin-top:14pt; margin-bottom:12pt;">
+            <div style="font-size:10pt; font-weight:bold; text-transform:uppercase; color:#45387E; border-bottom:1px solid #EEEEEE; padding-bottom:2pt; margin-bottom:6pt; letter-spacing:0.5pt;">
+                DATE IMPORTANTI
+            </div>
+            <div style="margin-left:8pt;">
+                ${(verbale.dateImportanti || []).map(d => {
+                    const dataInizio = formatSafeDate(d.dataInizio);
+                    const dataFine = d.dataFine ? formatSafeDate(d.dataFine) : '';
+                    const dateRange = dataFine ? `${dataInizio} – ${dataFine}` : dataInizio;
+                    const luogoStr = d.luogo ? ` • ${d.luogo}` : '';
+                    const brancaStr = (d.branca && d.branca !== 'CoCa') ? ` [${d.branca}]` : '';
+
+                    return `
+                    <div style="margin-bottom:8pt; border-left:2px solid #45387E; padding-left:8pt;">
+                        <div style="font-size:10pt; font-weight:bold;">
+                            ${d.evento}${brancaStr ? `<span style="color:#45387E; font-weight:normal;">${brancaStr}</span>` : ''}
+                        </div>
+                        <div style="font-size:9pt; color:#666; margin-top:1pt;">
+                            ${dateRange ? `<span>📅 ${dateRange}</span>` : ''}${luogoStr ? `<span>${luogoStr}</span>` : ''}
+                        </div>
+                        ${d.note ? `<div style="font-size:9pt; font-style:italic; color:#555; margin-top:1pt;">${d.note}</div>` : ''}
+                    </div>
+                    `;
+                }).join('')}
+            </div>
+          </div>`
+        : '';
+
+    // Sezione: Posti d'Azione
+    const postiAzioneHtml = isSectionActive('posti_azione') && (verbale.postiAzione || []).length > 0
+        ? `<div style="margin-top:14pt; margin-bottom:12pt;">
+            <div style="font-size:10pt; font-weight:bold; text-transform:uppercase; color:#45387E; border-bottom:1px solid #EEEEEE; padding-bottom:2pt; margin-bottom:6pt; letter-spacing:0.5pt;">
+                POSTI D'AZIONE
+            </div>
+            <ul style="margin-top:4pt; margin-bottom:4pt; padding-left:16pt;">
                 ${(verbale.postiAzione || []).map(pa => `
-                    <li style="margin-bottom:4pt">
-                        <strong>${pa.cosa}</strong>
-                        <span style="color:#666"> — Resp: ${(pa.chiIds || []).map(membroNome).join(', ') || '—'}${pa.quando ? ` (${formatDate(pa.quando)})` : ''}</span>
+                    <li style="margin-bottom:5pt; font-size:10pt;">
+                        <strong>🎯 ${pa.cosa}</strong>
+                        <span style="color:#666;"> — Resp: ${(pa.chiIds || []).map(membroNome).join(', ') || '—'}${pa.quando ? ` (${formatSafeDate(pa.quando)})` : ''}</span>
                     </li>
                 `).join('')}
             </ul>
           </div>`
         : '';
 
-    const ritornoHtml = (verbale.sezioniAttive || []).includes('ritorni') && (verbale.ritorni || []).length > 0
-        ? `<div style="margin-top:10pt">
-            <strong>🗣️ Ritorni</strong>
-            <ul style="margin-top:4pt;">
-                ${(verbale.ritorni || []).map(r => `<li style="margin-bottom:3pt">${r.branca ? `<strong>[${r.branca}]</strong> ` : ''}${r.contenuto}</li>`).join('')}
+    // Sezione: Movimenti di cassa di gruppo
+    const cassaHtml = isSectionActive('cassa') && (verbale.cassa || []).length > 0
+        ? `<div style="margin-top:14pt; margin-bottom:12pt;">
+            <div style="font-size:10pt; font-weight:bold; text-transform:uppercase; color:#45387E; border-bottom:1px solid #EEEEEE; padding-bottom:2pt; margin-bottom:6pt; letter-spacing:0.5pt;">
+                MOVIMENTI DI CASSA DI GRUPPO
+            </div>
+            <table style="width:100%; border-collapse:collapse; margin-top:4pt; font-size:9pt;">
+                <thead>
+                    <tr style="background-color:#F3F4F6;">
+                        <th style="padding:4pt 6pt; text-align:left; border:1px solid #D1D5DB; font-weight:bold;">Branca</th>
+                        <th style="padding:4pt 6pt; text-align:left; border:1px solid #D1D5DB; font-weight:bold;">Tipo</th>
+                        <th style="padding:4pt 6pt; text-align:left; border:1px solid #D1D5DB; font-weight:bold;">Causale</th>
+                        <th style="padding:4pt 6pt; text-align:right; border:1px solid #D1D5DB; font-weight:bold;">Importo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${(verbale.cassa || []).map(m => `
+                        <tr>
+                            <td style="padding:3pt 6pt; border:1px solid #E5E7EB;">${m.branca || '-'}</td>
+                            <td style="padding:3pt 6pt; border:1px solid #E5E7EB;">${m.tipo || 'Versamento'}</td>
+                            <td style="padding:3pt 6pt; border:1px solid #E5E7EB; font-style:italic;">${m.note || '-'}</td>
+                            <td style="padding:3pt 6pt; border:1px solid #E5E7EB; text-align:right; font-weight:bold;">€ ${(m.importo || 0).toFixed(2)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+          </div>`
+        : '';
+
+    // Sezione: Prossimi impegni
+    const prossimiImpegniHtml = isSectionActive('prossimi_impegni') && (verbale.prossimiImpegni || []).length > 0
+        ? `<div style="margin-top:14pt; margin-bottom:12pt;">
+            <div style="font-size:10pt; font-weight:bold; text-transform:uppercase; color:#45387E; border-bottom:1px solid #EEEEEE; padding-bottom:2pt; margin-bottom:6pt; letter-spacing:0.5pt;">
+                PROSSIMI IMPEGNI
+            </div>
+            <ul style="margin-top:4pt; margin-bottom:4pt; padding-left:16pt;">
+                ${(verbale.prossimiImpegni || []).map(imp => {
+                    const dataStr = formatSafeDate(imp.dataInizio);
+                    const oraStr = imp.note ? ` ore ${imp.note}` : '';
+                    const brancaStr = (imp.branca && imp.branca !== 'CoCa') ? ` [${imp.branca}]` : '';
+                    return `
+                    <li style="margin-bottom:4pt; font-size:10pt;">
+                        <strong>• ${imp.evento}</strong>${brancaStr ? `<span style="color:#45387E;">${brancaStr}</span>` : ''}
+                        <span style="color:#666;"> — ${dataStr}${oraStr}</span>
+                    </li>
+                    `;
+                }).join('')}
             </ul>
           </div>`
         : '';
 
-    const varieHtml = (verbale.sezioniAttive || []).includes('varie') && verbale.varie
-        ? `<div style="margin-top:10pt">
-            <strong>💬 Varie ed Eventuali</strong>
-            <p style="margin-top:4pt;font-style:italic;color:#444">${verbale.varie}</p>
+    // Sezione: Varie ed eventuali
+    const varieHtml = isSectionActive('varie') && verbale.varie && verbale.varie.trim().length > 0
+        ? `<div style="margin-top:14pt; margin-bottom:12pt;">
+            <div style="font-size:10pt; font-weight:bold; text-transform:uppercase; color:#45387E; border-bottom:1px solid #EEEEEE; padding-bottom:2pt; margin-bottom:6pt; letter-spacing:0.5pt;">
+                VARIE ED EVENTUALI
+            </div>
+            <div style="font-size:10pt; line-height:1.45; font-style:italic; color:#333; margin-left:8pt; text-align:justify;">
+                ${verbale.varie}
+            </div>
           </div>`
         : '';
+
+    // Mappa sezioni e ordinamento dinamico
+    const sectionHtmlMap: Record<string, string> = {
+        ritorni: ritornoHtml,
+        date_importanti: dateImportantiHtml,
+        posti_azione: postiAzioneHtml,
+        cassa: cassaHtml,
+        prossimi_impegni: prossimiImpegniHtml,
+        varie: varieHtml,
+    };
+
+    const activeSectionOrder = verbale.sezioniAttive || ['ritorni', 'date_importanti', 'posti_azione', 'cassa', 'prossimi_impegni', 'varie'];
+    const sectionsBodyHtml = activeSectionOrder.map(s => sectionHtmlMap[s] || '').filter(Boolean).join('');
 
     // Costruiamo il contenuto principale come HTML e poi lo convertiamo con htmlToPdfmake
     const contentHtml = `
         <div>
-            <div style="margin-bottom:12pt; font-size: 16pt;">
-                <strong>${verbale.titolo || 'Verbale di Riunione'}</strong>
-                <div style="color:#666;font-size:10pt;margin-top:2pt">
-                    N° ${verbale.numero || '-'} |
-                    ${formatDate(verbale.data)} |
-                    ${verbale.luogo || '-'} |
-                    ${verbale.oraInizio || '-'} – ${verbale.oraFine || '-'}
+            <div style="margin-bottom:10pt;">
+                <table style="width:100%; border:none; margin-bottom:4pt;">
+                    <tr>
+                        <td style="border:none; padding:0; font-size:10pt;"><strong>${formatSafeDate(verbale.data)}</strong></td>
+                        <td style="border:none; padding:0; text-align:right; font-size:10pt; color:#666;">A.A. ${scoutYearText}</td>
+                    </tr>
+                </table>
+                <div style="font-size:11pt; margin-bottom:3pt;">
+                    <strong>Oggetto:</strong> <span style="text-transform:capitalize;">${verbale.titolo || 'Verbale di Riunione'}</span>
+                </div>
+                <div style="color:#666; font-size:9.5pt; margin-bottom:6pt;">
+                    Verbale N° ${verbale.numero || '-'}
+                    ${verbale.luogo ? ` • ${verbale.luogo}` : ''}
+                    ${(verbale.oraInizio || verbale.oraFine) ? ` • ore ${verbale.oraInizio || '?'} – ${verbale.oraFine || '?'}` : ''}
+                </div>
+                <div style="font-size:10pt; line-height:1.4;">
+                    <div><strong>Presenti:</strong> <em>${presentiConOspiti}</em></div>
+                    <div><strong>Assenti:</strong> <em>${assenti}</em></div>
+                    ${ritardi ? `<div><strong>Ritardi:</strong> <em>${ritardi}</em></div>` : ''}
                 </div>
             </div>
 
-            <div style="margin-bottom:10pt; font-size: 11pt;">
-                <strong>✓ Presenti:</strong> ${presenti}<br>
-                ${assenti !== '-' ? `<strong>✗ Assenti:</strong> ${assenti}<br>` : ''}
-                ${ritardi ? `<strong>⏱ Ritardi:</strong> ${ritardi}` : ''}
-            </div>
-
-            <div style="margin-bottom:12pt">
-                <strong style="font-size: 11pt">📋 Ordine del Giorno</strong>
-                <div style="margin-top:4pt">${odgHtml}</div>
-            </div>
-
-            ${ritornoHtml}
-            ${postiAzioneHtml}
-            ${varieHtml}
+            ${odgSummaryHtml}
+            ${odgDetailsHtml}
+            ${sectionsBodyHtml}
         </div>
     `;
 
