@@ -657,7 +657,7 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                                         new Paragraph({
                                             children: [
                                                 new TextRun({ 
-                                                    text: `${dateRange ? '📅 ' + dateRange : ''}${d.luogo ? ' • ' + cleanText(d.luogo) : ''}`, 
+                                                    text: `${dateRange ? dateRange : ''}${d.luogo ? ' • ' + cleanText(d.luogo) : ''}`, 
                                                     font: "Georgia", 
                                                     color: "666666", 
                                                     size: 18 

@@ -17,17 +17,56 @@ if (pdfMakeAny && !pdfMakeAny.vfs && vfs) {
 }
 
 /**
+ * Rileva se un nodo dell'AST di pdfMake è puramente vuoto o composto solo da spazi bianchi / ritorni a capo
+ */
+function isBlankPdfMakeNode(node: any): boolean {
+    if (!node) return true;
+    if (typeof node === 'string') return node.trim() === '';
+    if (typeof node.text === 'string') return node.text.trim() === '';
+    if (Array.isArray(node.text)) {
+        if (node.text.length === 0) return true;
+        return node.text.every((t: any) => {
+            if (!t) return true;
+            if (typeof t === 'string') return t.trim() === '';
+            if (typeof t.text === 'string') return t.text.trim() === '';
+            return false;
+        });
+    }
+    if (Array.isArray(node.stack) && node.stack.length === 0) return true;
+    return false;
+}
+
+/**
+ * Pulisce l'HTML per il rendering PDF:
+ * 1. Rimuove whitespace e newlines tra tag HTML di blocco per evitare nodi vuoti fantasma in pdfMake
+ * 2. Rimuove paragrafi e div vuoti residui dall'editor
+ * 3. Rimuove emoji non supportate dai font standard PDF (es. 📅, 🎯) per evitare glifi 'tofu' o rettangoli vuoti
+ */
+function cleanHtmlForPdf(html: string): string {
+    if (!html) return '';
+    return html
+        .replace(/(<\/?(div|p|h1|h2|h3|h4|h5|h6|ul|ol|li|table|thead|tbody|tfoot|tr|td|th|header|footer|section|article)[^>]*>)\s+(<\/?(div|p|h1|h2|h3|h4|h5|h6|ul|ol|li|table|thead|tbody|tfoot|tr|td|th|header|footer|section|article)[^>]*>)/gi, '$1$3')
+        .replace(/(<\/?(div|p|h1|h2|h3|h4|h5|h6|ul|ol|li|table|thead|tbody|tfoot|tr|td|th|header|footer|section|article)[^>]*>)\s+(<\/?(div|p|h1|h2|h3|h4|h5|h6|ul|ol|li|table|thead|tbody|tfoot|tr|td|th|header|footer|section|article)[^>]*>)/gi, '$1$3')
+        .replace(/<p>\s*(<br\s*\/?>|&nbsp;|\s)*\s*<\/p>/gi, '')
+        .replace(/<div>\s*(<br\s*\/?>|&nbsp;|\s)*\s*<\/div>/gi, '')
+        .replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '')
+        .trim();
+}
+
+/**
  * Sanitizza ricorsivamente l'albero AST generato da html-to-pdfmake
  * per garantire che pdfMake non fallisca in nessun caso limite:
  * - Rimuove proprietà `font` non registrate nel VFS (es. 'Inherit', 'Sans-serif', 'Arial')
  * - Normalizza e bilancia tutte le tabelle (evita "Malformed table row, a cell is undefined" o righe vuote)
  * - Sostituisce immagini remote non caricate nel VFS per evitare crash di pdfMake
+ * - Rimuove nodi vuoti fantasma che creano interlinee e spaziature eccessive
+ * - Calibra i margini per mantenere i titoli vicini al contenuto
  */
 function sanitizePdfMakeDoc(node: any): any {
     if (!node) return node;
 
     if (Array.isArray(node)) {
-        return node.map(sanitizePdfMakeDoc).filter(Boolean);
+        return node.map(sanitizePdfMakeDoc).filter((n: any) => Boolean(n) && !isBlankPdfMakeNode(n));
     }
 
     if (typeof node === 'object') {
@@ -79,9 +118,23 @@ function sanitizePdfMakeDoc(node: any): any {
             }
         }
 
-        // 4. Ricorsione sui contenitori annidati
+        // 4. Rimuovi emoji residue nei nodi di testo per evitare caratteri tofu '▯'
+        if (typeof node.text === 'string') {
+            node.text = node.text.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '');
+        }
+
+        // 5. Calibra margini eccessivi per evitare spazi bianchi sproporzionati tra paragrafi e titoli
+        if (Array.isArray(node.margin)) {
+            // [left, top, right, bottom]
+            if (node.margin[1] > 8) node.margin[1] = 8;
+            if (node.margin[3] > 8) node.margin[3] = 8;
+        }
+
+        // 6. Ricorsione sui contenitori annidati filtrando i nodi vuoti fantasma
         if (Array.isArray(node.stack)) {
-            node.stack = node.stack.map(sanitizePdfMakeDoc).filter(Boolean);
+            node.stack = node.stack
+                .map(sanitizePdfMakeDoc)
+                .filter((n: any) => Boolean(n) && !isBlankPdfMakeNode(n));
         }
         if (Array.isArray(node.columns)) {
             node.columns = node.columns.map(sanitizePdfMakeDoc).filter(Boolean);
@@ -201,9 +254,9 @@ export async function exportVerbaleToPdf(
     ];
 
     const odgSummaryHtml = odgSummaryItems.length > 0 ? `
-        <div style="margin-top:6pt; margin-bottom:12pt; font-size:10pt;">
+        <div style="margin-top:4pt; margin-bottom:8pt; font-size:9.5pt;">
             <strong>ODG:</strong>
-            <ul style="margin-top:3pt; margin-bottom:4pt; padding-left:20pt;">
+            <ul style="margin-top:2pt; margin-bottom:2pt; padding-left:16pt;">
                 ${odgSummaryItems.join('')}
             </ul>
         </div>
@@ -211,24 +264,24 @@ export async function exportVerbaleToPdf(
 
     // Dettaglio punti ODG
     const odgDetailsHtml = (verbale.odg || []).map((p) => `
-        <div style="margin-top:10pt; margin-bottom:12pt;">
-            <div style="font-size:11pt; margin-bottom:3pt;">
+        <div style="margin-top:6pt; margin-bottom:8pt;">
+            <div style="font-size:10.5pt; margin-bottom:2pt;">
                 <strong>• ${p.titolo}</strong>
             </div>
-            ${p.contenuto ? `<div style="font-size:10pt; line-height:1.45; text-align:justify; margin-left:14pt; color:#222;">${p.contenuto}</div>` : ''}
+            ${p.contenuto ? `<div style="font-size:9.5pt; line-height:1.25; text-align:justify; margin-left:10pt; color:#222;">${p.contenuto}</div>` : ''}
         </div>
     `).join('');
 
     // Sezione: Ritorni dalle branche
     const ritornoHtml = isSectionActive('ritorni') && (verbale.ritorni || []).length > 0
-        ? `<div style="margin-top:14pt; margin-bottom:12pt;">
-            <div style="font-size:10pt; font-weight:bold; text-transform:uppercase; color:#45387E; border-bottom:1px solid #EEEEEE; padding-bottom:2pt; margin-bottom:6pt; letter-spacing:0.5pt;">
+        ? `<div style="margin-top:8pt; margin-bottom:8pt;">
+            <div style="font-size:9.5pt; font-weight:bold; text-transform:uppercase; color:#45387E; border-bottom:1px solid #EEEEEE; padding-bottom:1pt; margin-bottom:4pt; letter-spacing:0.5pt;">
                 RITORNI DALLE BRANCHE
             </div>
             ${(verbale.ritorni || []).map(r => `
-                <div style="margin-bottom:8pt; margin-left:8pt;">
-                    <div style="font-size:10pt; font-weight:bold;">- ${r.branca}</div>
-                    <div style="font-size:10pt; line-height:1.45; font-style:italic; color:#333; margin-left:10pt; text-align:justify;">
+                <div style="margin-bottom:5pt; margin-left:6pt;">
+                    <div style="font-size:9.5pt; font-weight:bold;">- ${r.branca}</div>
+                    <div style="font-size:9.5pt; line-height:1.25; font-style:italic; color:#333; margin-left:8pt; text-align:justify;">
                         ${r.contenuto}
                     </div>
                 </div>
@@ -238,11 +291,11 @@ export async function exportVerbaleToPdf(
 
     // Sezione: Date importanti
     const dateImportantiHtml = isSectionActive('date_importanti') && (verbale.dateImportanti || []).length > 0
-        ? `<div style="margin-top:14pt; margin-bottom:12pt;">
-            <div style="font-size:10pt; font-weight:bold; text-transform:uppercase; color:#45387E; border-bottom:1px solid #EEEEEE; padding-bottom:2pt; margin-bottom:6pt; letter-spacing:0.5pt;">
+        ? `<div style="margin-top:8pt; margin-bottom:8pt;">
+            <div style="font-size:9.5pt; font-weight:bold; text-transform:uppercase; color:#45387E; border-bottom:1px solid #EEEEEE; padding-bottom:1pt; margin-bottom:4pt; letter-spacing:0.5pt;">
                 DATE IMPORTANTI
             </div>
-            <div style="margin-left:8pt;">
+            <div style="margin-left:6pt;">
                 ${(verbale.dateImportanti || []).map(d => {
                     const dataInizio = formatSafeDate(d.dataInizio);
                     const dataFine = d.dataFine ? formatSafeDate(d.dataFine) : '';
@@ -251,14 +304,14 @@ export async function exportVerbaleToPdf(
                     const brancaStr = (d.branca && d.branca !== 'CoCa') ? ` [${d.branca}]` : '';
 
                     return `
-                    <div style="margin-bottom:8pt; border-left:2px solid #45387E; padding-left:8pt;">
-                        <div style="font-size:10pt; font-weight:bold;">
+                    <div style="margin-bottom:5pt; border-left:2px solid #45387E; padding-left:6pt;">
+                        <div style="font-size:9.5pt; font-weight:bold;">
                             ${d.evento}${brancaStr ? `<span style="color:#45387E; font-weight:normal;">${brancaStr}</span>` : ''}
                         </div>
                         <div style="font-size:9pt; color:#666; margin-top:1pt;">
-                            ${dateRange ? `<span>📅 ${dateRange}</span>` : ''}${luogoStr ? `<span>${luogoStr}</span>` : ''}
+                            ${dateRange ? `<span>${dateRange}</span>` : ''}${luogoStr ? `<span>${luogoStr}</span>` : ''}
                         </div>
-                        ${d.note ? `<div style="font-size:9pt; font-style:italic; color:#555; margin-top:1pt;">${d.note}</div>` : ''}
+                        ${d.note ? `<div style="font-size:8.5pt; font-style:italic; color:#555; margin-top:1pt;">${d.note}</div>` : ''}
                     </div>
                     `;
                 }).join('')}
@@ -268,14 +321,14 @@ export async function exportVerbaleToPdf(
 
     // Sezione: Posti d'Azione
     const postiAzioneHtml = isSectionActive('posti_azione') && (verbale.postiAzione || []).length > 0
-        ? `<div style="margin-top:14pt; margin-bottom:12pt;">
-            <div style="font-size:10pt; font-weight:bold; text-transform:uppercase; color:#45387E; border-bottom:1px solid #EEEEEE; padding-bottom:2pt; margin-bottom:6pt; letter-spacing:0.5pt;">
+        ? `<div style="margin-top:8pt; margin-bottom:8pt;">
+            <div style="font-size:9.5pt; font-weight:bold; text-transform:uppercase; color:#45387E; border-bottom:1px solid #EEEEEE; padding-bottom:1pt; margin-bottom:4pt; letter-spacing:0.5pt;">
                 POSTI D'AZIONE
             </div>
-            <ul style="margin-top:4pt; margin-bottom:4pt; padding-left:16pt;">
+            <ul style="margin-top:3pt; margin-bottom:3pt; padding-left:14pt;">
                 ${(verbale.postiAzione || []).map(pa => `
-                    <li style="margin-bottom:5pt; font-size:10pt;">
-                        <strong>🎯 ${pa.cosa}</strong>
+                    <li style="margin-bottom:3pt; font-size:9.5pt;">
+                        <strong>• ${pa.cosa}</strong>
                         <span style="color:#666;"> — Resp: ${(pa.chiIds || []).map(membroNome).join(', ') || '—'}${pa.quando ? ` (${formatSafeDate(pa.quando)})` : ''}</span>
                     </li>
                 `).join('')}
@@ -285,26 +338,26 @@ export async function exportVerbaleToPdf(
 
     // Sezione: Movimenti di cassa di gruppo
     const cassaHtml = isSectionActive('cassa') && (verbale.cassa || []).length > 0
-        ? `<div style="margin-top:14pt; margin-bottom:12pt;">
-            <div style="font-size:10pt; font-weight:bold; text-transform:uppercase; color:#45387E; border-bottom:1px solid #EEEEEE; padding-bottom:2pt; margin-bottom:6pt; letter-spacing:0.5pt;">
+        ? `<div style="margin-top:8pt; margin-bottom:8pt;">
+            <div style="font-size:9.5pt; font-weight:bold; text-transform:uppercase; color:#45387E; border-bottom:1px solid #EEEEEE; padding-bottom:1pt; margin-bottom:4pt; letter-spacing:0.5pt;">
                 MOVIMENTI DI CASSA DI GRUPPO
             </div>
-            <table style="width:100%; border-collapse:collapse; margin-top:4pt; font-size:9pt;">
+            <table style="width:100%; border-collapse:collapse; margin-top:3pt; font-size:8.5pt;">
                 <thead>
                     <tr style="background-color:#F3F4F6;">
-                        <th style="padding:4pt 6pt; text-align:left; border:1px solid #D1D5DB; font-weight:bold;">Branca</th>
-                        <th style="padding:4pt 6pt; text-align:left; border:1px solid #D1D5DB; font-weight:bold;">Tipo</th>
-                        <th style="padding:4pt 6pt; text-align:left; border:1px solid #D1D5DB; font-weight:bold;">Causale</th>
-                        <th style="padding:4pt 6pt; text-align:right; border:1px solid #D1D5DB; font-weight:bold;">Importo</th>
+                        <th style="padding:3pt 5pt; text-align:left; border:1px solid #D1D5DB; font-weight:bold;">Branca</th>
+                        <th style="padding:3pt 5pt; text-align:left; border:1px solid #D1D5DB; font-weight:bold;">Tipo</th>
+                        <th style="padding:3pt 5pt; text-align:left; border:1px solid #D1D5DB; font-weight:bold;">Causale</th>
+                        <th style="padding:3pt 5pt; text-align:right; border:1px solid #D1D5DB; font-weight:bold;">Importo</th>
                     </tr>
                 </thead>
                 <tbody>
                     ${(verbale.cassa || []).map(m => `
                         <tr>
-                            <td style="padding:3pt 6pt; border:1px solid #E5E7EB;">${m.branca || '-'}</td>
-                            <td style="padding:3pt 6pt; border:1px solid #E5E7EB;">${m.tipo || 'Versamento'}</td>
-                            <td style="padding:3pt 6pt; border:1px solid #E5E7EB; font-style:italic;">${m.note || '-'}</td>
-                            <td style="padding:3pt 6pt; border:1px solid #E5E7EB; text-align:right; font-weight:bold;">€ ${(m.importo || 0).toFixed(2)}</td>
+                            <td style="padding:2pt 5pt; border:1px solid #E5E7EB;">${m.branca || '-'}</td>
+                            <td style="padding:2pt 5pt; border:1px solid #E5E7EB;">${m.tipo || 'Versamento'}</td>
+                            <td style="padding:2pt 5pt; border:1px solid #E5E7EB; font-style:italic;">${m.note || '-'}</td>
+                            <td style="padding:2pt 5pt; border:1px solid #E5E7EB; text-align:right; font-weight:bold;">€ ${(m.importo || 0).toFixed(2)}</td>
                         </tr>
                     `).join('')}
                 </tbody>
@@ -314,17 +367,17 @@ export async function exportVerbaleToPdf(
 
     // Sezione: Prossimi impegni
     const prossimiImpegniHtml = isSectionActive('prossimi_impegni') && (verbale.prossimiImpegni || []).length > 0
-        ? `<div style="margin-top:14pt; margin-bottom:12pt;">
-            <div style="font-size:10pt; font-weight:bold; text-transform:uppercase; color:#45387E; border-bottom:1px solid #EEEEEE; padding-bottom:2pt; margin-bottom:6pt; letter-spacing:0.5pt;">
+        ? `<div style="margin-top:8pt; margin-bottom:8pt;">
+            <div style="font-size:9.5pt; font-weight:bold; text-transform:uppercase; color:#45387E; border-bottom:1px solid #EEEEEE; padding-bottom:1pt; margin-bottom:4pt; letter-spacing:0.5pt;">
                 PROSSIMI IMPEGNI
             </div>
-            <ul style="margin-top:4pt; margin-bottom:4pt; padding-left:16pt;">
+            <ul style="margin-top:3pt; margin-bottom:3pt; padding-left:14pt;">
                 ${(verbale.prossimiImpegni || []).map(imp => {
                     const dataStr = formatSafeDate(imp.dataInizio);
                     const oraStr = imp.note ? ` ore ${imp.note}` : '';
                     const brancaStr = (imp.branca && imp.branca !== 'CoCa') ? ` [${imp.branca}]` : '';
                     return `
-                    <li style="margin-bottom:4pt; font-size:10pt;">
+                    <li style="margin-bottom:3pt; font-size:9.5pt;">
                         <strong>• ${imp.evento}</strong>${brancaStr ? `<span style="color:#45387E;">${brancaStr}</span>` : ''}
                         <span style="color:#666;"> — ${dataStr}${oraStr}</span>
                     </li>
@@ -336,11 +389,11 @@ export async function exportVerbaleToPdf(
 
     // Sezione: Varie ed eventuali
     const varieHtml = isSectionActive('varie') && verbale.varie && verbale.varie.trim().length > 0
-        ? `<div style="margin-top:14pt; margin-bottom:12pt;">
-            <div style="font-size:10pt; font-weight:bold; text-transform:uppercase; color:#45387E; border-bottom:1px solid #EEEEEE; padding-bottom:2pt; margin-bottom:6pt; letter-spacing:0.5pt;">
+        ? `<div style="margin-top:8pt; margin-bottom:8pt;">
+            <div style="font-size:9.5pt; font-weight:bold; text-transform:uppercase; color:#45387E; border-bottom:1px solid #EEEEEE; padding-bottom:1pt; margin-bottom:4pt; letter-spacing:0.5pt;">
                 VARIE ED EVENTUALI
             </div>
-            <div style="font-size:10pt; line-height:1.45; font-style:italic; color:#333; margin-left:8pt; text-align:justify;">
+            <div style="font-size:9.5pt; line-height:1.25; font-style:italic; color:#333; margin-left:6pt; text-align:justify;">
                 ${verbale.varie}
             </div>
           </div>`
@@ -362,22 +415,22 @@ export async function exportVerbaleToPdf(
     // Costruiamo il contenuto principale come HTML e poi lo convertiamo con htmlToPdfmake
     const contentHtml = `
         <div>
-            <div style="margin-bottom:10pt;">
-                <table style="width:100%; border:none; margin-bottom:4pt;">
+            <div style="margin-bottom:6pt;">
+                <table style="width:100%; border:none; margin-bottom:2pt;">
                     <tr>
                         <td style="border:none; padding:0; font-size:10pt;"><strong>${formatSafeDate(verbale.data)}</strong></td>
-                        <td style="border:none; padding:0; text-align:right; font-size:10pt; color:#666;">A.A. ${scoutYearText}</td>
+                        <td style="border:none; padding:0; text-align:right; font-size:9.5pt; color:#666;">A.A. ${scoutYearText}</td>
                     </tr>
                 </table>
-                <div style="font-size:11pt; margin-bottom:3pt;">
+                <div style="font-size:10.5pt; margin-bottom:1.5pt;">
                     <strong>Oggetto:</strong> <span style="text-transform:capitalize;">${verbale.titolo || 'Verbale di Riunione'}</span>
                 </div>
-                <div style="color:#666; font-size:9.5pt; margin-bottom:6pt;">
+                <div style="color:#666; font-size:9pt; margin-bottom:2.5pt;">
                     Verbale N° ${verbale.numero || '-'}
                     ${verbale.luogo ? ` • ${verbale.luogo}` : ''}
                     ${(verbale.oraInizio || verbale.oraFine) ? ` • ore ${verbale.oraInizio || '?'} – ${verbale.oraFine || '?'}` : ''}
                 </div>
-                <div style="font-size:10pt; line-height:1.4;">
+                <div style="font-size:9.5pt; line-height:1.25;">
                     <div><strong>Presenti:</strong> <em>${presentiConOspiti}</em></div>
                     <div><strong>Assenti:</strong> <em>${assenti}</em></div>
                     ${ritardi ? `<div><strong>Ritardi:</strong> <em>${ritardi}</em></div>` : ''}
@@ -415,21 +468,32 @@ export async function exportVerbaleToPdf(
     try {
         console.log("PDF Export Engine: parsing HTML with html-to-pdfmake...");
         
-        // Impostiamo defaultStyles per evitare margini doppi tra paragrafi e liste ed ignoriamo font-family
-        const parsedContent = htmlToPdfmake(contentHtml, { 
+        // Pulizia preliminare dell'HTML per rimuovere ritorni a capo tra tag e paragrafi vuoti
+        const cleanedHtml = cleanHtmlForPdf(contentHtml);
+
+        // Impostiamo defaultStyles calibrati per evitare margini vuoti esagerati tra paragrafi e titoli
+        const parsedContent = htmlToPdfmake(cleanedHtml, { 
             window: window as any,
             ignoreStyles: ['font-family'],
+            removeExtraBlanks: true,
             defaultStyles: {
-                p: { margin: [0, 0, 0, 4] },
-                div: { margin: [0, 0, 0, 2] },
-                ul: { margin: [0, 0, 0, 5] },
-                li: { margin: [0, 0, 0, 2] },
-                table: { margin: [0, 6, 0, 6] },
+                h1: { fontSize: 13, bold: true, margin: [0, 5, 0, 2] },
+                h2: { fontSize: 11.5, bold: true, margin: [0, 4, 0, 2] },
+                h3: { fontSize: 10.5, bold: true, margin: [0, 3, 0, 1] },
+                h4: { fontSize: 10, bold: true, margin: [0, 2, 0, 1] },
+                h5: { fontSize: 9.5, bold: true, margin: [0, 2, 0, 1] },
+                h6: { fontSize: 9, bold: true, margin: [0, 1, 0, 1] },
+                p: { margin: [0, 1, 0, 2] },
+                div: { margin: [0, 0, 0, 0] },
+                ul: { margin: [0, 2, 0, 3] },
+                ol: { margin: [0, 2, 0, 3] },
+                li: { margin: [0, 0, 0, 1] },
+                table: { margin: [0, 3, 0, 4] },
                 th: { bold: true, fillColor: '#EEEEEE' }
             }
         });
 
-        // Sanificazione profonda dell'AST per prevenire crash di pdfMake (tabelle asimmetriche, font non caricati, immagini remote)
+        // Sanificazione profonda dell'AST per prevenire crash di pdfMake (tabelle asimmetriche, font non caricati, nodi vuoti fantasma)
         const sanitizedContent = sanitizePdfMakeDoc(parsedContent);
 
         const docDefinition = {
@@ -505,7 +569,8 @@ export async function exportVerbaleToPdf(
             },
             pageMargins: [40, 95, 40, 75] as [number, number, number, number],
             defaultStyle: {
-                fontSize: 12,
+                fontSize: 10,
+                lineHeight: 1.2,
                 color: '#111111'
             }
         };
