@@ -16,23 +16,13 @@ export interface EventoCalendario {
     branca: string;
     colore: string;
     creatoDa?: string;
-    sorgente: 'manuale' | 'verbale';
+    sorgente: 'manuale' | 'verbale' | 'import_ics';
     verbaleId?: string;
     createdAt: string;
 }
 
-export const BRANCA_COLORS: Record<string, string> = {
-    'L/C': '#FDD835',    // Giallo
-    'E/G': '#4CAF50',    // Verde
-    'R/S': '#e53935',    // Rosso
-    'CoCa': '#9c27b0',   // Viola
-    'Gruppo': '#0288D1', // Azzurro
-    'Altro': '#00897B'
-};
-
-export function getColorByBranca(branca: string): string {
-    return BRANCA_COLORS[branca] || BRANCA_COLORS['Altro'];
-}
+import { BRANCA_COLORS, getColorByBranca } from './constants';
+export { BRANCA_COLORS, getColorByBranca };
 
 function mapRow(row: any): EventoCalendario {
     return {
@@ -128,6 +118,47 @@ export async function saveEvento(evento: Partial<EventoCalendario>): Promise<Eve
         }
         return mapRow(data);
     }
+}
+
+export async function saveEventiBatch(eventi: Partial<EventoCalendario>[]): Promise<EventoCalendario[]> {
+    if (!eventi || eventi.length === 0) return [];
+    const user = await getUser();
+
+    const payloads = eventi.map(ev => ({
+        group_id: user.groupId,
+        titolo: ev.titolo || 'Evento',
+        data_inizio: ev.dataInizio,
+        data_fine: ev.dataFine || null,
+        ora_inizio: ev.oraInizio || null,
+        ora_fine: ev.oraFine || null,
+        luogo: ev.luogo || '',
+        note: ev.note || '',
+        branca: ev.branca || 'CoCa',
+        colore: ev.colore || getColorByBranca(ev.branca || 'CoCa'),
+        sorgente: ev.sorgente || 'import_ics',
+        verbale_id: ev.verbaleId || null,
+        creato_da: user.id,
+    }));
+
+    const { data, error } = await supabase
+        .from('eventi_calendario')
+        .insert(payloads)
+        .select();
+
+    if (error) throw error;
+
+    if (user.groupId && data && data.length > 0) {
+        createNotificationsForGroup(
+            user.groupId,
+            'calendario_evento',
+            `📅 Importati ${data.length} eventi nel calendario`,
+            `${user.nickname || user.firstName} ha importato ${data.length} eventi nel calendario di gruppo.`,
+            { conteggio: data.length },
+            user.id
+        ).catch(console.error);
+    }
+
+    return (data || []).map(mapRow);
 }
 
 export async function deleteEvento(id: string): Promise<void> {

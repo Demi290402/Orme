@@ -138,3 +138,17 @@ export const ALL_ITALIAN_PROVINCES: string[] = Array.from(
     new Set(Object.values(ITALIAN_PROVINCIAL_DATA).flat())
 ).sort((a, b) => a.localeCompare(b, 'it', { sensitivity: 'base' }));
 
+export const BRANCA_COLORS: Record<string, string> = {
+    'L/C': '#FDD835',    // Giallo
+    'E/G': '#4CAF50',    // Verde
+    'R/S': '#e53935',    // Rosso
+    'CoCa': '#9c27b0',   // Viola
+    'Gruppo': '#0288D1', // Azzurro
+    'Altro': '#00897B'
+};
+
+export function getColorByBranca(branca: string): string {
+    return BRANCA_COLORS[branca] || BRANCA_COLORS['Altro'];
+}
+
+

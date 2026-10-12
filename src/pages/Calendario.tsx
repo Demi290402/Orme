@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, ChevronLeft, ChevronRight, Calendar, CalendarDays, CalendarRange, X, Pencil, Trash2, Save, MapPin, Clock } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight, Calendar, CalendarDays, CalendarRange, X, Pencil, Trash2, Save, MapPin, Clock, Download, Upload } from 'lucide-react';
 import { getEventi, saveEvento, deleteEvento, EventoCalendario, getColorByBranca, BRANCA_COLORS } from '@/lib/calendario';
+import { exportSingleEventoIcs } from '@/lib/ical';
+import ExportCalendarModal from '@/components/Calendar/ExportCalendarModal';
+import ImportCalendarModal from '@/components/Calendar/ImportCalendarModal';
 import { cn } from '@/lib/utils';
 import RichTextEditor from '@/components/RichTextEditor';
 import { addPointsWithStats, addPoints } from '@/lib/gamification';
@@ -288,6 +291,16 @@ function EventForm({ initial, onSave, onCancel, onDelete }: EventFormProps) {
                 </div>
 
                 <div className="flex gap-2 pt-2">
+                    {initial?.id && (
+                        <button
+                            type="button"
+                            onClick={() => exportSingleEventoIcs({ ...form, id: initial.id } as EventoCalendario)}
+                            className="p-2.5 text-gray-500 hover:text-scout-green hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors"
+                            title="Scarica questo evento in formato .ics per il tuo calendario"
+                        >
+                            <Download size={18} />
+                        </button>
+                    )}
                     {onDelete && (
                         <button onClick={async () => { if(confirm('Eliminare questo evento?')) await onDelete(); }}
                             className="p-2.5 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors">
@@ -333,6 +346,9 @@ export default function Calendario() {
     const [eventi, setEventi] = useState<EventoCalendario[]>([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
+    const [showExportModal, setShowExportModal] = useState(false);
+    const [showImportModal, setShowImportModal] = useState(false);
+    const [bannerMessage, setBannerMessage] = useState<string | null>(null);
     const [editingEvento, setEditingEvento] = useState<EventoCalendario | undefined>();
     const [formInitial, setFormInitial] = useState<Partial<EventoCalendario>>({});
 
@@ -556,7 +572,7 @@ export default function Calendario() {
     return (
         <div className="pb-6">
             {/* Header */}
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
                         <Calendar className="text-scout-green" size={26} />
@@ -564,11 +580,39 @@ export default function Calendario() {
                     </h1>
                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Riunioni, eventi e impegni del gruppo</p>
                 </div>
-                <button onClick={() => openAdd()}
-                    className="bg-scout-green text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 hover:bg-scout-green-dark transition-colors shadow-sm">
-                    <Plus size={16} /> Evento
-                </button>
+                <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                        onClick={() => setShowImportModal(true)}
+                        className="bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 px-3.5 py-2 rounded-xl font-bold flex items-center gap-1.5 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors shadow-sm text-xs sm:text-sm"
+                        title="Importa eventi da un file .ics"
+                    >
+                        <Upload size={15} />
+                        <span>Importa .ics</span>
+                    </button>
+                    <button
+                        onClick={() => setShowExportModal(true)}
+                        className="bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 px-3.5 py-2 rounded-xl font-bold flex items-center gap-1.5 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors shadow-sm text-xs sm:text-sm"
+                        title="Esporta calendario in formato .ics"
+                    >
+                        <Download size={15} />
+                        <span>Esporta .ics</span>
+                    </button>
+                    <button
+                        onClick={() => openAdd()}
+                        className="bg-scout-green text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 hover:bg-scout-green-dark transition-colors shadow-sm text-xs sm:text-sm"
+                    >
+                        <Plus size={16} />
+                        <span>Evento</span>
+                    </button>
+                </div>
             </div>
+
+            {/* Banner Messaggio */}
+            {bannerMessage && (
+                <div className="mb-5 p-3.5 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800/50 rounded-xl text-green-700 dark:text-green-300 text-xs font-bold flex items-center gap-2">
+                    <span>✓ {bannerMessage}</span>
+                </div>
+            )}
 
             {/* View switcher */}
             <div className="flex bg-gray-100 dark:bg-gray-700 p-1 rounded-xl mb-6 w-fit">
@@ -610,6 +654,27 @@ export default function Calendario() {
                     onSave={handleSave}
                     onCancel={() => setShowForm(false)}
                     onDelete={editingEvento ? () => handleDelete(editingEvento.id) : undefined}
+                />
+            )}
+
+            {showExportModal && (
+                <ExportCalendarModal
+                    eventi={eventi}
+                    currentYear={selectedYear}
+                    onClose={() => setShowExportModal(false)}
+                />
+            )}
+
+            {showImportModal && (
+                <ImportCalendarModal
+                    existingEventi={eventi}
+                    onClose={() => setShowImportModal(false)}
+                    onImportSuccess={(count) => {
+                        setShowImportModal(false);
+                        reload();
+                        setBannerMessage(`Importati con successo ${count} ${count === 1 ? 'evento' : 'eventi'} nel calendario CoCa!`);
+                        setTimeout(() => setBannerMessage(null), 4000);
+                    }}
                 />
             )}
         </div>
