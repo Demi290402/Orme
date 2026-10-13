@@ -27,69 +27,85 @@ serve(async (req) => {
       groupName = '', 
       excludeUserId, 
       type = 'generic',
+      recipientEmail = '',
       subject: customSubject, 
       title: customTitle,
       body = '', 
       candidateName = '', 
       candidateNickname = '', 
       actionUrl, 
-      actionLabel 
+      actionLabel,
+      reporterName = '',
+      reporterEmail = '',
+      reporterGroup = '',
+      reporterRole = '',
+      issueCategory = '',
+      diagnosticInfo = null
     } = payload
 
-    console.log(`[send-email-notification] Tipo: ${type}, Gruppo: ${groupId} (${groupName}), Escludi utente: ${excludeUserId}`)
+    console.log(`[send-email-notification] Tipo: ${type}, Destinatario: ${recipientEmail || 'CoCa'}, Gruppo: ${groupId} (${groupName})`)
 
-    if (!groupId && !groupName) {
-      throw new Error('Campo obbligatorio mancante (groupId o groupName)')
-    }
+    let validEmails: string[] = []
 
-    const supabaseAdmin = createClient(
-      SUPABASE_URL ?? '',
-      SUPABASE_SERVICE_ROLE_KEY ?? ''
-    )
+    if (type === 'segnalazione_problema' || recipientEmail) {
+      // Destinazione diretta: segnalazioni al supporto Orme o a email specifica
+      validEmails = [recipientEmail || 'appormescout@gmail.com']
+    } else {
+      if (!groupId && !groupName) {
+        throw new Error('Campo obbligatorio mancante (groupId o groupName)')
+      }
 
-    // Cerca tutti i capi ATTIVI censiti nella Comunità Capi
-    let query = supabaseAdmin
-      .from('users')
-      .select('email, id, first_name, last_name, membership_status')
-      .eq('membership_status', 'attivo')
+      const supabaseAdmin = createClient(
+        SUPABASE_URL ?? '',
+        SUPABASE_SERVICE_ROLE_KEY ?? ''
+      )
 
-    if (groupId && groupName) {
-      query = query.or(`group_id.eq.${groupId},group_name.eq.${groupName}`)
-    } else if (groupId) {
-      query = query.eq('group_id', String(groupId))
-    } else if (groupName) {
-      query = query.eq('group_name', String(groupName))
-    }
+      // Cerca tutti i capi ATTIVI censiti nella Comunità Capi
+      let query = supabaseAdmin
+        .from('users')
+        .select('email, id, first_name, last_name, membership_status')
+        .eq('membership_status', 'attivo')
 
-    if (excludeUserId) {
-      query = query.neq('id', excludeUserId)
-    }
+      if (groupId && groupName) {
+        query = query.or(`group_id.eq.${groupId},group_name.eq.${groupName}`)
+      } else if (groupId) {
+        query = query.eq('group_id', String(groupId))
+      } else if (groupName) {
+        query = query.eq('group_name', String(groupName))
+      }
 
-    const { data: users, error: usersErr } = await query
-    if (usersErr) throw new Error(`DB Error: ${usersErr.message}`)
-    
-    // Filtra email uniche e valide
-    const validEmails = [...new Set(users
-      ?.map((u: any) => (u.email || '').trim().toLowerCase())
-      .filter((e: string) => e && e.includes('@') && !e.includes('example.com')))]
+      if (excludeUserId) {
+        query = query.neq('id', excludeUserId)
+      }
 
-    console.log(`[send-email-notification] Destinatari attivi trovati: ${validEmails.length}`)
+      const { data: users, error: usersErr } = await query
+      if (usersErr) throw new Error(`DB Error: ${usersErr.message}`)
+      
+      // Filtra email uniche e valide
+      validEmails = [...new Set(users
+        ?.map((u: any) => (u.email || '').trim().toLowerCase())
+        .filter((e: string) => e && e.includes('@') && !e.includes('example.com')))]
 
-    if (validEmails.length === 0) {
-      return new Response(JSON.stringify({ 
-        message: "Nessun capo attivo con email valida trovato per questo gruppo.",
-        recipientsCount: 0 
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      })
+      console.log(`[send-email-notification] Destinatari attivi trovati: ${validEmails.length}`)
+
+      if (validEmails.length === 0) {
+        return new Response(JSON.stringify({ 
+          message: "Nessun capo attivo con email valida trovato per questo gruppo.",
+          recipientsCount: 0 
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        })
+      }
     }
 
     const senderEmail = Deno.env.get('BREVO_SENDER_EMAIL') || 'appormescout@gmail.com'
-    const senderName = Deno.env.get('BREVO_SENDER_NAME') || 'Orme — Comunità Capi'
+    const senderName = type === 'segnalazione_problema' 
+      ? 'Orme — Segnalazione Problema' 
+      : (Deno.env.get('BREVO_SENDER_NAME') || 'Orme — Comunità Capi')
 
     // Definizione Oggetto, Titoli e Link in base al Tipo
-    let finalSubject = customSubject || '[Orme] Notifica Comunità Capi'
+    let finalSubject = customSubject || '[Orme] Notifica'
     let badgeText = 'NOTIFICA COMUNITÀ CAPI'
     let badgeColor = '#2F855A'
     let badgeBg = '#f0fff4'
@@ -103,7 +119,84 @@ serve(async (req) => {
       ? `${candidateName} (${candidateNickname})` 
       : candidateName
 
-    if (type === 'richiesta_accesso') {
+    if (type === 'segnalazione_problema') {
+      finalSubject = customSubject || `[Orme Segnalazione] ${issueCategory || 'Problema'}: ${customTitle || 'Nuova richiesta supporto'}`
+      badgeText = '🚨 SEGNALAZIONE PROBLEMA & FEEDBACK'
+      badgeColor = '#C53030'
+      badgeBg = '#FFF5F5'
+      mainHeading = customTitle || `Segnalazione: ${issueCategory || 'Problema riscontrato'}`
+      finalActionUrl = reporterEmail ? `mailto:${reporterEmail}?subject=${encodeURIComponent(`Re: [Orme] ${finalSubject}`)}` : 'https://orme.pages.dev'
+      finalActionLabel = reporterEmail ? `Rispondi a ${reporterName || reporterEmail}` : 'Accedi a Orme'
+
+      const diag = diagnosticInfo || {}
+
+      contentHtmlBlock = `
+        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin: 20px 0; text-align: left;">
+            <table style="width: 100%; border-collapse: collapse; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+                <tr>
+                    <td style="padding: 6px 0; font-size: 13px; color: #718096; width: 140px;">Segnalatore:</td>
+                    <td style="padding: 6px 0; font-size: 15px; font-weight: bold; color: #1a202c;">${reporterName || 'Utente Orme'}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 6px 0; font-size: 13px; color: #718096;">Email di contatto:</td>
+                    <td style="padding: 6px 0; font-size: 14px; font-weight: bold; color: #2F855A;">${reporterEmail || 'Non specificata'}</td>
+                </tr>
+                ${reporterGroup ? `
+                <tr>
+                    <td style="padding: 6px 0; font-size: 13px; color: #718096;">Gruppo Scout:</td>
+                    <td style="padding: 6px 0; font-size: 14px; color: #1a202c;">${reporterGroup}${reporterRole ? ` (${reporterRole})` : ''}</td>
+                </tr>` : ''}
+                <tr>
+                    <td style="padding: 6px 0; font-size: 13px; color: #718096;">Categoria:</td>
+                    <td style="padding: 6px 0; font-size: 14px; font-weight: bold; color: #C53030;">${issueCategory || 'Generale'}</td>
+                </tr>
+            </table>
+        </div>
+
+        <div style="text-align: left; margin: 20px 0;">
+            <p style="font-size: 13px; font-weight: bold; color: #4a5568; margin-bottom: 8px;">Descrizione del problema / richiesta:</p>
+            <div style="background-color: #fffaf0; border-left: 4px solid #dd6b20; border-radius: 8px; padding: 16px; font-size: 14px; line-height: 1.6; color: #2d3748; white-space: pre-wrap;">
+                ${body}
+            </div>
+        </div>
+
+        ${diag && (diag.browser || diag.os || diag.currentUrl || diag.screenSize) ? `
+        <div style="background-color: #f7fafc; border: 1px dashed #cbd5e0; border-radius: 10px; padding: 14px 18px; margin: 20px 0; text-align: left; font-size: 12px; color: #718096;">
+            <p style="font-size: 12px; font-weight: bold; color: #4a5568; margin: 0 0 6px 0;">💻 Informazioni Tecniche & Dispositivo:</p>
+            <table style="width: 100%; border-collapse: collapse;">
+                ${diag.os ? `<tr><td style="padding: 3px 0; width: 120px;">Sistema Operativo:</td><td style="font-weight: 600; color: #2d3748;">${diag.os}</td></tr>` : ''}
+                ${diag.browser ? `<tr><td style="padding: 3px 0;">Browser:</td><td style="font-weight: 600; color: #2d3748;">${diag.browser}</td></tr>` : ''}
+                ${diag.screenSize ? `<tr><td style="padding: 3px 0;">Risoluzione Schermo:</td><td style="color: #2d3748;">${diag.screenSize}</td></tr>` : ''}
+                ${diag.currentUrl ? `<tr><td style="padding: 3px 0;">Pagina / URL:</td><td style="font-family: monospace; color: #2b6cb0;">${diag.currentUrl}</td></tr>` : ''}
+            </table>
+        </div>` : ''}
+      `
+
+      textContent = `
+🚨 ORME — SEGNALAZIONE PROBLEMA
+--------------------------------------------------
+Nuova segnalazione inviata da un utente dell'app Orme.
+
+DATI SEGNALATORE:
+- Nome: ${reporterName || 'Utente Orme'}
+- Email: ${reporterEmail || 'Non specificata'}
+${reporterGroup ? `- Gruppo: ${reporterGroup} ${reporterRole ? `(${reporterRole})` : ''}\n` : ''}- Categoria: ${issueCategory || 'Generale'}
+
+DESCRIZIONE DEL PROBLEMA:
+${body}
+
+${diag && (diag.browser || diag.os || diag.currentUrl || diag.screenSize) ? `
+DATI TECNICI:
+- OS: ${diag.os || '-'}
+- Browser: ${diag.browser || '-'}
+- Schermo: ${diag.screenSize || '-'}
+- Pagina: ${diag.currentUrl || '-'}
+` : ''}
+--------------------------------------------------
+Puoi rispondere direttamente a questa email per contattare ${reporterName || 'l\'utente'} all'indirizzo ${reporterEmail}.
+      `.trim()
+
+    } else if (type === 'richiesta_accesso') {
       finalSubject = customSubject || `[Orme] Richiesta di accesso: ${formattedCandidate} desidera entrare nel gruppo ${groupName || ''}`.trim()
       badgeText = '🔔 RICHIESTA DI ACCESSO IN CO.CA.'
       badgeColor = '#B7791F'
@@ -296,10 +389,14 @@ Supporto: ${senderEmail}
           <tr>
             <td style="background-color: #f8fafc; padding: 24px 30px; text-align: center; border-top: 1px solid #edf2f7;">
               <p style="font-size: 11px; color: #718096; line-height: 1.5; margin: 0;">
-                Ricevi questa email automatica in quanto capo attivo e censito nella Comunità Capi${groupName ? ` del <strong>${groupName}</strong>` : ''} su <strong>Orme</strong>.
+                ${type === 'segnalazione_problema' 
+                  ? 'Questa è una segnalazione di supporto inviata tramite l\'app <strong>Orme</strong>.' 
+                  : `Ricevi questa email automatica in quanto capo attivo e censito nella Comunità Capi${groupName ? ` del <strong>${groupName}</strong>` : ''} su <strong>Orme</strong>.`}
               </p>
               <p style="font-size: 11px; color: #a0aec0; margin: 8px 0 0 0;">
-                Hai bisogno di aiuto o vuoi segnalare un errore? Rispondi a questa email o scrivi a <a href="mailto:${senderEmail}" style="color: #2F855A; text-decoration: none;">${senderEmail}</a>
+                ${type === 'segnalazione_problema' && reporterEmail
+                  ? `Puoi rispondere direttamente a questa email per contattare ${reporterName || 'l\'utente'} (${reporterEmail})`
+                  : `Hai bisogno di aiuto o vuoi segnalare un errore? Rispondi a questa email o scrivi a <a href="mailto:${senderEmail}" style="color: #2F855A; text-decoration: none;">${senderEmail}</a>`}
               </p>
             </td>
           </tr>
@@ -325,7 +422,10 @@ Supporto: ${senderEmail}
           email: senderEmail
         },
         to: validEmails.map(email => ({ email })),
-        replyTo: {
+        replyTo: reporterEmail ? {
+          email: reporterEmail,
+          name: reporterName || 'Utente Orme'
+        } : {
           email: senderEmail,
           name: 'Supporto Orme'
         },

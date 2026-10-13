@@ -324,6 +324,8 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
 
             let errorMsg: string | null = null;
 
+            // 1. Invio tramite Supabase Functions SDK
+            try {
                 const emailPayload = {
                     groupId: targetGroupId,
                     groupName: currentUser?.groupName || '',

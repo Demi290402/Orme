@@ -4,11 +4,12 @@ import {
     ChevronLeft, Sun, Moon, Bell, BellOff, User, Trash2,
     Download, RefreshCw, FolderOpen, Check,
     Shield, ChevronRight, MapPin, FileText, Users, BarChart2,
-    Archive, Trophy, Zap, Bus, Clock, KeyRound, Copy, Crown, ShieldCheck, Compass, Share2
+    Archive, Trophy, Zap, Bus, Clock, KeyRound, Copy, Crown, ShieldCheck, Compass, Share2, HelpCircle
 } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
 import { getUser, deleteUserProfile, getGroupPin } from '@/lib/data';
 import ShareAppModal from '@/components/ShareAppModal';
+import ReportProblemModal from '@/components/ReportProblemModal';
 import { cn } from '@/lib/utils';
 import { User as UserType } from '@/types';
 import { playNotificationSound } from '@/lib/notifications';
@@ -114,6 +115,7 @@ export default function Settings() {
     const [copiedPin, setCopiedPin] = useState(false);
     const [loadingPin, setLoadingPin] = useState(false);
     const [showShareModal, setShowShareModal] = useState(false);
+    const [showReportModal, setShowReportModal] = useState(false);
 
     // Notification settings
     const [notifiche, setNotifiche] = useState(true);
@@ -827,6 +829,17 @@ export default function Settings() {
                 )}
             </SettingsSection>
 
+            {/* ASSISTENZA & FEEDBACK */}
+            <SettingsSection title="Assistenza & Feedback">
+                <SettingsRow
+                    icon={HelpCircle}
+                    label="Segnala un Problema o Suggerimento"
+                    subtitle="Invia una segnalazione diretta al team di Orme (appormescout@gmail.com)"
+                    color="text-amber-500"
+                    onClick={() => setShowReportModal(true)}
+                />
+            </SettingsSection>
+
             {/* ACCOUNT */}
             <SettingsSection title="Account">
                 <SettingsRow
@@ -894,6 +907,13 @@ export default function Settings() {
                 onClose={() => setShowShareModal(false)}
                 inviterName={user ? `${user.firstName} ${user.lastName}` : undefined}
                 inviterGroup={user?.groupName}
+            />
+
+            {/* Report Problem Modal */}
+            <ReportProblemModal
+                isOpen={showReportModal}
+                onClose={() => setShowReportModal(false)}
+                currentUser={user}
             />
 
             {/* Version */}
