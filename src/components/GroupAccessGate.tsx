@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { ShieldAlert, Clock, KeyRound, CheckCircle2, AlertCircle, ArrowRight, Compass, RefreshCw } from 'lucide-react';
+import { ShieldAlert, Clock, KeyRound, CheckCircle2, AlertCircle, ArrowRight, Compass, RefreshCw, Search } from 'lucide-react';
 import { getUser, submitGroupPin, transferUserGroup, getGruppiScout, GruppoScout } from '@/lib/data';
 import { User } from '@/types';
 
@@ -20,6 +20,7 @@ export default function GroupAccessGate({ children }: GroupAccessGateProps) {
     // Transfer modal state
     const [showTransfer, setShowTransfer] = useState(false);
     const [gruppi, setGruppi] = useState<GruppoScout[]>([]);
+    const [groupSearch, setGroupSearch] = useState('');
     const [selectedGroup, setSelectedGroup] = useState<GruppoScout | null>(null);
     const [transferPin, setTransferPin] = useState('');
     const [transferLoading, setTransferLoading] = useState(false);
@@ -52,7 +53,7 @@ export default function GroupAccessGate({ children }: GroupAccessGateProps) {
             if (!res.success) {
                 setPinError(res.message || 'PIN non valido.');
             } else {
-                setPinSuccess('PIN verificato con successo!');
+                setPinSuccess('PIN verificato! Accesso completato con successo.');
                 await refreshUser();
             }
         } catch (err: any) {
@@ -64,6 +65,7 @@ export default function GroupAccessGate({ children }: GroupAccessGateProps) {
 
     const handleOpenTransfer = async () => {
         setShowTransfer(true);
+        setGroupSearch('');
         try {
             const g = await getGruppiScout();
             setGruppi(g);
@@ -114,7 +116,7 @@ export default function GroupAccessGate({ children }: GroupAccessGateProps) {
     }
 
     const approvalsCount = user.cocaApprovals?.length || 0;
-    const requiredCount = user.hasValidPin ? 2 : 4;
+    const requiredCount = 2; // Richiede esattamente 2 approvazioni di capi attivi
     const progressPercent = Math.min(100, Math.round((approvalsCount / requiredCount) * 100));
 
     // Pending member
@@ -132,7 +134,7 @@ export default function GroupAccessGate({ children }: GroupAccessGateProps) {
                         </h2>
                         <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
                             Sei registrato nel gruppo <strong className="text-scout-green dark:text-scout-green-light font-extrabold">{user.groupName || 'Gruppo Scout'}</strong>. 
-                            Per tutelare la privacy della Comunità Capi, i verbali, la cassa e i dati interni sono protetti.
+                            Per tutelare la privacy della Comunità Capi, i verbali, la cassa e i dati interni sono protetti fino alla verifica dell'accesso.
                         </p>
                     </div>
 
@@ -140,7 +142,7 @@ export default function GroupAccessGate({ children }: GroupAccessGateProps) {
                     <div className="p-4 bg-gray-50 dark:bg-gray-900/60 rounded-2xl border border-gray-150 dark:border-gray-800 text-left space-y-3">
                         <div className="flex items-center justify-between text-xs font-black">
                             <span className="text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-                                🗳️ Approvazioni CoCa:
+                                🗳️ Approvazioni Capi CoCa:
                             </span>
                             <span className="text-scout-green font-bold">
                                 {approvalsCount} di {requiredCount} voti ricevuti
@@ -156,58 +158,48 @@ export default function GroupAccessGate({ children }: GroupAccessGateProps) {
                         </div>
 
                         <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                            {user.hasValidPin ? (
-                                <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
-                                    <CheckCircle2 size={12} /> PIN CoCa inserito: servono 2 approvazioni di capi attivi.
-                                </span>
-                            ) : (
-                                <span>
-                                    Senza PIN servono <strong>4 approvazioni</strong> da parte di capi attivi del gruppo.
-                                </span>
-                            )}
+                            Servono <strong>2 approvazioni</strong> da parte di capi già censiti e attivi nel gruppo per convalidare l'accesso.
                         </p>
                     </div>
 
-                    {/* PIN unlock section (if user doesn't have valid PIN yet) */}
-                    {!user.hasValidPin && (
-                        <div className="p-4 bg-amber-50/70 dark:bg-amber-950/20 rounded-2xl border border-amber-200 dark:border-amber-900/30 text-left space-y-3">
-                            <div className="flex items-center gap-2 text-xs font-black text-amber-800 dark:text-amber-300">
-                                <KeyRound size={16} />
-                                Hai il PIN fornito dai Capi Gruppo?
-                            </div>
-                            <p className="text-[11px] text-gray-600 dark:text-gray-400">
-                                Inserendo il PIN della CoCa, la soglia per l'ingresso scende subito a <strong>sole 2 approvazioni</strong>.
-                            </p>
-
-                            <form onSubmit={handlePinSubmit} className="flex gap-2">
-                                <input 
-                                    type="text"
-                                    value={pinInput}
-                                    onChange={(e) => setPinInput(e.target.value.toUpperCase())}
-                                    placeholder="Es: TRANI1"
-                                    className="flex-1 px-3.5 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-xs md:text-sm font-black uppercase tracking-wider outline-none focus:ring-1 focus:ring-scout-green dark:text-white"
-                                />
-                                <button
-                                    type="submit"
-                                    disabled={!pinInput.trim() || pinLoading}
-                                    className="px-4 py-2 bg-scout-green text-white text-xs font-bold rounded-xl hover:bg-scout-green-dark transition-all disabled:opacity-50 cursor-pointer shrink-0"
-                                >
-                                    {pinLoading ? 'Verifica...' : 'Convalida PIN'}
-                                </button>
-                            </form>
-
-                            {pinError && (
-                                <p className="text-[11px] text-red-500 font-bold flex items-center gap-1">
-                                    <AlertCircle size={12} /> {pinError}
-                                </p>
-                            )}
-                            {pinSuccess && (
-                                <p className="text-[11px] text-emerald-600 font-bold flex items-center gap-1">
-                                    <CheckCircle2 size={12} /> {pinSuccess}
-                                </p>
-                            )}
+                    {/* PIN unlock section (immediate access) */}
+                    <div className="p-4 bg-emerald-50/70 dark:bg-emerald-950/20 rounded-2xl border border-emerald-200 dark:border-emerald-900/30 text-left space-y-3">
+                        <div className="flex items-center gap-2 text-xs font-black text-emerald-800 dark:text-emerald-300">
+                            <KeyRound size={16} />
+                            Hai il Codice di Accesso fornito dai Capi Gruppo?
                         </div>
-                    )}
+                        <p className="text-[11px] text-gray-600 dark:text-gray-400">
+                            Inserendo il PIN corretto della tua Comunità Capi, l'accesso viene sbloccato <strong>immediatamente</strong> senza attendere voti.
+                        </p>
+
+                        <form onSubmit={handlePinSubmit} className="flex gap-2">
+                            <input 
+                                type="text"
+                                value={pinInput}
+                                onChange={(e) => setPinInput(e.target.value.toUpperCase())}
+                                placeholder="Es: TRANI1"
+                                className="flex-1 px-3.5 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-xs md:text-sm font-black uppercase tracking-wider outline-none focus:ring-1 focus:ring-scout-green dark:text-white"
+                            />
+                            <button
+                                type="submit"
+                                disabled={!pinInput.trim() || pinLoading}
+                                className="px-4 py-2 bg-scout-green text-white text-xs font-bold rounded-xl hover:bg-scout-green-dark transition-all disabled:opacity-50 cursor-pointer shrink-0"
+                            >
+                                {pinLoading ? 'Verifica...' : 'Sblocca Subito'}
+                            </button>
+                        </form>
+
+                        {pinError && (
+                            <p className="text-[11px] text-red-500 font-bold flex items-center gap-1">
+                                <AlertCircle size={12} /> {pinError}
+                            </p>
+                        )}
+                        {pinSuccess && (
+                            <p className="text-[11px] text-emerald-600 font-bold flex items-center gap-1">
+                                <CheckCircle2 size={12} /> {pinSuccess}
+                            </p>
+                        )}
+                    </div>
 
                     {/* Actions */}
                     <div className="pt-2 flex flex-col sm:flex-row gap-3 justify-center items-center">
@@ -229,9 +221,10 @@ export default function GroupAccessGate({ children }: GroupAccessGateProps) {
                         <button
                             type="button"
                             onClick={handleOpenTransfer}
-                            className="text-[11px] font-bold text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 underline cursor-pointer"
+                            className="text-xs font-bold text-scout-green hover:underline cursor-pointer flex items-center justify-center gap-1.5 mx-auto"
                         >
-                            Non appartieni a questo gruppo? Cambia Gruppo Scout
+                            <span>Hai sbagliato gruppo?</span>
+                            <span className="underline">Cambia Gruppo Scout qui</span>
                         </button>
                     </div>
                 </div>
@@ -292,27 +285,54 @@ export default function GroupAccessGate({ children }: GroupAccessGateProps) {
 
     function renderTransferModal() {
         if (!showTransfer) return null;
+
+        const filteredGruppi = gruppi.filter(g => {
+            if (!groupSearch.trim()) return true;
+            const q = groupSearch.toLowerCase();
+            return (
+                g.groupName.toLowerCase().includes(q) ||
+                g.scoutZone.toLowerCase().includes(q) ||
+                g.region.toLowerCase().includes(q)
+            );
+        });
+
         return (
             <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-                <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 max-w-md w-full shadow-2xl border border-gray-100 dark:border-gray-700 space-y-5">
+                <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 max-w-md w-full shadow-2xl border border-gray-100 dark:border-gray-700 space-y-4">
                     <div className="flex items-center justify-between">
                         <h3 className="font-black text-lg text-gray-900 dark:text-white">Cambia Gruppo Scout</h3>
                         <button 
                             type="button"
                             onClick={() => setShowTransfer(false)}
-                            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 font-bold text-sm"
+                            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 font-bold text-sm cursor-pointer p-1"
                         >
                             ✕
                         </button>
                     </div>
 
                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                        Seleziona il nuovo gruppo scout a cui intendi richiedere l'adesione.
+                        Se hai selezionato per errore un altro gruppo, cerca quello corretto per richiedere l'adesione:
                     </p>
 
-                    <form onSubmit={handleExecuteTransfer} className="space-y-4">
+                    <form onSubmit={handleExecuteTransfer} className="space-y-3.5">
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold text-gray-400 uppercase block">Cerca Gruppo</label>
+                            <div className="relative">
+                                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                                    <Search size={14} />
+                                </div>
+                                <input
+                                    type="text"
+                                    value={groupSearch}
+                                    onChange={(e) => setGroupSearch(e.target.value)}
+                                    placeholder="Es: Roma 10, Milano 2, Trani 1..."
+                                    className="w-full pl-8 pr-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-medium text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-scout-green"
+                                />
+                            </div>
+                        </div>
+
                         <div>
-                            <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Gruppo Scout</label>
+                            <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Gruppo Selezionato*</label>
                             <select
                                 value={selectedGroup ? String(selectedGroup.id) : ''}
                                 onChange={(e) => {
@@ -321,8 +341,8 @@ export default function GroupAccessGate({ children }: GroupAccessGateProps) {
                                 }}
                                 className="w-full p-2.5 border border-gray-200 dark:border-gray-700 dark:bg-gray-900 rounded-xl text-xs md:text-sm font-bold text-gray-900 dark:text-white outline-none"
                             >
-                                <option value="">-- Seleziona Gruppo --</option>
-                                {gruppi.map(g => (
+                                <option value="">-- Seleziona Gruppo ({filteredGruppi.length} disponibili) --</option>
+                                {filteredGruppi.map(g => (
                                     <option key={g.id} value={g.id}>
                                         {g.groupName} ({g.scoutZone} - {g.region})
                                     </option>
@@ -331,14 +351,17 @@ export default function GroupAccessGate({ children }: GroupAccessGateProps) {
                         </div>
 
                         <div>
-                            <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">PIN del nuovo gruppo (opzionale)</label>
+                            <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Codice di Accesso CoCa (opzionale)</label>
                             <input 
                                 type="text"
                                 value={transferPin}
                                 onChange={(e) => setTransferPin(e.target.value.toUpperCase())}
-                                placeholder="Inserisci il PIN se lo conosci..."
+                                placeholder="Inserisci il PIN del nuovo gruppo se lo conosci..."
                                 className="w-full p-2.5 border border-gray-200 dark:border-gray-700 dark:bg-gray-900 rounded-xl text-xs font-bold uppercase tracking-wider text-gray-900 dark:text-white outline-none"
                             />
+                            <p className="text-[10px] text-gray-400 mt-1">
+                                💡 Con il PIN corretto accedi immediatamente. Senza PIN, serviranno 2 approvazioni di capi del nuovo gruppo.
+                            </p>
                         </div>
 
                         {transferError && (
@@ -349,16 +372,16 @@ export default function GroupAccessGate({ children }: GroupAccessGateProps) {
                             <button
                                 type="button"
                                 onClick={() => setShowTransfer(false)}
-                                className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs font-bold rounded-xl"
+                                className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs font-bold rounded-xl cursor-pointer"
                             >
                                 Annulla
                             </button>
                             <button
                                 type="submit"
                                 disabled={!selectedGroup || transferLoading}
-                                className="px-5 py-2 bg-scout-green text-white text-xs font-bold rounded-xl hover:bg-scout-green-dark disabled:opacity-50"
+                                className="px-5 py-2 bg-scout-green text-white text-xs font-bold rounded-xl hover:bg-scout-green-dark disabled:opacity-50 cursor-pointer shadow-sm"
                             >
-                                {transferLoading ? 'Trasferimento...' : 'Richiedi Adesione'}
+                                {transferLoading ? 'Trasferimento...' : 'Conferma e Spostati'}
                             </button>
                         </div>
                     </form>

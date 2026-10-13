@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Search, Filter, Plus, X, Check, Clock, Tent, BedDouble, Bus, Flame, Droplets, Home as HomeIcon, MapPin } from 'lucide-react';
-import { getLocations, getUser, getUserLocationViews, getAllLocationHistory } from '@/lib/data';
+import { getLocations, getUser, getUserLocationViews, getAllLocationHistory, getAllUsers } from '@/lib/data';
 import { Location, User as UserType } from '@/types';
 import LocationCard from '@/components/LocationCard';
 import InteractiveMap from '@/components/InteractiveMap';
@@ -79,6 +79,7 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
     const [selectedActivities, setSelectedActivities] = useState<string[]>(() => initialFilters.selectedActivities || []);
     const [selectedStaleness, setSelectedStaleness] = useState<number[]>(() => initialFilters.selectedStaleness || []);
     const [currentUser, setCurrentUser] = useState<UserType | null>(null);
+    const [pendingCoCaUsers, setPendingCoCaUsers] = useState<UserType[]>([]);
     const [locationViews, setLocationViews] = useState<Record<string, string>>({});
     const [histories, setHistories] = useState<any[]>([]);
     const [showTransportModal, setShowTransportModal] = useState(false);
@@ -184,7 +185,15 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
 
     useEffect(() => {
         getLocations().then(setLocations).catch(console.error);
-        getUser().then(setCurrentUser).catch(console.error);
+        getUser().then(u => {
+            setCurrentUser(u);
+            if (u && u.membershipStatus === 'attivo' && (u.groupId || u.groupName)) {
+                getAllUsers().then(users => {
+                    const pending = users.filter(usr => usr.membershipStatus === 'in_attesa');
+                    setPendingCoCaUsers(pending);
+                }).catch(console.error);
+            }
+        }).catch(console.error);
         getUserLocationViews().then(setLocationViews).catch(console.error);
         getAllLocationHistory().then(setHistories).catch(console.error);
 
@@ -394,6 +403,34 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                     </div>
                 </div>
             </div>
+
+            {/* Banner Richieste Accesso CoCa in Sospeso */}
+            {pendingCoCaUsers.length > 0 && (
+                <Link
+                    to="/verbali/membri?tab=sicurezza"
+                    className="block bg-amber-500/10 border-2 border-amber-500/40 hover:border-amber-500 rounded-3xl p-4 sm:p-5 transition-all shadow-xs group animate-in fade-in"
+                >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-3.5">
+                            <div className="w-11 h-11 rounded-2xl bg-amber-500 text-white flex items-center justify-center font-black shrink-0 animate-pulse shadow-xs">
+                                <Clock size={22} />
+                            </div>
+                            <div>
+                                <h3 className="font-black text-sm md:text-base text-amber-950 dark:text-amber-200">
+                                    {pendingCoCaUsers.length === 1 ? '1 nuova richiesta di accesso alla Comunità Capi' : `${pendingCoCaUsers.length} nuove richieste di accesso alla Comunità Capi`}
+                                </h3>
+                                <p className="text-xs text-amber-800/80 dark:text-amber-300/80 mt-0.5">
+                                    {pendingCoCaUsers.map(u => `${u.firstName} ${u.lastName}${u.nickname ? ` (${u.nickname})` : ''}`).join(', ')} in attesa di approvazione (2 voti).
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-xs font-black text-amber-700 dark:text-amber-400 group-hover:translate-x-1 transition-transform self-end sm:self-auto shrink-0 bg-amber-500/20 px-3 py-1.5 rounded-xl">
+                            <span>Esamina e Vota</span>
+                            <span>→</span>
+                        </div>
+                    </div>
+                </Link>
+            )}
 
             {/* Filter Modal */}
             {showFilters && (

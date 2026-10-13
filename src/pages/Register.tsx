@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { UserPlus, ChevronDown, Plus, Check, AlertCircle } from 'lucide-react';
+import { UserPlus, ChevronDown, Plus, Check, AlertCircle, Camera } from 'lucide-react';
 import { registerUser, getGruppiScout, aggiungiGruppoScout, GruppoScout } from '@/lib/data';
+import { compressImage } from '@/lib/imageCompression';
 import { cn } from '@/lib/utils';
 
 // =====================================================
@@ -227,6 +228,7 @@ export default function Register() {
     const [scoutZone, setScoutZone] = useState('');
     const [groupName, setGroupName] = useState('');
     const [joinCodeInput, setJoinCodeInput] = useState('');
+    const [profilePicture, setProfilePicture] = useState<string>('');
 
     const [formazione, setFormazione] = useState<{ corso: string; anno: string; mese: string }[]>([]);
     const [hasNominaCapo, setHasNominaCapo] = useState(false);
@@ -237,6 +239,18 @@ export default function Register() {
     const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
     const [submitError, setSubmitError] = useState('');
     const [submitting, setSubmitting] = useState(false);
+
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            try {
+                const compressed = await compressImage(file, 400, 400, 0.8);
+                setProfilePicture(compressed);
+            } catch (err) {
+                console.error('Errore compressione immagine profilo:', err);
+            }
+        }
+    };
 
     // Load existing groups from DB
     useEffect(() => {
@@ -325,6 +339,7 @@ export default function Register() {
                 firstName: formData.firstName.trim(),
                 lastName: formData.lastName.trim(),
                 nickname: formData.nickname.trim(),
+                profilePicture: profilePicture || undefined,
                 email: formData.email.trim().toLowerCase(),
                 password: formData.password,
                 region,
@@ -359,7 +374,7 @@ export default function Register() {
                 </div>
 
                 <h1 className="text-2xl font-bold text-center text-scout-green mb-2">Unisciti al Branco</h1>
-                <p className="text-center text-gray-500 dark:text-gray-400 mb-8">Crea il tuo profilo scout.</p>
+                <p className="text-center text-gray-500 dark:text-gray-400 mb-6">Crea il tuo profilo scout.</p>
 
                 {submitError && (
                     <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-center text-sm font-bold border border-red-100 flex items-center gap-2">
@@ -368,6 +383,37 @@ export default function Register() {
                 )}
 
                 <form onSubmit={handleRegister} className="space-y-4" noValidate>
+                    {/* Foto Profilo (Opzionale) */}
+                    <div className="flex flex-col items-center justify-center pb-2">
+                        <label className="relative group cursor-pointer block">
+                            <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-scout-green/30 group-hover:border-scout-green transition-all shadow-md bg-gray-50 dark:bg-gray-700 flex items-center justify-center">
+                                {profilePicture ? (
+                                    <img src={profilePicture} alt="Foto profilo" className="w-full h-full object-cover" />
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center text-gray-400 dark:text-gray-400">
+                                        <Camera size={30} className="mb-1" />
+                                        <span className="text-[9px] font-bold uppercase tracking-wider">Foto</span>
+                                    </div>
+                                )}
+                            </div>
+                            <div className="absolute bottom-0 right-0 p-2 bg-scout-green text-white rounded-full shadow-md group-hover:scale-110 transition-transform">
+                                <Camera size={13} />
+                            </div>
+                            <input 
+                                type="file" 
+                                accept="image/*" 
+                                className="hidden" 
+                                onChange={handleImageUpload}
+                            />
+                        </label>
+                        <p className="text-[11px] font-bold text-gray-500 dark:text-gray-400 mt-2">
+                            Foto Profilo (consigliata)
+                        </p>
+                        <p className="text-[10px] text-gray-400 text-center">
+                            Aiuta i capi della tua CoCa a riconoscerti se accedi senza codice
+                        </p>
+                    </div>
+
                     {/* Nome e Cognome */}
                     <div className="grid grid-cols-2 gap-4">
                         <ValidatedInput
@@ -414,7 +460,7 @@ export default function Register() {
                                 Scegli liberamente la tua <strong>Regione, Zona e Gruppo AGESCI</strong>. Se il tuo gruppo non è presente nell'elenco, aprilo e seleziona <em>"+ Aggiungi nuovo gruppo"</em> per crearlo e diventarne il capo fondatore!
                             </p>
                             <p className="text-[10px] text-gray-500 dark:text-gray-400 pt-0.5">
-                                *Se fai parte dello stesso gruppo di chi ti ha mandato l'invito, puoi inserire anche il PIN di CoCa qui sotto per accelerare l'approvazione (bastano 2 voti invece di 4).
+                                *Se conosci il Codice fornito dai tuoi Capi Gruppo, inseriscilo qui sotto per entrare immediatamente senza attesa. Senza codice, potrai comunque registrarti e attendere l'approvazione di 2 capi.
                             </p>
                         </div>
 
@@ -481,7 +527,7 @@ export default function Register() {
                                             className="w-full p-2.5 rounded-lg border border-gray-200 dark:border-gray-600 dark:bg-gray-700 text-xs md:text-sm font-bold uppercase tracking-wider outline-none focus:border-scout-brown dark:text-white"
                                         />
                                         <p className="text-[11px] text-gray-400 mt-1">
-                                            💡 Se inserisci il PIN della CoCa, basteranno <strong>2 approvazioni</strong> di capi del gruppo per accedere alle sezioni riservate. Senza PIN, ne serviranno <strong>4</strong>.
+                                            💡 Se inserisci il PIN della CoCa, accedi <strong>immediatamente</strong> alla Comunità Capi. Senza PIN, serviranno <strong>2 approvazioni</strong> da parte di capi attivi del gruppo.
                                         </p>
                                     </div>
                                 )}

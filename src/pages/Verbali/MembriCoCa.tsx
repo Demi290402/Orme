@@ -20,7 +20,10 @@ import ShareAppModal from '@/components/ShareAppModal';
 
 export default function MembriCoCaPage() {
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState<'censimento' | 'sicurezza'>('censimento');
+    const [activeTab, setActiveTab] = useState<'censimento' | 'sicurezza'>(() => {
+        const params = new URLSearchParams(window.location.search);
+        return params.get('tab') === 'sicurezza' ? 'sicurezza' : 'censimento';
+    });
     const [censimentoSubTab, setCensimentoSubTab] = useState<'attivi' | 'storici'>('attivi');
 
     // Censimento State
@@ -230,8 +233,10 @@ export default function MembriCoCaPage() {
     };
 
     const handleConcludeService = async (targetUser: User) => {
-        const confirmMsg = `Sei sicuro di voler concludere il servizio di ${targetUser.firstName} ${targetUser.lastName}? 
-L'utente perderà immediatamente l'accesso a verbali, bilancio, inventario e lista d'attesa di questo gruppo.`;
+        const isPending = targetUser.membershipStatus === 'in_attesa';
+        const confirmMsg = isPending
+            ? `Sei sicuro di voler rifiutare la richiesta di accesso di ${targetUser.firstName} ${targetUser.lastName}?`
+            : `Sei sicuro di voler concludere il servizio di ${targetUser.firstName} ${targetUser.lastName}?\nL'utente perderà immediatamente l'accesso a verbali, bilancio, inventario e lista d'attesa di questo gruppo.`;
         if (!confirm(confirmMsg)) return;
 
         setActionLoadingId(targetUser.id);
@@ -339,6 +344,30 @@ L'utente perderà immediatamente l'accesso a verbali, bilancio, inventario e lis
             {/* TAB 1: CENSIMENTO BRANCHE & RUOLI */}
             {activeTab === 'censimento' && (
                 <div className="space-y-5">
+                    {/* BANNER RICHIESTE DI ACCESSO IN ATTESA */}
+                    {pendingUsers.length > 0 && (
+                        <div className="bg-amber-500/10 border-2 border-amber-500/40 rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs animate-in fade-in">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center font-black shrink-0 animate-pulse">
+                                    <Clock size={20} />
+                                </div>
+                                <div>
+                                    <h3 className="font-extrabold text-sm text-amber-900 dark:text-amber-200">
+                                        {pendingUsers.length === 1 ? '1 nuova richiesta di accesso alla Comunità Capi in attesa di approvazione' : `${pendingUsers.length} nuove richieste di accesso alla Comunità Capi in attesa`}
+                                    </h3>
+                                    <p className="text-xs text-amber-800/80 dark:text-amber-300/80 mt-0.5">
+                                        {pendingUsers.map(u => `${u.firstName} ${u.lastName}${u.nickname ? ` (${u.nickname})` : ''}`).join(', ')} (richiede 2 approvazioni)
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setActiveTab('sicurezza')}
+                                className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-black rounded-xl transition-all shadow-xs cursor-pointer shrink-0 self-start sm:self-auto"
+                            >
+                                Esamina e Vota Richieste →
+                            </button>
+                        </div>
+                    )}
                     {/* BANNER RECUPERO CAPI RIMOSSI DAI VECCHI VERBALI */}
                     {orphanedMembers.length > 0 && (
                         <div className="bg-amber-50/80 dark:bg-amber-950/40 border-2 border-amber-300 dark:border-amber-700/80 rounded-3xl p-4 sm:p-5 space-y-3 shadow-sm animate-in fade-in">
@@ -659,7 +688,7 @@ L'utente perderà immediatamente l'accesso a verbali, bilancio, inventario e lis
                                     Codice di Accesso CoCa (PIN di Gruppo)
                                 </h3>
                                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                    I nuovi capi che inseriscono questo PIN richiedono solo <strong>2 approvazioni</strong> invece di 4 per accedere.
+                                    I nuovi capi che inseriscono questo PIN accedono <strong>immediatamente</strong> alla Comunità Capi. Senza PIN, sono necessarie <strong>2 approvazioni</strong> da parte di capi attivi del gruppo.
                                 </p>
                             </div>
 
@@ -726,41 +755,56 @@ L'utente perderà immediatamente l'accesso a verbali, bilancio, inventario e lis
                                 ✨ Nessuna richiesta in attesa. Tutti i capi censiti sono attivi!
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                                 {pendingUsers.map(u => {
-                                    const required = u.hasValidPin ? 2 : 4;
+                                    const required = 2; // Richiede esattamente 2 approvazioni di capi attivi
                                     const votes = u.cocaApprovals?.length || 0;
                                     const alreadyVoted = !!currentUser && (u.cocaApprovals || []).includes(currentUser.id);
                                     const isSubmitting = actionLoadingId === u.id;
 
                                     return (
-                                        <div key={u.id} className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-amber-300 dark:border-amber-800/60 shadow-xs space-y-3">
+                                        <div key={u.id} className="bg-white dark:bg-gray-800 p-4 sm:p-5 rounded-3xl border-2 border-amber-300 dark:border-amber-800/60 shadow-xs space-y-3.5">
                                             <div className="flex items-start justify-between gap-3">
-                                                <div className="flex items-center gap-3">
-                                                    <UserAvatar user={u} className="w-10 h-10 rounded-full" />
-                                                    <div>
-                                                        <p className="font-bold text-sm text-gray-900 dark:text-white">
-                                                            {u.firstName} {u.lastName} {u.nickname && <span className="text-gray-400 text-xs">({u.nickname})</span>}
-                                                        </p>
-                                                        <p className="text-[11px] text-gray-400">{u.email}</p>
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    {/* Immagine di profilo */}
+                                                    <div className="shrink-0">
+                                                        <UserAvatar user={u} size="md" className="w-12 h-12 rounded-2xl border-2 border-amber-400" />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        {/* Nome e Cognome */}
+                                                        <h4 className="font-extrabold text-sm sm:text-base text-gray-900 dark:text-white truncate">
+                                                            {u.firstName} {u.lastName}
+                                                        </h4>
+                                                        {/* Soprannome / Totem */}
+                                                        <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                                                            <span className="text-[11px] font-bold text-gray-400">Totem:</span>
+                                                            {u.nickname ? (
+                                                                <span className="text-xs font-extrabold text-amber-700 dark:text-amber-300 bg-amber-100/70 dark:bg-amber-950/40 px-2 py-0.5 rounded-md border border-amber-200 dark:border-amber-800/60">
+                                                                    {u.nickname}
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-[11px] text-gray-400 italic">Nessuno</span>
+                                                            )}
+                                                        </div>
+                                                        <p className="text-[11px] text-gray-400 truncate mt-0.5">{u.email}</p>
                                                     </div>
                                                 </div>
 
                                                 <span className={cn(
                                                     "text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider shrink-0",
-                                                    u.hasValidPin ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300" : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300"
+                                                    u.hasValidPin ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300" : "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300"
                                                 )}>
-                                                    {u.hasValidPin ? '🔑 Con PIN' : 'Senza PIN'}
+                                                    {u.hasValidPin ? '🔑 Con PIN' : 'Senza Codice'}
                                                 </span>
                                             </div>
 
                                             {/* Voting progress */}
-                                            <div className="space-y-1">
+                                            <div className="space-y-1 bg-amber-50/50 dark:bg-amber-950/20 p-2.5 rounded-xl border border-amber-100 dark:border-amber-900/30">
                                                 <div className="flex justify-between text-xs font-bold">
-                                                    <span className="text-gray-500">Approvazioni ricevute:</span>
-                                                    <span className="text-amber-600 dark:text-amber-400">{votes} / {required} voti</span>
+                                                    <span className="text-gray-600 dark:text-gray-300">Approvazioni ricevute:</span>
+                                                    <span className="text-amber-600 dark:text-amber-400 font-extrabold">{votes} di {required} voti</span>
                                                 </div>
-                                                <div className="w-full h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                                                <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mt-1">
                                                     <div 
                                                         className="h-full bg-amber-500 rounded-full transition-all"
                                                         style={{ width: `${Math.min(100, (votes / required) * 100)}%` }}
@@ -771,15 +815,15 @@ L'utente perderà immediatamente l'accesso a verbali, bilancio, inventario e lis
                                             {/* Action Buttons */}
                                             <div className="flex items-center gap-2 pt-1">
                                                 {alreadyVoted ? (
-                                                    <div className="flex-1 py-1.5 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 border border-emerald-200 dark:border-emerald-800">
-                                                        <CheckCircle2 size={14} /> Hai già approvato
+                                                    <div className="flex-1 py-2 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 border border-emerald-200 dark:border-emerald-800">
+                                                        <CheckCircle2 size={14} /> Hai già votato
                                                     </div>
                                                 ) : (
                                                     <button
                                                         type="button"
                                                         disabled={isSubmitting}
                                                         onClick={() => handleVoteApprove(u.id)}
-                                                        className="flex-1 py-1.5 bg-scout-green hover:bg-scout-green-dark text-white text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs disabled:opacity-50"
+                                                        className="flex-1 py-2 bg-scout-green hover:bg-scout-green-dark text-white text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs disabled:opacity-50"
                                                     >
                                                         <Check size={14} /> {isSubmitting ? 'Salvataggio...' : 'Vota Approvazione'}
                                                     </button>
@@ -789,7 +833,7 @@ L'utente perderà immediatamente l'accesso a verbali, bilancio, inventario e lis
                                                     type="button"
                                                     disabled={isSubmitting}
                                                     onClick={() => handleConcludeService(u)}
-                                                    className="px-3 py-1.5 bg-gray-100 hover:bg-red-50 text-gray-500 hover:text-red-600 dark:bg-gray-700 dark:hover:bg-red-950/40 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                                                    className="px-3.5 py-2 bg-gray-100 hover:bg-red-50 text-gray-500 hover:text-red-600 dark:bg-gray-700 dark:hover:bg-red-950/40 text-xs font-bold rounded-xl transition-all cursor-pointer"
                                                     title="Rifiuta richiesta"
                                                 >
                                                     Rifiuta

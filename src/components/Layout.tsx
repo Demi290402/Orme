@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import Logo from '@/components/Logo';
 import PWAInstallPrompt from './PWAInstallPrompt';
 import { User as UserType } from '@/types';
-import { getUser } from '@/lib/data';
+import { getUser, getAllUsers } from '@/lib/data';
 import UserAvatar from '@/components/UserAvatar';
 import NotificationBell from '@/components/NotificationBell';
 import { isOnline as checkOnline, getOfflineQueue, syncOfflineQueue } from '@/lib/offline';
@@ -15,6 +15,7 @@ import ShareAppModal from '@/components/ShareAppModal';
 export default function Layout({ children }: { children: React.ReactNode }) {
     const location = useLocation();
     const [currentUser, setCurrentUser] = useState<UserType | null>(null);
+    const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
     const [showAltroMenu, setShowAltroMenu] = useState(false);
     const [showShareModal, setShowShareModal] = useState(false);
     const [online, setOnline] = useState(checkOnline());
@@ -22,7 +23,20 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'error' | 'done'>('idle');
 
     useEffect(() => {
-        getUser().then(setCurrentUser).catch(console.error);
+        getUser().then(u => {
+            setCurrentUser(u);
+            if (u && u.membershipStatus === 'attivo' && (u.groupId || u.groupName)) {
+                getAllUsers().then(users => {
+                    const pending = users.filter(usr => usr.membershipStatus === 'in_attesa');
+                    setPendingRequestsCount(pending.length);
+                }).catch(console.error);
+            } else {
+                setPendingRequestsCount(0);
+            }
+        }).catch(() => {
+            setCurrentUser(null);
+            setPendingRequestsCount(0);
+        });
     }, [location.pathname]);
 
     useEffect(() => {
@@ -155,12 +169,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                                     key={item.path}
                                     to={item.path}
                                     className={cn(
-                                        "flex items-center space-x-1 hover:text-scout-green transition-colors text-sm",
+                                        "flex items-center space-x-1 hover:text-scout-green transition-colors text-sm relative",
                                         location.pathname === item.path ? "text-scout-green font-semibold" : "text-gray-600 dark:text-gray-400"
                                     )}
                                 >
                                     <item.icon size={18} />
                                     <span>{item.label}</span>
+                                    {item.path === '/verbali' && pendingRequestsCount > 0 && (
+                                        <span className="w-4 h-4 bg-amber-500 text-white rounded-full text-[9px] font-black flex items-center justify-center animate-pulse ml-0.5 shadow-xs">
+                                            {pendingRequestsCount}
+                                        </span>
+                                    )}
                                 </Link>
                             ))}
 
@@ -247,11 +266,18 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                             key={item.path}
                             to={item.path}
                             className={cn(
-                                "flex flex-col items-center justify-center w-full h-full",
+                                "flex flex-col items-center justify-center w-full h-full relative",
                                 location.pathname === item.path ? "text-scout-green" : "text-gray-400 dark:text-gray-500",
                             )}
                         >
-                            <item.icon size={22} />
+                            <div className="relative">
+                                <item.icon size={22} />
+                                {item.path === '/verbali' && pendingRequestsCount > 0 && (
+                                    <span className="absolute -top-1 -right-2 w-4 h-4 bg-amber-500 text-white rounded-full text-[9px] font-black flex items-center justify-center animate-pulse shadow-xs">
+                                        {pendingRequestsCount}
+                                    </span>
+                                )}
+                            </div>
                             <span className="text-[10px] mt-0.5">{item.label}</span>
                         </Link>
                     ))}

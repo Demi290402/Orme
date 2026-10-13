@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 import { Location, User, LocationReview } from '@/types';
-import { createNotificationsForGroup } from './notifications';
+import { createNotificationsForGroup, createNotification } from './notifications';
 import { isOnline, getCachedData, setCachedData, enqueueOfflineWrite } from './offline';
 import { findDuplicateLocation } from './duplicateDetection';
 
@@ -101,12 +101,38 @@ export async function registerUser(userData: {
             groupRole = 'capo_gruppo';
             hasValidPin = true;
         } else if (userData.joinCodeInput && userData.joinCodeInput.trim()) {
+            const cleanPin = userData.joinCodeInput.trim().toUpperCase();
             try {
-                const { data: isValid } = await supabase.rpc('verify_group_pin', {
+                let isValid = false;
+                const { data: rpcValid } = await supabase.rpc('verify_group_pin', {
                     target_group_id: userData.groupId,
-                    pin_input: userData.joinCodeInput.trim()
+                    pin_input: cleanPin
                 });
-                hasValidPin = !!isValid;
+                isValid = !!rpcValid;
+
+                if (!isValid && userData.groupName) {
+                    const { data: rpcValidName } = await supabase.rpc('verify_group_pin', {
+                        target_group_id: userData.groupName,
+                        pin_input: cleanPin
+                    });
+                    isValid = !!rpcValidName;
+                }
+
+                if (!isValid) {
+                    const { data: gData } = await supabase
+                        .from('gruppi_scout')
+                        .select('join_code')
+                        .or(`id.eq.${userData.groupId},group_name.eq.${userData.groupName}`)
+                        .maybeSingle();
+                    if (gData?.join_code && gData.join_code.trim().toUpperCase() === cleanPin) {
+                        isValid = true;
+                    }
+                }
+
+                if (isValid) {
+                    hasValidPin = true;
+                    membershipStatus = 'attivo'; // ACCESSO DIRETTO ATTIVO CON CODICE
+                }
             } catch (e) {
                 console.warn('verify_group_pin check failed:', e);
             }
@@ -139,6 +165,29 @@ export async function registerUser(userData: {
             .single();
 
         if (profileError) throw profileError;
+
+        // Notifica il gruppo per la nuova richiesta o il nuovo ingresso
+        if (userData.groupId) {
+            if (membershipStatus === 'attivo' && !userData.isGroupCreator) {
+                createNotificationsForGroup(
+                    userData.groupId,
+                    'nuovo_capo',
+                    `⚜️ Nuovo capo in CoCa — ${userData.firstName} ${userData.lastName}`,
+                    `${userData.firstName} ${userData.lastName}${userData.nickname ? ` (${userData.nickname})` : ''} è entrato nella Comunità Capi con codice di accesso.`,
+                    { userId: authData.user.id },
+                    authData.user.id
+                ).catch(console.error);
+            } else if (membershipStatus === 'in_attesa') {
+                createNotificationsForGroup(
+                    userData.groupId,
+                    'richiesta_accesso',
+                    `🔔 Nuova richiesta di accesso — ${userData.firstName} ${userData.lastName}`,
+                    `${userData.firstName} ${userData.lastName}${userData.nickname ? ` (${userData.nickname})` : ''} ha richiesto l'accesso alla Comunità Capi. Servono 2 approvazioni.`,
+                    { userId: authData.user.id },
+                    authData.user.id
+                ).catch(console.error);
+            }
+        }
 
         return mapSupabaseUserToUser(profileData);
     } catch (error) {
@@ -275,11 +324,30 @@ export async function getAllUsers(): Promise<User[]> {
     }
     try {
         const currentUser = await getUser();
-        const { data, error } = await supabase
-            .from('users')
-            .select('*')
-            .eq('group_id', currentUser.groupId)
-            .order('points', { ascending: false });
+
+        // 1. Prova prima la funzione SECURITY DEFINER RPC get_group_coca_users
+        // Questo scavalca qualsiasi restrizione RLS lato client
+        try {
+            const { data: rpcUsers, error: rpcErr } = await supabase.rpc('get_group_coca_users');
+            if (!rpcErr && rpcUsers && Array.isArray(rpcUsers) && rpcUsers.length > 0) {
+                setCachedData(cacheKey, rpcUsers);
+                return rpcUsers.map(mapSupabaseUserToUser);
+            }
+        } catch (e) {
+            console.warn('RPC get_group_coca_users non disponibile o fallito, procedo con query diretta:', e);
+        }
+
+        // 2. Fallback su query diretta con OR su group_id e group_name
+        let query = supabase.from('users').select('*');
+        if (currentUser.groupId && currentUser.groupName) {
+            query = query.or(`group_id.eq.${currentUser.groupId},group_name.eq.${currentUser.groupName},group_id.eq.${currentUser.groupName}`);
+        } else if (currentUser.groupId) {
+            query = query.eq('group_id', currentUser.groupId);
+        } else if (currentUser.groupName) {
+            query = query.eq('group_name', currentUser.groupName);
+        }
+
+        const { data, error } = await query.order('points', { ascending: false });
 
         if (error) throw error;
         setCachedData(cacheKey, data);
@@ -297,26 +365,176 @@ export async function getAllUsers(): Promise<User[]> {
 // =====================================================
 
 export async function submitGroupPin(pin: string): Promise<{ success: boolean; message?: string; membership_status?: string; approvals_count?: number; required_count?: number }> {
-    const { data, error } = await supabase.rpc('submit_my_group_pin', { pin_input: pin });
-    if (error) throw error;
-    if (data?.success) {
-        // Force refresh user profile
+    const cleanPin = pin.trim().toUpperCase();
+
+    // 1. Prova RPC submit_my_group_pin
+    try {
+        const { data, error } = await supabase.rpc('submit_my_group_pin', { pin_input: cleanPin });
+        if (!error && data) {
+            if (data.success) {
+                localStorage.removeItem('cache_currentUser');
+                await getUser();
+            }
+            return data;
+        }
+        if (error) {
+            console.warn('RPC submit_my_group_pin error, provo fallback diretto:', error);
+        }
+    } catch (e) {
+        console.warn('RPC submit_my_group_pin error, provo fallback diretto:', e);
+    }
+
+    // 2. Fallback diretto: verifica join_code su gruppi_scout
+    try {
+        const currentUser = await getUser();
+        let isValid = false;
+
+        if (currentUser.groupId && !isNaN(Number(currentUser.groupId))) {
+            const { data: gData } = await supabase
+                .from('gruppi_scout')
+                .select('join_code')
+                .eq('id', Number(currentUser.groupId))
+                .maybeSingle();
+            if (gData?.join_code && gData.join_code.trim().toUpperCase() === cleanPin) {
+                isValid = true;
+            }
+        }
+
+        if (!isValid && currentUser.groupName) {
+            const { data: gData } = await supabase
+                .from('gruppi_scout')
+                .select('join_code')
+                .eq('group_name', currentUser.groupName)
+                .maybeSingle();
+            if (gData?.join_code && gData.join_code.trim().toUpperCase() === cleanPin) {
+                isValid = true;
+            }
+        }
+
+        if (!isValid) {
+            return { success: false, message: 'Codice di accesso non corretto per questo gruppo' };
+        }
+
+        // Codice valido: sblocca subito come 'attivo'
+        const { error: updErr } = await supabase
+            .from('users')
+            .update({
+                has_valid_pin: true,
+                membership_status: 'attivo'
+            })
+            .eq('id', currentUser.id);
+
+        if (updErr) throw updErr;
+
         localStorage.removeItem('cache_currentUser');
         await getUser();
+
+        return {
+            success: true,
+            membership_status: 'attivo'
+        };
+    } catch (err: any) {
+        throw new Error(err.message || 'Errore durante la convalida del PIN');
     }
-    return data;
 }
 
 export async function voteApproveMember(targetUserId: string): Promise<{ success: boolean; message?: string; membership_status?: string; approvals_count?: number; required_count?: number }> {
-    const { data, error } = await supabase.rpc('vote_approve_member', { target_user_id: targetUserId });
-    if (error) throw error;
-    return data;
+    // 1. Prova RPC vote_approve_member
+    try {
+        const { data, error } = await supabase.rpc('vote_approve_member', { target_user_id: targetUserId });
+        if (!error && data) {
+            return data;
+        }
+        if (error) {
+            console.warn('RPC vote_approve_member error, provo fallback diretto:', error);
+        }
+    } catch (e) {
+        console.warn('RPC vote_approve_member fallito, provo fallback diretto:', e);
+    }
+
+    // 2. Fallback diretto con soglia fissa a 2 voti
+    const currentUser = await getUser();
+    const { data: targetUser, error: tErr } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', targetUserId)
+        .single();
+
+    if (tErr || !targetUser) throw new Error('Utente da approvare non trovato');
+
+    const approvals: string[] = targetUser.coca_approvals || [];
+    if (!approvals.includes(currentUser.id)) {
+        approvals.push(currentUser.id);
+    }
+
+    // Conta membri attivi del gruppo per determinare se serve 1 o 2 voti
+    let activeCount = 2;
+    try {
+        const { data: activeUsers } = await supabase
+            .from('users')
+            .select('id')
+            .or(`group_id.eq.${targetUser.group_id},group_name.eq.${targetUser.group_name}`)
+            .eq('membership_status', 'attivo');
+        if (activeUsers && activeUsers.length > 0) {
+            activeCount = activeUsers.length;
+        }
+    } catch (e) {
+        console.warn('Could not count active users:', e);
+    }
+
+    // Soglia: esattamente 2 approvazioni (o 1 se c'è solo 1 membro attivo nel gruppo)
+    const requiredCount = Math.min(2, Math.max(1, activeCount));
+    const newStatus = approvals.length >= requiredCount ? 'attivo' : 'in_attesa';
+
+    const { error: uErr } = await supabase
+        .from('users')
+        .update({
+            coca_approvals: approvals,
+            membership_status: newStatus
+        })
+        .eq('id', targetUserId);
+
+    if (uErr) throw uErr;
+
+    if (newStatus === 'attivo') {
+        createNotification(
+            targetUserId,
+            targetUser.group_id || currentUser.groupId || '',
+            'generic',
+            '🎉 Accesso Approvato!',
+            'La tua richiesta di accesso alla Comunità Capi è stata approvata. Ora puoi visualizzare i verbali e tutti i dati del gruppo.'
+        ).catch(console.error);
+    }
+
+    return {
+        success: true,
+        membership_status: newStatus,
+        approvals_count: approvals.length,
+        required_count: requiredCount
+    };
 }
 
 export async function concludeMemberService(targetUserId: string): Promise<{ success: boolean; message?: string }> {
-    const { data, error } = await supabase.rpc('conclude_member_service', { target_user_id: targetUserId });
+    try {
+        const { data, error } = await supabase.rpc('conclude_member_service', { target_user_id: targetUserId });
+        if (!error && data) {
+            return data;
+        }
+        if (error) {
+            console.warn('RPC conclude_member_service error, provo fallback diretto:', error);
+        }
+    } catch (e) {
+        console.warn('RPC conclude_member_service error, fallback diretto:', e);
+    }
+
+    // Fallback diretto
+    const { error } = await supabase
+        .from('users')
+        .update({ membership_status: 'uscito' })
+        .eq('id', targetUserId);
+
     if (error) throw error;
-    return data;
+    return { success: true, message: 'Servizio concluso / richiesta rifiutata con successo' };
 }
 
 export async function regenerateGroupPin(groupId: string): Promise<string> {
@@ -367,23 +585,51 @@ export async function transferUserGroup(params: {
     let hasValidPin = false;
 
     if (params.joinCodeInput && params.joinCodeInput.trim()) {
+        const cleanPin = params.joinCodeInput.trim().toUpperCase();
         try {
-            const { data: isValid } = await supabase.rpc('verify_group_pin', {
+            // Verifica RPC per ID
+            const { data: isValidId } = await supabase.rpc('verify_group_pin', {
                 target_group_id: params.groupId,
-                pin_input: params.joinCodeInput.trim()
+                pin_input: cleanPin
             });
-            hasValidPin = !!isValid;
+            hasValidPin = !!isValidId;
+
+            // Verifica RPC per Nome Gruppo
+            if (!hasValidPin && params.groupName) {
+                const { data: isValidName } = await supabase.rpc('verify_group_pin', {
+                    target_group_id: params.groupName,
+                    pin_input: cleanPin
+                });
+                hasValidPin = !!isValidName;
+            }
+
+            // Fallback diretto su tabella gruppi_scout
+            if (!hasValidPin) {
+                let query = supabase.from('gruppi_scout').select('join_code');
+                if (params.groupId && !isNaN(Number(params.groupId))) {
+                    query = query.or(`id.eq.${params.groupId},group_name.eq.${params.groupName}`);
+                } else {
+                    query = query.eq('group_name', params.groupName);
+                }
+                const { data: gData } = await query.maybeSingle();
+                if (gData?.join_code && gData.join_code.trim().toUpperCase() === cleanPin) {
+                    hasValidPin = true;
+                }
+            }
         } catch (e) {
-            console.warn('verify_group_pin check failed:', e);
+            console.warn('verify_group_pin check failed in transferUserGroup:', e);
         }
     }
+
+    // Con codice valido: direttamente 'attivo'; senza codice: 'in_attesa' con 2 voti necessari
+    const newStatus = hasValidPin ? 'attivo' : 'in_attesa';
 
     const updateData = {
         region: params.region,
         scout_zone: params.scoutZone,
         group_name: params.groupName,
         group_id: params.groupId,
-        membership_status: 'in_attesa',
+        membership_status: newStatus,
         group_role: 'capo',
         has_valid_pin: hasValidPin,
         coca_approvals: []
@@ -397,6 +643,30 @@ export async function transferUserGroup(params: {
         .single();
 
     if (error) throw error;
+
+    // Notifica il nuovo gruppo
+    if (params.groupId) {
+        if (newStatus === 'attivo') {
+            createNotificationsForGroup(
+                params.groupId,
+                'nuovo_capo',
+                `⚜️ Nuovo capo in CoCa — ${currentUser.firstName} ${currentUser.lastName}`,
+                `${currentUser.firstName} ${currentUser.lastName}${currentUser.nickname ? ` (${currentUser.nickname})` : ''} è entrato nella tua Comunità Capi con codice di accesso.`,
+                { userId: currentUser.id },
+                currentUser.id
+            ).catch(console.error);
+        } else {
+            createNotificationsForGroup(
+                params.groupId,
+                'richiesta_accesso',
+                `🔔 Nuova richiesta di accesso CoCa — ${currentUser.firstName} ${currentUser.lastName}`,
+                `${currentUser.firstName} ${currentUser.lastName}${currentUser.nickname ? ` (${currentUser.nickname})` : ''} ha richiesto l'accesso senza codice. Servono 2 approvazioni.`,
+                { userId: currentUser.id },
+                currentUser.id
+            ).catch(console.error);
+        }
+    }
+
     localStorage.removeItem('cache_currentUser');
     setCachedData('currentUser', data);
     return mapSupabaseUserToUser(data);
