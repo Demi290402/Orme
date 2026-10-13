@@ -71,9 +71,10 @@ export default function MembriCoCaPage() {
             const orphans = findOrphanedMemberIds(v, m);
             setOrphanedMembers(orphans);
 
-            if (u && u.groupId) {
+            if (u && (u.groupId || u.groupName)) {
+                const targetGid = u.groupId || u.groupName || '';
                 const [pin, allU] = await Promise.all([
-                    getGroupPin(u.groupId).catch(() => null),
+                    getGroupPin(targetGid).catch(() => null),
                     getAllUsers().catch(() => [])
                 ]);
                 setGroupPin(pin);

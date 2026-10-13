@@ -8,7 +8,7 @@ import {
     RotateCw
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { getMembriCoCa, saveVerbale, getVerbali, getImpostazioniVerbali, calculateScoutYear, formatScoutYear } from '@/lib/verbali';
+import { getMembriCoCa, saveVerbale, getVerbali, getVerbaleById, getImpostazioniVerbali, calculateScoutYear, formatScoutYear } from '@/lib/verbali';
 import { exportVerbaleToPdf } from '@/utils/pdfExport';
 import { exportVerbaleToDocx } from '@/utils/docxExport';
 import { Verbale, MembroCoCa } from '@/types';
@@ -99,12 +99,14 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [membriData, userData] = await Promise.all([
+                const [membriRes, userRes] = await Promise.allSettled([
                     getMembriCoCa(true), // Carica tutti i membri (attivi e storici) per risolvere tutti i nomi passati
                     getUser()
                 ]);
+                const membriData = membriRes.status === 'fulfilled' ? membriRes.value : [];
+                const userData = userRes.status === 'fulfilled' ? userRes.value : null;
                 setMembri(membriData);
-                setCurrentUser(userData);
+                if (userData) setCurrentUser(userData);
 
                 // Load page settings
                 try {
@@ -113,8 +115,11 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                 } catch (_ignored) { /* ok */ }
 
                 if (id) {
-                    const allVerbali = await getVerbali();
-                    const found = allVerbali.find(v => v.id === id);
+                    const allVerbali = await getVerbali().catch(() => []);
+                    let found = allVerbali.find(v => v.id === id);
+                    if (!found) {
+                        found = (await getVerbaleById(id)) || undefined;
+                    }
                     if (found) {
                         if (!found.annoScout) {
                             found.annoScout = calculateScoutYear(found.data);
@@ -128,7 +133,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                         }
                     }
                 } else {
-                    const allVerbali = await getVerbali();
+                    const allVerbali = await getVerbali().catch(() => []);
                     const defaultScoutYear = calculateScoutYear(new Date().toISOString().split('T')[0]);
                     const validNums = allVerbali
                         .filter(v => (v.annoScout ?? calculateScoutYear(v.data)) === defaultScoutYear)

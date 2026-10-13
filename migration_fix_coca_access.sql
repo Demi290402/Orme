@@ -160,17 +160,54 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 5. Policy RLS sulla tabella users per consentire la lettura dei membri e delle richieste del proprio gruppo
+-- 5. Helper SECURITY DEFINER e Policy RLS sulla tabella users (senza ricorsione infinita)
+CREATE OR REPLACE FUNCTION public.get_auth_user_group_id()
+RETURNS TEXT
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+    SELECT group_id FROM public.users WHERE id = auth.uid() LIMIT 1;
+$$;
+
+CREATE OR REPLACE FUNCTION public.get_auth_user_group_name()
+RETURNS TEXT
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+    SELECT group_name FROM public.users WHERE id = auth.uid() LIMIT 1;
+$$;
+
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Users can read members of own group" ON public.users;
-CREATE POLICY "Users can read members of own group" ON public.users
+DROP POLICY IF EXISTS "Users can read own profile" ON public.users;
+DROP POLICY IF EXISTS "Users can read profiles of own group" ON public.users;
+
+CREATE POLICY "Users can read profiles of own group" ON public.users
 FOR SELECT USING (
     auth.uid() = id
     OR
-    (group_id IS NOT NULL AND group_id != '' AND group_id = (SELECT u.group_id FROM public.users u WHERE u.id = auth.uid()))
+    (
+        public.get_auth_user_group_id() IS NOT NULL 
+        AND public.get_auth_user_group_id() != '' 
+        AND (
+            group_id = public.get_auth_user_group_id() 
+            OR group_name = public.get_auth_user_group_id()
+        )
+    )
     OR
-    (group_name IS NOT NULL AND group_name != '' AND UPPER(TRIM(group_name)) = (SELECT UPPER(TRIM(u.group_name)) FROM public.users u WHERE u.id = auth.uid()))
+    (
+        public.get_auth_user_group_name() IS NOT NULL 
+        AND public.get_auth_user_group_name() != '' 
+        AND (
+            UPPER(TRIM(group_name)) = UPPER(TRIM(public.get_auth_user_group_name())) 
+            OR UPPER(TRIM(group_id)) = UPPER(TRIM(public.get_auth_user_group_name()))
+        )
+    )
 );
 
 DROP POLICY IF EXISTS "Users can update own profile" ON public.users;

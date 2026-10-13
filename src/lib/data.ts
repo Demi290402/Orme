@@ -290,7 +290,14 @@ export async function getUser(id?: string): Promise<User> {
             .eq('id', user.id)
             .single();
 
-        if (profileError) throw profileError;
+        if (profileError) {
+            console.warn('getUser: profile query error, fallback to cached profile:', profileError);
+            const cached = getCachedData<any>('currentUser');
+            if (cached && (cached.id === user.id || cached.email === user.email)) {
+                return mapSupabaseUserToUser(cached);
+            }
+            throw profileError;
+        }
 
         // Auto-heal missing group_id if user has group_name
         if (!profileData.group_id && profileData.group_name) {

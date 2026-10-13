@@ -22,7 +22,7 @@ export default function VerbaliList() {
         try {
             const [u, data] = await Promise.all([
                 getUser().catch(() => null),
-                getVerbali()
+                getVerbali().catch(() => [])
             ]);
             if (u) setCurrentUser(u);
             setVerbali(data);

@@ -5,28 +5,33 @@ import { syncVerbaleEventi } from './calendario';
 
 export async function getVerbali(): Promise<Verbale[]> {
     try {
-        const currentUser = await getUser();
-        if (!currentUser || currentUser.membershipStatus !== 'attivo') return [];
+        const currentUser = await getUser().catch(() => null);
+        if (!currentUser) return [];
+        // Only block if explicitly pending or exited
+        if (currentUser.membershipStatus === 'in_attesa' || currentUser.membershipStatus === 'uscito') {
+            return [];
+        }
 
         const userGroupId = currentUser.groupId ? String(currentUser.groupId).trim() : '';
+        const userGroupName = currentUser.groupName ? String(currentUser.groupName).trim() : '';
         let verbaliData: any[] = [];
 
         let query = supabase.from('verbali').select('*');
 
-        if (userGroupId && currentUser.id) {
-            // Include both verbali belonging to the user's group AND any verbali authored by the user directly
-            query = query.or(`group_id.eq.${userGroupId},created_by.eq.${currentUser.id}`);
-        } else if (userGroupId) {
-            query = query.eq('group_id', userGroupId);
-        } else if (currentUser.id) {
-            query = query.eq('created_by', currentUser.id);
+        const orClauses: string[] = [];
+        if (userGroupId) orClauses.push(`group_id.eq.${userGroupId}`);
+        if (userGroupName && userGroupName !== userGroupId) orClauses.push(`group_id.eq.${userGroupName}`);
+        if (currentUser.id) orClauses.push(`created_by.eq.${currentUser.id}`);
+
+        if (orClauses.length > 0) {
+            query = query.or(orClauses.join(','));
         }
 
         const { data, error } = await query.order('data', { ascending: false });
 
         if (error) {
-            console.warn('Primary verbali query error, attempting fallback by author:', error);
-            // Fallback: If group filter errored, attempt fetching directly authored verbali
+            console.warn('Primary verbali query error, attempting fallbacks:', error);
+            // Fallback 1: by author
             if (currentUser.id) {
                 const { data: authorData } = await supabase
                     .from('verbali')
@@ -35,11 +40,32 @@ export async function getVerbali(): Promise<Verbale[]> {
                     .order('data', { ascending: false });
                 verbaliData = authorData || [];
             }
+            // Fallback 2: by groupName directly
+            if (verbaliData.length === 0 && userGroupName) {
+                const { data: groupNameData } = await supabase
+                    .from('verbali')
+                    .select('*')
+                    .eq('group_id', userGroupName)
+                    .order('data', { ascending: false });
+                verbaliData = groupNameData || [];
+            }
         } else {
             verbaliData = data || [];
         }
 
-        // Secondary fallback: if nothing was returned by group query, check if user authored any verbali
+        // Secondary fallback: if nothing returned by query, check if groupName has verbali
+        if (verbaliData.length === 0 && userGroupName && userGroupId && userGroupId !== userGroupName) {
+            const { data: gData } = await supabase
+                .from('verbali')
+                .select('*')
+                .eq('group_id', userGroupName)
+                .order('data', { ascending: false });
+            if (gData && gData.length > 0) {
+                verbaliData = gData;
+            }
+        }
+
+        // Tertiary fallback: if still nothing, check if user authored any verbali
         if (verbaliData.length === 0 && currentUser.id) {
             const { data: myData } = await supabase
                 .from('verbali')
@@ -55,19 +81,23 @@ export async function getVerbali(): Promise<Verbale[]> {
             return [];
         }
 
-        // Fetch user info to resolve createdByName using creator IDs
+        // Fetch user info to resolve createdByName using creator IDs safely
         const creatorIds = Array.from(new Set(verbaliData.map(v => v.created_by).filter(Boolean)));
         let usersMap = new Map<string, string>();
         if (creatorIds.length > 0) {
-            const { data: usersData } = await supabase
-                .from('users')
-                .select('id, nickname, first_name, last_name')
-                .in('id', creatorIds);
+            try {
+                const { data: usersData } = await supabase
+                    .from('users')
+                    .select('id, nickname, first_name, last_name')
+                    .in('id', creatorIds);
 
-            usersMap = new Map((usersData || []).map(u => [
-                u.id,
-                u.nickname || `${u.first_name || ''} ${u.last_name || ''}`.trim() || 'Utente'
-            ]));
+                usersMap = new Map((usersData || []).map(u => [
+                    u.id,
+                    u.nickname || `${u.first_name || ''} ${u.last_name || ''}`.trim() || 'Utente'
+                ]));
+            } catch (uErr) {
+                console.warn('Could not resolve user names for verbali creators:', uErr);
+            }
         }
 
         return verbaliData.map(v => {
@@ -81,18 +111,58 @@ export async function getVerbali(): Promise<Verbale[]> {
     }
 }
 
+export async function getVerbaleById(id: string): Promise<Verbale | null> {
+    try {
+        const { data, error } = await supabase
+            .from('verbali')
+            .select('*')
+            .eq('id', id)
+            .maybeSingle();
+
+        if (error || !data) return null;
+        return mapSupabaseVerbaleToVerbale(data);
+    } catch (e) {
+        console.warn('Error in getVerbaleById:', e);
+        return null;
+    }
+}
+
 export async function getMembriCoCa(includeInactive: boolean = false): Promise<MembroCoCa[]> {
     try {
-        const currentUser = await getUser();
-        if (!currentUser || currentUser.membershipStatus !== 'attivo') return [];
-        const userGroupId = currentUser.groupId ? String(currentUser.groupId).trim() : '';
-        if (!userGroupId) return [];
+        const currentUser = await getUser().catch(() => null);
+        if (!currentUser) return [];
+        if (currentUser.membershipStatus === 'in_attesa' || currentUser.membershipStatus === 'uscito') {
+            return [];
+        }
 
-        const { data, error } = await supabase
-            .from('membri')
-            .select('*')
-            .eq('group_id', userGroupId)
-            .order('nome', { ascending: true });
+        const userGroupId = currentUser.groupId ? String(currentUser.groupId).trim() : '';
+        const userGroupName = currentUser.groupName ? String(currentUser.groupName).trim() : '';
+
+        if (!userGroupId && !userGroupName) return [];
+
+        let query = supabase.from('membri').select('*');
+        if (userGroupId && userGroupName && userGroupId !== userGroupName) {
+            query = query.or(`group_id.eq.${userGroupId},group_id.eq.${userGroupName}`);
+        } else if (userGroupId) {
+            query = query.eq('group_id', userGroupId);
+        } else {
+            query = query.eq('group_id', userGroupName);
+        }
+
+        let { data, error } = await query.order('nome', { ascending: true });
+
+        // Fallback: se la query OR fallisce o non restituisce dati, prova con groupName o userGroupId
+        if ((error || !data || data.length === 0) && userGroupName && userGroupId && userGroupId !== userGroupName) {
+            const { data: fallbackData } = await supabase
+                .from('membri')
+                .select('*')
+                .eq('group_id', userGroupName)
+                .order('nome', { ascending: true });
+            if (fallbackData && fallbackData.length > 0) {
+                data = fallbackData;
+                error = null;
+            }
+        }
 
         if (error) throw error;
         const allMembri = (data || []).map(mapSupabaseMembroToMembro);
@@ -132,8 +202,11 @@ export function formatScoutYear(year: number): string {
 }
 
 export async function saveVerbale(verbale: Partial<Verbale>): Promise<Verbale> {
-    const currentUser = await getUser();
-    const resolvedGroupId = (currentUser?.groupId ? String(currentUser.groupId).trim() : '') || verbale.groupId || 'default';
+    const currentUser = await getUser().catch(() => null);
+    const resolvedGroupId = (currentUser?.groupId ? String(currentUser.groupId).trim() : '')
+        || (currentUser?.groupName ? String(currentUser.groupName).trim() : '')
+        || verbale.groupId
+        || 'default';
     const targetAnnoScout = verbale.annoScout ?? calculateScoutYear(verbale.data || new Date().toISOString().split('T')[0]);
 
     const dataToSave: any = {
@@ -177,7 +250,7 @@ export async function saveVerbale(verbale: Partial<Verbale>): Promise<Verbale> {
                 .from('verbali')
                 .insert({
                     ...dataToSave,
-                    created_by: currentUser.id
+                    created_by: currentUser?.id || null
                 })
                 .select()
                 .single();
@@ -208,7 +281,7 @@ export async function saveVerbale(verbale: Partial<Verbale>): Promise<Verbale> {
                     .from('verbali')
                     .insert({
                         ...dataToSave,
-                        created_by: currentUser.id
+                        created_by: currentUser?.id || null
                     })
                     .select()
                     .single();
@@ -269,9 +342,11 @@ function mapSupabaseVerbaleToVerbale(data: any): Verbale {
 }
 
 export async function saveMembroCoCa(membro: Partial<MembroCoCa>): Promise<MembroCoCa> {
-    const currentUser = await getUser();
+    const currentUser = await getUser().catch(() => null);
     const dataToSave: any = {
-        group_id: (currentUser?.groupId ? String(currentUser.groupId).trim() : '') || membro.groupId,
+        group_id: (currentUser?.groupId ? String(currentUser.groupId).trim() : '')
+            || (currentUser?.groupName ? String(currentUser.groupName).trim() : '')
+            || membro.groupId,
         nome: membro.nome,
         branca: membro.branca,
         branche_secondarie: membro.brancheSecondarie || [],
@@ -418,15 +493,21 @@ export interface ImpostazioniVerbali {
 
 export async function getImpostazioniVerbali(): Promise<ImpostazioniVerbali | null> {
     try {
-        const currentUser = await getUser();
+        const currentUser = await getUser().catch(() => null);
         const userGroupId = currentUser?.groupId ? String(currentUser.groupId).trim() : '';
-        if (!userGroupId) return null;
+        const userGroupName = currentUser?.groupName ? String(currentUser.groupName).trim() : '';
+        if (!userGroupId && !userGroupName) return null;
 
-        const { data, error } = await supabase
-            .from('impostazioni_verbali')
-            .select('*')
-            .eq('group_id', userGroupId)
-            .maybeSingle();
+        let query = supabase.from('impostazioni_verbali').select('*');
+        if (userGroupId && userGroupName && userGroupId !== userGroupName) {
+            query = query.or(`group_id.eq.${userGroupId},group_id.eq.${userGroupName}`);
+        } else if (userGroupId) {
+            query = query.eq('group_id', userGroupId);
+        } else {
+            query = query.eq('group_id', userGroupName);
+        }
+
+        const { data, error } = await query.maybeSingle();
 
         if (error || !data) return null;
         return {
@@ -442,8 +523,11 @@ export async function getImpostazioniVerbali(): Promise<ImpostazioniVerbali | nu
 }
 
 export async function saveImpostazioniVerbali(impostazioni: Partial<ImpostazioniVerbali>): Promise<void> {
-    const currentUser = await getUser();
-    const userGroupId = (currentUser?.groupId ? String(currentUser.groupId).trim() : '') || impostazioni.groupId || 'default';
+    const currentUser = await getUser().catch(() => null);
+    const userGroupId = (currentUser?.groupId ? String(currentUser.groupId).trim() : '')
+        || (currentUser?.groupName ? String(currentUser.groupName).trim() : '')
+        || impostazioni.groupId
+        || 'default';
     const dataToSave = {
         group_id: userGroupId,
         intestazione: impostazioni.intestazioneHtml,
