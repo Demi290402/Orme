@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Bell, X, CheckCheck, MapPin, FileText, Info } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import {
@@ -11,16 +12,26 @@ import {
 import { getUser } from '@/lib/data';
 import { cn } from '@/lib/utils';
 
-const showNativeNotification = (title: string, body: string) => {
-    if ('Notification' in window && Notification.permission === 'granted') {
-        try {
-            new Notification(title, {
-                body: body,
-                icon: '/manifest-icon-192.png'
-            });
-        } catch (e) {
-            console.error("Failed to show native notification:", e);
+const showNativeNotification = async (title: string, body: string) => {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    try {
+        if ('serviceWorker' in navigator) {
+            const reg = await navigator.serviceWorker.ready;
+            if (reg && reg.showNotification) {
+                await reg.showNotification(title, {
+                    body,
+                    icon: '/manifest-icon-192.png',
+                    badge: '/manifest-icon-192.png',
+                });
+                return;
+            }
         }
+        new Notification(title, {
+            body,
+            icon: '/manifest-icon-192.png'
+        });
+    } catch (e) {
+        console.error("Failed to show native notification:", e);
     }
 };
 
@@ -40,14 +51,20 @@ function NotifIcon({ type }: { type: AppNotification['type'] }) {
     if (type === 'verbale_saved') return <FileText size={16} className="text-scout-blue" />;
     if (type === 'location_added') return <MapPin size={16} className="text-scout-green" />;
     if (type === 'proposal') return <CheckCheck size={16} className="text-orange-500" />;
+    if (type === 'richiesta_accesso') return <span className="text-sm">🔔</span>;
+    if (type === 'nuovo_capo') return <span className="text-sm">⚜️</span>;
     return <Info size={16} className="text-gray-400" />;
 }
 
 export default function NotificationBell() {
+    const navigate = useNavigate();
     const [notifications, setNotifications] = useState<AppNotification[]>([]);
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(true);
     const [userId, setUserId] = useState<string | null>(null);
+    const [permissionStatus, setPermissionStatus] = useState<NotificationPermission>(() => 
+        typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'denied'
+    );
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     const unreadCount = notifications.filter(n => !n.isRead).length;
@@ -97,8 +114,9 @@ export default function NotificationBell() {
                                 
                                 let preferenceKey = 'generic';
                                 if (row.type === 'verbale_saved') preferenceKey = 'verbali';
-                                else if (row.type === 'location_added' || row.type === 'proposal') preferenceKey = 'modifiche_luoghi';
+                                else if (row.type === 'location_added' || row.type === 'proposal') preferenceKey = 'aggiornamento_luoghi';
                                 else if (row.type === 'lista_attesa') preferenceKey = 'lista_attesa';
+                                else if (row.type === 'richiesta_accesso' || row.type === 'nuovo_capo') preferenceKey = 'membri';
 
                                 const isTypeEnabled = notifTypes[preferenceKey] !== false;
 
@@ -162,6 +180,20 @@ export default function NotificationBell() {
             await markAsRead(n.id);
             setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, isRead: true } : x));
         }
+        setOpen(false);
+        if (n.type === 'richiesta_accesso') {
+            navigate('/verbali/membri?tab=sicurezza');
+        } else if (n.type === 'nuovo_capo') {
+            navigate('/verbali/membri');
+        } else if (n.type === 'verbale_saved') {
+            navigate('/verbali');
+        } else if (n.type === 'location_added' && n.data?.locationId) {
+            navigate(`/location/${n.data.locationId}`);
+        } else if (n.type === 'calendario_evento') {
+            navigate('/calendario');
+        } else if (n.type === 'lista_attesa') {
+            navigate('/lista-attesa');
+        }
     };
 
     if (!userId && !loading) return null;
@@ -185,7 +217,7 @@ export default function NotificationBell() {
 
             {/* Dropdown */}
             {open && (
-                <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 z-[100] overflow-hidden">
+                <div className="absolute right-0 mt-2 w-80 sm:w-88 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 z-[100] overflow-hidden">
                     {/* Header */}
                     <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700">
                         <h3 className="font-bold text-sm text-gray-800 dark:text-gray-200 flex items-center gap-2">
@@ -214,6 +246,36 @@ export default function NotificationBell() {
                             </button>
                         </div>
                     </div>
+
+                    {/* Banner Richiesta Permessi Browser / Dispositivo */}
+                    {typeof window !== 'undefined' && 'Notification' in window && permissionStatus !== 'granted' && (
+                        <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200/50 dark:border-amber-900/40 flex items-center justify-between gap-2.5">
+                            <div className="flex items-center gap-2">
+                                <span className="text-base shrink-0">🔔</span>
+                                <div className="text-left">
+                                    <p className="text-[11px] font-bold text-amber-900 dark:text-amber-200 leading-tight">Attiva notifiche di sistema</p>
+                                    <p className="text-[10px] text-amber-700 dark:text-amber-400">Ricevi avvisi per la tua CoCa sul dispositivo</p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={async () => {
+                                    try {
+                                        const res = await Notification.requestPermission();
+                                        setPermissionStatus(res);
+                                        if (res === 'granted') {
+                                            showNativeNotification('⚜️ Notifiche Orme attive!', 'Riceverai avvisi e notifiche per la tua Comunità Capi.');
+                                        }
+                                    } catch (e) {
+                                        console.error('requestPermission error:', e);
+                                    }
+                                }}
+                                className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-black rounded-lg shrink-0 cursor-pointer transition-transform active:scale-95"
+                            >
+                                Consenti
+                            </button>
+                        </div>
+                    )}
 
                     {/* Notification list */}
                     <div className="max-h-96 overflow-y-auto">

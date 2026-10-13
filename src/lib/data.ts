@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { Location, User, LocationReview } from '@/types';
 import { createNotificationsForGroup, createNotification } from './notifications';
+import { sendGroupEmailNotification } from './emailNotification';
 import { isOnline, getCachedData, setCachedData, enqueueOfflineWrite } from './offline';
 import { findDuplicateLocation } from './duplicateDetection';
 
@@ -186,6 +187,19 @@ export async function registerUser(userData: {
                     { userId: authData.user.id },
                     authData.user.id
                 ).catch(console.error);
+
+                // Notifica email ufficiale all'intera Comunità Capi
+                sendGroupEmailNotification({
+                    groupId: userData.groupId,
+                    groupName: userData.groupName,
+                    excludeUserId: authData.user.id,
+                    type: 'richiesta_accesso',
+                    candidateName: `${userData.firstName} ${userData.lastName}`,
+                    candidateNickname: userData.nickname,
+                    body: `Il capo ${userData.firstName} ${userData.lastName}${userData.nickname ? ` (${userData.nickname})` : ''} sta chiedendo di entrare a far parte della Comunità Capi del ${userData.groupName || ''}. Per convalidare l'accesso su Orme sono necessarie 2 approvazioni da parte dei capi già censiti.`,
+                    actionUrl: 'https://orme.pages.dev/verbali/membri?tab=sicurezza',
+                    actionLabel: 'Esamina e Vota la Richiesta'
+                }).catch(err => console.warn('Errore notifica email CoCa alla registrazione:', err));
             }
         }
 
@@ -692,6 +706,19 @@ export async function transferUserGroup(params: {
                 { userId: currentUser.id },
                 currentUser.id
             ).catch(console.error);
+
+            // Notifica email ufficiale all'intera Comunità Capi per il cambio gruppo
+            sendGroupEmailNotification({
+                groupId: params.groupId,
+                groupName: params.groupName,
+                excludeUserId: currentUser.id,
+                type: 'richiesta_accesso',
+                candidateName: `${currentUser.firstName} ${currentUser.lastName}`,
+                candidateNickname: currentUser.nickname,
+                body: `Il capo ${currentUser.firstName} ${currentUser.lastName}${currentUser.nickname ? ` (${currentUser.nickname})` : ''} ha aggiornato la propria richiesta e desidera entrare a far parte della Comunità Capi del ${params.groupName || ''}. Servono 2 approvazioni da parte dei capi censiti per convalidare l'accesso.`,
+                actionUrl: 'https://orme.pages.dev/verbali/membri?tab=sicurezza',
+                actionLabel: 'Esamina e Vota la Richiesta'
+            }).catch(err => console.warn('Errore notifica email CoCa al cambio gruppo:', err));
         }
     }
 

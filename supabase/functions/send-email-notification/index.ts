@@ -1,4 +1,4 @@
-// supa/functions/send-email-notification/index.ts
+// supabase/functions/send-email-notification/index.ts
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
 
@@ -21,11 +21,25 @@ serve(async (req) => {
       throw new Error('BREVO_API_KEY non configurata nei segreti di Supabase.')
     }
 
-    const { groupId, excludeUserId, subject, body } = await req.json()
-    console.log(`Richiesta notifica per gruppo: ${groupId}, escludendo utente: ${excludeUserId}`)
+    const payload = await req.json()
+    const { 
+      groupId, 
+      groupName = '', 
+      excludeUserId, 
+      type = 'generic',
+      subject: customSubject, 
+      title: customTitle,
+      body = '', 
+      candidateName = '', 
+      candidateNickname = '', 
+      actionUrl, 
+      actionLabel 
+    } = payload
 
-    if (!groupId || !subject || !body) {
-      throw new Error('Campi obbligatori mancanti (groupId, subject, body)')
+    console.log(`[send-email-notification] Tipo: ${type}, Gruppo: ${groupId} (${groupName}), Escludi utente: ${excludeUserId}`)
+
+    if (!groupId && !groupName) {
+      throw new Error('Campo obbligatorio mancante (groupId o groupName)')
     }
 
     const supabaseAdmin = createClient(
@@ -33,11 +47,19 @@ serve(async (req) => {
       SUPABASE_SERVICE_ROLE_KEY ?? ''
     )
 
-    console.log(`Inizializzazione query per group_id="${groupId}"`)
+    // Cerca tutti i capi ATTIVI censiti nella Comunità Capi
     let query = supabaseAdmin
       .from('users')
-      .select('email, id')
-      .eq('group_id', String(groupId))
+      .select('email, id, first_name, last_name, membership_status')
+      .eq('membership_status', 'attivo')
+
+    if (groupId && groupName) {
+      query = query.or(`group_id.eq.${groupId},group_name.eq.${groupName}`)
+    } else if (groupId) {
+      query = query.eq('group_id', String(groupId))
+    } else if (groupName) {
+      query = query.eq('group_name', String(groupName))
+    }
 
     if (excludeUserId) {
       query = query.neq('id', excludeUserId)
@@ -46,24 +68,250 @@ serve(async (req) => {
     const { data: users, error: usersErr } = await query
     if (usersErr) throw new Error(`DB Error: ${usersErr.message}`)
     
-    // Filter out duplicate emails and the verified sender if present (to avoid loops)
+    // Filtra email uniche e valide
     const validEmails = [...new Set(users
-      ?.map((u: any) => u.email)
-      .filter((e: any) => e && e.includes('@')))]
+      ?.map((u: any) => (u.email || '').trim().toLowerCase())
+      .filter((e: string) => e && e.includes('@') && !e.includes('example.com')))]
 
-    console.log(`Destinatari trovati: ${validEmails.length}`)
+    console.log(`[send-email-notification] Destinatari attivi trovati: ${validEmails.length}`)
 
     if (validEmails.length === 0) {
-      return new Response(JSON.stringify({ message: "Nessun destinatario trovato." }), {
+      return new Response(JSON.stringify({ 
+        message: "Nessun capo attivo con email valida trovato per questo gruppo.",
+        recipientsCount: 0 
+      }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
       })
     }
 
     const senderEmail = Deno.env.get('BREVO_SENDER_EMAIL') || 'appormescout@gmail.com'
-    const senderName = Deno.env.get('BREVO_SENDER_NAME') || 'Orme App'
+    const senderName = Deno.env.get('BREVO_SENDER_NAME') || 'Orme — Comunità Capi'
 
-    // Send email via Brevo
+    // Definizione Oggetto, Titoli e Link in base al Tipo
+    let finalSubject = customSubject || '[Orme] Notifica Comunità Capi'
+    let badgeText = 'NOTIFICA COMUNITÀ CAPI'
+    let badgeColor = '#2F855A'
+    let badgeBg = '#f0fff4'
+    let mainHeading = customTitle || 'Nuova notifica per la tua Comunità Capi'
+    let finalActionUrl = actionUrl || 'https://orme.pages.dev'
+    let finalActionLabel = actionLabel || 'Accedi a Orme'
+    let contentHtmlBlock = ''
+    let textContent = ''
+
+    const formattedCandidate = candidateNickname 
+      ? `${candidateName} (${candidateNickname})` 
+      : candidateName
+
+    if (type === 'richiesta_accesso') {
+      finalSubject = customSubject || `[Orme] Richiesta di accesso: ${formattedCandidate} desidera entrare nel gruppo ${groupName || ''}`.trim()
+      badgeText = '🔔 RICHIESTA DI ACCESSO IN CO.CA.'
+      badgeColor = '#B7791F'
+      badgeBg = '#FEFCBF'
+      mainHeading = 'Nuova richiesta di ingresso in Comunità Capi'
+      finalActionUrl = actionUrl || 'https://orme.pages.dev/verbali/membri?tab=sicurezza'
+      finalActionLabel = actionLabel || 'Esamina e Vota la Richiesta'
+
+      contentHtmlBlock = `
+        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin: 20px 0; text-align: left;">
+            <table style="width: 100%; border-collapse: collapse; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+                <tr>
+                    <td style="padding: 6px 0; font-size: 13px; color: #718096; width: 140px;">Candidato:</td>
+                    <td style="padding: 6px 0; font-size: 15px; font-weight: bold; color: #1a202c;">${candidateName || 'Nuovo Capo'}</td>
+                </tr>
+                ${candidateNickname ? `
+                <tr>
+                    <td style="padding: 6px 0; font-size: 13px; color: #718096;">Soprannome (Totem):</td>
+                    <td style="padding: 6px 0; font-size: 14px; font-weight: bold; color: #2F855A;">${candidateNickname}</td>
+                </tr>` : ''}
+                <tr>
+                    <td style="padding: 6px 0; font-size: 13px; color: #718096;">Gruppo Richiesto:</td>
+                    <td style="padding: 6px 0; font-size: 14px; font-weight: bold; color: #1a202c;">${groupName || 'La tua Comunità Capi'}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 6px 0; font-size: 13px; color: #718096;">Stato Accesso:</td>
+                    <td style="padding: 6px 0; font-size: 13px; font-weight: bold; color: #d69e2e;">In attesa di approvazione (servono 2 voti)</td>
+                </tr>
+            </table>
+        </div>
+        <p style="font-size: 14px; line-height: 1.6; color: #4a5568; margin: 15px 0;">
+            ${body || `Il capo <strong>${formattedCandidate}</strong> sta chiedendo di accedere alla Comunità Capi su Orme senza codice di invito.`}
+        </p>
+        <div style="background-color: #ebf8ff; border-left: 4px solid #3182ce; padding: 12px 16px; border-radius: 6px; margin: 20px 0; text-align: left;">
+            <p style="font-size: 12px; line-height: 1.5; color: #2b6cb0; margin: 0;">
+                🛡️ <strong>Sicurezza & Privacy</strong>: I dati dei ragazzi, i verbali e la cassa sono protetti. L'utente rimarrà bloccato e non potrà vedere alcun dato del gruppo finché due capi censiti non confermano la sua identità.
+            </p>
+        </div>
+      `
+
+      textContent = `
+⚜️ ORME — NOTIFICA COMUNITÀ CAPI
+Nuova Richiesta di Accesso in Comunità Capi
+--------------------------------------------------
+
+Ciao,
+ti informiamo che ${formattedCandidate} sta chiedendo di entrare a far parte della Comunità Capi del gruppo ${groupName || ''} su Orme.
+
+DETTAGLI CANDIDATO:
+- Nome e Cognome: ${candidateName || 'Nuovo Capo'}
+${candidateNickname ? `- Soprannome: ${candidateNickname}\n` : ''}- Gruppo: ${groupName || ''}
+- Stato: In attesa di approvazione (servono 2 conferme)
+
+Per garantire la massima sicurezza e la privacy dei verbali e dei dati dei ragazzi, l'accesso a Orme per il tuo gruppo richiede l'approvazione di almeno due capi censiti.
+
+Per esaminare il profilo del capo e confermare il suo ingresso, apri questo link su Orme:
+${finalActionUrl}
+
+--------------------------------------------------
+Ricevi questa email in quanto capo attivo del gruppo ${groupName || ''} su Orme.
+Supporto: ${senderEmail}
+      `.trim()
+
+    } else if (type === 'verbale') {
+      finalSubject = customSubject || `[Orme] Nuovo Verbale di Comunità Capi — ${groupName || ''}`.trim()
+      badgeText = '📋 VERBALE DI COMUNITÀ CAPI'
+      badgeColor = '#2b6cb0'
+      badgeBg = '#ebf8ff'
+      mainHeading = customTitle || 'Nuovo Verbale Registrato'
+      finalActionUrl = actionUrl || 'https://orme.pages.dev/verbali'
+      finalActionLabel = actionLabel || 'Leggi il Verbale su Orme'
+
+      contentHtmlBlock = `
+        <div style="margin: 20px 0; padding: 20px; background-color: #f8fafc; border-radius: 12px; border: 1px solid #edf2f7; text-align: left;">
+            <p style="font-size: 15px; line-height: 1.6; color: #2d3748; margin: 0;">
+                ${body}
+            </p>
+        </div>
+      `
+
+      textContent = `
+⚜️ ORME — COMUNITÀ CAPI
+Nuovo Verbale Registrato
+--------------------------------------------------
+
+${body}
+
+Visualizza il verbale su Orme:
+${finalActionUrl}
+
+--------------------------------------------------
+Ricevi questa email in quanto capo attivo della Comunità Capi ${groupName || ''} su Orme.
+Supporto: ${senderEmail}
+      `.trim()
+
+    } else {
+      // Notifica Generica
+      contentHtmlBlock = `
+        <div style="margin: 20px 0; padding: 20px; background-color: #f8fafc; border-radius: 12px; border: 1px solid #edf2f7; text-align: left;">
+            <p style="font-size: 15px; line-height: 1.6; color: #2d3748; margin: 0;">
+                ${body}
+            </p>
+        </div>
+      `
+      textContent = `
+⚜️ ORME — COMUNITÀ CAPI
+--------------------------------------------------
+${mainHeading}
+
+${body}
+
+Accedi a Orme:
+${finalActionUrl}
+
+--------------------------------------------------
+Ricevi questa email in quanto capo della Comunità Capi su Orme.
+Supporto: ${senderEmail}
+      `.trim()
+    }
+
+    const htmlContent = `
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${finalSubject}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f6f8; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
+  <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color: #f4f6f8; padding: 30px 15px;">
+    <tr>
+      <td align="center">
+        <!-- Contenitore Principale -->
+        <table width="100%" border="0" cellpadding="0" cellspacing="0" style="max-width: 580px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;">
+          <!-- Top Stripe Verde Bosco Scout -->
+          <tr>
+            <td style="background-color: #2F855A; height: 6px; font-size: 0; line-height: 0;">&nbsp;</td>
+          </tr>
+          
+          <!-- Header Brand -->
+          <tr>
+            <td style="padding: 30px 30px 20px 30px; text-align: center; border-bottom: 1px solid #f0f4f8;">
+              <span style="font-size: 28px; line-height: 1;">⚜️</span>
+              <h2 style="margin: 8px 0 2px 0; color: #2F855A; font-size: 20px; font-weight: 800; letter-spacing: -0.3px;">ORME</h2>
+              <p style="margin: 0; font-size: 11px; text-transform: uppercase; font-weight: bold; color: #718096; letter-spacing: 1px;">Piattaforma Comunità Capi</p>
+            </td>
+          </tr>
+
+          <!-- Corpo Messaggio -->
+          <tr>
+            <td style="padding: 30px; text-align: center;">
+              <!-- Badge Categoria -->
+              <div style="display: inline-block; padding: 5px 14px; background-color: ${badgeBg}; color: ${badgeColor}; border-radius: 20px; font-size: 11px; font-weight: 800; letter-spacing: 0.5px; margin-bottom: 15px;">
+                ${badgeText}
+              </div>
+
+              <!-- Titolo Principale -->
+              <h1 style="color: #1a202c; font-size: 22px; font-weight: 800; line-height: 1.3; margin: 0 0 10px 0;">
+                ${mainHeading}
+              </h1>
+
+              ${groupName ? `
+              <p style="color: #718096; font-size: 14px; font-weight: 600; margin: 0 0 20px 0;">
+                Gruppo Scout: <span style="color: #2F855A;">${groupName}</span>
+              </p>
+              ` : ''}
+
+              <!-- Contenuto dinamico -->
+              ${contentHtmlBlock}
+
+              <!-- Pulsante di Chiamata all'Azione (CTA) Bulletproof -->
+              <table border="0" cellpadding="0" cellspacing="0" style="margin: 30px auto 10px auto;">
+                <tr>
+                  <td align="center" style="border-radius: 12px; background-color: #2F855A;">
+                    <a href="${finalActionUrl}" target="_blank" style="font-size: 15px; font-family: Helvetica, Arial, sans-serif; color: #ffffff; font-weight: bold; text-decoration: none; border-radius: 12px; padding: 14px 28px; border: 1px solid #2F855A; display: inline-block; box-shadow: 0 3px 6px rgba(47, 133, 90, 0.25);">
+                      ${finalActionLabel} &rarr;
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Link alternativo anti-blocco -->
+              <p style="font-size: 11px; color: #a0aec0; margin-top: 20px; word-break: break-all;">
+                Se il pulsante non funziona, apri: <a href="${finalActionUrl}" style="color: #2F855A; text-decoration: underline;">${finalActionUrl}</a>
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer di Conformità e Anti-Spam -->
+          <tr>
+            <td style="background-color: #f8fafc; padding: 24px 30px; text-align: center; border-top: 1px solid #edf2f7;">
+              <p style="font-size: 11px; color: #718096; line-height: 1.5; margin: 0;">
+                Ricevi questa email automatica in quanto capo attivo e censito nella Comunità Capi${groupName ? ` del <strong>${groupName}</strong>` : ''} su <strong>Orme</strong>.
+              </p>
+              <p style="font-size: 11px; color: #a0aec0; margin: 8px 0 0 0;">
+                Hai bisogno di aiuto o vuoi segnalare un errore? Rispondi a questa email o scrivi a <a href="mailto:${senderEmail}" style="color: #2F855A; text-decoration: none;">${senderEmail}</a>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `.trim()
+
+    // Invio tramite Brevo SMTP API v3 con supporto MIME completo (HTML + Text)
     const response = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: {
@@ -76,55 +324,41 @@ serve(async (req) => {
           name: senderName,
           email: senderEmail
         },
-        to: validEmails.map(email => ({ email })), // Invio a tutti
+        to: validEmails.map(email => ({ email })),
         replyTo: {
           email: senderEmail,
           name: 'Supporto Orme'
         },
-        subject: subject,
-        htmlContent: `
-          <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f4f7f6; padding: 40px 20px; color: #333;">
-              <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-top: 6px solid #2F855A;">
-                  <div style="padding: 40px 30px; text-align: center;">
-                      <div style="background-color: #f0fff4; width: 60px; h-60px; border-radius: 20px; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
-                          <span style="font-size: 30px;">📋</span>
-                      </div>
-                      <h1 style="color: #2F855A; margin: 0; font-size: 24px; letter-spacing: -0.5px;">Notifica Verbale</h1>
-                      <p style="color: #718096; font-size: 14px; margin-top: 5px;">Orme — Diario di Bordo</p>
-                      
-                      <div style="margin-top: 30px; padding: 25px; background-color: #f8fafc; border-radius: 12px; border: 1px solid #edf2f7; text-align: left;">
-                          <p style="font-size: 16px; line-height: 1.6; color: #2d3748; margin: 0;">
-                              ${body}
-                          </p>
-                      </div>
-
-                      <div style="margin-top: 35px;">
-                          <a href="https://orme.pages.dev/verbali" style="background-color: #2F855A; color: #ffffff; padding: 14px 28px; border-radius: 10px; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px rgba(47, 133, 90, 0.2);">Visualizza su Orme</a>
-                      </div>
-                  </div>
-                  <div style="background-color: #f8fafc; padding: 20px; text-align: center; border-top: 1px solid #edf2f7;">
-                      <p style="font-size: 11px; color: #a0aec0; margin: 0;">Questa è una notifica automatica per la tua Comunità Capi.</p>
-                      <p style="font-size: 11px; color: #a0aec0; margin: 5px 0 0;">Problemi? <a href="mailto:appormescout@gmail.com" style="color: #2F855A; text-decoration: none;">Contattaci qui</a></p>
-                  </div>
-              </div>
-          </div>
-        `
+        subject: finalSubject,
+        htmlContent: htmlContent,
+        textContent: textContent,
+        headers: {
+          'X-Mailer': 'Orme Platform Scout',
+          'X-Auto-Response-Suppress': 'OOF, AutoReply',
+          'Precedence': 'bulk'
+        }
       })
     })
 
     const resData = await response.json()
 
     if (!response.ok) {
-        console.error('Errore Brevo API:', resData)
-        throw new Error(`Errore invio email (Brevo): ${resData.message || JSON.stringify(resData)}`)
+      console.error('[send-email-notification] Errore Brevo API:', resData)
+      throw new Error(`Errore invio email (Brevo): ${resData.message || JSON.stringify(resData)}`)
     }
 
-    return new Response(JSON.stringify(resData), {
+    console.log(`[send-email-notification] Email inviata con successo a ${validEmails.length} destinatari. MessageId: ${resData.messageId || 'OK'}`)
+
+    return new Response(JSON.stringify({
+      success: true,
+      recipientsCount: validEmails.length,
+      resData
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })
   } catch (error: any) {
-    console.error('Errore critico:', error.message)
+    console.error('[send-email-notification] Errore critico:', error.message)
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 400,

@@ -324,14 +324,18 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
 
             let errorMsg: string | null = null;
 
-            // 1. Invoking via Supabase Functions SDK
-            try {
+                const emailPayload = {
+                    groupId: targetGroupId,
+                    groupName: currentUser?.groupName || '',
+                    type: 'verbale',
+                    subject: emailSubject,
+                    body: emailBody,
+                    actionUrl: 'https://orme.pages.dev/verbali',
+                    actionLabel: 'Leggi il Verbale su Orme'
+                };
+
                 const { data, error } = await supabase.functions.invoke('send-email-notification', {
-                    body: {
-                        groupId: targetGroupId,
-                        subject: emailSubject,
-                        body: emailBody,
-                    }
+                    body: emailPayload
                 });
 
                 if (error) {
@@ -361,8 +365,12 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                         },
                         body: JSON.stringify({
                             groupId: targetGroupId,
+                            groupName: currentUser?.groupName || '',
+                            type: 'verbale',
                             subject: emailSubject,
                             body: emailBody,
+                            actionUrl: 'https://orme.pages.dev/verbali',
+                            actionLabel: 'Leggi il Verbale su Orme'
                         }),
                     });
 
