@@ -58,6 +58,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
     const [_savedVerbaleForModal, setSavedVerbaleForModal] = useState<Verbale | null>(null);
     const [isNewVerbale, setIsNewVerbale] = useState(false);
     const [showHistoricMembers, setShowHistoricMembers] = useState(false);
+    const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
 
     const [verbale, setVerbale] = useState<Partial<Verbale>>({
         numero: 1,
@@ -145,6 +146,19 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                         annoScout: prev.annoScout || defaultScoutYear,
                         numero: lastNum + 1 
                     }));
+
+                    // Controllo presenza bozza locale salvata
+                    const draftKey = `verbale_draft_${id || 'new'}`;
+                    const rawDraft = localStorage.getItem(draftKey);
+                    if (rawDraft) {
+                        try {
+                            const d = JSON.parse(rawDraft);
+                            if (d && typeof d === 'object') {
+                                setVerbale(prev => ({ ...prev, ...d }));
+                                setDraftSavedAt('recuperata da memoria locale');
+                            }
+                        } catch (_e) { /* ignore */ }
+                    }
                 }
             } catch (err) {
                 console.error(err);
@@ -154,6 +168,23 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
         };
         fetchData();
     }, [id]);
+
+    // Salvataggio automatico locale della bozza per evitare qualsiasi perdita di dati accidentale
+    useEffect(() => {
+        if (viewMode || loading) return;
+        const draftKey = `verbale_draft_${id || 'new'}`;
+        const timer = setTimeout(() => {
+            try {
+                localStorage.setItem(draftKey, JSON.stringify(verbale));
+                const now = new Date();
+                const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+                setDraftSavedAt(timeStr);
+            } catch (e) {
+                console.warn('Auto-save bozza locale fallito:', e);
+            }
+        }, 1200);
+        return () => clearTimeout(timer);
+    }, [verbale, viewMode, loading, id]);
 
     const handleExportPdf = async () => {
         if (isExporting) return;
@@ -225,6 +256,11 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
 
             const saved = await saveVerbale(verbaleToSave);
             setVerbale(saved);
+            try {
+                localStorage.removeItem(`verbale_draft_${id || 'new'}`);
+                if (saved.id) localStorage.removeItem(`verbale_draft_${saved.id}`);
+                setDraftSavedAt(null);
+            } catch (_e) { /* ignore */ }
             
             if (!id) {
                 navigate(`/verbali/modifica/${saved.id}`, { replace: true });
@@ -403,9 +439,17 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                     <ChevronLeft size={24} />
                 </button>
                 <div className="flex-1">
-                    <h1 className="text-xl font-serif font-black text-scout-brown dark:text-scout-yellow">
-                        {id ? `Verbale N. ${verbale.numero}` : 'Apertura Nuovo Verbale'}
-                    </h1>
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                        <h1 className="text-xl font-serif font-black text-scout-brown dark:text-scout-yellow">
+                            {id ? `Verbale N. ${verbale.numero}` : 'Apertura Nuovo Verbale'}
+                        </h1>
+                        {!viewMode && draftSavedAt && (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800/40 shadow-xs">
+                                <CheckCircle2 size={12} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                                {draftSavedAt.includes(':') ? `Bozza salvata alle ${draftSavedAt}` : 'Bozza salvata'}
+                            </span>
+                        )}
+                    </div>
                     {verbale.data && (
                         <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mt-0.5">
                             Anno Associativo: <strong className="text-scout-brown dark:text-amber-300">{formatScoutYear(verbale.annoScout ?? calculateScoutYear(verbale.data))}</strong>

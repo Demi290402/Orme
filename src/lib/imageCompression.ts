@@ -73,3 +73,19 @@ export function getBase64SizeInKB(base64String: string): number {
     const sizeInBytes = 4 * Math.ceil(stringLength / 3) * 0.562489633438312;
     return Math.round(sizeInBytes / 1024);
 }
+
+/**
+ * Ottimizzazione avatar per minimizzare egress Supabase e preservare il limite di 500MB DB
+ * Dimensione massima: 256x256, qualità 75% WebP (~15-25 KB)
+ */
+export async function compressAvatar(fileOrBlob: File | Blob): Promise<string> {
+    return compressImage(fileOrBlob, 256, 256, 0.75);
+}
+
+/**
+ * Ottimizzazione immagine di copertina
+ * Dimensione massima: 900x350, qualità 75% WebP (~35-50 KB)
+ */
+export async function compressCover(fileOrBlob: File | Blob): Promise<string> {
+    return compressImage(fileOrBlob, 900, 350, 0.75);
+}

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { UserPlus, ChevronDown, Plus, Check, AlertCircle, Camera } from 'lucide-react';
 import { registerUser, getGruppiScout, aggiungiGruppoScout, GruppoScout } from '@/lib/data';
-import { compressImage } from '@/lib/imageCompression';
+import { compressAvatar } from '@/lib/imageCompression';
 import { cn } from '@/lib/utils';
 
 // =====================================================
@@ -244,7 +244,7 @@ export default function Register() {
         const file = e.target.files?.[0];
         if (file) {
             try {
-                const compressed = await compressImage(file, 400, 400, 0.8);
+                const compressed = await compressAvatar(file);
                 setProfilePicture(compressed);
             } catch (err) {
                 console.error('Errore compressione immagine profilo:', err);

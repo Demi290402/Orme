@@ -416,42 +416,7 @@ export default function AkelaAssistant() {
         return null;
     };
 
-    const fetchWikipediaSummary = async (query: string): Promise<string | null> => {
-        try {
-            // Search Wikipedia
-            const searchUrl = `https://it.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
-            const searchRes = await fetch(searchUrl);
-            const searchData = await searchRes.json();
-            
-            if (!searchData.query?.search || searchData.query.search.length === 0) {
-                return null;
-            }
-            
-            const bestMatch = searchData.query.search[0];
-            const title = bestMatch.title;
-            
-            // Fetch page extract
-            const extractUrl = `https://it.wikipedia.org/w/api.php?action=query&prop=extracts&exintro=1&explaintext=1&titles=${encodeURIComponent(title)}&format=json&origin=*`;
-            const extractRes = await fetch(extractUrl);
-            const extractData = await extractRes.json();
-            
-            const pages = extractData.query?.pages;
-            if (!pages) return null;
-            
-            const pageId = Object.keys(pages)[0];
-            if (pageId === '-1') return null;
-            
-            const extract = pages[pageId].extract;
-            if (!extract || extract.trim().length === 0) return null;
-            
-            const trimmed = extract.length > 500 ? extract.substring(0, 500) + '...' : extract;
-            
-            return `🐺 Ho cercato sulla pista di Wikipedia per darti informazioni aggiornate in tempo reale! Ecco cosa ho trovato su **${title}**:\n\n"${trimmed}"\n\n*Vuoi saperne di più? Puoi cercare "${title}" direttamente sul web!* 🌐`;
-        } catch (err) {
-            console.error("Errore ricerca Wikipedia:", err);
-            return null;
-        }
-    };
+
 
     const getPageLabel = (path: string): string => {
         if (path === '/mappa') return 'Mappa Interattiva';
@@ -463,6 +428,9 @@ export default function AkelaAssistant() {
         if (path === '/lista-attesa') return 'Lista d\'Attesa';
         if (path === '/inventario') return 'Inventario';
         if (path === '/bilancio') return 'Bilancio';
+        if (path === '/guide') return 'Guida dell\'App';
+        if (path === '/leaderboard') return 'Classifica & Badge';
+        if (path === '/') return 'Luoghi & Strutture';
         if (path === '/profile') return 'Profilo Socio';
         if (path === '/settings') return 'Impostazioni';
         if (path.startsWith('/location/')) return 'Dettaglio Luogo';
@@ -789,16 +757,10 @@ export default function AkelaAssistant() {
         }
 
         // Fallback with dynamic variations
-        const fallbacks = [
-            'Non sono sicuro di aver capito quale sentiero vuoi percorrere... 🌲 Prova a chiedermi cose come "scrivere un verbale", "vedere la classifica", "lista d\'attesa" o digita "aiuto" per il tutorial.',
-            'Fratellino, le mie vecchie zampe si sono confuse su questa pista. 🐾 Prova a riformulare la frase o chiedimi "cosa puoi fare" per vedere la mia mappa di aiuti!',
-            'Le fronde della giungla sono fitte e non riesco a scorgere la tua direzione. 🌿 Puoi chiedermi aiuto digitando "aiuto" o "funzioni" per capire come guidarti.'
-        ];
-        const randomFallback = fallbacks[Math.floor(Math.random() * fallbacks.length)];
-
+        // Fallback with pragmatic in-app navigation guidance
         return {
             intent: 'fallback',
-            reply: randomFallback
+            reply: `🐺 Non ho trovato un riferimento esatto per questa ricerca nella traccia, ma posso guidarti passo passo in qualsiasi sezione dell'app!\n\nEcco le piste principali che posso aprirti subito:\n• 📝 **Verbali Co.Ca.** — Riunioni, presenze e archivio firmato\n• 📅 **Calendario** — Uscite, eventi associativi e sync .ics\n• 💰 **Bilancio** — Cassa generale di gruppo e casse di branca\n• 📍 **Luoghi** — Ricerca basi scout e strutture per campi\n• 🎒 **Inventario** — Attrezzature, tende e magazzino\n• 📋 **Lista d'Attesa** — Nuove iscrizioni e passaggi\n• ❓ **Guida** — Regolamento e funzionamento dell'app\n\nPuoi cliccare sui sentieri rapidi qui sotto o scrivermi dove vuoi andare! 🐾`
         };
     };
 
@@ -944,24 +906,8 @@ export default function AkelaAssistant() {
             return;
         }
 
-        // 3. Fallback to NLP Intent Parser (offline or key not yet set)
+        // 3. Fallback to NLP Intent Parser (or offline fallback)
         const parsed = parseIntent(textToSend);
-        if (parsed.intent === 'fallback' && typeof navigator !== 'undefined' && navigator.onLine) {
-            const wikiReply = await fetchWikipediaSummary(textToSend);
-            if (wikiReply) {
-                setTimeout(() => {
-                    const akelaMsg: Message = {
-                        id: crypto.randomUUID(),
-                        sender: 'akela',
-                        text: wikiReply
-                    };
-                    setMessages(prev => [...prev, akelaMsg]);
-                    setIsTyping(false);
-                    setPendingLearning(null);
-                }, 500);
-                return;
-            }
-        }
 
         // 4. Default NLP response (or offline fallback)
         setTimeout(() => {
@@ -1033,21 +979,49 @@ export default function AkelaAssistant() {
 
     const triggerTutorialTopic = (topic: string, text: string) => {
         let replyText = '';
+        let targetPath: string | null = null;
+        let targetLabel: string | null = null;
+
         switch (topic) {
             case 'campi':
-                replyText = '📍 **SENTIERO CAMPI (Luoghi)**: In questa sezione trovi la mappa e l\'elenco di tutti i campi scout e le case censiti. Puoi cercare filtrando per posti letto, bagni o servizi. Per aggiungere un campo che conosci, usa il tasto "+" nella Home!';
+                replyText = '📍 **SENTIERO CAMPI (Luoghi)**: Qui trovi la mappa e l\'elenco di tutti i campi scout, terreni e strutture censiti. Puoi filtrare per tende, posti letto o riscaldamento!';
+                targetPath = '/';
+                targetLabel = 'Luoghi e Strutture';
                 break;
             case 'verbali':
-                replyText = '📝 **SENTIERO VERBALI & PRESENZE**: La sezione verbali ti permette di redigere e firmare i verbali di CoCa. Puoi inserire l\'ordine del giorno, le varie e tenere traccia delle presenze dello staff. Le presenze aggiornano le statistiche complessive!';
+                replyText = '📝 **SENTIERO VERBALI & PRESENZE**: Qui puoi consultare e redigere i verbali di CoCa con ordine del giorno, presenze e storico decisioni!';
+                targetPath = '/verbali';
+                targetLabel = 'Archivio Verbali';
                 break;
-            case 'trasporti':
-                replyText = '🚌 **SENTIERO TRASPORTI**: Nella rubrica trasporti trovi l\'elenco pubblico di tutte le ditte di pullman censite. Puoi contattarle rapidamente ed inserire i preventivi privati del tuo gruppo per stimare il costo a persona basandosi sugli ultimi prezzi.';
+            case 'calendario':
+                replyText = '📅 **SENTIERO CALENDARIO & USCITE**: Pianifica le uscite e gli eventi di gruppo e di branca, con sincronizzazione import/export .ics!';
+                targetPath = '/calendario';
+                targetLabel = 'Calendario Eventi';
                 break;
-            case 'punti':
-                replyText = '🏆 **SENTIERO CLASSIFICA & BADGE**: Ogni azione utile (come censire un luogo o compilare un verbale) ti fa guadagnare punti. Accumulando punti puoi salire di livello nella leaderboard di gruppo e sbloccare badge formativi scout!';
+            case 'bilancio':
+                replyText = '💰 **SENTIERO CASSA & BILANCIO**: Visualizza la Cassa Generale di Gruppo e i saldi delle singole branche (L/C, E/G, R/S, CoCa) con entrate e uscite!';
+                targetPath = '/bilancio';
+                targetLabel = 'Patrimonio e Bilancio';
+                break;
+            case 'inventario':
+                replyText = '🎒 **SENTIERO INVENTARIO**: Gestisci le tende di reparto, gli attrezzi, le cucine e il materiale del magazzino di gruppo!';
+                targetPath = '/inventario';
+                targetLabel = 'Inventario';
                 break;
             case 'lista':
-                replyText = '📋 **SENTIERO LISTA D\'ATTESA**: Puoi gestire i nuovi iscritti di tutte le branche in lista d\'attesa. C\'è anche un link pubblico che puoi condividere con i genitori per far compilare loro la richiesta direttamente online!';
+                replyText = '📋 **SENTIERO LISTA D\'ATTESA**: Gestisci i ragazzi in lista d\'attesa, i passaggi di branca e ottieni il link di iscrizione per le famiglie!';
+                targetPath = '/lista-attesa';
+                targetLabel = 'Lista d\'Attesa';
+                break;
+            case 'guida':
+                replyText = '❓ **GUIDA & REGOLAMENTO**: Scopri tutte le funzionalità di Orme, il punteggio per le azioni e le regole di collaborazione!';
+                targetPath = '/guide';
+                targetLabel = 'Guida dell\'App';
+                break;
+            case 'trasporti':
+                replyText = '🚌 **SENTIERO TRASPORTI**: Nella rubrica trasporti trovi l\'elenco delle ditte di pullman per stimare i costi per le prossime uscite!';
+                targetPath = '/?transport=true';
+                targetLabel = 'Rubrica Trasporti';
                 break;
             default:
                 replyText = 'Scegli uno dei sentieri per scoprire come muoverti!';
@@ -1070,7 +1044,10 @@ export default function AkelaAssistant() {
             };
             setMessages(prev => [...prev, akelaMsg]);
             setIsTyping(false);
-        }, 600);
+            if (targetPath && targetLabel) {
+                setPendingRedirect({ path: targetPath, label: targetLabel });
+            }
+        }, 500);
     };
 
     return (
@@ -1184,37 +1161,49 @@ export default function AkelaAssistant() {
                             </div>
                         </div>
 
-                        {/* Quick Action Chips (Tutorial) */}
-                        <div className={cn("p-3 border-t border-gray-100 dark:border-gray-800 flex gap-1.5 overflow-x-auto whitespace-nowrap shrink-0 bg-white dark:bg-gray-900 scrollbar-none", isFullscreen && "justify-center")}>
+                        {/* Quick Action Chips (Sentieri di navigazione) */}
+                        <div className={cn("p-2.5 border-t border-gray-100 dark:border-gray-800 flex gap-1.5 overflow-x-auto whitespace-nowrap shrink-0 bg-white dark:bg-gray-900 scrollbar-none", isFullscreen && "justify-center")}>
                             <button 
-                                onClick={() => triggerTutorialTopic('campi', '📍 Sentiero Campi')} 
-                                className="px-2.5 py-1.5 bg-scout-green/5 dark:bg-scout-green/10 border border-scout-green/20 text-scout-green rounded-full text-[10px] font-black hover:bg-scout-green/10 transition-colors cursor-pointer"
-                            >
-                                📍 Luoghi
-                            </button>
-                            <button 
-                                onClick={() => triggerTutorialTopic('verbali', '📝 Sentiero Verbali')} 
-                                className="px-2.5 py-1.5 bg-scout-blue/5 dark:bg-scout-blue/10 border border-scout-blue/20 text-scout-blue rounded-full text-[10px] font-black hover:bg-scout-blue/10 transition-colors cursor-pointer"
+                                onClick={() => triggerTutorialTopic('verbali', '📝 Verbali')} 
+                                className="px-3 py-1.5 bg-scout-blue/10 border border-scout-blue/20 text-scout-blue dark:text-blue-400 rounded-full text-xs font-bold hover:bg-scout-blue/15 transition-colors cursor-pointer"
                             >
                                 📝 Verbali
                             </button>
                             <button 
-                                onClick={() => triggerTutorialTopic('trasporti', '🚌 Sentiero Trasporti')} 
-                                className="px-2.5 py-1.5 bg-purple-500/5 dark:bg-purple-500/10 border border-purple-500/20 text-purple-650 dark:text-purple-400 rounded-full text-[10px] font-black hover:bg-purple-500/10 transition-colors cursor-pointer"
+                                onClick={() => triggerTutorialTopic('calendario', '📅 Calendario')} 
+                                className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 rounded-full text-xs font-bold hover:bg-emerald-500/15 transition-colors cursor-pointer"
                             >
-                                🚌 Trasporti
+                                📅 Calendario
                             </button>
                             <button 
-                                onClick={() => triggerTutorialTopic('punti', '🏆 Sentiero Classifica')} 
-                                className="px-2.5 py-1.5 bg-yellow-500/5 dark:bg-yellow-500/10 border border-yellow-500/20 text-yellow-650 dark:text-yellow-500 rounded-full text-[10px] font-black hover:bg-yellow-500/10 transition-colors cursor-pointer"
+                                onClick={() => triggerTutorialTopic('bilancio', '💰 Cassa & Bilancio')} 
+                                className="px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 rounded-full text-xs font-bold hover:bg-amber-500/15 transition-colors cursor-pointer"
                             >
-                                🏆 Classifica
+                                💰 Cassa
                             </button>
                             <button 
-                                onClick={() => triggerTutorialTopic('lista', '📋 Sentiero Lista Attesa')} 
-                                className="px-2.5 py-1.5 bg-red-500/5 dark:bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 rounded-full text-[10px] font-black hover:bg-red-500/10 transition-colors cursor-pointer"
+                                onClick={() => triggerTutorialTopic('campi', '📍 Luoghi')} 
+                                className="px-3 py-1.5 bg-scout-green/10 border border-scout-green/20 text-scout-green dark:text-emerald-400 rounded-full text-xs font-bold hover:bg-scout-green/15 transition-colors cursor-pointer"
+                            >
+                                📍 Luoghi
+                            </button>
+                            <button 
+                                onClick={() => triggerTutorialTopic('inventario', '🎒 Inventario')} 
+                                className="px-3 py-1.5 bg-orange-500/10 border border-orange-500/20 text-orange-700 dark:text-orange-400 rounded-full text-xs font-bold hover:bg-orange-500/15 transition-colors cursor-pointer"
+                            >
+                                🎒 Inventario
+                            </button>
+                            <button 
+                                onClick={() => triggerTutorialTopic('lista', '📋 Lista Attesa')} 
+                                className="px-3 py-1.5 bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 rounded-full text-xs font-bold hover:bg-red-500/15 transition-colors cursor-pointer"
                             >
                                 📋 Lista Attesa
+                            </button>
+                            <button 
+                                onClick={() => triggerTutorialTopic('guida', '❓ Guida')} 
+                                className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-xs font-bold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+                            >
+                                ❓ Guida
                             </button>
                         </div>
 

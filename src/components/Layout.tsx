@@ -278,7 +278,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                                     </span>
                                 )}
                             </div>
-                            <span className="text-[10px] mt-0.5">{item.label}</span>
+                            <span className="text-xs font-semibold mt-0.5 leading-none">{item.label}</span>
                         </Link>
                     ))}
                     <button
@@ -289,7 +289,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                         )}
                     >
                         <Menu size={22} />
-                        <span className="text-[10px] mt-0.5">Altro</span>
+                        <span className="text-xs font-semibold mt-0.5 leading-none">Altro</span>
                     </button>
                 </div>
             </nav>
@@ -334,8 +334,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                                                 <item.icon size={20} />
                                             </div>
                                             <div className="flex flex-col text-left">
-                                                <span className="text-xs font-bold leading-none">{item.label}</span>
-                                                <span className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 font-medium leading-tight">
+                                                <span className="text-sm font-bold leading-none">{item.label}</span>
+                                                <span className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-medium leading-tight">
                                                     {item.label === 'Storico' && 'Cronologia completa delle attività passate'}
                                                     {item.label === 'Punti' && 'Classifica di reparto, punteggi e badge'}
                                                     {item.label === 'Bilancio' && 'Gestione del patrimonio e cassa di gruppo'}
@@ -362,8 +362,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                                             <Share2 size={20} />
                                         </div>
                                         <div className="flex flex-col text-left">
-                                            <span className="text-xs font-bold leading-none">Invita un Capo Scout</span>
-                                            <span className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 font-medium leading-tight">
+                                            <span className="text-sm font-bold leading-none">Invita un Capo Scout</span>
+                                            <span className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-medium leading-tight">
                                                 Condividi Orme con capi di qualsiasi gruppo
                                             </span>
                                         </div>

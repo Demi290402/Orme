@@ -322,13 +322,26 @@ export async function getUser(id?: string): Promise<User> {
     }
 }
 
-export async function getAllUsers(): Promise<User[]> {
+// In-memory caches to protect Supabase Free Tier egress
+let memoryUsersCache: { data: User[]; timestamp: number } | null = null;
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minuti di validità in memoria
+
+export function invalidateUsersCache(): void {
+    memoryUsersCache = null;
+}
+
+export async function getAllUsers(forceRefresh = false): Promise<User[]> {
     const cacheKey = 'users';
     if (!isOnline()) {
         const cached = getCachedData<any[]>(cacheKey);
         if (cached) return cached.map(mapSupabaseUserToUser);
         return [];
     }
+
+    if (!forceRefresh && memoryUsersCache && (Date.now() - memoryUsersCache.timestamp < CACHE_TTL_MS)) {
+        return memoryUsersCache.data;
+    }
+
     try {
         const currentUser = await getUser();
 
@@ -338,7 +351,9 @@ export async function getAllUsers(): Promise<User[]> {
             const { data: rpcUsers, error: rpcErr } = await supabase.rpc('get_group_coca_users');
             if (!rpcErr && rpcUsers && Array.isArray(rpcUsers) && rpcUsers.length > 0) {
                 setCachedData(cacheKey, rpcUsers);
-                return rpcUsers.map(mapSupabaseUserToUser);
+                const mapped = rpcUsers.map(mapSupabaseUserToUser);
+                memoryUsersCache = { data: mapped, timestamp: Date.now() };
+                return mapped;
             }
         } catch (e) {
             console.warn('RPC get_group_coca_users non disponibile o fallito, procedo con query diretta:', e);
@@ -358,9 +373,12 @@ export async function getAllUsers(): Promise<User[]> {
 
         if (error) throw error;
         setCachedData(cacheKey, data);
-        return data.map(mapSupabaseUserToUser);
+        const mapped = data.map(mapSupabaseUserToUser);
+        memoryUsersCache = { data: mapped, timestamp: Date.now() };
+        return mapped;
     } catch (error) {
         console.error('Error fetching users:', error);
+        if (memoryUsersCache) return memoryUsersCache.data;
         const cached = getCachedData<any[]>(cacheKey);
         if (cached) return cached.map(mapSupabaseUserToUser);
         return [];
@@ -513,6 +531,7 @@ export async function voteApproveMember(targetUserId: string): Promise<{ success
         ).catch(console.error);
     }
 
+    invalidateUsersCache();
     return {
         success: true,
         membership_status: newStatus,
@@ -525,6 +544,7 @@ export async function concludeMemberService(targetUserId: string): Promise<{ suc
     try {
         const { data, error } = await supabase.rpc('conclude_member_service', { target_user_id: targetUserId });
         if (!error && data) {
+            invalidateUsersCache();
             return data;
         }
         if (error) {
@@ -541,6 +561,7 @@ export async function concludeMemberService(targetUserId: string): Promise<{ suc
         .eq('id', targetUserId);
 
     if (error) throw error;
+    invalidateUsersCache();
     return { success: true, message: 'Servizio concluso / richiesta rifiutata con successo' };
 }
 
@@ -753,6 +774,7 @@ export async function updateUser(user: User): Promise<User> {
 
         if (error) throw error;
         setCachedData('currentUser', data);
+        invalidateUsersCache();
         return mapSupabaseUserToUser(data);
     } catch (error) {
         console.error('Error updating user:', error);
@@ -764,13 +786,24 @@ export async function updateUser(user: User): Promise<User> {
 // LOCATION MANAGEMENT
 // =====================================================
 
-export async function getLocations(): Promise<Location[]> {
+let memoryLocationsCache: { data: Location[]; timestamp: number } | null = null;
+
+export function invalidateLocationsCache(): void {
+    memoryLocationsCache = null;
+}
+
+export async function getLocations(forceRefresh = false): Promise<Location[]> {
     const cacheKey = 'locations';
     if (!isOnline()) {
         const cached = getCachedData<any[]>(cacheKey);
         if (cached) return cached.map(mapSupabaseLocationToLocation);
         return [];
     }
+
+    if (!forceRefresh && memoryLocationsCache && (Date.now() - memoryLocationsCache.timestamp < CACHE_TTL_MS)) {
+        return memoryLocationsCache.data;
+    }
+
     try {
         const { data, error } = await supabase
             .from('locations')
@@ -779,9 +812,12 @@ export async function getLocations(): Promise<Location[]> {
 
         if (error) throw error;
         setCachedData(cacheKey, data);
-        return data.map(mapSupabaseLocationToLocation);
+        const mapped = data.map(mapSupabaseLocationToLocation);
+        memoryLocationsCache = { data: mapped, timestamp: Date.now() };
+        return mapped;
     } catch (error) {
         console.error('Error fetching locations:', error);
+        if (memoryLocationsCache) return memoryLocationsCache.data;
         const cached = getCachedData<any[]>(cacheKey);
         if (cached) return cached.map(mapSupabaseLocationToLocation);
         return [];
@@ -966,6 +1002,7 @@ export async function addLocation(location: Omit<Location, 'id' | 'lastUpdatedAt
             ).catch(e => console.error("Error creating location notification:", e));
         }
 
+        invalidateLocationsCache();
         return mapSupabaseLocationToLocation(insertedData || { ...insertData, id: locationId });
     } catch (error) {
         console.error('Error adding location:', error);
@@ -1041,8 +1078,8 @@ export async function updateLocation(id: string, location: Partial<Location>, de
             });
         if (historyErr) console.error("Error saving history:", historyErr);
 
-        // Update local cache
-        await getLocations();
+        // Invalidate cache
+        invalidateLocationsCache();
 
         return mapSupabaseLocationToLocation(updatedData);
     } catch (error) {
@@ -1063,8 +1100,8 @@ export async function deleteLocation(id: string): Promise<boolean> {
             .eq('id', id);
         if (error) throw error;
         
-        // Update local cache
-        await getLocations();
+        // Invalidate cache
+        invalidateLocationsCache();
         
         return true;
     } catch (error) {

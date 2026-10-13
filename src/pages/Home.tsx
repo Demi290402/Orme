@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Search, Filter, Plus, X, Check, Clock, Tent, BedDouble, Bus, Flame, Droplets, Home as HomeIcon, MapPin } from 'lucide-react';
-import { getLocations, getUser, getUserLocationViews, getAllLocationHistory, getAllUsers } from '@/lib/data';
+import { getLocations, getUser, getUserLocationViews, getAllUsers } from '@/lib/data';
 import { Location, User as UserType } from '@/types';
 import LocationCard from '@/components/LocationCard';
 import InteractiveMap from '@/components/InteractiveMap';
@@ -81,7 +81,6 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
     const [currentUser, setCurrentUser] = useState<UserType | null>(null);
     const [pendingCoCaUsers, setPendingCoCaUsers] = useState<UserType[]>([]);
     const [locationViews, setLocationViews] = useState<Record<string, string>>({});
-    const [histories, setHistories] = useState<any[]>([]);
     const [showTransportModal, setShowTransportModal] = useState(false);
 
     const resetAllFilters = () => {
@@ -195,7 +194,6 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
             }
         }).catch(console.error);
         getUserLocationViews().then(setLocationViews).catch(console.error);
-        getAllLocationHistory().then(setHistories).catch(console.error);
 
         const params = new URLSearchParams(window.location.search);
         if (params.get('transport') === 'true') {
@@ -205,18 +203,13 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
         }
     }, []);
 
-    const getUnreadCount = (locationId: string) => {
-        if (!currentUser) return 0;
-        const lastViewedAt = locationViews[locationId];
-        const locHistories = histories.filter(h => h.location_id === locationId);
-        
-        return locHistories.filter(h => {
-            if (h.user_id === currentUser.id) return false;
-            
-            const editTime = new Date(h.created_at).getTime();
-            const viewTime = lastViewedAt ? new Date(lastViewedAt).getTime() : 0;
-            return editTime > viewTime;
-        }).length;
+    const getUnreadCount = (loc: Location) => {
+        if (!currentUser || !loc.lastUpdatedAt) return 0;
+        if (loc.lastUpdatedBy === currentUser.id || loc.lastUpdatedBy === currentUser.nickname) return 0;
+        const lastViewedAt = locationViews[loc.id];
+        const editTime = new Date(loc.lastUpdatedAt).getTime();
+        const viewTime = lastViewedAt ? new Date(lastViewedAt).getTime() : 0;
+        return editTime > viewTime ? 1 : 0;
     };
 
     const toggleSelection = (list: any[], item: any, setList: (l: any[]) => void) => {
@@ -1160,7 +1153,7 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                         <LocationCard 
                             key={location.id} 
                             location={location} 
-                            unreadModificationsCount={getUnreadCount(location.id)} 
+                            unreadModificationsCount={getUnreadCount(location)} 
                         />
                     ))}
 

@@ -6,6 +6,7 @@ import { User } from '@/types';
 import { useNavigate } from 'react-router-dom';
 import UserAvatar from '@/components/UserAvatar';
 import { cn, getDefaultCover } from '@/lib/utils';
+import { compressAvatar, compressCover } from '@/lib/imageCompression';
 
 // =====================================================
 // VALIDATION HELPERS
@@ -171,27 +172,27 @@ export default function Profile() {
         ? ((user.points - levelInfo.current.min) / (levelInfo.current.max - levelInfo.current.min)) * 100
         : 100;
 
-    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, field: 'profilePicture' | 'coverImage') => {
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: 'profilePicture' | 'coverImage') => {
         const file = e.target.files?.[0];
         if (file) {
-            const maxSize = 500 * 1024;
-            if (file.size > maxSize) {
-                alert('Immagine inserita troppo grande.\n\nCONSIGLIO: fare screenshot dell\'immagine che si vuole caricare');
-                e.target.value = '';
-                return;
-            }
+            try {
+                // Compressione client-side automatica senza limiti frustranti di dimensione file
+                const compressed = field === 'profilePicture'
+                    ? await compressAvatar(file)
+                    : await compressCover(file);
 
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const result = reader.result as string;
                 if (!isEditing) {
                     // Quick update if not in main edit modal
-                    handleSave({ [field]: result });
+                    handleSave({ [field]: compressed });
                 } else {
-                    setEditForm(prev => ({ ...prev, [field]: result }));
+                    setEditForm(prev => ({ ...prev, [field]: compressed }));
                 }
-            };
-            reader.readAsDataURL(file);
+            } catch (err) {
+                console.error('Errore compressione foto:', err);
+                alert('Impossibile elaborare l\'immagine. Prova con una foto diversa.');
+            } finally {
+                e.target.value = '';
+            }
         }
     };
 

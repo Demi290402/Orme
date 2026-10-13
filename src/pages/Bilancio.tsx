@@ -64,6 +64,11 @@ export default function Bilancio() {
             return acc + (m.tipo === 'entrata' ? m.importo : -m.importo);
         }, 0);
 
+    // Patrimonio complessivo (Somma di tutte le casse: Gruppo + L/C + E/G + R/S + CoCa)
+    const overallBalance = movimenti.reduce((acc, m) => {
+        return acc + (m.tipo === 'entrata' ? m.importo : -m.importo);
+    }, 0);
+
     const totalEntrate = movimenti
         .filter(m => m.branca === 'Gruppo')
         .reduce((acc, m) => {
@@ -233,39 +238,49 @@ export default function Bilancio() {
 
             {/* Riepilogo Saldo Totale */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* Saldo complessivo */}
-                <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-3xl p-5 flex items-center gap-4 shadow-sm relative overflow-hidden">
-                    <div className="p-3.5 bg-scout-green/10 dark:bg-emerald-950/30 text-scout-green rounded-2xl shrink-0">
-                        <Wallet size={24} />
+                {/* Saldo Cassa Generale di Gruppo */}
+                <div className="bg-white dark:bg-gray-800 border border-gray-150 dark:border-gray-700 rounded-3xl p-5 flex flex-col justify-between shadow-sm relative overflow-hidden">
+                    <div className="flex items-center gap-3.5">
+                        <div className="p-3 bg-scout-green/10 dark:bg-emerald-950/30 text-scout-green rounded-2xl shrink-0">
+                            <Wallet size={24} />
+                        </div>
+                        <div>
+                            <p className="text-[11px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider leading-none mb-1">
+                                Cassa Generale di Gruppo
+                            </p>
+                            <p className={cn("text-2xl font-black leading-none font-mono", totalBalance >= 0 ? "text-gray-900 dark:text-white" : "text-red-500")}>
+                                € {totalBalance.toFixed(2)}
+                            </p>
+                        </div>
                     </div>
-                    <div>
-                        <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest leading-none mb-1">Saldo di Gruppo</p>
-                        <p className={cn("text-2xl font-black leading-none font-mono", totalBalance >= 0 ? "text-gray-900 dark:text-white" : "text-red-500")}>
-                            € {totalBalance.toFixed(2)}
-                        </p>
+                    <div className="mt-3 pt-2.5 border-t border-gray-100 dark:border-gray-700/60 flex items-center justify-between text-xs">
+                        <span className="text-gray-500 dark:text-gray-400 font-medium">Totale tutte le casse (Gruppo + Branche):</span>
+                        <span className={cn("font-mono font-bold text-sm", overallBalance >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-500")}>
+                            € {overallBalance.toFixed(2)}
+                        </span>
                     </div>
                 </div>
 
-                {/* Totale entrate */}
+                {/* Totale entrate Gruppo */}
                 <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-3xl p-5 flex items-center gap-4 shadow-sm">
                     <div className="p-3.5 bg-emerald-100 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-2xl shrink-0">
                         <TrendingUp size={24} />
                     </div>
                     <div>
-                        <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest leading-none mb-1">Entrate Totali</p>
+                        <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest leading-none mb-1">Entrate Cassa Gruppo</p>
                         <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 leading-none font-mono">
                             + € {totalEntrate.toFixed(2)}
                         </p>
                     </div>
                 </div>
 
-                {/* Totale uscite */}
+                {/* Totale uscite Gruppo */}
                 <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-3xl p-5 flex items-center gap-4 shadow-sm">
                     <div className="p-3.5 bg-red-100 dark:bg-red-900/20 text-red-500 rounded-2xl shrink-0">
                         <TrendingDown size={24} />
                     </div>
                     <div>
-                        <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest leading-none mb-1">Uscite Totali</p>
+                        <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest leading-none mb-1">Uscite Cassa Gruppo</p>
                         <p className="text-2xl font-black text-red-500 leading-none font-mono">
                             - € {totalUscite.toFixed(2)}
                         </p>
@@ -275,7 +290,10 @@ export default function Bilancio() {
 
             {/* Riepilogo Saldi Branche */}
             <div className="space-y-2.5">
-                <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.15em] px-1">Saldi Branche e Categorie</p>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 px-1">
+                    <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.15em]">Saldi per Singola Unità e Branca</p>
+                    <p className="text-[11px] text-gray-400 dark:text-gray-500 italic">I movimenti di ogni branca sono contabilizzati separatamente</p>
+                </div>
                 
                 {/* Mobile view: vertical list */}
                 <div className="block sm:hidden space-y-2">

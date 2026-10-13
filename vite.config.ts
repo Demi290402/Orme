@@ -62,4 +62,38 @@ export default defineConfig({
       overlay: false,
     },
   },
+  build: {
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks: (id) => {
+          if (id.includes('node_modules')) {
+            if (id.includes('leaflet') || id.includes('react-leaflet') || id.includes('MarkerCluster')) {
+              return 'vendor-maps';
+            }
+            if (
+              id.includes('docx') ||
+              id.includes('xlsx') ||
+              id.includes('html2pdf') ||
+              id.includes('jspdf') ||
+              id.includes('pdfmake') ||
+              id.includes('html-to-pdfmake') ||
+              id.includes('file-saver')
+            ) {
+              return 'vendor-docs';
+            }
+            if (id.includes('@supabase')) {
+              return 'vendor-supabase';
+            }
+            if (id.includes('lucide-react')) {
+              return 'vendor-icons';
+            }
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
+              return 'vendor-react';
+            }
+          }
+        },
+      },
+    },
+  },
 })

@@ -61,17 +61,32 @@ export default function IscrizionePubblica() {
                 return;
             }
             try {
-                // Carica nome del gruppo
-                const { data, error } = await supabase
-                    .from('users')
-                    .select('group_name')
-                    .eq('group_id', groupId)
-                    .limit(1);
+                // Carica nome del gruppo da gruppi_scout (tabella accessibile pubblicamente)
+                let resolvedName = '';
+                const numericId = parseInt(groupId, 10);
+                if (!isNaN(numericId)) {
+                    const { data: gData } = await supabase
+                        .from('gruppi_scout')
+                        .select('group_name')
+                        .eq('id', numericId)
+                        .maybeSingle();
+                    if (gData?.group_name) {
+                        resolvedName = gData.group_name;
+                    }
+                }
+                if (!resolvedName) {
+                    const { data: gDataByName } = await supabase
+                        .from('gruppi_scout')
+                        .select('group_name')
+                        .eq('group_name', groupId)
+                        .maybeSingle();
+                    if (gDataByName?.group_name) {
+                        resolvedName = gDataByName.group_name;
+                    }
+                }
 
-                if (error) throw error;
-
-                if (data && data.length > 0 && data[0].group_name) {
-                    setGroupName(data[0].group_name);
+                if (resolvedName) {
+                    setGroupName(resolvedName);
                 } else {
                     setGroupName(`Gruppo Scout (Codice: ${groupId})`);
                 }
