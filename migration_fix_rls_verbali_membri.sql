@@ -132,7 +132,15 @@ CREATE POLICY "Verbali access policy" ON public.verbali
         auth.role() = 'authenticated'
     );
 
--- 5. Policy su IMPOSTAZIONI_VERBALI
+-- 5. Creazione se non presente e Policy su IMPOSTAZIONI_VERBALI
+CREATE TABLE IF NOT EXISTS public.impostazioni_verbali (
+    group_id TEXT PRIMARY KEY,
+    intestazione TEXT,
+    pie_pagina TEXT,
+    font_family TEXT DEFAULT 'serif',
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
 ALTER TABLE public.impostazioni_verbali ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Group isolation" ON public.impostazioni_verbali;
