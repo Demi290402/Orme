@@ -1052,23 +1052,33 @@ export default function AkelaAssistant() {
 
     return (
         <>
-            {/* Floating Action Button (FAB) */}
+            {/* Floating Action Button (FAB) - Pill Human-Crafted con etichetta chiara */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className={cn(
-                    "fixed bottom-20 md:bottom-6 left-5 md:left-auto md:right-6 z-[60] flex items-center justify-center cursor-pointer transition-all duration-300 select-none outline-none border-none",
+                    "fixed bottom-20 md:bottom-6 right-4 md:right-6 z-[60] flex items-center gap-2 cursor-pointer transition-all duration-200 select-none outline-none shadow-xl border-2 active:scale-95",
                     isOpen 
-                        ? "bg-red-500 hover:bg-red-650 text-white p-3.5 rounded-full shadow-lg border-2 border-white dark:border-gray-800 rotate-90 scale-100 hover:scale-105 active:scale-95" 
-                        : "bg-transparent shadow-none p-0 scale-100 hover:scale-110 active:scale-90 animate-wolf-float"
+                        ? "bg-red-600 hover:bg-red-700 text-white p-3 rounded-full border-white dark:border-gray-800 rotate-90" 
+                        : "bg-white dark:bg-gray-800 border-scout-green/40 dark:border-emerald-500/40 text-scout-green-dark dark:text-emerald-300 px-3.5 py-2.5 rounded-full hover:shadow-2xl hover:border-scout-green"
                 )}
-                title={isOpen ? "Chiudi Akela" : "Chiedi ad Akela"}
+                title={isOpen ? "Chiudi Akela" : "Chiedi ad Akela - Assistente AI"}
             >
-                {isOpen ? <X size={20} /> : (
-                    <div className="relative filter drop-shadow-md">
-                        <span className="text-5xl md:text-6xl leading-none">🐺</span>
-                        <div className="absolute top-1.5 right-1.5 w-3 h-3 bg-yellow-400 rounded-full border-2 border-white dark:border-gray-900 animate-ping" />
-                        <div className="absolute top-1.5 right-1.5 w-3 h-3 bg-yellow-400 rounded-full border-2 border-white dark:border-gray-900" />
-                    </div>
+                {isOpen ? (
+                    <X size={20} />
+                ) : (
+                    <>
+                        <div className="relative flex items-center justify-center shrink-0">
+                            <span className="text-2xl leading-none">🐺</span>
+                            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-yellow-400 rounded-full border-2 border-white dark:border-gray-800 animate-ping" />
+                            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-yellow-400 rounded-full border-2 border-white dark:border-gray-800" />
+                        </div>
+                        <span className="text-xs font-black tracking-tight pr-1">
+                            Chiedi ad Akela
+                        </span>
+                        <span className="text-[9px] bg-yellow-400 text-gray-900 font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider hidden sm:inline">
+                            AI
+                        </span>
+                    </>
                 )}
             </button>
 
@@ -1082,7 +1092,7 @@ export default function AkelaAssistant() {
                         "fixed bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border border-gray-200/50 dark:border-gray-800/50 shadow-2xl z-[70] flex flex-col overflow-hidden transition-all duration-300 ease-out",
                         isFullscreen 
                             ? "inset-0 md:inset-4 lg:inset-8 w-auto h-auto rounded-none md:rounded-[2rem]" 
-                            : "bottom-36 md:bottom-24 left-4 md:left-auto right-auto md:right-6 w-[350px] max-w-[92vw] h-[500px] rounded-[2rem] animate-in zoom-in-95 slide-in-from-bottom"
+                            : "bottom-36 md:bottom-24 right-4 md:right-6 w-[360px] max-w-[92vw] h-[520px] rounded-[2rem] animate-in zoom-in-95 slide-in-from-bottom"
                     )}>
                         {/* Header */}
                         <div className="bg-scout-green dark:bg-scout-green-dark text-white p-3.5 md:p-4 flex flex-col gap-2 shrink-0 transition-colors duration-200">

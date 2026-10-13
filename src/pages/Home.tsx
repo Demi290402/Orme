@@ -340,19 +340,19 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
     return (
         <div className="space-y-6 relative min-h-[calc(100vh-150px)] pb-20">
             {/* Header Section */}
-            <div className="bg-scout-green dark:bg-green-900/60 dark:border dark:border-green-800/50 text-white p-6 rounded-2xl shadow-lg -mx-4 md:mx-0 rounded-t-none md:rounded-2xl backdrop-blur-sm">
-                <h1 className="text-3xl font-bold mb-2">Esplora Luoghi</h1>
-                <p className="opacity-90">Trova il posto perfetto per la tua prossima caccia o campo.</p>
+            <div className="bg-scout-green dark:bg-green-900/60 dark:border dark:border-green-800/50 text-white p-5 sm:p-6 rounded-2xl shadow-lg -mx-4 md:mx-0 rounded-t-none md:rounded-2xl backdrop-blur-sm">
+                <h1 className="text-2xl sm:text-3xl font-black mb-1.5 tracking-tight">Trova Luoghi per Uscite e Campi</h1>
+                <p className="text-xs sm:text-sm text-emerald-100 font-medium">Basi scout, case, accantonamenti e terreni per tende in tutta Italia.</p>
 
-                <div className="mt-6 flex gap-2">
-                    <div className="relative flex-1">
-                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                <div className="mt-5 space-y-3">
+                    {/* Barra di Ricerca a larghezza intera */}
+                    <div className="relative">
+                        <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400">
                             <Search size={20} className="text-scout-green" />
                         </div>
-                        {/* Improved Contrast: White background with dark text */}
                         <input
                             type="text"
-                            placeholder="Cerca per nome, comune..."
+                            placeholder="Cerca per nome base, comune, provincia o regione..."
                             value={searchTerm}
                             onChange={(e) => {
                                 setSearchTerm(e.target.value);
@@ -372,26 +372,56 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                                     addPointsWithStats(1, stats).catch(console.error);
                                 }
                             }}
-                            className="w-full pl-10 pr-4 py-3 rounded-xl bg-white dark:bg-gray-800 dark:text-gray-100 dark:border dark:border-green-700/50 text-gray-900 focus:outline-none focus:ring-4 focus:ring-scout-green-light/50 shadow-sm placeholder:text-gray-400 dark:placeholder:text-gray-500"
+                            className="w-full pl-11 pr-10 py-3.5 rounded-xl bg-white dark:bg-gray-800 dark:text-gray-100 dark:border dark:border-green-700/50 text-gray-900 font-semibold focus:outline-none focus:ring-4 focus:ring-white/30 shadow-md placeholder:text-gray-400 dark:placeholder:text-gray-500 text-sm md:text-base"
                         />
+                        {searchTerm && (
+                            <button
+                                type="button"
+                                onClick={() => setSearchTerm('')}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 rounded-full cursor-pointer"
+                                title="Cancella testo di ricerca"
+                            >
+                                <X size={18} />
+                            </button>
+                        )}
                     </div>
-                    <div className="flex gap-2">
-                        <Link to="/add" className="bg-scout-blue dark:bg-scout-blue-dark text-white p-3 rounded-xl shadow-md active:scale-95 transition-transform flex items-center justify-center border-2 border-white/20 dark:border-white/10 aspect-square">
-                            <Plus size={24} />
+
+                    {/* Azioni Rapide con etichette esplicite (Human-Crafted) */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-1">
+                        <Link 
+                            to="/add" 
+                            className="min-h-[46px] bg-white text-scout-green-dark hover:bg-emerald-50 dark:bg-gray-800 dark:text-emerald-300 dark:hover:bg-gray-700 px-3 py-2.5 rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm border border-emerald-100 dark:border-gray-700 active:scale-95 transition-all text-center"
+                        >
+                            <Plus size={18} className="text-scout-green dark:text-emerald-400 shrink-0" />
+                            <span className="truncate">Aggiungi Luogo</span>
                         </Link>
+
                         <button
+                            type="button"
                             onClick={() => setShowFilters(true)}
                             className={cn(
-                                "p-3 rounded-xl shadow-md active:scale-95 transition-transform flex items-center justify-center border-2 border-white/20 dark:border-white/10 relative aspect-square",
-                                activeFiltersCount > 0 ? "bg-scout-brown text-white" : "bg-white dark:bg-gray-800 text-scout-green dark:text-green-500"
+                                "min-h-[46px] px-3 py-2.5 rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm border active:scale-95 transition-all cursor-pointer text-center",
+                                activeFiltersCount > 0 
+                                    ? "bg-amber-600 text-white border-amber-700 shadow-md ring-2 ring-amber-300/40" 
+                                    : "bg-white text-gray-800 dark:bg-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-gray-50"
                             )}
                         >
-                            <Filter size={24} />
+                            <Filter size={18} className="shrink-0" />
+                            <span>Filtri</span>
                             {activeFiltersCount > 0 && (
-                                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white">
+                                <span className="bg-white text-amber-700 dark:bg-amber-950 dark:text-amber-200 text-[11px] font-black px-1.5 py-0.5 rounded-full">
                                     {activeFiltersCount}
                                 </span>
                             )}
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => setShowTransportModal(true)}
+                            className="col-span-2 sm:col-span-1 min-h-[46px] bg-emerald-800/60 hover:bg-emerald-800/80 text-white px-3 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm border border-white/20 active:scale-95 transition-all cursor-pointer text-center"
+                        >
+                            <Bus size={18} className="shrink-0" />
+                            <span className="truncate">Pullman & Trasporti</span>
                         </button>
                     </div>
                 </div>
@@ -1117,32 +1147,42 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
             )}
 
              {/* View Toggle and Count Header */}
-            <div className="flex justify-between items-center bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-150 dark:border-gray-700 shadow-sm">
-                <span className="text-sm font-extrabold text-gray-500 dark:text-gray-400">
-                    Trovati {filteredLocations.length} luoghi
-                </span>
-                <div className="flex bg-gray-100 dark:bg-gray-700 p-1 rounded-xl shrink-0">
+            <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xs">
+                <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-scout-green animate-pulse shrink-0" />
+                    <span className="text-sm font-black text-gray-800 dark:text-gray-200">
+                        {filteredLocations.length} {filteredLocations.length === 1 ? 'luogo trovato' : 'luoghi trovati'}
+                    </span>
+                    {activeFiltersCount > 0 && (
+                        <span className="text-xs text-amber-700 dark:text-amber-400 font-bold bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-md border border-amber-200 dark:border-amber-800">
+                            (con filtri attivi)
+                        </span>
+                    )}
+                </div>
+                <div className="flex bg-gray-100 dark:bg-gray-750 p-1 rounded-xl shrink-0 gap-1 border border-gray-200/50 dark:border-gray-700/50">
                     <button
                         onClick={() => setViewMode('list')}
                         className={cn(
-                            "px-4 py-2 rounded-lg text-xs font-black transition-all uppercase tracking-wider cursor-pointer",
+                            "flex-1 sm:flex-initial px-4 py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer min-h-[40px]",
                             viewMode === 'list'
-                                ? "bg-white dark:bg-gray-800 text-scout-green-dark dark:text-emerald-400 shadow-sm"
-                                : "text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                                ? "bg-white dark:bg-gray-800 text-scout-green-dark dark:text-emerald-400 shadow-sm font-black"
+                                : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
                         )}
                     >
-                        Lista
+                        <span>📋</span>
+                        <span>Elenco Schede</span>
                     </button>
                     <button
                         onClick={() => setViewMode('map')}
                         className={cn(
-                            "px-4 py-2 rounded-lg text-xs font-black transition-all uppercase tracking-wider cursor-pointer",
+                            "flex-1 sm:flex-initial px-4 py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer min-h-[40px]",
                             viewMode === 'map'
-                                ? "bg-white dark:bg-gray-800 text-scout-green-dark dark:text-emerald-400 shadow-sm"
-                                : "text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                                ? "bg-white dark:bg-gray-800 text-scout-green-dark dark:text-emerald-400 shadow-sm font-black"
+                                : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
                         )}
                     >
-                        Mappa
+                        <span>🗺️</span>
+                        <span>Mappa d'Italia</span>
                     </button>
                 </div>
             </div>
@@ -1198,20 +1238,6 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                 </div>
             ) : (
                 <InteractiveMap locations={currentUser ? filteredLocations : filteredLocations.slice(0, 5)} />
-            )}
-
-            {/* Floating Action Button (FAB) for Transport Directory */}
-            {currentUser && (
-                <button
-                    onClick={() => setShowTransportModal(true)}
-                    className="fixed bottom-20 md:bottom-24 right-5 md:right-6 z-40 bg-scout-green hover:bg-scout-green-dark text-white p-4 rounded-full shadow-2xl hover:scale-[1.05] active:scale-95 transition-all duration-200 border-2 border-white dark:border-gray-800 flex items-center justify-center cursor-pointer group"
-                    title="Anagrafica Trasporti Privati"
-                >
-                    <Bus size={24} className="group-hover:rotate-12 transition-transform duration-200" />
-                    <span className="max-w-0 overflow-hidden group-hover:max-w-xs group-hover:ml-2 text-xs font-black uppercase transition-all duration-350 tracking-wider">
-                        Trasporti
-                    </span>
-                </button>
             )}
 
             {/* Transport Directory Modal */}
