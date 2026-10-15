@@ -524,7 +524,15 @@ export default function Settings() {
                     color={theme === 'dark' ? 'text-indigo-500' : 'text-amber-500'}
                     right={<Toggle value={theme === 'dark'} onChange={toggleTheme} />}
                 />
+                <SettingsRow
+                    icon={Clock}
+                    label="Vista Smartwatch"
+                    subtitle="Interfaccia compatta per Apple Watch, Samsung e Wear OS"
+                    color="text-emerald-500"
+                    onClick={() => navigate('/watch')}
+                />
             </SettingsSection>
+
 
             {/* PROFILO */}
             <SettingsSection title="Profilo">

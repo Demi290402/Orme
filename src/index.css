@@ -180,3 +180,20 @@
 .dark .leaflet-tile-pane {
   filter: brightness(0.65) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.75);
 }
+
+/* ─── Smartwatch Utilities ────────────────────────────── */
+.watch-no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.watch-no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@media (shape: round) {
+  .watch-container {
+    border-radius: 50% !important;
+    padding-left: 12% !important;
+    padding-right: 12% !important;
+  }
+}

@@ -29,6 +29,24 @@ const Bilancio = lazy(() => import('@/pages/Bilancio'));
 const ListaAttesa = lazy(() => import('@/pages/ListaAttesa/ListaAttesa'));
 const PersonalizzaFormIscrizione = lazy(() => import('@/pages/ListaAttesa/PersonalizzaFormIscrizione'));
 const IscrizionePubblica = lazy(() => import('@/pages/Public/IscrizionePubblica'));
+const WatchView = lazy(() => import('@/pages/Watch/WatchView'));
+import { useSmartwatch } from '@/hooks/useSmartwatch';
+import { useLocation, useNavigate } from 'react-router-dom';
+
+function SmartwatchRedirector() {
+  const { isSmartwatch, viewMode } = useSmartwatch();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isSmartwatch && viewMode !== 'full' && location.pathname !== '/watch' && !location.pathname.startsWith('/iscrizione') && location.pathname !== '/privacy') {
+      navigate('/watch', { replace: true });
+    }
+  }, [isSmartwatch, viewMode, location.pathname, navigate]);
+
+  return null;
+}
+
 
 function PageLoader() {
   return (
@@ -53,8 +71,12 @@ function App() {
     <ThemeProvider>
       <UpdateManager />
       <Router>
+        <SmartwatchRedirector />
         <Suspense fallback={<PageLoader />}>
           <Routes>
+            {/* Smartwatch route */}
+            <Route path="/watch" element={<WatchView />} />
+
             {/* Public routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
