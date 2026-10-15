@@ -8,6 +8,7 @@ import { getVerbali } from '@/lib/verbali';
 import { getEventi } from '@/lib/calendario';
 import { getListaAttesa, getClasseAttuale, calculateAge } from '@/lib/listaAttesa';
 import { askAkelaBot, AIMessage } from '@/lib/ai';
+import { useSmartwatch } from '@/hooks/useSmartwatch';
 
 interface Message {
     id: string;
@@ -18,8 +19,11 @@ interface Message {
 
 
 export default function AkelaAssistant() {
+    const { isSmartwatch } = useSmartwatch();
     const navigate = useNavigate();
     const [isOpen, setIsOpen] = useState(false);
+
+    if (isSmartwatch) return null;
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [input, setInput] = useState('');
     const [userName, setUserName] = useState(() => localStorage.getItem('akela_user_name') || '');

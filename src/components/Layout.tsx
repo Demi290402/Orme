@@ -12,8 +12,10 @@ import { isOnline as checkOnline, getOfflineQueue, syncOfflineQueue } from '@/li
 import AkelaAssistant from './AkelaAssistant';
 import ShareAppModal from '@/components/ShareAppModal';
 import TransportModal from '@/components/TransportModal';
+import { useSmartwatch } from '@/hooks/useSmartwatch';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
+    const { isSmartwatch } = useSmartwatch();
     const location = useLocation();
     const [currentUser, setCurrentUser] = useState<UserType | null>(null);
     const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
@@ -105,6 +107,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     return (
         <div className="min-h-screen bg-scout-beige-light dark:bg-gray-900 font-sans text-gray-900 dark:text-gray-100 pb-20 md:pb-0">
             <PWAInstallPrompt />
+
+            {/* Smartwatch Quick Bar */}
+            {isSmartwatch && (
+                <div className="bg-black text-white px-3 py-1.5 flex items-center justify-between text-xs sticky top-0 z-[60] border-b border-emerald-500/30">
+                    <span className="text-[10px] font-bold text-emerald-400">⌚ Vista Smartwatch Ottimizzata</span>
+                    <Link to="/watch" className="bg-emerald-600 hover:bg-emerald-500 text-white px-2 py-0.5 rounded text-[10px] font-bold">
+                        Apri
+                    </Link>
+                </div>
+            )}
+
             {/* Desktop Header */}
             <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 shadow-sm sticky top-0 z-50">
                 <div className="max-w-4xl mx-auto flex justify-between items-center">

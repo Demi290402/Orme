@@ -192,8 +192,20 @@
 
 @media (shape: round) {
   .watch-container {
-    border-radius: 50% !important;
-    padding-left: 12% !important;
-    padding-right: 12% !important;
+    padding-left: 14% !important;
+    padding-right: 14% !important;
+    padding-top: 14% !important;
+    padding-bottom: 16% !important;
+  }
+  header {
+    padding-left: 10% !important;
+    padding-right: 10% !important;
+  }
+  main {
+    padding-left: 8% !important;
+    padding-right: 8% !important;
+  }
+  nav.fixed {
+    padding-bottom: 24px !important;
   }
 }

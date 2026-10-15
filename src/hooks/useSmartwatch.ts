@@ -30,19 +30,50 @@ export function useSmartwatch(): SmartwatchInfo {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('watch') === 'true') return true;
 
-    // Screen dimensions: Virtually all modern smartwatches have CSS width <= 320px
-    const minDim = Math.min(window.innerWidth, window.innerHeight);
-    const screenMin = Math.min(window.screen.width || 9999, window.screen.height || 9999);
-    const hasSmallScreen = minDim <= 320 || screenMin <= 320;
+    // Direct /watch route
+    if (window.location.pathname === '/watch') return true;
 
-    // User-agent detection for Samsung Galaxy Watch, Wear OS, Tizen, Apple Watch
+    // 1. (shape: round) media query. Smartwatches (Wear OS / Tizen) are the ONLY round screen devices!
+    try {
+      if (window.matchMedia && window.matchMedia('(shape: round)').matches) {
+        return true;
+      }
+    } catch {
+      // ignore
+    }
+
+    // 2. Physical Screen dimensions: Smartwatches have screen dimensions <= 500px
+    const maxScreen = Math.max(window.screen.width || 0, window.screen.height || 0);
+    const minScreen = Math.min(window.screen.width || 0, window.screen.height || 0);
+    const minWindow = Math.min(window.innerWidth || 0, window.innerHeight || 0);
+
+    // Any device with physical screen width/height <= 500px is an Apple Watch or Wear OS watch
+    if (maxScreen > 0 && maxScreen <= 500) {
+      return true;
+    }
+
+    // 3. 1:1 or nearly 1:1 aspect ratio with screen <= 540px
+    if (minScreen > 0 && maxScreen > 0 && (maxScreen / minScreen) < 1.18 && maxScreen <= 540) {
+      return true;
+    }
+
+    // 4. Viewport width <= 320px
+    if (minWindow > 0 && minWindow <= 320) {
+      return true;
+    }
+
+    // 5. User-agent detection
     const ua = navigator.userAgent || '';
-    const hasWatchUA = /(watchOS|AppleWatch|Tizen|Wear\s*OS|Galaxy\s*Watch|SM-R[0-9]+|SM-L[0-9]+)/i.test(ua);
-    
-    // Apple Watch WebKit sends iPhone/iPod UA but with microscopic screen width
-    const isTinyAppleDevice = /(iPhone|iPod)/i.test(ua) && minDim <= 220;
+    if (/(watchOS|AppleWatch|Apple Watch|Tizen|Wear\s*OS|WearOS|Galaxy\s*Watch|SM-R[0-9]+|SM-L[0-9]+|Watch[0-9,]+)/i.test(ua)) {
+      return true;
+    }
 
-    return hasWatchUA || isTinyAppleDevice || (hasSmallScreen && !/iPad|Tablet|Android(?!.*Mobile)/i.test(ua) && minDim <= 300);
+    // 6. SamsungBrowser on Android with small screen
+    if (/SamsungBrowser/i.test(ua) && maxScreen <= 520) {
+      return true;
+    }
+
+    return false;
   }
 
   function checkIsRound(): boolean {
@@ -56,15 +87,19 @@ export function useSmartwatch(): SmartwatchInfo {
     }
 
     const ua = navigator.userAgent || '';
-    // Most Samsung Watches (Tizen / Wear OS) and Pixel Watches are round
-    if (/(Galaxy\s*Watch|SM-R[0-9]+|SM-L[0-9]+|Tizen)/i.test(ua)) {
+    if (/(Galaxy\s*Watch|SM-R[0-9]+|SM-L[0-9]+|Tizen|Pixel\s*Watch)/i.test(ua)) {
       return true;
     }
 
-    // Almost 1:1 aspect ratio with small screen often indicates round bezel
+    const sw = window.screen.width || 0;
+    const sh = window.screen.height || 0;
+    if (sw > 0 && sh > 0 && Math.abs(sw - sh) < 25 && sw <= 500) {
+      return true;
+    }
+
     const w = window.innerWidth;
     const h = window.innerHeight;
-    if (Math.abs(w - h) < 15 && w <= 320) {
+    if (Math.abs(w - h) < 25 && w <= 420) {
       return true;
     }
 
@@ -74,9 +109,10 @@ export function useSmartwatch(): SmartwatchInfo {
   function checkIsAppleWatch(): boolean {
     if (typeof window === 'undefined') return false;
     const ua = navigator.userAgent || '';
-    if (/(watchOS|AppleWatch)/i.test(ua)) return true;
+    if (/(watchOS|AppleWatch|Apple Watch)/i.test(ua)) return true;
     const minDim = Math.min(window.innerWidth, window.innerHeight);
-    return /(iPhone|iPod)/i.test(ua) && minDim <= 220;
+    const maxScreen = Math.max(window.screen.width || 0, window.screen.height || 0);
+    return /(iPhone|iPod)/i.test(ua) && (minDim <= 220 || maxScreen <= 502);
   }
 
   useEffect(() => {
