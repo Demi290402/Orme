@@ -1,22 +1,25 @@
 import { useState, useEffect } from 'react';
 import { getLevelInfo, BADGES } from '@/lib/gamification';
-import { Trophy, X, ChevronLeft, ChevronRight, Award } from 'lucide-react';
+import { Trophy, X, ChevronLeft, ChevronRight, Award, Clock, ShieldAlert } from 'lucide-react';
 import { cn, getDefaultCover } from '@/lib/utils';
 import { User } from '@/types';
-import { getAllUsers } from '@/lib/data';
+import { getUser, getAllUsers } from '@/lib/data';
 import UserAvatar from '@/components/UserAvatar';
 
 export default function Leaderboard() {
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [allUsers, setAllUsers] = useState<User[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
     const usersPerPage = 10;
 
     useEffect(() => {
-        // Read users from Supabase
+        getUser().then(setCurrentUser).catch(console.error);
+
+        // Read users from Supabase: mostra SOLO i capi in stato 'attivo'
         getAllUsers().then(users => {
-            // Already sorted by points in getAllUsers
-            setAllUsers(users);
+            const activeOnly = users.filter(u => u.membershipStatus === 'attivo');
+            setAllUsers(activeOnly);
         }).catch(console.error);
     }, []);
 
@@ -31,15 +34,44 @@ export default function Leaderboard() {
             <div className="bg-scout-brown dark:bg-amber-950/60 text-white p-6 rounded-2xl shadow-lg -mx-4 md:mx-0 rounded-t-none md:rounded-2xl flex items-center justify-between dark:border dark:border-amber-900/50">
                 <div>
                     <h1 className="text-3xl font-bold mb-1 drop-shadow-sm">Classifica</h1>
-                    <p className="opacity-90 text-sm drop-shadow-sm">I migliori tracciatori del gruppo</p>
+                    <p className="opacity-90 text-sm drop-shadow-sm">
+                        {currentUser?.groupName ? `Comunità Capi ${currentUser.groupName} • Capi Attivi` : 'Capi in servizio attivo'}
+                    </p>
                 </div>
                 <Trophy size={48} className="opacity-20" />
             </div>
 
+            {/* Banner per capi in attesa di approvazione */}
+            {currentUser?.membershipStatus === 'in_attesa' && (
+                <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-2xl p-4 flex items-center gap-3 text-xs text-amber-800 dark:text-amber-200">
+                    <Clock size={20} className="shrink-0 text-amber-600 dark:text-amber-400" />
+                    <div>
+                        <p className="font-bold">Richiesta di ingresso in approvazione</p>
+                        <p className="text-[11px] text-amber-700/80 dark:text-amber-300/80 mt-0.5 leading-relaxed">
+                            Il tuo profilo e i tuoi punti saranno visibili nella classifica della Comunità Capi solo dopo che la tua richiesta sarà stata confermata.
+                        </p>
+                    </div>
+                </div>
+            )}
+
+            {/* Banner per capi con servizio concluso */}
+            {currentUser?.membershipStatus === 'uscito' && (
+                <div className="bg-gray-100 dark:bg-gray-800/70 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 flex items-center gap-3 text-xs text-gray-700 dark:text-gray-300">
+                    <ShieldAlert size={20} className="shrink-0 text-gray-400" />
+                    <div>
+                        <p className="font-bold">Servizio concluso in questa Comunità Capi</p>
+                        <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">
+                            I tuoi punti ({currentUser.points} pt) sono al sicuro e non vanno persi. Se rientrerai in questo gruppo ritroverai tutti i tuoi punti, mentre se ti iscriverai ad un'altra Comunità Capi ripartirai da 0.
+                        </p>
+                    </div>
+                </div>
+            )}
+
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
                 {currentUsers.length === 0 ? (
-                    <div className="p-8 text-center text-gray-400 dark:text-gray-500">
-                        Nessun utente registrato ancora.
+                    <div className="p-8 text-center space-y-1.5 text-gray-400 dark:text-gray-500">
+                        <p className="font-bold text-sm">Nessun capo attivo in classifica al momento.</p>
+                        <p className="text-xs">I capi in attesa saranno visibili solo dopo essere stati approvati dalla Comunità Capi.</p>
                     </div>
                 ) : (
                     currentUsers.map((user, index) => {

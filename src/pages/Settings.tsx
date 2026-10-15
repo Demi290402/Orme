@@ -248,7 +248,9 @@ export default function Settings() {
             if (exportOptions.classifica) {
                 const { getAllUsers } = await import('@/lib/data');
                 const users = await getAllUsers();
-                dataBundle.classifica = users.sort((a, b) => b.points - a.points);
+                dataBundle.classifica = users
+                    .filter(u => u.membershipStatus === 'attivo')
+                    .sort((a, b) => b.points - a.points);
             }
             if (exportOptions.lista_attesa) {
                 const { getListaAttesa } = await import('@/lib/listaAttesa');

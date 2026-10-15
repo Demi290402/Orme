@@ -47,6 +47,9 @@ export interface User {
     // Storico Formazione
     formazione?: CorsoFormazione[];
     hasNominaCapo?: boolean;
+
+    // Storico punti per Comunità Capi (memorizza i punti accumulati in ciascun gruppo scout)
+    groupPoints?: Record<string, number>;
 }
 
 export type MembershipStatus = 'attivo' | 'in_attesa' | 'uscito';

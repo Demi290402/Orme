@@ -316,7 +316,7 @@ export async function checkAndRunAutoExport(force: boolean = false): Promise<voi
                 data = await getAllLocationHistory();
             } else if (key === 'classifica') {
                 const users = await getAllUsers();
-                data = users.sort((a, b) => b.points - a.points);
+                data = users.filter(u => u.membershipStatus === 'attivo').sort((a, b) => b.points - a.points);
             } else if (key === 'lista_attesa') {
                 const { getListaAttesa } = await import('./listaAttesa');
                 data = await getListaAttesa();

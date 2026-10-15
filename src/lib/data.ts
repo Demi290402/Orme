@@ -666,7 +666,42 @@ export async function transferUserGroup(params: {
     // Con codice valido: direttamente 'attivo'; senza codice: 'in_attesa' con 2 voti necessari
     const newStatus = hasValidPin ? 'attivo' : 'in_attesa';
 
-    const updateData = {
+    // Determina se il gruppo selezionato è lo stesso della Comunità Capi precedente
+    const prevGroupId = currentUser.groupId ? String(currentUser.groupId).trim() : '';
+    const prevGroupName = currentUser.groupName ? currentUser.groupName.trim().toLowerCase() : '';
+    const newGroupId = params.groupId ? String(params.groupId).trim() : '';
+    const newGroupName = params.groupName ? params.groupName.trim().toLowerCase() : '';
+
+    const isSameGroup = Boolean(
+        (prevGroupId && newGroupId && prevGroupId === newGroupId) ||
+        (prevGroupName && newGroupName && prevGroupName === newGroupName)
+    );
+
+    // Mappa storico punti per Comunità Capi
+    const groupPointsMap: Record<string, number> = { ...(currentUser.groupPoints || {}) };
+
+    // Salva i punti correnti per il gruppo che sta lasciando (se ne aveva uno)
+    const oldKey = prevGroupId || prevGroupName;
+    if (oldKey) {
+        groupPointsMap[oldKey] = currentUser.points || 0;
+    }
+
+    // Regola:
+    // Se rientra nella stessa Comunità Capi -> ritrova i suoi punti
+    // Se si iscrive a un'altra Comunità Capi -> riparte da 0 (o ritrova i punti che aveva già in quella specifica CoCa se c'era già stato)
+    const newKey = newGroupId || newGroupName;
+    let targetPoints = currentUser.points || 0;
+
+    if (!isSameGroup) {
+        targetPoints = groupPointsMap[newKey] ?? 0;
+        if (newKey) {
+            groupPointsMap[newKey] = targetPoints;
+        }
+    } else if (newKey && groupPointsMap[newKey] !== undefined) {
+        targetPoints = Math.max(targetPoints, groupPointsMap[newKey]);
+    }
+
+    const updateData: any = {
         region: params.region,
         scout_zone: params.scoutZone,
         group_name: params.groupName,
@@ -674,15 +709,37 @@ export async function transferUserGroup(params: {
         membership_status: newStatus,
         group_role: 'capo',
         has_valid_pin: hasValidPin,
-        coca_approvals: []
+        coca_approvals: [],
+        points: targetPoints,
     };
 
-    const { data, error } = await supabase
-        .from('users')
-        .update(updateData)
-        .eq('id', currentUser.id)
-        .select()
-        .single();
+    let data: any = null;
+    let error: any = null;
+
+    try {
+        const res = await supabase
+            .from('users')
+            .update({ ...updateData, group_points: groupPointsMap })
+            .eq('id', currentUser.id)
+            .select()
+            .single();
+        data = res.data;
+        error = res.error;
+    } catch (e) {
+        error = e;
+    }
+
+    // Fallback se la colonna group_points non esiste ancora sul database Supabase
+    if (error && (String(error.message || '').includes('group_points') || (error as any).code === 'PGRST204')) {
+        const fallbackRes = await supabase
+            .from('users')
+            .update(updateData)
+            .eq('id', currentUser.id)
+            .select()
+            .single();
+        data = fallbackRes.data;
+        error = fallbackRes.error;
+    }
 
     if (error) throw error;
 
@@ -783,21 +840,39 @@ export async function updateUser(user: User): Promise<User> {
         has_valid_pin: user.hasValidPin || false,
         coca_approvals: user.cocaApprovals || [],
     };
+
+    const currentGroupKey = resolvedGroupId || user.groupId || user.groupName || '';
+    const updatedGroupPoints = { ...(user.groupPoints || {}) };
+    if (currentGroupKey && user.points !== undefined) {
+        updatedGroupPoints[currentGroupKey] = user.points;
+    }
+
     if (!isOnline()) {
-        enqueueOfflineWrite('update', 'users', updateData, { id: user.id });
+        enqueueOfflineWrite('update', 'users', { ...updateData, group_points: updatedGroupPoints }, { id: user.id });
         const cached = getCachedData<any>('currentUser');
         if (cached && cached.id === user.id) {
-            setCachedData('currentUser', { ...cached, ...updateData });
+            setCachedData('currentUser', { ...cached, ...updateData, groupPoints: updatedGroupPoints });
         }
         return user;
     }
     try {
-        const { data, error } = await supabase
+        let { data, error } = await supabase
             .from('users')
-            .update(updateData)
+            .update({ ...updateData, group_points: updatedGroupPoints })
             .eq('id', user.id)
             .select()
             .single();
+
+        if (error && (String(error.message || '').includes('group_points') || (error as any).code === 'PGRST204')) {
+            const fallbackRes = await supabase
+                .from('users')
+                .update(updateData)
+                .eq('id', user.id)
+                .select()
+                .single();
+            data = fallbackRes.data;
+            error = fallbackRes.error;
+        }
 
         if (error) throw error;
         setCachedData('currentUser', data);
@@ -1280,6 +1355,7 @@ function mapSupabaseUserToUser(data: any): User {
         groupRole: data.group_role || 'capo',
         cocaApprovals: data.coca_approvals || [],
         hasValidPin: data.has_valid_pin || false,
+        groupPoints: data.group_points || {},
     };
 }
 
