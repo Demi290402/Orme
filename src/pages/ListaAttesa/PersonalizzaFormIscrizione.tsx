@@ -1083,7 +1083,7 @@ export default function PersonalizzaFormIscrizione() {
             </main>
 
             {/* ─── Google Forms Floating Right Toolbar ──────────────────────── */}
-            <aside className="fixed bottom-6 right-6 md:bottom-auto md:top-1/3 md:right-8 z-30 flex md:flex-col items-center gap-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-xl p-2 rounded-2xl md:rounded-2xl animate-in zoom-in-95 duration-200">
+            <aside className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] right-3 md:bottom-auto md:top-1/3 md:right-8 z-40 flex md:flex-col items-center gap-1.5 sm:gap-2 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border border-gray-200 dark:border-gray-700 shadow-2xl p-1.5 sm:p-2 rounded-2xl animate-in zoom-in-95 duration-200">
                 <button
                     type="button"
                     onClick={addQuestion}

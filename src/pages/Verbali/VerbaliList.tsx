@@ -160,59 +160,64 @@ export default function VerbaliList() {
                             className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-scout-green shadow-sm"
                         />
                     </div>
-                    <div className="flex gap-2">
-                        <button
-                            onClick={() => { setRefreshing(true); loadData(); }}
-                            disabled={refreshing || loading}
-                            className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-scout-brown/10 dark:border-gray-700 shadow-sm hover:border-scout-brown/30 dark:hover:border-gray-600 text-scout-brown dark:text-gray-300 hover:bg-scout-brown/5 dark:hover:bg-gray-700 transition-all outline-none"
-                            title="Ricarica elenco verbali"
-                        >
-                            <RotateCw size={20} className={cn(refreshing ? "animate-spin text-scout-green" : "")} />
-                        </button>
-                        <button
-                            onClick={() => setShowFilters(!showFilters)}
-                            className={cn(
-                                "px-4 py-3 rounded-xl font-bold border-2 transition-all flex items-center justify-center gap-2 relative",
-                                showFilters || selectedYear !== 'all' || selectedMonth !== 'all' || hasOspite !== 'all'
-                                    ? "bg-scout-green/10 dark:bg-emerald-900/30 border-scout-green dark:border-emerald-500 text-scout-green dark:text-emerald-500"
-                                    : "bg-white dark:bg-gray-800 border-scout-brown/10 dark:border-gray-700 text-scout-brown dark:text-gray-300 hover:border-scout-brown/30 dark:hover:border-gray-600"
-                            )}
-                        >
-                            <Filter size={20} />
-                            {(selectedYear !== 'all' || selectedMonth !== 'all' || hasOspite !== 'all') && (
-                                <span className="absolute -top-2 -right-2 w-5 h-5 bg-scout-green dark:bg-emerald-600 text-white text-[10px] rounded-full flex items-center justify-center border-2 border-white dark:border-gray-800 shadow-sm">
-                                    { [selectedYear, selectedMonth, hasOspite].filter(f => f !== 'all').length }
-                                </span>
-                            )}
-                        </button>
-                        <Link
-                            to="/verbali/impostazioni"
-                            className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-scout-brown/10 dark:border-gray-700 shadow-sm hover:border-scout-brown/30 dark:hover:border-gray-600 text-scout-brown dark:text-gray-300 hover:bg-scout-brown/5 dark:hover:bg-gray-700 transition-all outline-none"
-                            title="Personalizza Intestazione"
-                        >
-                            <Settings size={20} />
-                        </Link>
-                        <Link
-                            to="/verbali/statistiche"
-                            className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-scout-brown/10 dark:border-gray-700 shadow-sm hover:border-scout-brown/30 dark:hover:border-gray-600 text-amber-600 dark:text-amber-500 hover:bg-amber-50 dark:hover:bg-gray-700 transition-all outline-none"
-                            title="Reportistica Presenze"
-                        >
-                            <FileText size={20} />
-                        </Link>
-                        <Link
-                            to="/verbali/membri"
-                            className="bg-white dark:bg-gray-800 text-scout-brown dark:text-gray-300 px-4 py-3 rounded-xl font-bold border-2 border-scout-brown/10 dark:border-gray-700 shadow-sm hover:border-scout-brown/30 dark:hover:border-gray-600 transition-all flex items-center justify-center gap-2"
-                        >
-                            <UserIcon size={20} />
-                            <span className="hidden sm:inline">Membri</span>
-                        </Link>
+                    <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
                         <Link
                             to="/verbali/nuovo"
-                            className="bg-scout-green dark:bg-emerald-600 text-white px-6 py-3 rounded-xl font-bold shadow-md hover:bg-scout-green-dark dark:hover:bg-emerald-700 transition-all active:scale-95 flex items-center justify-center gap-2"
+                            className="order-first sm:order-last flex-1 sm:flex-initial min-h-[46px] bg-scout-green dark:bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-bold shadow-md hover:bg-scout-green-dark dark:hover:bg-emerald-700 transition-all active:scale-95 flex items-center justify-center gap-2"
                         >
                             <Plus size={20} />
-                            <span className="hidden sm:inline">Nuovo</span>
+                            <span>Nuovo Verbale</span>
                         </Link>
+
+                        <div className="flex items-center gap-1.5 shrink-0 flex-wrap sm:flex-nowrap">
+                            <button
+                                onClick={() => { setRefreshing(true); loadData(); }}
+                                disabled={refreshing || loading}
+                                className="min-w-[44px] min-h-[44px] bg-white dark:bg-gray-800 p-2.5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all flex items-center justify-center outline-none"
+                                title="Ricarica elenco verbali"
+                            >
+                                <RotateCw size={18} className={cn(refreshing ? "animate-spin text-scout-green" : "")} />
+                            </button>
+                            <button
+                                onClick={() => setShowFilters(!showFilters)}
+                                className={cn(
+                                    "min-h-[44px] px-3.5 py-2 rounded-xl font-bold border-2 transition-all flex items-center justify-center gap-1.5 relative",
+                                    showFilters || selectedYear !== 'all' || selectedMonth !== 'all' || hasOspite !== 'all'
+                                        ? "bg-scout-green/10 dark:bg-emerald-900/30 border-scout-green dark:border-emerald-500 text-scout-green dark:text-emerald-500"
+                                        : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300"
+                                )}
+                                title="Filtri"
+                            >
+                                <Filter size={18} />
+                                {(selectedYear !== 'all' || selectedMonth !== 'all' || hasOspite !== 'all') && (
+                                    <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-scout-green dark:bg-emerald-600 text-white text-[10px] rounded-full flex items-center justify-center border-2 border-white dark:border-gray-800 shadow-sm">
+                                        { [selectedYear, selectedMonth, hasOspite].filter(f => f !== 'all').length }
+                                    </span>
+                                )}
+                            </button>
+                            <Link
+                                to="/verbali/membri"
+                                className="min-h-[44px] bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-3 py-2 rounded-xl font-bold border border-gray-200 dark:border-gray-700 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-all flex items-center justify-center gap-1.5"
+                                title="Membri CoCa"
+                            >
+                                <UserIcon size={18} />
+                                <span className="text-xs">Membri</span>
+                            </Link>
+                            <Link
+                                to="/verbali/statistiche"
+                                className="min-w-[44px] min-h-[44px] bg-white dark:bg-gray-800 p-2.5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm text-amber-600 dark:text-amber-500 hover:bg-amber-50 dark:hover:bg-gray-700 transition-all flex items-center justify-center outline-none"
+                                title="Reportistica Presenze"
+                            >
+                                <FileText size={18} />
+                            </Link>
+                            <Link
+                                to="/verbali/impostazioni"
+                                className="min-w-[44px] min-h-[44px] bg-white dark:bg-gray-800 p-2.5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all flex items-center justify-center outline-none"
+                                title="Personalizza Intestazione"
+                            >
+                                <Settings size={18} />
+                            </Link>
+                        </div>
                     </div>
                 </div>
 

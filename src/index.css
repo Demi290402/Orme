@@ -190,6 +190,20 @@
   scrollbar-width: none;
 }
 
+/* ─── Mobile Safe Area & Human-Crafted Utilities ───────── */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.bottom-safe {
+  bottom: env(safe-area-inset-bottom, 0px);
+}
+.mb-safe {
+  margin-bottom: env(safe-area-inset-bottom, 0px);
+}
+
 @media (shape: round) {
   .watch-container {
     padding-left: 14% !important;

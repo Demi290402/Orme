@@ -105,7 +105,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     ];
 
     return (
-        <div className="min-h-screen bg-scout-beige-light dark:bg-gray-900 font-sans text-gray-900 dark:text-gray-100 pb-20 md:pb-0">
+        <div className="min-h-screen bg-scout-beige-light dark:bg-gray-900 font-sans text-gray-900 dark:text-gray-100 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] md:pb-8">
             <PWAInstallPrompt />
 
             {/* Smartwatch Quick Bar */}
@@ -119,10 +119,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             )}
 
             {/* Desktop Header */}
-            <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 shadow-sm sticky top-0 z-50">
+            <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-3 sm:px-4 py-2 sm:py-3 md:py-4 shadow-sm sticky top-0 z-50">
                 <div className="max-w-4xl mx-auto flex justify-between items-center">
                     <Link to="/" className="flex items-center space-x-2">
-                        <Logo className="h-20 w-auto" />
+                        <Logo className="h-10 sm:h-14 md:h-18 w-auto transition-all" />
                     </Link>
 
                     <div className="flex items-center space-x-2.5">
@@ -148,7 +148,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                             <button
                                 type="button"
                                 onClick={() => setShowShareModal(true)}
-                                className="p-2.5 text-gray-500 dark:text-gray-400 hover:text-scout-green hover:bg-gray-100 dark:hover:bg-gray-700/60 rounded-xl transition-all active:scale-95 cursor-pointer"
+                                className="hidden sm:flex items-center justify-center p-2.5 text-gray-500 dark:text-gray-400 hover:text-scout-green hover:bg-gray-100 dark:hover:bg-gray-700/60 rounded-xl transition-all active:scale-95 cursor-pointer"
                                 title="Invita un Capo Scout su Orme"
                             >
                                 <Share2 size={20} />
@@ -275,7 +275,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
             {/* Guest Welcome Banner */}
             {!currentUser && (
-                <div className="bg-scout-blue text-white py-2 px-4 shadow-md sticky top-[113px] md:top-[113px] z-[40]">
+                <div className="bg-scout-blue text-white py-2.5 px-4 shadow-sm relative z-[40]">
                     <div className="max-w-4xl mx-auto flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <UserPlus size={16} className="shrink-0" />
@@ -298,7 +298,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </main>
 
             {/* Mobile Bottom Navigation */}
-            <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 z-[50] pb-safe shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+            <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-gray-800/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 z-[50] pb-safe shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
                 <div className="flex justify-around items-center h-16">
                     {primaryNavItems.map((item) => (
                         <Link
@@ -337,7 +337,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             {showAltroMenu && (
                 <div className="md:hidden fixed inset-0 z-[60] flex items-end justify-center">
                     <div className="fixed inset-0 bg-black/60 backdrop-blur-xs" onClick={() => setShowAltroMenu(false)} />
-                    <div className="bg-white dark:bg-gray-800 w-full rounded-t-[2.5rem] border-t border-gray-200 dark:border-gray-700 p-6 pb-10 z-[70] shadow-2xl space-y-4 animate-in slide-in-from-bottom duration-250">
+                    <div className="bg-white dark:bg-gray-800 w-full max-h-[85vh] overflow-y-auto rounded-t-[2.5rem] border-t border-gray-200 dark:border-gray-700 p-5 sm:p-6 pb-[calc(2.5rem+env(safe-area-inset-bottom,0px))] z-[70] shadow-2xl space-y-4 animate-in slide-in-from-bottom duration-250">
                         {/* Drag indicator */}
                         <div className="w-12 h-1 bg-gray-200 dark:bg-gray-700 rounded-full mx-auto mb-1 shrink-0" />
                         

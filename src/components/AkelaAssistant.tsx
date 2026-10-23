@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { X, Send, Sparkles, Maximize2, Minimize2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { matchScoutKnowledge, scoutKnowledgeBase } from '@/lib/scoutKnowledge';
@@ -21,9 +21,19 @@ interface Message {
 export default function AkelaAssistant() {
     const { isSmartwatch } = useSmartwatch();
     const navigate = useNavigate();
+    const location = useLocation();
     const [isOpen, setIsOpen] = useState(false);
 
-    if (isSmartwatch) return null;
+    // Don't show floating Akela button on editor or form builder pages where it collides with form FABs
+    const isEditorPage = 
+        location.pathname.startsWith('/verbali/nuovo') ||
+        location.pathname.startsWith('/verbali/modifica') ||
+        location.pathname.startsWith('/verbali/visualizza') ||
+        location.pathname.startsWith('/add') ||
+        location.pathname.startsWith('/edit') ||
+        location.pathname.startsWith('/lista-attesa/personalizza');
+
+    if (isSmartwatch || isEditorPage) return null;
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [input, setInput] = useState('');
     const [userName, setUserName] = useState(() => localStorage.getItem('akela_user_name') || '');
@@ -1060,10 +1070,11 @@ export default function AkelaAssistant() {
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className={cn(
-                    "fixed bottom-20 md:bottom-6 right-4 md:right-6 z-[60] flex items-center gap-2 cursor-pointer transition-all duration-200 select-none outline-none shadow-xl border-2 active:scale-95",
+                    "fixed z-[60] flex items-center justify-center cursor-pointer transition-all duration-200 select-none outline-none shadow-xl border-2 active:scale-95",
+                    "bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] md:bottom-6 right-3 md:right-6",
                     isOpen 
-                        ? "bg-red-600 hover:bg-red-700 text-white p-3 rounded-full border-white dark:border-gray-800 rotate-90" 
-                        : "bg-white dark:bg-gray-800 border-scout-green/40 dark:border-emerald-500/40 text-scout-green-dark dark:text-emerald-300 px-3.5 py-2.5 rounded-full hover:shadow-2xl hover:border-scout-green"
+                        ? "bg-red-600 hover:bg-red-700 text-white w-12 h-12 md:w-auto md:px-4 md:py-2.5 rounded-full border-white dark:border-gray-800 rotate-90" 
+                        : "bg-white dark:bg-gray-800 border-scout-green/40 dark:border-emerald-500/40 text-scout-green-dark dark:text-emerald-300 w-12 h-12 md:w-auto md:px-3.5 md:py-2.5 rounded-full hover:shadow-2xl hover:border-scout-green"
                 )}
                 title={isOpen ? "Chiudi Akela" : "Chiedi ad Akela - Assistente AI"}
             >
@@ -1076,7 +1087,7 @@ export default function AkelaAssistant() {
                             <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-yellow-400 rounded-full border-2 border-white dark:border-gray-800 animate-ping" />
                             <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-yellow-400 rounded-full border-2 border-white dark:border-gray-800" />
                         </div>
-                        <span className="text-xs font-black tracking-tight pr-1">
+                        <span className="text-xs font-black tracking-tight pr-1 hidden md:inline">
                             Chiedi ad Akela
                         </span>
                         <span className="text-[9px] bg-yellow-400 text-gray-900 font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider hidden sm:inline">
@@ -1096,8 +1107,9 @@ export default function AkelaAssistant() {
                         "fixed bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border border-gray-200/50 dark:border-gray-800/50 shadow-2xl z-[70] flex flex-col overflow-hidden transition-all duration-300 ease-out",
                         isFullscreen 
                             ? "inset-0 md:inset-4 lg:inset-8 w-auto h-auto rounded-none md:rounded-[2rem]" 
-                            : "bottom-36 md:bottom-24 right-4 md:right-6 w-[360px] max-w-[92vw] h-[520px] rounded-[2rem] animate-in zoom-in-95 slide-in-from-bottom"
+                            : "inset-x-0 bottom-0 md:bottom-24 md:right-6 md:left-auto md:w-[380px] h-[85vh] md:h-[540px] rounded-t-[2.5rem] md:rounded-[2rem] animate-in slide-in-from-bottom duration-250"
                     )}>
+                        <div className="w-12 h-1.5 bg-gray-300 dark:bg-gray-700 rounded-full mx-auto my-2 md:hidden shrink-0" />
                         {/* Header */}
                         <div className="bg-scout-green dark:bg-scout-green-dark text-white p-3.5 md:p-4 flex flex-col gap-2 shrink-0 transition-colors duration-200">
                             <div className="flex items-center gap-3">

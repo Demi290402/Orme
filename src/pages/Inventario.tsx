@@ -484,7 +484,7 @@ export default function Inventario() {
                     </p>
                 </div>
                 
-                <div className="flex gap-2">
+                <div className="flex gap-2 w-full md:w-auto">
                     {activeTab === 'luoghi' ? (
                         <button
                             onClick={() => {
@@ -492,7 +492,7 @@ export default function Inventario() {
                                 setLuogoForm({ name: '', description: '', color: '#4CAF50', icon: 'MapPin' });
                                 setShowLuogoForm(true);
                             }}
-                            className="bg-scout-green text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-scout-green-dark transition-all active:scale-95 shadow-md cursor-pointer"
+                            className="w-full md:w-auto justify-center bg-scout-green text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-scout-green-dark transition-all active:scale-95 shadow-md cursor-pointer"
                         >
                             <Plus size={16} /> Nuovo Luogo
                         </button>
@@ -507,7 +507,7 @@ export default function Inventario() {
                                 });
                                 setShowAttrezzoForm(true);
                             }}
-                            className="bg-scout-green text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-scout-green-dark transition-all active:scale-95 shadow-md cursor-pointer"
+                            className="w-full md:w-auto justify-center bg-scout-green text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-scout-green-dark transition-all active:scale-95 shadow-md cursor-pointer"
                         >
                             <Plus size={16} /> Nuovo Attrezzo
                         </button>

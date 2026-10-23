@@ -534,7 +534,7 @@ export default function LocationDetail() {
             {bannerOpen && bannerMinimized && (
                 <button
                     onClick={() => setBannerMinimized(false)}
-                    className="fixed bottom-6 right-6 z-[90] bg-scout-green text-white px-5 py-3 rounded-full shadow-2xl flex items-center gap-2 hover:scale-[1.05] active:scale-95 transition-all text-xs font-black animate-bounce border-2 border-white dark:border-gray-800 cursor-pointer"
+                    className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] md:bottom-6 right-4 md:right-6 z-[45] bg-scout-green text-white px-4 py-2.5 sm:px-5 sm:py-3 rounded-full shadow-2xl flex items-center gap-2 hover:scale-[1.05] active:scale-95 transition-all text-xs font-black animate-bounce border-2 border-white dark:border-gray-800 cursor-pointer"
                     title="Vedi cronologia modifiche"
                 >
                     <Footprints size={16} />

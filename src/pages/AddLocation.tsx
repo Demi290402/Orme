@@ -1711,7 +1711,7 @@ export default function AddLocation() {
                 </button>
 
                 {/* Floating Points Counter */}
-                <div className="fixed bottom-24 right-6 z-50 animate-bounce-subtle">
+                <div className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] md:bottom-6 right-4 md:right-6 z-40 animate-bounce-subtle">
                     <div className="bg-scout-green text-white px-4 py-2 rounded-2xl shadow-xl flex items-center gap-2 border-2 border-white">
                         <div className="bg-white text-scout-green w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs">
                             {livePoints}
