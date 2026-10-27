@@ -243,10 +243,32 @@ export async function loginUser(email: string, password: string): Promise<User |
     }
 }
 
-export async function logoutUser() {
+// In-memory cache and in-flight promise for current user to avoid duplicate calls & lock deadlocks
+let memoryCurrentUser: { user: User; timestamp: number } | null = null;
+let inFlightCurrentUserPromise: Promise<User> | null = null;
+const CURRENT_USER_TTL_MS = 20 * 1000; // 20 secondi di cache in memoria per navigazione immediata
+
+export function invalidateCurrentUserCache(): void {
+    memoryCurrentUser = null;
+    inFlightCurrentUserPromise = null;
     try {
         localStorage.removeItem('cache_currentUser');
     } catch (e) {}
+}
+
+export function getCachedCurrentUser(): User | null {
+    if (memoryCurrentUser) {
+        return memoryCurrentUser.user;
+    }
+    const cached = getCachedData<any>('currentUser');
+    if (cached) {
+        return mapSupabaseUserToUser(cached);
+    }
+    return null;
+}
+
+export async function logoutUser() {
+    invalidateCurrentUserCache();
     await supabase.auth.signOut();
 }
 
@@ -262,9 +284,7 @@ export async function deleteUserProfile(): Promise<void> {
     if (error) throw error;
 
     // Sign out
-    try {
-        localStorage.removeItem('cache_currentUser');
-    } catch (e) {}
+    invalidateCurrentUserCache();
     await supabase.auth.signOut();
 }
 
@@ -288,50 +308,115 @@ export async function getUser(id?: string): Promise<User> {
             return mapSupabaseUserToUser(data);
         }
 
-        // Get current logged-in user
-        if (!isOnline()) {
-            const cached = getCachedData<any>('currentUser');
-            if (cached) return mapSupabaseUserToUser(cached);
-            throw new Error('No user logged in (offline)');
+        // Return immediately if in-memory cache is fresh
+        if (memoryCurrentUser && (Date.now() - memoryCurrentUser.timestamp < CURRENT_USER_TTL_MS)) {
+            return memoryCurrentUser.user;
         }
 
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('No user logged in');
-
-        const { data: profileData, error: profileError } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', user.id)
-            .single();
-
-        if (profileError) {
-            console.warn('getUser: profile query error, fallback to cached profile:', profileError);
-            const cached = getCachedData<any>('currentUser');
-            if (cached && (cached.id === user.id || cached.email === user.email)) {
-                return mapSupabaseUserToUser(cached);
-            }
-            throw profileError;
+        // Return in-flight promise if one is already running to deduplicate concurrent calls
+        if (inFlightCurrentUserPromise) {
+            return inFlightCurrentUserPromise;
         }
 
-        // Auto-heal missing group_id if user has group_name
-        if (!profileData.group_id && profileData.group_name) {
+        inFlightCurrentUserPromise = (async () => {
             try {
-                const gruppo = await aggiungiGruppoScout(profileData.region || '', profileData.scout_zone || '', profileData.group_name);
-                if (gruppo && gruppo.id) {
-                    profileData.group_id = String(gruppo.id);
-                    await supabase.from('users').update({ group_id: String(gruppo.id) }).eq('id', profileData.id);
+                // If offline, return cached user
+                if (!isOnline()) {
+                    const cached = getCachedData<any>('currentUser');
+                    if (cached) {
+                        const mapped = mapSupabaseUserToUser(cached);
+                        memoryCurrentUser = { user: mapped, timestamp: Date.now() };
+                        return mapped;
+                    }
+                    throw new Error('No user logged in (offline)');
                 }
-            } catch (e) {
-                console.warn('Could not auto-resolve group_id in getUser:', e);
+
+                // Race auth.getUser against a 3.5s timeout; fallback to auth.getSession() if it hangs or fails
+                const authPromise = supabase.auth.getUser();
+                const timeoutPromise = new Promise<any>((_, reject) =>
+                    setTimeout(() => reject(new Error('supabase.auth.getUser timed out')), 3500)
+                );
+
+                let authUser: any = null;
+                try {
+                    const res = await Promise.race([authPromise, timeoutPromise]);
+                    authUser = res?.data?.user;
+                } catch (authErr) {
+                    console.warn('supabase.auth.getUser slow or timed out, trying auth.getSession():', authErr);
+                    try {
+                        const { data: sessionData } = await supabase.auth.getSession();
+                        authUser = sessionData?.session?.user;
+                    } catch (sessionErr) {
+                        console.warn('supabase.auth.getSession also failed:', sessionErr);
+                    }
+                }
+
+                if (!authUser) {
+                    const cached = getCachedData<any>('currentUser');
+                    if (cached) {
+                        const mapped = mapSupabaseUserToUser(cached);
+                        memoryCurrentUser = { user: mapped, timestamp: Date.now() };
+                        return mapped;
+                    }
+                    throw new Error('No user logged in');
+                }
+
+                // Query profile with a 4s timeout
+                const profilePromise = supabase
+                    .from('users')
+                    .select('*')
+                    .eq('id', authUser.id)
+                    .single();
+                const profileTimeout = new Promise<any>((_, reject) =>
+                    setTimeout(() => reject(new Error('users table query timed out')), 4000)
+                );
+
+                let profileData: any = null;
+                try {
+                    const { data, error } = await Promise.race([profilePromise, profileTimeout]);
+                    if (error) throw error;
+                    profileData = data;
+                } catch (profErr) {
+                    console.warn('getUser: profile query error, fallback to cached profile:', profErr);
+                    const cached = getCachedData<any>('currentUser');
+                    if (cached && (cached.id === authUser.id || cached.email === authUser.email)) {
+                        const mapped = mapSupabaseUserToUser(cached);
+                        memoryCurrentUser = { user: mapped, timestamp: Date.now() };
+                        return mapped;
+                    }
+                    throw profErr;
+                }
+
+                // Auto-heal missing group_id if user has group_name
+                if (!profileData.group_id && profileData.group_name) {
+                    try {
+                        const gruppo = await aggiungiGruppoScout(profileData.region || '', profileData.scout_zone || '', profileData.group_name);
+                        if (gruppo && gruppo.id) {
+                            profileData.group_id = String(gruppo.id);
+                            supabase.from('users').update({ group_id: String(gruppo.id) }).eq('id', profileData.id).then(() => {}, (err) => console.warn(err));
+                        }
+                    } catch (e) {
+                        console.warn('Could not auto-resolve group_id in getUser:', e);
+                    }
+                }
+
+                setCachedData('currentUser', profileData);
+                const mappedUser = mapSupabaseUserToUser(profileData);
+                memoryCurrentUser = { user: mappedUser, timestamp: Date.now() };
+                return mappedUser;
+            } finally {
+                inFlightCurrentUserPromise = null;
             }
-        }
+        })();
 
-        setCachedData('currentUser', profileData);
-
-        return mapSupabaseUserToUser(profileData);
+        return inFlightCurrentUserPromise;
     } catch (error) {
         const cached = getCachedData<any>('currentUser');
-        if (cached) return mapSupabaseUserToUser(cached);
+        if (cached) {
+            const mapped = mapSupabaseUserToUser(cached);
+            memoryCurrentUser = { user: mapped, timestamp: Date.now() };
+            return mapped;
+        }
         throw new Error('No user logged in');
     }
 }

@@ -2,13 +2,13 @@ import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, FileText, Search, Calendar, MapPin, User as UserIcon, Filter, X, Settings, RotateCw, AlertTriangle, ChevronDown } from 'lucide-react';
 import { getVerbali, calculateScoutYear, formatScoutYear } from '@/lib/verbali';
-import { getUser } from '@/lib/data';
+import { getUser, getCachedCurrentUser } from '@/lib/data';
 import { Verbale, User } from '@/types';
 import { cn } from '@/lib/utils';
 
 export default function VerbaliList() {
     const [verbali, setVerbali] = useState<Verbale[]>([]);
-    const [currentUser, setCurrentUser] = useState<User | null>(null);
+    const [currentUser, setCurrentUser] = useState<User | null>(() => getCachedCurrentUser());
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -20,12 +20,20 @@ export default function VerbaliList() {
 
     const loadData = async () => {
         try {
-            const [u, data] = await Promise.all([
+            const dataPromise = Promise.all([
                 getUser().catch(() => null),
                 getVerbali().catch(() => [])
             ]);
+            const timeoutPromise = new Promise<[User | null, Verbale[]]>((resolve) =>
+                setTimeout(() => resolve([null, []]), 6000)
+            );
+            const [u, data] = await Promise.race([dataPromise, timeoutPromise]);
             if (u) setCurrentUser(u);
-            setVerbali(data);
+            if (data && data.length > 0) {
+                setVerbali(data);
+            } else if (data) {
+                setVerbali(data);
+            }
         } catch (err) {
             console.error(err);
         } finally {

@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import Logo from '@/components/Logo';
 import PWAInstallPrompt from './PWAInstallPrompt';
 import { User as UserType } from '@/types';
-import { getUser, getAllUsers } from '@/lib/data';
+import { getUser, getAllUsers, getCachedCurrentUser } from '@/lib/data';
 import UserAvatar from '@/components/UserAvatar';
 import NotificationBell from '@/components/NotificationBell';
 import { isOnline as checkOnline, getOfflineQueue, syncOfflineQueue } from '@/lib/offline';
@@ -17,7 +17,7 @@ import { useSmartwatch } from '@/hooks/useSmartwatch';
 export default function Layout({ children }: { children: React.ReactNode }) {
     const { isSmartwatch } = useSmartwatch();
     const location = useLocation();
-    const [currentUser, setCurrentUser] = useState<UserType | null>(null);
+    const [currentUser, setCurrentUser] = useState<UserType | null>(() => getCachedCurrentUser());
     const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
     const [showAltroMenu, setShowAltroMenu] = useState(false);
     const [showShareModal, setShowShareModal] = useState(false);

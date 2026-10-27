@@ -13,7 +13,7 @@ import { exportVerbaleToPdf } from '@/utils/pdfExport';
 import { exportVerbaleToDocx } from '@/utils/docxExport';
 import { Verbale, MembroCoCa } from '@/types';
 import { cn } from '@/lib/utils';
-import { getUser } from '@/lib/data';
+import { getUser, getCachedCurrentUser } from '@/lib/data';
 import VerbaleHeader from '@/components/VerbaleHeader';
 import RichTextEditor from '@/components/RichTextEditor';
 import { createNotificationsForGroup } from '@/lib/notifications';
@@ -46,7 +46,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
     const [membri, setMembri] = useState<MembroCoCa[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [currentUser, setCurrentUser] = useState<any>(null);
+    const [currentUser, setCurrentUser] = useState<any>(() => getCachedCurrentUser());
     const [showNotifyModal, setShowNotifyModal] = useState(false);
     const [isFabOpen, setIsFabOpen] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
@@ -98,75 +98,88 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
     }, [verbale.annoScout]);
 
     useEffect(() => {
+        let isMounted = true;
         const fetchData = async () => {
             try {
-                const [membriRes, userRes] = await Promise.allSettled([
-                    getMembriCoCa(true), // Carica tutti i membri (attivi e storici) per risolvere tutti i nomi passati
-                    getUser()
-                ]);
-                const membriData = membriRes.status === 'fulfilled' ? membriRes.value : [];
-                const userData = userRes.status === 'fulfilled' ? userRes.value : null;
-                setMembri(membriData);
-                if (userData) setCurrentUser(userData);
+                const runFetch = async () => {
+                    const [membriRes, userRes] = await Promise.allSettled([
+                        getMembriCoCa(true), // Carica tutti i membri (attivi e storici) per risolvere tutti i nomi passati
+                        getUser()
+                    ]);
+                    const membriData = membriRes.status === 'fulfilled' ? membriRes.value : [];
+                    const userData = userRes.status === 'fulfilled' ? userRes.value : null;
+                    if (!isMounted) return;
+                    setMembri(membriData);
+                    if (userData) setCurrentUser(userData);
 
-                // Load page settings
-                try {
-                    const imp = await getImpostazioniVerbali();
-                    if (imp) setImpostazioni(imp);
-                } catch (_ignored) { /* ok */ }
+                    // Load page settings
+                    try {
+                        const imp = await getImpostazioniVerbali();
+                        if (isMounted && imp) setImpostazioni(imp);
+                    } catch (_ignored) { /* ok */ }
 
-                if (id) {
-                    const allVerbali = await getVerbali().catch(() => []);
-                    let found = allVerbali.find(v => v.id === id);
-                    if (!found) {
-                        found = (await getVerbaleById(id)) || undefined;
-                    }
-                    if (found) {
-                        if (!found.annoScout) {
-                            found.annoScout = calculateScoutYear(found.data);
+                    if (id) {
+                        // Prioritize single query by primary key ID for maximum speed
+                        let found = await getVerbaleById(id).catch(() => null);
+                        if (!found) {
+                            const allVerbali = await getVerbali().catch(() => []);
+                            found = allVerbali.find(v => v.id === id) || null;
                         }
-                        setVerbale(found);
-                        // Passive gamification: track verbale view (once ever per verbale)
-                        if (viewMode && userData) {
-                            if (!userData.verbaliReadIds?.includes(id)) {
-                                addPointsWithStats(5, { verbaliRead: 1, newVerbaleReadId: id }).catch(console.error);
+                        if (isMounted && found) {
+                            if (!found.annoScout) {
+                                found.annoScout = calculateScoutYear(found.data);
+                            }
+                            setVerbale(found);
+                            // Passive gamification: track verbale view (once ever per verbale)
+                            if (viewMode && userData) {
+                                if (!userData.verbaliReadIds?.includes(id)) {
+                                    addPointsWithStats(5, { verbaliRead: 1, newVerbaleReadId: id }).catch(console.error);
+                                }
                             }
                         }
-                    }
-                } else {
-                    const allVerbali = await getVerbali().catch(() => []);
-                    const defaultScoutYear = calculateScoutYear(new Date().toISOString().split('T')[0]);
-                    const validNums = allVerbali
-                        .filter(v => (v.annoScout ?? calculateScoutYear(v.data)) === defaultScoutYear)
-                        .map(v => Number(v.numero))
-                        .filter(n => !isNaN(n));
-                    const lastNum = validNums.length > 0 ? Math.max(...validNums) : 0;
-                    setVerbale(prev => ({ 
-                        ...prev, 
-                        annoScout: prev.annoScout || defaultScoutYear,
-                        numero: lastNum + 1 
-                    }));
+                    } else {
+                        const allVerbali = await getVerbali().catch(() => []);
+                        if (!isMounted) return;
+                        const defaultScoutYear = calculateScoutYear(new Date().toISOString().split('T')[0]);
+                        const validNums = allVerbali
+                            .filter(v => (v.annoScout ?? calculateScoutYear(v.data)) === defaultScoutYear)
+                            .map(v => Number(v.numero))
+                            .filter(n => !isNaN(n));
+                        const lastNum = validNums.length > 0 ? Math.max(...validNums) : 0;
+                        setVerbale(prev => ({ 
+                            ...prev, 
+                            annoScout: prev.annoScout || defaultScoutYear,
+                            numero: lastNum + 1 
+                        }));
 
-                    // Controllo presenza bozza locale salvata
-                    const draftKey = `verbale_draft_${id || 'new'}`;
-                    const rawDraft = localStorage.getItem(draftKey);
-                    if (rawDraft) {
-                        try {
-                            const d = JSON.parse(rawDraft);
-                            if (d && typeof d === 'object') {
-                                setVerbale(prev => ({ ...prev, ...d }));
-                                setDraftSavedAt('recuperata da memoria locale');
-                            }
-                        } catch (_e) { /* ignore */ }
+                        // Controllo presenza bozza locale salvata
+                        const draftKey = `verbale_draft_${id || 'new'}`;
+                        const rawDraft = localStorage.getItem(draftKey);
+                        if (rawDraft) {
+                            try {
+                                const d = JSON.parse(rawDraft);
+                                if (d && typeof d === 'object') {
+                                    setVerbale(prev => ({ ...prev, ...d }));
+                                    setDraftSavedAt('recuperata da memoria locale');
+                                }
+                            } catch (_e) { /* ignore */ }
+                        }
                     }
-                }
+                };
+
+                // Safety timeout of 6 seconds to guarantee loading never hangs
+                const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 6000));
+                await Promise.race([runFetch(), timeoutPromise]);
             } catch (err) {
-                console.error(err);
+                console.error('VerbaleEditor fetchData error:', err);
             } finally {
-                setLoading(false);
+                if (isMounted) {
+                    setLoading(false);
+                }
             }
         };
         fetchData();
+        return () => { isMounted = false; };
     }, [id]);
 
     // Salvataggio automatico locale della bozza per evitare qualsiasi perdita di dati accidentale

@@ -120,7 +120,20 @@ export async function getVerbaleById(id: string): Promise<Verbale | null> {
             .maybeSingle();
 
         if (error || !data) return null;
-        return mapSupabaseVerbaleToVerbale(data);
+        const verbale = mapSupabaseVerbaleToVerbale(data);
+        if (data.created_by) {
+            try {
+                const { data: uData } = await supabase
+                    .from('users')
+                    .select('id, nickname, first_name, last_name')
+                    .eq('id', data.created_by)
+                    .maybeSingle();
+                if (uData) {
+                    verbale.createdByName = uData.nickname || `${uData.first_name || ''} ${uData.last_name || ''}`.trim() || 'Utente';
+                }
+            } catch {}
+        }
+        return verbale;
     } catch (e) {
         console.warn('Error in getVerbaleById:', e);
         return null;

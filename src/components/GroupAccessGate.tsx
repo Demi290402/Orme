@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { ShieldAlert, Clock, KeyRound, CheckCircle2, AlertCircle, ArrowRight, Compass, RefreshCw, Search } from 'lucide-react';
-import { getUser, submitGroupPin, transferUserGroup, getGruppiScout, GruppoScout } from '@/lib/data';
+import { getUser, getCachedCurrentUser, submitGroupPin, transferUserGroup, getGruppiScout, GruppoScout } from '@/lib/data';
 import { User } from '@/types';
 
 interface GroupAccessGateProps {
@@ -10,8 +10,8 @@ interface GroupAccessGateProps {
 
 export default function GroupAccessGate({ children }: GroupAccessGateProps) {
     const navigate = useNavigate();
-    const [user, setUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState(true);
+    const [user, setUser] = useState<User | null>(() => getCachedCurrentUser());
+    const [loading, setLoading] = useState(() => !getCachedCurrentUser());
     const [pinInput, setPinInput] = useState('');
     const [pinLoading, setPinLoading] = useState(false);
     const [pinError, setPinError] = useState('');
@@ -28,10 +28,11 @@ export default function GroupAccessGate({ children }: GroupAccessGateProps) {
 
     const refreshUser = async () => {
         try {
-            const u = await getUser();
-            setUser(u);
+            const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000));
+            const u = await Promise.race([getUser(), timeoutPromise]);
+            if (u) setUser(u);
         } catch (e) {
-            setUser(null);
+            // keep existing user
         } finally {
             setLoading(false);
         }

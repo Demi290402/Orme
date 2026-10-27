@@ -1,26 +1,30 @@
 import { useState, useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { getUser } from '@/lib/data';
+import { getUser, getCachedCurrentUser } from '@/lib/data';
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
     const location = useLocation();
-    const [user, setUser] = useState<any>(null);
-    const [isLoading, setIsLoading] = useState(true);
+    const [user, setUser] = useState<any>(() => getCachedCurrentUser());
+    const [isLoading, setIsLoading] = useState(() => !getCachedCurrentUser());
 
     useEffect(() => {
         let isMounted = true;
-        getUser()
-            .then((u) => {
+        const checkUser = async () => {
+            try {
+                const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000));
+                const u = await Promise.race([getUser(), timeoutPromise]);
                 if (isMounted) {
-                    setUser(u);
+                    if (u) setUser(u);
                     setIsLoading(false);
                 }
-            })
-            .catch(() => {
+            } catch {
                 if (isMounted) {
                     setIsLoading(false);
                 }
-            });
+            }
+        };
+
+        checkUser();
         return () => { isMounted = false; };
     }, []);
 
