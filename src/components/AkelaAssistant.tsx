@@ -33,7 +33,6 @@ export default function AkelaAssistant() {
         location.pathname.startsWith('/edit') ||
         location.pathname.startsWith('/lista-attesa/personalizza');
 
-    if (isSmartwatch || isEditorPage) return null;
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [input, setInput] = useState('');
     const [userName, setUserName] = useState(() => localStorage.getItem('akela_user_name') || '');
@@ -1063,6 +1062,8 @@ export default function AkelaAssistant() {
             }
         }, 500);
     };
+
+    if (isSmartwatch || isEditorPage) return null;
 
     return (
         <>
