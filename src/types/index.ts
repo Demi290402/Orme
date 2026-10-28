@@ -50,7 +50,20 @@ export interface User {
 
     // Storico punti per Comunità Capi (memorizza i punti accumulati in ciascun gruppo scout)
     groupPoints?: Record<string, number>;
+    notificationPreferences?: UserNotificationPreferences;
+    notificationTone?: string;
 }
+
+export type NotificationCategory = 'verbali' | 'lista_attesa' | 'richiesta_accesso' | 'aggiornamento_luoghi';
+export type NotificationChannelPref = 'entrambe' | 'in_app' | 'email' | 'disattivo';
+export type UserNotificationPreferences = Record<NotificationCategory, NotificationChannelPref>;
+
+export const DEFAULT_NOTIFICATION_PREFERENCES: UserNotificationPreferences = {
+    verbali: 'entrambe',
+    lista_attesa: 'entrambe',
+    richiesta_accesso: 'entrambe',
+    aggiornamento_luoghi: 'entrambe',
+};
 
 export type MembershipStatus = 'attivo' | 'in_attesa' | 'uscito';
 export type GroupRole = 'capo_gruppo' | 'capo';

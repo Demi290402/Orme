@@ -4,7 +4,7 @@ export interface GroupEmailNotificationParams {
     groupId: string;
     groupName?: string;
     excludeUserId?: string;
-    type?: 'richiesta_accesso' | 'nuovo_capo' | 'verbale' | 'generic';
+    type?: 'richiesta_accesso' | 'nuovo_capo' | 'verbale' | 'lista_attesa' | 'aggiornamento_luoghi' | 'generic';
     subject?: string;
     title?: string;
     body: string;
@@ -12,6 +12,7 @@ export interface GroupEmailNotificationParams {
     candidateNickname?: string;
     actionUrl?: string;
     actionLabel?: string;
+    recipientEmails?: string[];
 }
 
 export interface IssueReportParams {

@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 import { getUser, getCachedCurrentUser } from '@/lib/data';
 import VerbaleHeader from '@/components/VerbaleHeader';
 import RichTextEditor from '@/components/RichTextEditor';
-import { createNotificationsForGroup } from '@/lib/notifications';
+import { dispatchGroupNotification, getLocalNotificationPreferences } from '@/lib/notifications';
 import { addPointsWithStats } from '@/lib/gamification';
 
 type TabType = 'presenze' | 'odg' | 'sezioni' | 'anteprima';
@@ -302,13 +302,17 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
             const v = (_savedVerbaleForModal || verbale) as Verbale;
             const targetGroupId = (currentUser?.groupId ? String(currentUser.groupId).trim() : '') || (v.groupId ? String(v.groupId).trim() : '');
             const dateStr = v.data ? new Date(v.data).toLocaleDateString('it-IT', { day: '2-digit', month: 'long' }) : '';
-            await createNotificationsForGroup(
-                targetGroupId,
-                'verbale_saved',
-                `📋 Verbale N. ${v.numero} — ${v.titolo || 'Riunione di CoCa'}`,
-                `${currentUser.nickname || currentUser.firstName} ha salvato il verbale del ${dateStr}.`,
-                { verbaleId: v.id, numero: v.numero }
-            );
+            await dispatchGroupNotification({
+                groupId: targetGroupId,
+                groupName: currentUser.groupName,
+                category: 'verbali',
+                type: 'verbale_saved',
+                title: `📋 Verbale N. ${v.numero} — ${v.titolo || 'Riunione di CoCa'}`,
+                body: `${currentUser.nickname || currentUser.firstName} ha salvato il verbale del ${dateStr}.`,
+                data: { verbaleId: v.id, numero: v.numero },
+                actionUrl: `https://orme.pages.dev/verbali/visualizza/${v.id || id || ''}`,
+                actionLabel: 'Leggi il Verbale su Orme',
+            });
             setNotifyStatus(s => ({ ...s, inApp: 'done' }));
         } catch (e) {
             console.error('handleNotifyInApp error:', e);
@@ -335,11 +339,41 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
             const supabaseUrl = (import.meta as any).env.VITE_SUPABASE_URL;
             const supabaseKey = (import.meta as any).env.VITE_SUPABASE_ANON_KEY;
 
+            // Filtra i destinatari in base alle preferenze notifica verbali (incluso chi lo pubblica se attivo)
+            let recipientEmails: string[] = [];
+            try {
+                const { data: usersData } = await supabase
+                    .from('users')
+                    .select('id, email, notification_preferences')
+                    .or(`group_id.eq.${targetGroupId},group_name.eq.${targetGroupId}`);
+                if (usersData && usersData.length > 0) {
+                    const localPrefs = getLocalNotificationPreferences();
+                    for (const u of usersData) {
+                        let pref = 'entrambe';
+                        if (u.id === currentUser.id) {
+                            pref = localPrefs.verbali ?? 'entrambe';
+                        } else if (u.notification_preferences?.verbali) {
+                            pref = u.notification_preferences.verbali;
+                        }
+                        if (pref === 'entrambe' || pref === 'email') {
+                            const em = (u.email || '').trim().toLowerCase();
+                            if (em && em.includes('@') && !em.includes('example.com')) {
+                                recipientEmails.push(em);
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                console.warn('Errore lettura preferenze email verbali, fallback default:', err);
+            }
+
+            recipientEmails = Array.from(new Set(recipientEmails));
+
             let errorMsg: string | null = null;
 
             // 1. Invio tramite Supabase Functions SDK
             try {
-                const emailPayload = {
+                const emailPayload: any = {
                     groupId: targetGroupId,
                     groupName: currentUser?.groupName || '',
                     type: 'verbale',
@@ -348,6 +382,9 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                     actionUrl: 'https://orme.pages.dev/verbali',
                     actionLabel: 'Leggi il Verbale su Orme'
                 };
+                if (recipientEmails.length > 0) {
+                    emailPayload.recipientEmails = recipientEmails;
+                }
 
                 const { data, error } = await supabase.functions.invoke('send-email-notification', {
                     body: emailPayload

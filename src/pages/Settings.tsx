@@ -7,12 +7,22 @@ import {
     Archive, Trophy, Zap, Bus, Clock, KeyRound, Copy, Crown, ShieldCheck, Compass, Share2, HelpCircle
 } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
-import { getUser, deleteUserProfile, getGroupPin } from '@/lib/data';
+import { getUser, deleteUserProfile, getGroupPin, updateUser } from '@/lib/data';
 import ShareAppModal from '@/components/ShareAppModal';
 import ReportProblemModal from '@/components/ReportProblemModal';
 import { cn } from '@/lib/utils';
-import { User as UserType } from '@/types';
-import { playNotificationSound } from '@/lib/notifications';
+import { 
+    User as UserType, 
+    NotificationCategory, 
+    NotificationChannelPref, 
+    UserNotificationPreferences, 
+    DEFAULT_NOTIFICATION_PREFERENCES 
+} from '@/types';
+import { 
+    playNotificationSound, 
+    getLocalNotificationPreferences, 
+    saveLocalNotificationPreferences 
+} from '@/lib/notifications';
 
 // ─── Types ───────────────────────────────────────────
 type Cadenza = 'giornaliera' | 'settimanale' | 'mensile' | 'trimestrale' | 'semestrale' | 'annuale';
@@ -39,10 +49,53 @@ const EXPORT_OPTIONS = [
 
 const DOWNLOAD_OPTIONS = EXPORT_OPTIONS.filter(opt => opt.key !== 'membri' && opt.key !== 'presenze');
 
-const NOTIFICATION_TYPES = [
-    { key: 'aggiornamento_luoghi', label: 'Aggiornamento luoghi', description: 'Quando qualcuno apporta modifiche a un luogo censito' },
-    { key: 'lista_attesa', label: 'Aggiornamenti lista di attesa', description: 'Notifiche per nuovi inserimenti o modifiche in lista d\'attesa' },
-    { key: 'verbali', label: 'Nuovi verbali', description: 'Quando viene aggiunto un nuovo verbale alla CoCa' },
+const NOTIFICATION_CATEGORIES: {
+    key: NotificationCategory;
+    label: string;
+    description: string;
+    icon: React.ElementType;
+    color: string;
+}[] = [
+    { 
+        key: 'verbali', 
+        label: 'Verbali di Comunità Capi', 
+        description: 'Pubblicazione e aggiornamento dei verbali di riunione',
+        icon: FileText,
+        color: 'text-scout-blue'
+    },
+    { 
+        key: 'lista_attesa', 
+        label: 'Lista d\'Attesa', 
+        description: 'Nuove iscrizioni di ragazzi (da modulo pubblico o manuali) e modifiche',
+        icon: Clock,
+        color: 'text-amber-500'
+    },
+    { 
+        key: 'richiesta_accesso', 
+        label: 'Ingresso Capi in CoCa', 
+        description: 'Richieste di accesso o nuovi censiti nella Comunità Capi',
+        icon: Users,
+        color: 'text-purple-500'
+    },
+    { 
+        key: 'aggiornamento_luoghi', 
+        label: 'Luoghi & Basi Scout', 
+        description: 'Nuove strutture censite o modifiche a schede, contatti e servizi',
+        icon: MapPin,
+        color: 'text-emerald-500'
+    },
+];
+
+const CHANNEL_OPTIONS: {
+    value: NotificationChannelPref;
+    label: string;
+    shortLabel: string;
+    icon: string;
+}[] = [
+    { value: 'entrambe', label: 'Entrambe (In-App + Email)', shortLabel: 'Entrambe', icon: '🔔+✉️' },
+    { value: 'in_app', label: 'Solo In-App', shortLabel: 'Solo App', icon: '🔔' },
+    { value: 'email', label: 'Solo Email', shortLabel: 'Solo Email', icon: '✉️' },
+    { value: 'disattivo', label: 'Disattiva', shortLabel: 'Nessuna', icon: '🚫' },
 ];
 
 // ─── Toggle Component ─────────────────────────────────
@@ -120,9 +173,8 @@ export default function Settings() {
     // Notification settings
     const [notifiche, setNotifiche] = useState(true);
     const [suonoNotifica, setSuonoNotifica] = useState('default');
-    const [notifTypes, setNotifTypes] = useState<Record<string, boolean>>({
-        aggiornamento_luoghi: true, lista_attesa: true, verbali: true
-    });
+    const [notifPreferences, setNotifPreferences] = useState<UserNotificationPreferences>(() => getLocalNotificationPreferences());
+    const [savedNotificationToast, setSavedNotificationToast] = useState(false);
 
     // Auto-export settings
     const [autoExport, setAutoExport] = useState(false);
@@ -151,6 +203,16 @@ export default function Settings() {
     useEffect(() => {
         getUser().then(u => {
             setUser(u);
+            if (u) {
+                if (u.notificationTone) {
+                    setSuonoNotifica(u.notificationTone);
+                }
+                if (u.notificationPreferences) {
+                    const merged = { ...getLocalNotificationPreferences(), ...u.notificationPreferences };
+                    setNotifPreferences(merged);
+                    saveLocalNotificationPreferences(merged, u.notificationTone || suonoNotifica);
+                }
+            }
             if (u && (u.groupId || u.groupName)) {
                 setLoadingPin(true);
                 getGroupPin(u.groupId, u.groupName, u.scoutZone, u.region)
@@ -159,14 +221,19 @@ export default function Settings() {
                     .finally(() => setLoadingPin(false));
             }
         }).catch(console.error);
+
         // Load saved preferences
         const saved = localStorage.getItem('orme_settings');
         if (saved) {
             try {
                 const prefs = JSON.parse(saved);
                 if (prefs.notifiche !== undefined) setNotifiche(prefs.notifiche);
-                if (prefs.suonoNotifica) setSuonoNotifica(prefs.suonoNotifica);
-                if (prefs.notifTypes) setNotifTypes(prefs.notifTypes);
+                if (prefs.suonoNotifica || prefs.notificationTone || prefs.notifTone) {
+                    setSuonoNotifica(prefs.suonoNotifica || prefs.notificationTone || prefs.notifTone);
+                }
+                if (prefs.notificationPreferences) {
+                    setNotifPreferences({ ...DEFAULT_NOTIFICATION_PREFERENCES, ...prefs.notificationPreferences });
+                }
                 if (prefs.autoExport !== undefined) setAutoExport(prefs.autoExport);
                 if (prefs.exportOptions) setExportOptions(prefs.exportOptions);
                 if (prefs.exportPath) setExportPath(prefs.exportPath);
@@ -200,6 +267,64 @@ export default function Settings() {
     const savePrefs = (patch: object) => {
         const current = JSON.parse(localStorage.getItem('orme_settings') || '{}');
         localStorage.setItem('orme_settings', JSON.stringify({ ...current, ...patch }));
+    };
+
+    const handleSetChannelPref = async (category: NotificationCategory, pref: NotificationChannelPref) => {
+        const updated = {
+            ...notifPreferences,
+            [category]: pref,
+        };
+        setNotifPreferences(updated);
+        saveLocalNotificationPreferences(updated, suonoNotifica);
+        savePrefs({
+            notificationPreferences: updated,
+            notifTypes: {
+                verbali: updated.verbali !== 'disattivo',
+                lista_attesa: updated.lista_attesa !== 'disattivo',
+                aggiornamento_luoghi: updated.aggiornamento_luoghi !== 'disattivo',
+                richiesta_accesso: updated.richiesta_accesso !== 'disattivo',
+            }
+        });
+
+        if (user) {
+            try {
+                const updatedUser = await updateUser({
+                    ...user,
+                    notificationPreferences: updated,
+                    notificationTone: suonoNotifica,
+                });
+                setUser(updatedUser);
+            } catch (err) {
+                console.warn('Could not sync notification preferences to user record:', err);
+            }
+        }
+
+        setSavedNotificationToast(true);
+        setTimeout(() => setSavedNotificationToast(false), 2000);
+    };
+
+    const handleChangeTone = async (newTone: string) => {
+        setSuonoNotifica(newTone);
+        saveLocalNotificationPreferences(notifPreferences, newTone);
+        savePrefs({
+            suonoNotifica: newTone,
+            notifTone: newTone,
+            notificationTone: newTone,
+        });
+
+        if (user) {
+            try {
+                const updatedUser = await updateUser({
+                    ...user,
+                    notificationPreferences: notifPreferences,
+                    notificationTone: newTone,
+                });
+                setUser(updatedUser);
+            } catch (err) {
+                console.warn('Could not sync tone to user record:', err);
+            }
+        }
+        playNotificationSound(newTone);
     };
 
     const handleCopyPin = () => {
@@ -546,11 +671,11 @@ export default function Settings() {
             </SettingsSection>
 
             {/* NOTIFICHE */}
-            <SettingsSection title="Notifiche">
+            <SettingsSection title="Notifiche & Avvisi">
                 <SettingsRow
                     icon={notifiche ? Bell : BellOff}
-                    label="Notifiche Push"
-                    subtitle={notifiche ? 'Le notifiche sono attive' : 'Le notifiche sono disattivate'}
+                    label="Notifiche In-App & Push"
+                    subtitle={notifiche ? 'Le notifiche in-app sono attive' : 'Tutte le notifiche dell\'app sono silenziate'}
                     color="text-purple-500"
                     right={<Toggle value={notifiche} onChange={v => {
                         setNotifiche(v);
@@ -558,7 +683,7 @@ export default function Settings() {
                         if (v && 'Notification' in window) {
                             Notification.requestPermission().then(permission => {
                                 if (permission !== 'granted') {
-                                    alert('Per ricevere le notifiche push reali, abilita i permessi di notifica del browser.');
+                                    alert('Per ricevere le notifiche push di sistema, abilita i permessi di notifica del browser.');
                                 }
                             });
                         }
@@ -566,49 +691,100 @@ export default function Settings() {
                 />
                 {notifiche && (
                     <div className="px-4 py-4 space-y-4 bg-gray-50/50 dark:bg-gray-900/30">
-                        <div className="space-y-3">
-                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Tipi di notifica</p>
-                            {NOTIFICATION_TYPES.map(n => (
-                                <div key={n.key} className="flex items-center justify-between gap-3">
-                                    <div className="flex-1">
-                                        <p className="text-xs font-bold text-gray-700 dark:text-gray-300">{n.label}</p>
-                                        <p className="text-[10px] text-gray-400">{n.description}</p>
+                        {/* Notice info */}
+                        <div className="flex items-center justify-between">
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                Canali per tipologia
+                            </p>
+                            {savedNotificationToast && (
+                                <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 animate-in fade-in duration-200">
+                                    <Check size={12} /> Salvato
+                                </span>
+                            )}
+                        </div>
+
+                        <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed -mt-1">
+                            Scegli come ricevere ogni avviso (anche per le modifiche che applichi tu stesso):
+                            puoi attivare entrambe, solo notifica in-app, solo email oppure disattivare.
+                        </p>
+
+                        <div className="space-y-2.5">
+                            {NOTIFICATION_CATEGORIES.map(n => (
+                                <div 
+                                    key={n.key} 
+                                    className="p-3.5 rounded-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700/60 shadow-xs space-y-2.5"
+                                >
+                                    <div className="flex items-start gap-3">
+                                        <div className="w-8 h-8 rounded-lg bg-gray-50 dark:bg-gray-700/60 flex items-center justify-center shrink-0 mt-0.5">
+                                            <n.icon size={16} className={n.color} />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-xs font-bold text-gray-900 dark:text-white leading-snug">{n.label}</p>
+                                            <p className="text-[10px] text-gray-400 dark:text-gray-400 leading-tight mt-0.5">{n.description}</p>
+                                        </div>
                                     </div>
-                                    <Toggle
-                                        value={notifTypes[n.key] ?? false}
-                                        onChange={v => {
-                                            const updated = { ...notifTypes, [n.key]: v };
-                                            setNotifTypes(updated);
-                                            savePrefs({ notifTypes: updated });
-                                        }}
-                                    />
+
+                                    {/* Channel Selector Pills */}
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pt-1">
+                                        {CHANNEL_OPTIONS.map(opt => {
+                                            const isSelected = (notifPreferences[n.key] || 'entrambe') === opt.value;
+                                            return (
+                                                <button
+                                                    key={opt.value}
+                                                    type="button"
+                                                    onClick={() => handleSetChannelPref(n.key, opt.value)}
+                                                    className={cn(
+                                                        "flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-[11px] transition-all cursor-pointer select-none",
+                                                        isSelected
+                                                            ? opt.value === 'entrambe'
+                                                                ? "bg-emerald-600 text-white shadow-xs font-black ring-1 ring-emerald-500"
+                                                                : opt.value === 'in_app'
+                                                                ? "bg-purple-600 text-white shadow-xs font-black ring-1 ring-purple-500"
+                                                                : opt.value === 'email'
+                                                                ? "bg-blue-600 text-white shadow-xs font-black ring-1 ring-blue-500"
+                                                                : "bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 font-black ring-1 ring-gray-300 dark:ring-gray-500"
+                                                            : "bg-gray-100 dark:bg-gray-700/40 text-gray-600 dark:text-gray-400 font-semibold hover:bg-gray-200/70 dark:hover:bg-gray-700"
+                                                    )}
+                                                >
+                                                    <span className="text-xs">{opt.icon}</span>
+                                                    <span className="truncate">{opt.shortLabel}</span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
                             ))}
                         </div>
 
-                        <div className="space-y-2 pt-3 border-t border-gray-100 dark:border-gray-800/40">
-                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Suono di notifica</p>
+                        {/* Suono Notifica */}
+                        <div className="space-y-2 pt-3 border-t border-gray-150 dark:border-gray-800/40">
+                            <div className="flex items-center justify-between">
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                    Suono di notifica in-app
+                                </p>
+                                <span className="text-[10px] text-gray-400">
+                                    Riproduce all'arrivo di nuove notifiche
+                                </span>
+                            </div>
                             <div className="flex gap-2">
                                 <select
                                     value={suonoNotifica}
-                                    onChange={e => {
-                                        setSuonoNotifica(e.target.value);
-                                        savePrefs({ suonoNotifica: e.target.value });
-                                    }}
-                                    className="flex-1 px-3 py-2 rounded-xl border border-gray-205 dark:border-gray-800 bg-white dark:bg-gray-950 text-xs font-bold text-gray-850 dark:text-gray-200 outline-none focus:ring-1 focus:ring-purple-500"
+                                    onChange={e => handleChangeTone(e.target.value)}
+                                    className="flex-1 px-3 py-2 rounded-xl border border-gray-205 dark:border-gray-800 bg-white dark:bg-gray-950 text-xs font-bold text-gray-850 dark:text-gray-200 outline-none focus:ring-1 focus:ring-purple-500 cursor-pointer"
                                 >
                                     <option value="default">Default Beep</option>
-                                    <option value="scout_horn">Corno Scout (Bitonale)</option>
+                                    <option value="scout_horn">Corno Scout (Bitonale G4/A4)</option>
+                                    <option value="camp_bell">Campana del Campo Scout</option>
                                     <option value="campfire">Fuoco da Campo (Crepitio)</option>
                                     <option value="nature_birds">Canto degli Uccelli</option>
-                                    <option value="guitar_chord">Accordo di Chitarra</option>
+                                    <option value="guitar_chord">Accordo di Chitarra (Do Magg)</option>
                                 </select>
                                 <button
                                     onClick={() => playNotificationSound(suonoNotifica)}
                                     type="button"
-                                    className="bg-purple-100 dark:bg-purple-900/30 text-purple-650 dark:text-purple-400 px-4 py-2 rounded-xl text-xs font-black hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors active:scale-95 shrink-0"
+                                    className="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-4 py-2 rounded-xl text-xs font-black hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors active:scale-95 shrink-0 flex items-center gap-1.5 cursor-pointer"
                                 >
-                                    Prova
+                                    <span>Prova</span>
                                 </button>
                             </div>
                         </div>

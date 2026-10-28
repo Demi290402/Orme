@@ -8,6 +8,7 @@ import {
     markAllAsRead,
     AppNotification,
     playNotificationSound,
+    getLocalNotificationPreferences,
 } from '@/lib/notifications';
 import { getUser } from '@/lib/data';
 import { cn } from '@/lib/utils';
@@ -49,8 +50,9 @@ function formatRelativeTime(dateStr: string): string {
 
 function NotifIcon({ type }: { type: AppNotification['type'] }) {
     if (type === 'verbale_saved') return <FileText size={16} className="text-scout-blue" />;
-    if (type === 'location_added') return <MapPin size={16} className="text-scout-green" />;
+    if (type === 'location_added' || type === 'location_updated') return <MapPin size={16} className="text-scout-green" />;
     if (type === 'proposal') return <CheckCheck size={16} className="text-orange-500" />;
+    if (type === 'lista_attesa') return <span className="text-sm">📋</span>;
     if (type === 'richiesta_accesso') return <span className="text-sm">🔔</span>;
     if (type === 'nuovo_capo') return <span className="text-sm">⚜️</span>;
     return <Info size={16} className="text-gray-400" />;
@@ -110,18 +112,19 @@ export default function NotificationBell() {
                             try {
                                 const settings = JSON.parse(localStorage.getItem('orme_settings') || '{}');
                                 const isPushEnabled = settings.notifiche !== false;
-                                const notifTypes = settings.notifTypes || {};
+                                const userPrefs = getLocalNotificationPreferences();
                                 
-                                let preferenceKey = 'generic';
-                                if (row.type === 'verbale_saved') preferenceKey = 'verbali';
-                                else if (row.type === 'location_added' || row.type === 'proposal') preferenceKey = 'aggiornamento_luoghi';
-                                else if (row.type === 'lista_attesa') preferenceKey = 'lista_attesa';
-                                else if (row.type === 'richiesta_accesso' || row.type === 'nuovo_capo') preferenceKey = 'membri';
+                                let cat: 'verbali' | 'lista_attesa' | 'richiesta_accesso' | 'aggiornamento_luoghi' = 'verbali';
+                                if (row.type === 'verbale_saved') cat = 'verbali';
+                                else if (row.type === 'lista_attesa') cat = 'lista_attesa';
+                                else if (row.type === 'richiesta_accesso' || row.type === 'nuovo_capo') cat = 'richiesta_accesso';
+                                else if (row.type === 'location_added' || row.type === 'proposal' || row.type === 'location_updated') cat = 'aggiornamento_luoghi';
 
-                                const isTypeEnabled = notifTypes[preferenceKey] !== false;
+                                const channelPref = userPrefs[cat] ?? 'entrambe';
+                                const isCategoryActive = channelPref === 'entrambe' || channelPref === 'in_app';
 
-                                if (isPushEnabled && isTypeEnabled) {
-                                    const tone = settings.notifTone || 'default';
+                                if (isPushEnabled && isCategoryActive) {
+                                    const tone = settings.notificationTone || settings.suonoNotifica || settings.notifTone || 'default';
                                     playNotificationSound(tone);
                                     showNativeNotification(row.title, row.body);
                                 }
@@ -187,7 +190,7 @@ export default function NotificationBell() {
             navigate('/verbali/membri');
         } else if (n.type === 'verbale_saved') {
             navigate('/verbali');
-        } else if (n.type === 'location_added' && n.data?.locationId) {
+        } else if ((n.type === 'location_added' || n.type === 'location_updated' || n.type === 'proposal') && n.data?.locationId) {
             navigate(`/location/${n.data.locationId}`);
         } else if (n.type === 'calendario_evento') {
             navigate('/calendario');

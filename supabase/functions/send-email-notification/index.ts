@@ -28,6 +28,7 @@ serve(async (req) => {
       excludeUserId, 
       type = 'generic',
       recipientEmail = '',
+      recipientEmails = [],
       subject: customSubject, 
       title: customTitle,
       body = '', 
@@ -43,13 +44,19 @@ serve(async (req) => {
       diagnosticInfo = null
     } = payload
 
-    console.log(`[send-email-notification] Tipo: ${type}, Destinatario: ${recipientEmail || 'CoCa'}, Gruppo: ${groupId} (${groupName})`)
+    console.log(`[send-email-notification] Tipo: ${type}, Destinatario: ${recipientEmail || (Array.isArray(recipientEmails) && recipientEmails.length > 0 ? `${recipientEmails.length} destinatari mirati` : 'CoCa')}, Gruppo: ${groupId} (${groupName})`)
 
     let validEmails: string[] = []
 
     if (type === 'segnalazione_problema' || recipientEmail) {
       // Destinazione diretta: segnalazioni al supporto Orme o a email specifica
       validEmails = [recipientEmail || 'appormescout@gmail.com']
+    } else if (Array.isArray(recipientEmails) && recipientEmails.length > 0) {
+      // Destinatari specificati direttamente dal client (già filtrati in base alle preferenze dell'utente)
+      validEmails = [...new Set(recipientEmails
+        .map((e: string) => (e || '').trim().toLowerCase())
+        .filter((e: string) => e && e.includes('@') && !e.includes('example.com')))]
+      console.log(`[send-email-notification] Destinatari mirati da preferenze: ${validEmails.length}`)
     } else {
       if (!groupId && !groupName) {
         throw new Error('Campo obbligatorio mancante (groupId o groupName)')
@@ -289,6 +296,70 @@ ${finalActionUrl}
 
 --------------------------------------------------
 Ricevi questa email in quanto capo attivo della Comunità Capi ${groupName || ''} su Orme.
+Supporto: ${senderEmail}
+      `.trim()
+
+    } else if (type === 'lista_attesa') {
+      finalSubject = customSubject || `[Orme] Lista d'Attesa: Aggiornamento — ${groupName || ''}`.trim()
+      badgeText = '📋 LISTA D\'ATTESA'
+      badgeColor = '#D97706'
+      badgeBg = '#FEF3C7'
+      mainHeading = customTitle || 'Nuovo Iscritto / Aggiornamento Lista d\'Attesa'
+      finalActionUrl = actionUrl || 'https://orme.pages.dev/lista-attesa'
+      finalActionLabel = actionLabel || 'Visualizza Lista d\'Attesa'
+
+      contentHtmlBlock = `
+        <div style="margin: 20px 0; padding: 20px; background-color: #fffbeb; border-radius: 12px; border: 1px solid #fde68a; text-align: left;">
+            <p style="font-size: 15px; line-height: 1.6; color: #92400e; margin: 0; font-weight: 500;">
+                ${body}
+            </p>
+        </div>
+      `
+
+      textContent = `
+⚜️ ORME — COMUNITÀ CAPI
+Lista d'Attesa
+--------------------------------------------------
+
+${body}
+
+Visualizza la lista d'attesa su Orme:
+${finalActionUrl}
+
+--------------------------------------------------
+Ricevi questa email in quanto capo attivo con notifiche attive per la lista d'attesa del gruppo ${groupName || ''}.
+Supporto: ${senderEmail}
+      `.trim()
+
+    } else if (type === 'aggiornamento_luoghi') {
+      finalSubject = customSubject || `[Orme] Luoghi & Basi Scout: Aggiornamento — ${groupName || ''}`.trim()
+      badgeText = '🏕️ LUOGHI & BASI SCOUT'
+      badgeColor = '#059669'
+      badgeBg = '#D1FAE5'
+      mainHeading = customTitle || 'Aggiornamento Luogo Scout'
+      finalActionUrl = actionUrl || 'https://orme.pages.dev/'
+      finalActionLabel = actionLabel || 'Visualizza Scheda Luogo'
+
+      contentHtmlBlock = `
+        <div style="margin: 20px 0; padding: 20px; background-color: #ecfdf5; border-radius: 12px; border: 1px solid #a7f3d0; text-align: left;">
+            <p style="font-size: 15px; line-height: 1.6; color: #065f46; margin: 0; font-weight: 500;">
+                ${body}
+            </p>
+        </div>
+      `
+
+      textContent = `
+⚜️ ORME — LUOGHI & BASI SCOUT
+Aggiornamento Luoghi
+--------------------------------------------------
+
+${body}
+
+Accedi alla scheda su Orme:
+${finalActionUrl}
+
+--------------------------------------------------
+Ricevi questa email in quanto capo attivo con notifiche attive per i luoghi del gruppo ${groupName || ''}.
 Supporto: ${senderEmail}
       `.trim()
 

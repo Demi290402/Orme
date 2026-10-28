@@ -2,6 +2,7 @@ import { supabase } from './supabase';
 import { ListaAttesa, ImpostazioniIscrizione, FormBlock, FormQuestion } from '@/types';
 import { getUser } from './data';
 import { isOnline, getCachedData, setCachedData, enqueueOfflineWrite } from './offline';
+import { dispatchGroupNotification } from './notifications';
 
 export const CLASSI = [
     'Asilo',
@@ -222,6 +223,24 @@ export async function addIscritto(
         // Refresh local cache
         await getListaAttesa();
         
+        // Invia notifica Comunità Capi (In-App ed Email in base alle preferenze)
+        const author = currentUser.nickname || `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || 'Un capo';
+        dispatchGroupNotification({
+            groupId: currentUser.groupId,
+            groupName: currentUser.groupName,
+            category: 'lista_attesa',
+            type: 'lista_attesa',
+            title: `📋 Nuovo iscritto in Lista d'Attesa: ${insertData.nome_ragazzo} ${insertData.cognome_ragazzo}`,
+            body: `${author} ha inserito ${insertData.nome_ragazzo} ${insertData.cognome_ragazzo} (${insertData.classe}) in Lista d'Attesa.`,
+            data: { 
+                nomeRagazzo: insertData.nome_ragazzo, 
+                cognomeRagazzo: insertData.cognome_ragazzo, 
+                classe: insertData.classe 
+            },
+            actionUrl: 'https://orme.pages.dev/lista-attesa',
+            actionLabel: 'Visualizza Lista d\'Attesa'
+        }).catch(err => console.warn('Errore invio notifica lista attesa manuale:', err));
+
         return mapDbRowToListaAttesa(data);
     } catch (error: any) {
         console.error("Errore nell'aggiunta dell'iscritto:", error);
@@ -329,6 +348,25 @@ export async function addIscrittoPubblico(
             .insert(insertData);
 
         if (error) throw error;
+
+        // Invia notifica Comunità Capi per iscrizione ricevuta da modulo pubblico (In-App ed Email secondo preferenze)
+        dispatchGroupNotification({
+            groupId: String(groupId),
+            category: 'lista_attesa',
+            type: 'lista_attesa',
+            title: `📋 Nuovo iscritto in Lista d'Attesa: ${insertData.nome_ragazzo} ${insertData.cognome_ragazzo}`,
+            body: `È arrivata una nuova richiesta di iscrizione per ${insertData.nome_ragazzo} ${insertData.cognome_ragazzo} (${insertData.classe || 'Nuovo ragazzo'}). Genitore: ${insertData.nome_genitore} (Tel: ${insertData.telefono_genitore}).`,
+            data: { 
+                nomeRagazzo: insertData.nome_ragazzo, 
+                cognomeRagazzo: insertData.cognome_ragazzo, 
+                classe: insertData.classe,
+                nomeGenitore: insertData.nome_genitore,
+                telefonoGenitore: insertData.telefono_genitore,
+            },
+            actionUrl: 'https://orme.pages.dev/lista-attesa',
+            actionLabel: 'Visualizza Lista d\'Attesa'
+        }).catch(err => console.warn('Errore invio notifica lista attesa modulo pubblico:', err));
+
         return true;
     } catch (error) {
         console.error("Errore nell'invio pubblico dell'iscrizione:", error);
@@ -369,6 +407,27 @@ export async function updateIscritto(iscritto: ListaAttesa): Promise<ListaAttesa
         // Refresh local cache
         await getListaAttesa();
         
+        // Invia notifica Comunità Capi (In-App ed Email in base alle preferenze)
+        try {
+            const currentUser = await getUser();
+            if (currentUser?.groupId) {
+                const author = currentUser.nickname || `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || 'Un capo';
+                dispatchGroupNotification({
+                    groupId: currentUser.groupId,
+                    groupName: currentUser.groupName,
+                    category: 'lista_attesa',
+                    type: 'lista_attesa',
+                    title: `📋 Modifica Lista d'Attesa: ${updateData.nome_ragazzo} ${updateData.cognome_ragazzo}`,
+                    body: `${author} ha modificato la scheda di ${updateData.nome_ragazzo} ${updateData.cognome_ragazzo} (${updateData.classe}).`,
+                    data: { id: iscritto.id },
+                    actionUrl: 'https://orme.pages.dev/lista-attesa',
+                    actionLabel: 'Visualizza Lista d\'Attesa'
+                }).catch(err => console.warn('Errore invio notifica modifica lista attesa:', err));
+            }
+        } catch (e) {
+            console.warn('Errore utente per notifica updateIscritto:', e);
+        }
+
         return mapDbRowToListaAttesa(data);
     } catch (error) {
         console.error("Errore nell'aggiornamento dell'iscritto:", error);

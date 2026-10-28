@@ -1,7 +1,6 @@
 import { supabase } from './supabase';
-import { Location, User, LocationReview } from '@/types';
-import { createNotificationsForGroup, createNotification } from './notifications';
-import { sendGroupEmailNotification } from './emailNotification';
+import { Location, User, LocationReview, DEFAULT_NOTIFICATION_PREFERENCES } from '@/types';
+import { createNotification, dispatchGroupNotification } from './notifications';
 import { isOnline, getCachedData, setCachedData, enqueueOfflineWrite } from './offline';
 import { findDuplicateLocation } from './duplicateDetection';
 
@@ -167,39 +166,32 @@ export async function registerUser(userData: {
 
         if (profileError) throw profileError;
 
-        // Notifica il gruppo per la nuova richiesta o il nuovo ingresso
+        // Notifica il gruppo per la nuova richiesta o il nuovo ingresso (secondo le preferenze dei membri)
         if (userData.groupId) {
             if (membershipStatus === 'attivo' && !userData.isGroupCreator) {
-                createNotificationsForGroup(
-                    userData.groupId,
-                    'nuovo_capo',
-                    `⚜️ Nuovo capo in CoCa — ${userData.firstName} ${userData.lastName}`,
-                    `${userData.firstName} ${userData.lastName}${userData.nickname ? ` (${userData.nickname})` : ''} è entrato nella Comunità Capi con codice di accesso.`,
-                    { userId: authData.user.id },
-                    authData.user.id
-                ).catch(console.error);
-            } else if (membershipStatus === 'in_attesa') {
-                createNotificationsForGroup(
-                    userData.groupId,
-                    'richiesta_accesso',
-                    `🔔 Nuova richiesta di accesso — ${userData.firstName} ${userData.lastName}`,
-                    `${userData.firstName} ${userData.lastName}${userData.nickname ? ` (${userData.nickname})` : ''} ha richiesto l'accesso alla Comunità Capi. Servono 2 approvazioni.`,
-                    { userId: authData.user.id },
-                    authData.user.id
-                ).catch(console.error);
-
-                // Notifica email ufficiale all'intera Comunità Capi
-                sendGroupEmailNotification({
+                dispatchGroupNotification({
                     groupId: userData.groupId,
                     groupName: userData.groupName,
-                    excludeUserId: authData.user.id,
+                    category: 'richiesta_accesso',
+                    type: 'nuovo_capo',
+                    title: `⚜️ Nuovo capo in CoCa — ${userData.firstName} ${userData.lastName}`,
+                    body: `${userData.firstName} ${userData.lastName}${userData.nickname ? ` (${userData.nickname})` : ''} è entrato nella Comunità Capi con codice di accesso.`,
+                    data: { userId: authData.user.id },
+                    actionUrl: 'https://orme.pages.dev/verbali/membri',
+                    actionLabel: 'Visualizza Membri CoCa'
+                }).catch(console.error);
+            } else if (membershipStatus === 'in_attesa') {
+                dispatchGroupNotification({
+                    groupId: userData.groupId,
+                    groupName: userData.groupName,
+                    category: 'richiesta_accesso',
                     type: 'richiesta_accesso',
-                    candidateName: `${userData.firstName} ${userData.lastName}`,
-                    candidateNickname: userData.nickname,
-                    body: `Il capo ${userData.firstName} ${userData.lastName}${userData.nickname ? ` (${userData.nickname})` : ''} sta chiedendo di entrare a far parte della Comunità Capi del ${userData.groupName || ''}. Per convalidare l'accesso su Orme sono necessarie 2 approvazioni da parte dei capi già censiti.`,
+                    title: `🔔 Nuova richiesta di accesso — ${userData.firstName} ${userData.lastName}`,
+                    body: `Il capo ${userData.firstName} ${userData.lastName}${userData.nickname ? ` (${userData.nickname})` : ''} ha richiesto l'accesso alla Comunità Capi del ${userData.groupName || ''}. Servono 2 approvazioni da parte dei capi censiti.`,
+                    data: { userId: authData.user.id },
                     actionUrl: 'https://orme.pages.dev/verbali/membri?tab=sicurezza',
                     actionLabel: 'Esamina e Vota la Richiesta'
-                }).catch(err => console.warn('Errore notifica email CoCa alla registrazione:', err));
+                }).catch(console.error);
             }
         }
 
@@ -828,39 +820,32 @@ export async function transferUserGroup(params: {
 
     if (error) throw error;
 
-    // Notifica il nuovo gruppo
+    // Notifica il nuovo gruppo secondo le preferenze dei membri
     if (params.groupId) {
         if (newStatus === 'attivo') {
-            createNotificationsForGroup(
-                params.groupId,
-                'nuovo_capo',
-                `⚜️ Nuovo capo in CoCa — ${currentUser.firstName} ${currentUser.lastName}`,
-                `${currentUser.firstName} ${currentUser.lastName}${currentUser.nickname ? ` (${currentUser.nickname})` : ''} è entrato nella tua Comunità Capi con codice di accesso.`,
-                { userId: currentUser.id },
-                currentUser.id
-            ).catch(console.error);
-        } else {
-            createNotificationsForGroup(
-                params.groupId,
-                'richiesta_accesso',
-                `🔔 Nuova richiesta di accesso CoCa — ${currentUser.firstName} ${currentUser.lastName}`,
-                `${currentUser.firstName} ${currentUser.lastName}${currentUser.nickname ? ` (${currentUser.nickname})` : ''} ha richiesto l'accesso senza codice. Servono 2 approvazioni.`,
-                { userId: currentUser.id },
-                currentUser.id
-            ).catch(console.error);
-
-            // Notifica email ufficiale all'intera Comunità Capi per il cambio gruppo
-            sendGroupEmailNotification({
+            dispatchGroupNotification({
                 groupId: params.groupId,
                 groupName: params.groupName,
-                excludeUserId: currentUser.id,
+                category: 'richiesta_accesso',
+                type: 'nuovo_capo',
+                title: `⚜️ Nuovo capo in CoCa — ${currentUser.firstName} ${currentUser.lastName}`,
+                body: `${currentUser.firstName} ${currentUser.lastName}${currentUser.nickname ? ` (${currentUser.nickname})` : ''} è entrato nella tua Comunità Capi con codice di accesso.`,
+                data: { userId: currentUser.id },
+                actionUrl: 'https://orme.pages.dev/verbali/membri',
+                actionLabel: 'Visualizza Membri CoCa'
+            }).catch(console.error);
+        } else {
+            dispatchGroupNotification({
+                groupId: params.groupId,
+                groupName: params.groupName,
+                category: 'richiesta_accesso',
                 type: 'richiesta_accesso',
-                candidateName: `${currentUser.firstName} ${currentUser.lastName}`,
-                candidateNickname: currentUser.nickname,
-                body: `Il capo ${currentUser.firstName} ${currentUser.lastName}${currentUser.nickname ? ` (${currentUser.nickname})` : ''} ha aggiornato la propria richiesta e desidera entrare a far parte della Comunità Capi del ${params.groupName || ''}. Servono 2 approvazioni da parte dei capi censiti per convalidare l'accesso.`,
+                title: `🔔 Nuova richiesta di accesso CoCa — ${currentUser.firstName} ${currentUser.lastName}`,
+                body: `Il capo ${currentUser.firstName} ${currentUser.lastName}${currentUser.nickname ? ` (${currentUser.nickname})` : ''} desidera entrare a far parte della Comunità Capi del ${params.groupName || ''}. Servono 2 approvazioni da parte dei capi censiti per convalidare l'accesso.`,
+                data: { userId: currentUser.id },
                 actionUrl: 'https://orme.pages.dev/verbali/membri?tab=sicurezza',
                 actionLabel: 'Esamina e Vota la Richiesta'
-            }).catch(err => console.warn('Errore notifica email CoCa al cambio gruppo:', err));
+            }).catch(console.error);
         }
     }
 
@@ -924,6 +909,8 @@ export async function updateUser(user: User): Promise<User> {
         group_role: user.groupRole || 'capo',
         has_valid_pin: user.hasValidPin || false,
         coca_approvals: user.cocaApprovals || [],
+        notification_preferences: user.notificationPreferences,
+        notification_tone: user.notificationTone,
     };
 
     const currentGroupKey = resolvedGroupId || user.groupId || user.groupName || '';
@@ -941,17 +928,25 @@ export async function updateUser(user: User): Promise<User> {
         return user;
     }
     try {
+        let payload: any = { ...updateData, group_points: updatedGroupPoints };
         let { data, error } = await supabase
             .from('users')
-            .update({ ...updateData, group_points: updatedGroupPoints })
+            .update(payload)
             .eq('id', user.id)
             .select()
             .single();
 
-        if (error && (String(error.message || '').includes('group_points') || (error as any).code === 'PGRST204')) {
+        if (error) {
+            // Strip any missing columns dynamically and retry
+            const colsToClean = ['group_points', 'notification_preferences', 'notification_tone'];
+            for (const col of colsToClean) {
+                if (String(error.message || '').includes(col) || (error as any).code === 'PGRST204') {
+                    delete payload[col];
+                }
+            }
             const fallbackRes = await supabase
                 .from('users')
-                .update(updateData)
+                .update(payload)
                 .eq('id', user.id)
                 .select()
                 .single();
@@ -1177,16 +1172,23 @@ export async function addLocation(location: Omit<Location, 'id' | 'lastUpdatedAt
             })
             .eq('id', currentUser.id);
 
-        // Invia notifica agli altri membri del gruppo (fire and forget)
+        // Invia notifica per nuovo luogo censito (In-app ed email secondo le preferenze dei membri, incluso chi lo aggiunge)
         if (currentUser.groupId) {
-            createNotificationsForGroup(
-                currentUser.groupId,
-                'location_added',
-                `📍 Nuovo luogo: ${location.name || 'Senza nome'}`,
-                `${currentUser.nickname || currentUser.firstName} ha aggiunto ${location.name || 'un luogo'} in ${location.commune || location.region || 'un nuovo posto'}.`,
-                { locationId: (insertedData || currentInsertData).id },
-                currentUser.id
-            ).catch(e => console.error("Error creating location notification:", e));
+            const locId = (insertedData || currentInsertData).id;
+            const author = currentUser.nickname || `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || 'Un capo';
+            const locName = location.name || 'Nuovo luogo';
+            const locWhere = location.commune || location.region || 'Italia';
+            dispatchGroupNotification({
+                groupId: currentUser.groupId,
+                groupName: currentUser.groupName,
+                category: 'aggiornamento_luoghi',
+                type: 'location_added',
+                title: `📍 Nuovo luogo censito: ${locName}`,
+                body: `${author} ha inserito il luogo "${locName}" in ${locWhere}.`,
+                data: { locationId: locId },
+                actionUrl: `https://orme.pages.dev/location/${locId}`,
+                actionLabel: 'Visualizza Scheda Luogo'
+            }).catch(e => console.error("Error creating location notification:", e));
         }
 
         invalidateLocationsCache();
@@ -1267,6 +1269,23 @@ export async function updateLocation(id: string, location: Partial<Location>, de
 
         // Invalidate cache
         invalidateLocationsCache();
+
+        // Invia notifica per aggiornamento scheda luogo (In-app ed email secondo le preferenze dei membri, incluso chi lo modifica)
+        if (currentUser.groupId) {
+            const author = currentUser.nickname || `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || 'Un capo';
+            const locName = location.name || updatedData?.name || 'Luogo scout';
+            dispatchGroupNotification({
+                groupId: currentUser.groupId,
+                groupName: currentUser.groupName,
+                category: 'aggiornamento_luoghi',
+                type: 'location_updated',
+                title: `📍 Luogo aggiornato: ${locName}`,
+                body: `${author} ha modificato la scheda di "${locName}" (${detailsSummary || 'modifiche apportate'}).`,
+                data: { locationId: id, details: detailsSummary },
+                actionUrl: `https://orme.pages.dev/location/${id}`,
+                actionLabel: 'Visualizza Scheda Luogo'
+            }).catch(e => console.error("Error creating location update notification:", e));
+        }
 
         return mapSupabaseLocationToLocation(updatedData);
     } catch (error) {
@@ -1441,6 +1460,8 @@ function mapSupabaseUserToUser(data: any): User {
         cocaApprovals: data.coca_approvals || [],
         hasValidPin: data.has_valid_pin || false,
         groupPoints: data.group_points || {},
+        notificationPreferences: data.notification_preferences ? { ...DEFAULT_NOTIFICATION_PREFERENCES, ...data.notification_preferences } : DEFAULT_NOTIFICATION_PREFERENCES,
+        notificationTone: data.notification_tone || 'default',
     };
 }
 
