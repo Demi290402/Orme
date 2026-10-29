@@ -5,8 +5,7 @@ import {
     Edit, Euro, Wrench, Ban, Star, Footprints, X, 
     Droplets, Flame, Wind, ShieldCheck, Users, 
     Globe, Mail, Copy, Check, Building, Facebook, Instagram, Truck, Eye, 
-    FileText, MoreVertical, AlertTriangle, Navigation, 
-    ShieldAlert, ChevronDown, ChevronUp
+    MoreVertical, AlertTriangle, Navigation, ShieldAlert
 } from 'lucide-react';
 import { 
     getLocations, getUser, getReviews, saveReview, deleteLocation, 
@@ -244,7 +243,6 @@ export default function LocationDetail() {
     // Copy states
     const [copiedPhone, setCopiedPhone] = useState<string | null>(null);
     const [copiedEmail, setCopiedEmail] = useState<string | null>(null);
-    const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
     // History and Views
     const [historyList, setHistoryList] = useState<any[]>([]);
@@ -920,42 +918,7 @@ export default function LocationDetail() {
                     </div>
 
                     {/* ========================================================= */}
-                    {/* 6. DESCRIZIONE COMPLETA DEL LUOGO                         */}
-                    {/* ========================================================= */}
-                    {location.description && location.description.trim() !== '' && (
-                        <div className="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 border border-gray-150 dark:border-gray-700/80 shadow-xs space-y-3">
-                            <div className="flex items-center gap-2 pb-2 border-b border-gray-100 dark:border-gray-700/60">
-                                <FileText size={18} className="text-scout-green" />
-                                <h2 className="text-base font-black text-gray-900 dark:text-white">
-                                    Descrizione del Luogo
-                                </h2>
-                            </div>
-                            <div className="space-y-2">
-                                <p className={cn(
-                                    "text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line font-medium",
-                                    !isDescriptionExpanded && location.description.length > 260 && "line-clamp-4"
-                                )}>
-                                    {location.description}
-                                </p>
-                                {location.description.length > 260 && (
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsDescriptionExpanded(p => !p)}
-                                        className="text-xs font-bold text-scout-green hover:underline flex items-center gap-1 cursor-pointer pt-1"
-                                    >
-                                        {isDescriptionExpanded ? (
-                                            <>Mostra meno <ChevronUp size={14} /></>
-                                        ) : (
-                                            <>Leggi tutto <ChevronDown size={14} /></>
-                                        )}
-                                    </button>
-                                )}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* ========================================================= */}
-                    {/* 7. ESPERIENZE DELLA COMMUNITY                             */}
+                    {/* 6. ESPERIENZE DELLA COMMUNITY                             */}
                     {/* ========================================================= */}
                     <div className="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 border border-gray-150 dark:border-gray-700/80 shadow-xs space-y-4">
                         <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-gray-700/60">
