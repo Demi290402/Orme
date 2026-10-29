@@ -156,6 +156,9 @@ export default function AddLocation() {
         const hasDetailedContacts = contacts.some(c => c.phone.trim() !== '' && (c.name.trim() !== '' || c.role.trim() !== ''));
         if (hasDetailedContacts) points += 3;
 
+        // Punti extra per descrizione accurata del posto
+        if (formData.description && formData.description.trim().length >= 25) points += 2;
+
         if (formData.pricingBase && parseFloat(formData.pricingBase) > 0) points += 5;
         return points;
     }, [formData, contacts, emails]);
@@ -1683,9 +1686,39 @@ export default function AddLocation() {
 
                 {/* Section 6: Note */}
                 <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 space-y-4">
-                    <h2 className="font-semibold text-lg">Note</h2>
                     <div>
-                        <label className="block text-sm font-medium mb-1">Nota Rapida (max 10 parole)</label>
+                        <h2 className="font-semibold text-lg text-gray-900 dark:text-white">Note & Descrizione del Luogo</h2>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                            Fornisci informazioni utili e pratiche ai capi scout che consulteranno la scheda.
+                        </p>
+                    </div>
+
+                    {/* Descrizione Estesa */}
+                    <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                            <label className="block text-sm font-bold text-gray-800 dark:text-gray-200">
+                                Descrizione del Luogo <span className="text-xs font-normal text-gray-400">(opzionale, +2 pt)</span>
+                            </label>
+                            {formData.description && formData.description.trim().length >= 25 && (
+                                <span className="text-[10px] font-bold text-scout-green bg-scout-green/10 px-2 py-0.5 rounded-full">
+                                    +2 Punti Ottenuti
+                                </span>
+                            )}
+                        </div>
+                        <textarea
+                            name="description"
+                            rows={4}
+                            value={formData.description}
+                            onChange={handleChange}
+                            className="w-full p-3.5 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm outline-none focus:ring-2 focus:ring-scout-green placeholder-gray-400 leading-relaxed transition-all"
+                            placeholder="Racconta com'è questo posto: il contesto naturalistico, gli spazi per giochi e costruzioni, il tipo di bosco, la storia del casale o consigli pratici per il campo..."
+                        />
+                        <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">
+                            Una buona descrizione aiuta gli altri capi a capire subito se il posto è ideale per il proprio campo o per la propria branca.
+                        </p>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-gray-800 dark:text-gray-200 mb-1">Nota Rapida <span className="text-xs font-normal text-gray-400">(max 10 parole - in evidenza nelle anteprime)</span></label>
                         <input
                             type="text" name="quickNote"
                             value={formData.quickNote} onChange={handleChange}

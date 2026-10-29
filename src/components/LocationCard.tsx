@@ -93,10 +93,10 @@ export default function LocationCard({ location, unreadModificationsCount }: Loc
                         <span className="truncate">{location.commune}{location.province ? ` (${location.province})` : ''}</span>
                     </div>
 
-                    {/* Nota Rapida */}
-                    {location.quickNote && (
+                    {/* Nota Rapida o Descrizione */}
+                    {(location.quickNote || location.description) && (
                         <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-3.5 line-clamp-2 italic bg-gray-50/80 dark:bg-gray-750/50 p-2.5 rounded-xl border border-gray-150 dark:border-gray-700/60 leading-relaxed">
-                            "{location.quickNote}"
+                            "{location.quickNote || location.description}"
                         </p>
                     )}
 

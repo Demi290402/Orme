@@ -1158,6 +1158,7 @@ export async function addLocation(location: Omit<Location, 'id' | 'lastUpdatedAt
         if (hasPricing) pointsAwarded += 5;
         if (hasWebsite) pointsAwarded += 2;
         if (hasSocials) pointsAwarded += 2; // +2 punti per canali social (Facebook, Instagram)
+        if (location.description && location.description.trim().length >= 25) pointsAwarded += 2; // +2 punti per descrizione dettagliata
 
         // Update user stats
         await supabase

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Phone, MessageCircle, Map, ArrowLeft, BedDouble, Tent, Coffee, ShieldAlert, Edit, Euro, Wrench, Ban, Star, Footprints, MessageSquare, X, Droplets, Flame, Wind, ShieldCheck, Users, ChevronLeft, ChevronRight, Globe, Mail, Copy, Check, Building, Facebook, Instagram, Truck, Eye, Home } from 'lucide-react';
+import { Phone, MessageCircle, Map, ArrowLeft, BedDouble, Tent, Coffee, ShieldAlert, Edit, Euro, Wrench, Ban, Star, Footprints, MessageSquare, X, Droplets, Flame, Wind, ShieldCheck, Users, ChevronLeft, ChevronRight, Globe, Mail, Copy, Check, Building, Facebook, Instagram, Truck, Eye, Home, FileText } from 'lucide-react';
 import { getLocations, getUser, getReviews, saveReview, deleteLocation, getLocationHistory, upsertLocationView, getUserLocationViews, recordLocationVisit } from '@/lib/data';
 import { Location, LocationReview } from '@/types';
 import { getStalenessInfo, cn } from '@/lib/utils';
@@ -736,6 +736,28 @@ export default function LocationDetail() {
                 </a>
             </div>
 
+            {/* Sezione Descrizione Completa del Luogo */}
+            {location.description && location.description.trim() !== '' && (
+                <div className="bg-white dark:bg-gray-800 rounded-[2rem] shadow-sm border border-gray-100 dark:border-gray-700 p-6 space-y-3.5">
+                    <div className="flex items-center gap-2.5 pb-3 border-b border-gray-100 dark:border-gray-700/70">
+                        <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-scout-green flex items-center justify-center shrink-0">
+                            <FileText size={17} />
+                        </div>
+                        <div>
+                            <h2 className="font-black text-sm uppercase tracking-wider text-gray-900 dark:text-white">
+                                Descrizione del Luogo
+                            </h2>
+                            <p className="text-[11px] text-gray-400 dark:text-gray-500 font-medium">
+                                Panoramica, ambiente e dettagli generali
+                            </p>
+                        </div>
+                    </div>
+                    <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line font-medium">
+                        {location.description}
+                    </p>
+                </div>
+            )}
+
             {/* Sezione Contatti e Referenti */}
             {phoneContacts.length > 0 && (
                 <div className="bg-white dark:bg-gray-800 rounded-[2rem] shadow-sm border border-gray-100 dark:border-gray-700 p-6 space-y-4">
@@ -1252,9 +1274,16 @@ export default function LocationDetail() {
             )}
 
             {/* Quick Note */}
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 p-6 rounded-[2rem] border border-yellow-100 dark:border-yellow-800 text-xs font-medium text-yellow-900 dark:text-yellow-200 italic leading-relaxed">
-                "{location.quickNote}"
-            </div>
+            {location.quickNote && (
+                <div className="bg-amber-50/80 dark:bg-amber-950/20 p-5 rounded-[2rem] border border-amber-200/70 dark:border-amber-800/40 text-amber-900 dark:text-amber-200 leading-relaxed space-y-1.5 shadow-2xs">
+                    <p className="font-bold text-[11px] uppercase tracking-wider text-amber-800 dark:text-amber-300 flex items-center gap-1.5 not-italic">
+                        <span>📌</span> Nota Rapida
+                    </p>
+                    <p className="font-medium italic text-xs sm:text-sm pl-0.5">
+                        "{location.quickNote}"
+                    </p>
+                </div>
+            )}
 
             {/* Review Modal */}
             {showReviewModal && (
