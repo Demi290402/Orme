@@ -60,9 +60,9 @@ export type UserNotificationPreferences = Record<NotificationCategory, Notificat
 
 export const DEFAULT_NOTIFICATION_PREFERENCES: UserNotificationPreferences = {
     verbali: 'entrambe',
-    lista_attesa: 'entrambe',
     richiesta_accesso: 'entrambe',
-    aggiornamento_luoghi: 'entrambe',
+    lista_attesa: 'disattivo',
+    aggiornamento_luoghi: 'disattivo',
 };
 
 export type MembershipStatus = 'attivo' | 'in_attesa' | 'uscito';

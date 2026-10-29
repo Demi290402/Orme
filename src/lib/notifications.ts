@@ -230,10 +230,10 @@ export async function dispatchGroupNotification(params: DispatchNotificationPara
                 continue;
             }
 
-            // Determine channel preference for this category
-            let pref: NotificationChannelPref = 'entrambe';
+            // Determine channel preference for this category (defaults to verbali & richiesta_accesso attive, lista_attesa & luoghi disattivo)
+            let pref: NotificationChannelPref = DEFAULT_NOTIFICATION_PREFERENCES[category];
             if (u.id === currentUserId) {
-                pref = localPrefs[category] ?? (u.notification_preferences?.[category] || 'entrambe');
+                pref = localPrefs[category] ?? (u.notification_preferences?.[category] || DEFAULT_NOTIFICATION_PREFERENCES[category]);
             } else if (u.notification_preferences && u.notification_preferences[category]) {
                 pref = u.notification_preferences[category];
             }
