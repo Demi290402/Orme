@@ -1286,166 +1286,223 @@ export default function Settings() {
                                 <button
                                     type="button"
                                     onClick={() => setSearchQuery('')}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1"
                                 >
                                     <X size={14} />
                                 </button>
                             )}
                         </div>
 
-                        {/* iOS Profile Banner Card */}
-                        {user && (
-                            <div
-                                onClick={() => navigate('/profile')}
-                                className="flex items-center gap-3.5 bg-white dark:bg-gray-800 p-3.5 rounded-2xl border border-gray-150 dark:border-gray-700/80 shadow-xs cursor-pointer active:scale-[0.99] transition-transform"
-                            >
-                                <div className="w-12 h-12 rounded-full bg-scout-green/10 flex items-center justify-center font-black text-scout-green text-base overflow-hidden shrink-0 border-2 border-scout-green/30">
-                                    {user.profilePicture
-                                        ? <img src={user.profilePicture} className="w-full h-full object-cover" alt={user.nickname} />
-                                        : user.nickname?.charAt(0) || 'U'}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="font-bold text-sm text-gray-900 dark:text-white truncate">
-                                        {user.firstName} {user.lastName}
-                                    </p>
-                                    <p className="text-xs text-gray-400 truncate font-medium">
-                                        @{user.nickname} {user.groupName ? `· ${user.groupName}` : ''}
-                                    </p>
-                                </div>
-                                <ChevronRight size={18} className="text-gray-300 dark:text-gray-600 shrink-0" />
+                        {/* Search Results or Default Grouped Menu */}
+                        {searchQuery.trim() ? (
+                            <div className="space-y-3">
+                                {filteredCategories.length === 0 ? (
+                                    <div className="py-12 px-4 text-center space-y-2.5 bg-white dark:bg-gray-800 rounded-2xl border border-gray-150 dark:border-gray-700/80 shadow-xs animate-in fade-in-50 duration-200">
+                                        <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-700/60 flex items-center justify-center mx-auto text-gray-400">
+                                            <Search size={22} />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-bold text-gray-800 dark:text-gray-200">Nessun risultato</p>
+                                            <p className="text-xs text-gray-400 mt-0.5">Nessuna impostazione trovata per "{searchQuery}"</p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setSearchQuery('')}
+                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-scout-green bg-scout-green/10 hover:bg-scout-green/20 transition-colors"
+                                        >
+                                            Cancella ricerca
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2">
+                                        <div className="flex items-center justify-between px-3 text-[11px] font-bold uppercase tracking-wider text-gray-400">
+                                            <span>Risultati ({filteredCategories.length})</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => setSearchQuery('')}
+                                                className="text-scout-green font-bold text-xs lowercase tracking-normal hover:underline"
+                                            >
+                                                cancella
+                                            </button>
+                                        </div>
+                                        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-150 dark:border-gray-700/80 overflow-hidden divide-y divide-gray-100 dark:divide-gray-700/50 shadow-xs">
+                                            {filteredCategories.map(cat => (
+                                                <div
+                                                    key={cat.id}
+                                                    onClick={() => setActiveTabMobile(cat.id)}
+                                                    className="flex items-center gap-3.5 px-4 py-3.5 hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer active:bg-gray-100 dark:active:bg-gray-700 transition-colors"
+                                                >
+                                                    <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center shrink-0", cat.iconBg, cat.iconColor)}>
+                                                        <cat.icon size={16} />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm font-bold text-gray-900 dark:text-white">{cat.label}</p>
+                                                        <p className="text-[11px] text-gray-400 truncate">{cat.description}</p>
+                                                    </div>
+                                                    <ChevronRight size={18} className="text-gray-300 dark:text-gray-600 shrink-0" />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
+                        ) : (
+                            <>
+                                {/* iOS Profile Banner Card */}
+                                {user && (
+                                    <div
+                                        onClick={() => navigate('/profile')}
+                                        className="flex items-center gap-3.5 bg-white dark:bg-gray-800 p-3.5 rounded-2xl border border-gray-150 dark:border-gray-700/80 shadow-xs cursor-pointer active:scale-[0.99] transition-transform"
+                                    >
+                                        <div className="w-12 h-12 rounded-full bg-scout-green/10 flex items-center justify-center font-black text-scout-green text-base overflow-hidden shrink-0 border-2 border-scout-green/30">
+                                            {user.profilePicture
+                                                ? <img src={user.profilePicture} className="w-full h-full object-cover" alt={user.nickname} />
+                                                : user.nickname?.charAt(0) || 'U'}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-bold text-sm text-gray-900 dark:text-white truncate">
+                                                {user.firstName} {user.lastName}
+                                            </p>
+                                            <p className="text-xs text-gray-400 truncate font-medium">
+                                                @{user.nickname} {user.groupName ? `· ${user.groupName}` : ''}
+                                            </p>
+                                        </div>
+                                        <ChevronRight size={18} className="text-gray-300 dark:text-gray-600 shrink-0" />
+                                    </div>
+                                )}
+
+                                {/* Grouped Table View (iOS Style) */}
+                                <div className="space-y-4">
+                                    {/* Group 1: Organizzazione & Gruppo */}
+                                    <div className="space-y-1.5">
+                                        <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400 px-3">
+                                            Gruppo & Comunità Capi
+                                        </p>
+                                        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-150 dark:border-gray-700/80 overflow-hidden divide-y divide-gray-100 dark:divide-gray-700/50 shadow-xs">
+                                            <div
+                                                onClick={() => setActiveTabMobile('gruppo')}
+                                                className="flex items-center gap-3.5 px-4 py-3.5 hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer active:bg-gray-100 dark:active:bg-gray-700 transition-colors"
+                                            >
+                                                <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                                                    <Users size={16} />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-bold text-gray-900 dark:text-white">Gruppo Scout & CoCa</p>
+                                                    <p className="text-[11px] text-gray-400 truncate">{user?.groupName || 'Nessun gruppo associato'}</p>
+                                                </div>
+                                                <ChevronRight size={18} className="text-gray-300 dark:text-gray-600 shrink-0" />
+                                            </div>
+
+                                            <div
+                                                onClick={() => setShowShareModal(true)}
+                                                className="flex items-center gap-3.5 px-4 py-3.5 hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer active:bg-gray-100 dark:active:bg-gray-700 transition-colors"
+                                            >
+                                                <div className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shrink-0">
+                                                    <Share2 size={16} />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-bold text-gray-900 dark:text-white">Invita Capi Scout su Orme</p>
+                                                    <p className="text-[11px] text-gray-400">Condividi l'applicazione</p>
+                                                </div>
+                                                <ChevronRight size={18} className="text-gray-300 dark:text-gray-600 shrink-0" />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Group 2: Preferenze & Sistema */}
+                                    <div className="space-y-1.5">
+                                        <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400 px-3">
+                                            Preferenze & Sistema
+                                        </p>
+                                        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-150 dark:border-gray-700/80 overflow-hidden divide-y divide-gray-100 dark:divide-gray-700/50 shadow-xs">
+                                            <div
+                                                onClick={() => setActiveTabMobile('notifiche')}
+                                                className="flex items-center gap-3.5 px-4 py-3.5 hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer active:bg-gray-100 dark:active:bg-gray-700 transition-colors"
+                                            >
+                                                <div className="w-8 h-8 rounded-xl bg-purple-100 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+                                                    <Bell size={16} />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-bold text-gray-900 dark:text-white">Notifiche & Avvisi</p>
+                                                    <p className="text-[11px] text-gray-400">Canali per tipologia e tono audio</p>
+                                                </div>
+                                                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 mr-1">
+                                                    {notifiche ? 'Attive' : 'Silenziate'}
+                                                </span>
+                                                <ChevronRight size={18} className="text-gray-300 dark:text-gray-600 shrink-0" />
+                                            </div>
+
+                                            <div
+                                                onClick={() => setActiveTabMobile('aspetto')}
+                                                className="flex items-center gap-3.5 px-4 py-3.5 hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer active:bg-gray-100 dark:active:bg-gray-700 transition-colors"
+                                            >
+                                                <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                                                    {theme === 'dark' ? <Moon size={16} /> : <Sun size={16} />}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-bold text-gray-900 dark:text-white">Aspetto & Dispositivi</p>
+                                                    <p className="text-[11px] text-gray-400">Tema scuro e vista smartwatch</p>
+                                                </div>
+                                                <span className="text-xs font-bold text-gray-400 mr-1">
+                                                    {theme === 'dark' ? 'Scuro' : 'Chiaro'}
+                                                </span>
+                                                <ChevronRight size={18} className="text-gray-300 dark:text-gray-600 shrink-0" />
+                                            </div>
+
+                                            <div
+                                                onClick={() => setActiveTabMobile('dati')}
+                                                className="flex items-center gap-3.5 px-4 py-3.5 hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer active:bg-gray-100 dark:active:bg-gray-700 transition-colors"
+                                            >
+                                                <div className="w-8 h-8 rounded-xl bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                                                    <Download size={16} />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-bold text-gray-900 dark:text-white">Dati & Backup</p>
+                                                    <p className="text-[11px] text-gray-400">Download Excel ed estrazione programmata</p>
+                                                </div>
+                                                <ChevronRight size={18} className="text-gray-300 dark:text-gray-600 shrink-0" />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Group 3: Account & Supporto */}
+                                    <div className="space-y-1.5">
+                                        <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400 px-3">
+                                            Account & Supporto
+                                        </p>
+                                        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-150 dark:border-gray-700/80 overflow-hidden divide-y divide-gray-100 dark:divide-gray-700/50 shadow-xs">
+                                            <div
+                                                onClick={() => setActiveTabMobile('account')}
+                                                className="flex items-center gap-3.5 px-4 py-3.5 hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer active:bg-gray-100 dark:active:bg-gray-700 transition-colors"
+                                            >
+                                                <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+                                                    <Shield size={16} />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-bold text-gray-900 dark:text-white">Account & Privacy</p>
+                                                    <p className="text-[11px] text-gray-400">Modifica profilo e gestione dati</p>
+                                                </div>
+                                                <ChevronRight size={18} className="text-gray-300 dark:text-gray-600 shrink-0" />
+                                            </div>
+
+                                            <div
+                                                onClick={() => setActiveTabMobile('assistenza')}
+                                                className="flex items-center gap-3.5 px-4 py-3.5 hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer active:bg-gray-100 dark:active:bg-gray-700 transition-colors"
+                                            >
+                                                <div className="w-8 h-8 rounded-xl bg-orange-100 dark:bg-orange-950/60 text-orange-600 dark:text-orange-400 flex items-center justify-center shrink-0">
+                                                    <HelpCircle size={16} />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-bold text-gray-900 dark:text-white">Assistenza & Feedback</p>
+                                                    <p className="text-[11px] text-gray-400">Segnala problema e info versione</p>
+                                                </div>
+                                                <ChevronRight size={18} className="text-gray-300 dark:text-gray-600 shrink-0" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </>
                         )}
-
-                        {/* Grouped Table View (iOS Style) */}
-                        <div className="space-y-4">
-                            {/* Group 1: Organizzazione & Gruppo */}
-                            <div className="space-y-1.5">
-                                <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400 px-3">
-                                    Gruppo & Comunità Capi
-                                </p>
-                                <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-150 dark:border-gray-700/80 overflow-hidden divide-y divide-gray-100 dark:divide-gray-700/50 shadow-xs">
-                                    <div
-                                        onClick={() => setActiveTabMobile('gruppo')}
-                                        className="flex items-center gap-3.5 px-4 py-3.5 hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer active:bg-gray-100 dark:active:bg-gray-700 transition-colors"
-                                    >
-                                        <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center shrink-0">
-                                            <Users size={16} />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-bold text-gray-900 dark:text-white">Gruppo Scout & CoCa</p>
-                                            <p className="text-[11px] text-gray-400 truncate">{user?.groupName || 'Nessun gruppo associato'}</p>
-                                        </div>
-                                        <ChevronRight size={18} className="text-gray-300 dark:text-gray-600 shrink-0" />
-                                    </div>
-
-                                    <div
-                                        onClick={() => setShowShareModal(true)}
-                                        className="flex items-center gap-3.5 px-4 py-3.5 hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer active:bg-gray-100 dark:active:bg-gray-700 transition-colors"
-                                    >
-                                        <div className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shrink-0">
-                                            <Share2 size={16} />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-bold text-gray-900 dark:text-white">Invita Capi Scout su Orme</p>
-                                            <p className="text-[11px] text-gray-400">Condividi l'applicazione</p>
-                                        </div>
-                                        <ChevronRight size={18} className="text-gray-300 dark:text-gray-600 shrink-0" />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Group 2: Preferenze & Sistema */}
-                            <div className="space-y-1.5">
-                                <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400 px-3">
-                                    Preferenze & Sistema
-                                </p>
-                                <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-150 dark:border-gray-700/80 overflow-hidden divide-y divide-gray-100 dark:divide-gray-700/50 shadow-xs">
-                                    <div
-                                        onClick={() => setActiveTabMobile('notifiche')}
-                                        className="flex items-center gap-3.5 px-4 py-3.5 hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer active:bg-gray-100 dark:active:bg-gray-700 transition-colors"
-                                    >
-                                        <div className="w-8 h-8 rounded-xl bg-purple-100 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
-                                            <Bell size={16} />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-bold text-gray-900 dark:text-white">Notifiche & Avvisi</p>
-                                            <p className="text-[11px] text-gray-400">Canali per tipologia e tono audio</p>
-                                        </div>
-                                        <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 mr-1">
-                                            {notifiche ? 'Attive' : 'Silenziate'}
-                                        </span>
-                                        <ChevronRight size={18} className="text-gray-300 dark:text-gray-600 shrink-0" />
-                                    </div>
-
-                                    <div
-                                        onClick={() => setActiveTabMobile('aspetto')}
-                                        className="flex items-center gap-3.5 px-4 py-3.5 hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer active:bg-gray-100 dark:active:bg-gray-700 transition-colors"
-                                    >
-                                        <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-                                            {theme === 'dark' ? <Moon size={16} /> : <Sun size={16} />}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-bold text-gray-900 dark:text-white">Aspetto & Dispositivi</p>
-                                            <p className="text-[11px] text-gray-400">Tema scuro e vista smartwatch</p>
-                                        </div>
-                                        <span className="text-xs font-bold text-gray-400 mr-1">
-                                            {theme === 'dark' ? 'Scuro' : 'Chiaro'}
-                                        </span>
-                                        <ChevronRight size={18} className="text-gray-300 dark:text-gray-600 shrink-0" />
-                                    </div>
-
-                                    <div
-                                        onClick={() => setActiveTabMobile('dati')}
-                                        className="flex items-center gap-3.5 px-4 py-3.5 hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer active:bg-gray-100 dark:active:bg-gray-700 transition-colors"
-                                    >
-                                        <div className="w-8 h-8 rounded-xl bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-                                            <Download size={16} />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-bold text-gray-900 dark:text-white">Dati & Backup</p>
-                                            <p className="text-[11px] text-gray-400">Download Excel ed estrazione programmata</p>
-                                        </div>
-                                        <ChevronRight size={18} className="text-gray-300 dark:text-gray-600 shrink-0" />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Group 3: Account & Supporto */}
-                            <div className="space-y-1.5">
-                                <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400 px-3">
-                                    Account & Supporto
-                                </p>
-                                <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-150 dark:border-gray-700/80 overflow-hidden divide-y divide-gray-100 dark:divide-gray-700/50 shadow-xs">
-                                    <div
-                                        onClick={() => setActiveTabMobile('account')}
-                                        className="flex items-center gap-3.5 px-4 py-3.5 hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer active:bg-gray-100 dark:active:bg-gray-700 transition-colors"
-                                    >
-                                        <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
-                                            <Shield size={16} />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-bold text-gray-900 dark:text-white">Account & Privacy</p>
-                                            <p className="text-[11px] text-gray-400">Modifica profilo e gestione dati</p>
-                                        </div>
-                                        <ChevronRight size={18} className="text-gray-300 dark:text-gray-600 shrink-0" />
-                                    </div>
-
-                                    <div
-                                        onClick={() => setActiveTabMobile('assistenza')}
-                                        className="flex items-center gap-3.5 px-4 py-3.5 hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer active:bg-gray-100 dark:active:bg-gray-700 transition-colors"
-                                    >
-                                        <div className="w-8 h-8 rounded-xl bg-orange-100 dark:bg-orange-950/60 text-orange-600 dark:text-orange-400 flex items-center justify-center shrink-0">
-                                            <HelpCircle size={16} />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-bold text-gray-900 dark:text-white">Assistenza & Feedback</p>
-                                            <p className="text-[11px] text-gray-400">Segnala problema e info versione</p>
-                                        </div>
-                                        <ChevronRight size={18} className="text-gray-300 dark:text-gray-600 shrink-0" />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
 
                         {/* App footer note */}
                         <p className="text-center text-[11px] font-medium text-gray-400 dark:text-gray-500 pt-2">
