@@ -5,7 +5,7 @@ import {
     Edit, Euro, Wrench, Ban, Star, Footprints, X, 
     Droplets, Flame, Wind, ShieldCheck, Users, 
     Globe, Mail, Copy, Check, Building, Facebook, Instagram, Truck, Eye, 
-    MoreVertical, AlertTriangle, Navigation, ShieldAlert
+    MoreVertical, AlertTriangle, Navigation, ShieldAlert, ExternalLink
 } from 'lucide-react';
 import { 
     getLocations, getUser, getReviews, saveReview, deleteLocation, 
@@ -365,27 +365,32 @@ export default function LocationDetail() {
         ? location.emails
         : (location.email ? location.email.split(/[,;\s]+/).map(s => s.trim()).filter(Boolean) : []);
 
-    const websiteUrl = location.website 
-        ? (location.website.startsWith('http://') || location.website.startsWith('https://') 
-            ? location.website 
-            : `https://${location.website}`)
+    const cleanWebsite = location.website?.trim();
+    const websiteUrl = cleanWebsite 
+        ? (cleanWebsite.startsWith('http://') || cleanWebsite.startsWith('https://') 
+            ? cleanWebsite 
+            : `https://${cleanWebsite}`)
         : undefined;
 
-    const facebookUrl = location.facebook
-        ? (location.facebook.startsWith('http://') || location.facebook.startsWith('https://')
-            ? location.facebook
-            : (location.facebook.startsWith('facebook.com') || location.facebook.startsWith('www.facebook.com')
-                ? `https://${location.facebook}`
-                : `https://facebook.com/${location.facebook.replace(/^@/, '')}`))
+    const cleanFacebook = location.facebook?.trim();
+    const facebookUrl = cleanFacebook
+        ? (cleanFacebook.startsWith('http://') || cleanFacebook.startsWith('https://')
+            ? cleanFacebook
+            : (cleanFacebook.startsWith('facebook.com') || cleanFacebook.startsWith('www.facebook.com')
+                ? `https://${cleanFacebook}`
+                : `https://facebook.com/${cleanFacebook.replace(/^@/, '')}`))
         : undefined;
 
-    const instagramUrl = location.instagram
-        ? (location.instagram.startsWith('http://') || location.instagram.startsWith('https://')
-            ? location.instagram
-            : (location.instagram.startsWith('instagram.com') || location.instagram.startsWith('www.instagram.com')
-                ? `https://${location.instagram}`
-                : `https://instagram.com/${location.instagram.replace(/^@/, '')}`))
+    const cleanInstagram = location.instagram?.trim();
+    const instagramUrl = cleanInstagram
+        ? (cleanInstagram.startsWith('http://') || cleanInstagram.startsWith('https://')
+            ? cleanInstagram
+            : (cleanInstagram.startsWith('instagram.com') || cleanInstagram.startsWith('www.instagram.com')
+                ? `https://${cleanInstagram}`
+                : `https://instagram.com/${cleanInstagram.replace(/^@/, '')}`))
         : undefined;
+
+    const hasSocialOrWeb = Boolean(websiteUrl || facebookUrl || instagramUrl);
 
     // Position state
     const hasCoordinates = Boolean(location.coordinates?.lat && location.coordinates?.lng);
@@ -634,6 +639,47 @@ export default function LocationDetail() {
                         <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", staleness.color)} />
                         <span>{staleness.level === 0 ? 'Dati recenti' : (staleness.level === 1 ? 'Da verificare' : 'Non recenti')}</span>
                     </span>
+
+                    {/* Pill Rapidi Web & Social (se presenti) */}
+                    {websiteUrl && (
+                        <a 
+                            href={websiteUrl} 
+                            target="_blank" 
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-blue-50 dark:bg-blue-950/40 text-scout-blue dark:text-blue-300 border border-blue-200/80 dark:border-blue-800/50 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors cursor-pointer"
+                            title="Apri sito web ufficiale"
+                        >
+                            <Globe size={12} className="shrink-0" />
+                            <span>Sito Web</span>
+                            <ExternalLink size={10} className="opacity-70 shrink-0" />
+                        </a>
+                    )}
+                    {facebookUrl && (
+                        <a 
+                            href={facebookUrl} 
+                            target="_blank" 
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-50 dark:bg-blue-950/40 text-[#1877F2] dark:text-blue-400 border border-blue-200/80 dark:border-blue-800/50 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors cursor-pointer"
+                            title="Apri pagina Facebook"
+                        >
+                            <Facebook size={12} className="shrink-0" />
+                            <span>Facebook</span>
+                            <ExternalLink size={10} className="opacity-70 shrink-0" />
+                        </a>
+                    )}
+                    {instagramUrl && (
+                        <a 
+                            href={instagramUrl} 
+                            target="_blank" 
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-pink-50 dark:bg-pink-950/40 text-[#E4405F] dark:text-pink-400 border border-pink-200/80 dark:border-pink-800/50 hover:bg-pink-100 dark:hover:bg-pink-900/40 transition-colors cursor-pointer"
+                            title="Apri profilo Instagram"
+                        >
+                            <Instagram size={12} className="shrink-0" />
+                            <span>Instagram</span>
+                            <ExternalLink size={10} className="opacity-70 shrink-0" />
+                        </a>
+                    )}
                 </div>
             </div>
 
@@ -918,7 +964,102 @@ export default function LocationDetail() {
                     </div>
 
                     {/* ========================================================= */}
-                    {/* 6. ESPERIENZE DELLA COMMUNITY                             */}
+                    {/* 6. SITO WEB & CANALI SOCIAL (Solo se presenti)            */}
+                    {/* ========================================================= */}
+                    {hasSocialOrWeb && (
+                        <div className="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 border border-gray-150 dark:border-gray-700/80 shadow-xs space-y-4">
+                            <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-gray-700/60">
+                                <div>
+                                    <h2 className="text-base font-black text-gray-900 dark:text-white flex items-center gap-2">
+                                        <Globe size={18} className="text-scout-blue" />
+                                        Sito Web & Canali Ufficiali
+                                    </h2>
+                                    <p className="text-xs text-gray-400 dark:text-gray-500 font-medium mt-0.5">
+                                        Pagine e profili ufficiali della struttura per foto, avvisi e approfondimenti
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                {websiteUrl && (
+                                    <a
+                                        href={websiteUrl}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="flex items-center justify-between p-3.5 rounded-2xl bg-gray-50 dark:bg-gray-750 border border-gray-150 dark:border-gray-650 hover:border-scout-blue/60 transition-all group cursor-pointer"
+                                    >
+                                        <div className="flex items-center gap-3 min-w-0">
+                                            <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-scout-blue flex items-center justify-center shrink-0">
+                                                <Globe size={18} />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 block">
+                                                    Sito Web
+                                                </span>
+                                                <span className="text-xs font-bold text-gray-900 dark:text-white truncate block group-hover:text-scout-blue transition-colors">
+                                                    {location.website?.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <ExternalLink size={15} className="text-gray-400 group-hover:text-scout-blue shrink-0 ml-2" />
+                                    </a>
+                                )}
+
+                                {facebookUrl && (
+                                    <a
+                                        href={facebookUrl}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="flex items-center justify-between p-3.5 rounded-2xl bg-gray-50 dark:bg-gray-750 border border-gray-150 dark:border-gray-650 hover:border-[#1877F2]/60 transition-all group cursor-pointer"
+                                    >
+                                        <div className="flex items-center gap-3 min-w-0">
+                                            <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-[#1877F2] flex items-center justify-center shrink-0">
+                                                <Facebook size={18} />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 block">
+                                                    Facebook
+                                                </span>
+                                                <span className="text-xs font-bold text-gray-900 dark:text-white truncate block group-hover:text-[#1877F2] transition-colors">
+                                                    {location.facebook?.replace(/^https?:\/\/(www\.)?facebook\.com\//, '').replace(/\/$/, '') || 'Pagina Facebook'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <ExternalLink size={15} className="text-gray-400 group-hover:text-[#1877F2] shrink-0 ml-2" />
+                                    </a>
+                                )}
+
+                                {instagramUrl && (
+                                    <a
+                                        href={instagramUrl}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="flex items-center justify-between p-3.5 rounded-2xl bg-gray-50 dark:bg-gray-750 border border-gray-150 dark:border-gray-650 hover:border-[#E4405F]/60 transition-all group cursor-pointer"
+                                    >
+                                        <div className="flex items-center gap-3 min-w-0">
+                                            <div className="w-10 h-10 rounded-xl bg-pink-50 dark:bg-pink-950/50 text-[#E4405F] flex items-center justify-center shrink-0">
+                                                <Instagram size={18} />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 block">
+                                                    Instagram
+                                                </span>
+                                                <span className="text-xs font-bold text-gray-900 dark:text-white truncate block group-hover:text-[#E4405F] transition-colors">
+                                                    {location.instagram?.startsWith('@')
+                                                        ? location.instagram
+                                                        : `@${location.instagram?.replace(/^https?:\/\/(www\.)?instagram\.com\//, '').replace(/\/$/, '') || 'profilo'}`}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <ExternalLink size={15} className="text-gray-400 group-hover:text-[#E4405F] shrink-0 ml-2" />
+                                    </a>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ========================================================= */}
+                    {/* 7. ESPERIENZE DELLA COMMUNITY                             */}
                     {/* ========================================================= */}
                     <div className="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 border border-gray-150 dark:border-gray-700/80 shadow-xs space-y-4">
                         <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-gray-700/60">
@@ -1149,6 +1290,59 @@ export default function LocationDetail() {
                                     >
                                         <MessageCircle size={14} />
                                     </button>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Card Canali Web & Social Desktop (Se presenti) */}
+                    {hasSocialOrWeb && (
+                        <div className="bg-white dark:bg-gray-800 rounded-3xl p-5 border border-gray-150 dark:border-gray-700/80 shadow-xs space-y-3">
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400">
+                                Canali Web & Social
+                            </span>
+                            <div className="flex flex-col gap-2">
+                                {websiteUrl && (
+                                    <a
+                                        href={websiteUrl}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="flex items-center justify-between p-2.5 rounded-xl bg-gray-50 dark:bg-gray-750 border border-gray-200 dark:border-gray-650 hover:border-scout-blue text-xs font-bold text-gray-700 dark:text-gray-200 transition-colors group cursor-pointer"
+                                    >
+                                        <div className="flex items-center gap-2.5 truncate">
+                                            <Globe size={15} className="text-scout-blue shrink-0" />
+                                            <span className="truncate group-hover:text-scout-blue transition-colors">Sito Web</span>
+                                        </div>
+                                        <ExternalLink size={13} className="text-gray-400 group-hover:text-scout-blue shrink-0" />
+                                    </a>
+                                )}
+                                {facebookUrl && (
+                                    <a
+                                        href={facebookUrl}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="flex items-center justify-between p-2.5 rounded-xl bg-gray-50 dark:bg-gray-750 border border-gray-200 dark:border-gray-650 hover:border-[#1877F2] text-xs font-bold text-gray-700 dark:text-gray-200 transition-colors group cursor-pointer"
+                                    >
+                                        <div className="flex items-center gap-2.5 truncate">
+                                            <Facebook size={15} className="text-[#1877F2] shrink-0" />
+                                            <span className="truncate group-hover:text-[#1877F2] transition-colors">Facebook</span>
+                                        </div>
+                                        <ExternalLink size={13} className="text-gray-400 group-hover:text-[#1877F2] shrink-0" />
+                                    </a>
+                                )}
+                                {instagramUrl && (
+                                    <a
+                                        href={instagramUrl}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="flex items-center justify-between p-2.5 rounded-xl bg-gray-50 dark:bg-gray-750 border border-gray-200 dark:border-gray-650 hover:border-[#E4405F] text-xs font-bold text-gray-700 dark:text-gray-200 transition-colors group cursor-pointer"
+                                    >
+                                        <div className="flex items-center gap-2.5 truncate">
+                                            <Instagram size={15} className="text-[#E4405F] shrink-0" />
+                                            <span className="truncate group-hover:text-[#E4405F] transition-colors">Instagram</span>
+                                        </div>
+                                        <ExternalLink size={13} className="text-gray-400 group-hover:text-[#E4405F] shrink-0" />
+                                    </a>
                                 )}
                             </div>
                         </div>
