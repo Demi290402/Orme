@@ -9,7 +9,6 @@ import 'leaflet.markercluster';
 import { Location } from '@/types';
 import { extractCoordsFromMapsUrl, resolveLocationCoordinates } from '@/lib/geo';
 import { MapPin, ChevronRight, Info } from 'lucide-react';
-import { formatPriceSummary } from '@/lib/utils';
 
 interface InteractiveMapProps {
     locations: Location[];
@@ -52,10 +51,6 @@ function buildPopupHtml(item: MappedLocation): string {
     const rating = Number(loc.avgRating) || 0;
     const ratingText = rating > 0 ? rating.toFixed(1) : '—';
     const ormeLabel = loc.reviewsCount === 1 ? 'orma' : 'orme';
-    const priceText = formatPriceSummary(loc.pricing);
-    const priceHtml = priceText 
-        ? `<div class="mb-2 text-[10px] font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800/50">💰 ${priceText}</div>`
-        : '';
 
     let badgesHtml = '';
     if (loc.hasTents) {
@@ -87,6 +82,15 @@ function buildPopupHtml(item: MappedLocation): string {
         </div>
     ` : '';
 
+    let priceHtml = '';
+    if (loc.pricing && typeof loc.pricing.basePrice === 'number' && loc.pricing.basePrice > 0) {
+        const targetStr = loc.pricing.target === 'per_group' ? 'gruppo' : 'persona';
+        const unitStr = loc.pricing.unit === 'per_day' ? 'giorno' : 'notte';
+        priceHtml = `<div class="text-xs font-bold text-scout-green dark:text-emerald-400 mb-2">💶 ${loc.pricing.basePrice} € / ${targetStr} / ${unitStr}</div>`;
+    } else if (loc.pricing && loc.pricing.description && loc.pricing.description.trim().length > 0) {
+        priceHtml = `<div class="text-[11px] font-semibold text-gray-500 dark:text-gray-400 mb-2">Tariffa indicata nelle note</div>`;
+    }
+
     return `
         <div class="p-2 font-sans w-56 text-gray-900 dark:text-gray-100">
             <h4 class="font-black text-sm text-gray-900 dark:text-white mb-0.5 leading-tight">${loc.name}</h4>
@@ -94,7 +98,7 @@ function buildPopupHtml(item: MappedLocation): string {
             
             ${estimatedNotice}
 
-            <div class="flex items-center gap-1.5 mb-2.5">
+            <div class="flex items-center gap-1.5 mb-2">
                 <span class="text-yellow-500 font-bold text-xs">⭐ ${ratingText}</span>
                 <span class="text-[10px] text-gray-400 font-semibold">(${loc.reviewsCount} ${ormeLabel})</span>
             </div>
