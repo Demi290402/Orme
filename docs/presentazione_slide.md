@@ -1,124 +1,125 @@
-# Struttura Presentazione PowerPoint - Orme (Gestione Scout)
+# 📊 Presentazione Pitch di Prodotto — Orme
 
-Questo documento fornisce la struttura diapositiva per diapositiva (titoli, testi, layout suggerito e note per il presentatore) per creare una presentazione PowerPoint o Pitch su **Orme**.
+**Prodotto**: Orme (Ecosistema Gestionale & Metodologico Scout)  
+**Versione Presentazione**: 2.5.0  
+**Data**: Novembre 2026  
+**Target**: Presentazione alla Comunità Capi (Co.Ca.), Consigli di Zona, Incontri Regionali Capi  
 
 ---
 
 ## Slide 1: Copertina
 * **Titolo**: Orme
-* **Sottotitolo**: La piattaforma collaborativa per la gestione del Gruppo Scout
-* **Elementi Visivi**: Sfondo scuro elegante (Dark Blue/Gray) con il logo di Orme (impronta dello scarpone ed elementi naturali) al centro.
-* **Note del Presentatore**:
-  > *"Buonasera a tutti. Oggi presentiamo Orme, uno strumento nato dall'esigenza di semplificare la gestione logistica, contabile e metodologica del nostro gruppo scout. Orme unisce in un unico portale protetto tutto ciò che prima era frammentato in decine di file diversi."*
+* **Sottotitolo**: La piattaforma collaborativa, offline-first e intelligente per la Comunità Capi
+* **Elementi Grafici**: Logo di Orme in verde foresta scout su sfondo scuro elegante con accenti dorati e icone di avventura.
+* **Note del Relatore**:
+  > *"Buonasera a tutti. Oggi vi presentiamo Orme, uno strumento software concepito e sviluppato da capi scout per eliminare la burocrazia, salvare la memoria storica delle nostre attività e accompagnarci nel servizio educativo sia in sede che sul campo, anche senza connessione internet."*
 
 ---
 
 ## Slide 2: Il Problema della Gestione Tradizionale
-* **Titolo**: La disorganizzazione invisibile nei Gruppi Scout
-* **Layout**: Diapositiva divisa a due colonne (Problemi vs Conseguenze).
+* **Layout**: Due colonne a contrasto: *"La realtà di ieri"* vs *"Le conseguenze metodologiche"*.
 * **Punti Chiave**:
-  * **Dati e fogli sparsi**: Inventari, verbali, liste d'attesa e contatti dei genitori salvati su file personali oramai dimenticati.
-  * **Perdita della memoria storica**: Si fa fatica a reperire contatti e dettagli delle case vacanze o a ricordare in quali luoghi si è stati negli anni precedenti.
-  * **Tracciamento della formazione capi**: Gestione frammentata dell'iter di formazione dei capi della Comunità Capi.
-  * **Calcolo preventivi trasporti**: Difficoltà nel fare preventivi e calcolare le quote dei pullman per ragazzo.
-  * **Rischio privacy (GDPR)**: Liste d'attesa cartacee o file word non protetti sparsi sui computer personali.
-* **Note del Presentatore**:
-  > *"Sappiamo bene quanta fatica costi cercare un terreno di campeggio o tracciare chi ha preso le tende di squadriglia. Spesso le informazioni risiedono solo nella testa di alcuni capi storici, e quando questi cambiano servizio, la memoria si perde. C'è anche la complessità di calcolare le quote per persona quando noleggiamo un pullman, o di tenere traccia della formazione dei nostri capi."*
+  * **Memoria Storica Dispersa**: Contatti di terreni, prezzi, custodi e verbali si perdono con il normale avvicendamento dei capi nelle branche.
+  * **Frammentazione & Caos**: Dati sparsi su decine di file Excel personali, note sul telefono, chat WhatsApp e fogli di carta.
+  * **Rischi Privacy & GDPR**: Liste d'attesa e numeri dei genitori gestiti senza consenso formale o archiviazione sicura.
+  * **Blackout Connettivo**: Nessun software tradizionale funziona quando siamo in mezzo a un bosco o in alta quota.
+* **Note del Relatore**:
+  > *"Quante volte all'inizio dell'anno scout abbiamo dovuto ricominciare da capo a cercare un terreno per il campo estivo? O abbiamo faticato a ritrovare il verbale in cui avevamo preso una decisione cruciale? E cosa succede alle liste d'attesa dei bambini quando un capo finisce il proprio servizio? Orme nasce per rispondere a queste domande."*
 
 ---
 
 ## Slide 3: La Visione di Orme
-* **Titolo**: Una sola applicazione per tutta la Comunità Capi
-* **Layout**: Tre box con icone descrittive.
+* **Layout**: Tre pilastri visivi interconnessi.
 * **Punti Chiave**:
-  * **Centralizzazione**: Un unico database condiviso e sicuro per tutto il gruppo.
-  * **Collaborazione e Trasparenza**: Modifiche e aggiunte istantanee con registro storico delle modifiche per l'auditing dei dati.
-  * **Funzionamento Offline Reale**: L'app si adatta all'assenza di internet nei campi o nei boschi, salvando i dati localmente e sincronizzandoli al rientro in rete.
-* **Note del Presentatore**:
-  > *"La nostra visione con Orme è dare a ogni capo uno strumento immediato. L'applicazione risiede sul web ed è installabile su cellulare come PWA. Funziona offline al 100% per l'uso sul campo, permettendo di consultare dati o registrare spese nel bosco, per poi risincronizzarli in background non appena si torna online."*
+  * 🌐 **Centralizzazione Protetta**: Un unico database isolato e sicuro per il nostro gruppo scout, accessibile da PC, smartphone e smartwatch.
+  * 🏕️ **Offline-First Reale**: Continuità operativa totale anche senza rete telefonica: consulta contatti e registra spese nei boschi; al ritorno online l'app sincronizza tutto automaticamente.
+  * 🤝 **Collaborazione & Trasparenza**: Modifiche istantanee non bloccanti con audit trail completo e gamification meritocratica.
+* **Note del Relatore**:
+  > *"Orme non è solo un sito web: è una Progressive Web App che ciascun capo può installare sul proprio smartphone come un'app nativa. È progettata con un'architettura offline reale: se siamo in cammino o sul terreno di campeggio senza segnale, Orme continua a funzionare perfettamente."*
 
 ---
 
-## Slide 4: Mappatura collaborativa dei Luoghi di Campo
-* **Titolo**: Il Database dei Terreni e degli Accantonamenti
-* **Layout**: Screenshot o schema della scheda di dettaglio di un luogo.
+## Slide 4: Mappatura Luoghi & Scheda Tecnica Intelligente
+* **Layout**: Mockup della nuova Scheda Luogo Human-Crafted.
 * **Punti Chiave**:
-  * **Ricerca Avanzata con Filtri**: Filtra per posti letto, spazio tende, cucina, allaccio elettrico, riscaldamento e branche consigliate.
-  * **Parametri Metodologici**: Valutazioni da 1 a 5 espresse in "orme" su Ombra, Suolo, Legna, Isolamento e Servizi.
-  * **Inserimento Istantaneo con Storico**: Ogni capo può inserire o modificare subito i dati. La trasparenza è garantita da una cronologia storica delle modifiche visualizzabile in dettaglio.
-  * **Badge Novità**: Un indicatore rosso in Home segnala se un luogo ha subito modifiche dall'ultima visualizzazione.
-* **Note del Presentatore**:
-  > *"Il modulo Luoghi permette di catalogare case e terreni. Non è solo un indirizzo: contiene recensioni scritte da chi ci è stato prima di noi. Per evitare colli di bottiglia, le modifiche sono istantanee, ma l'app tiene traccia di chi ha modificato cosa e quando per la massima trasparenza operativa."*
+  * **7 Macro-Sezioni Ottimizzate**: Coordinate GPS, navigazione Google Maps con un click, numeri utili d'emergenza (guardia medica, ospedali, carabinieri).
+  * **Badge Freschezza Dati**: Rilevamento automatico di dati recenti, da verificare o obsoleti.
+  * **Pill Web & Social Ufficiali**: Collegamento immediato a siti web, pagine Facebook e profili Instagram (con zero footprint se non presenti).
+  * **Valutazione Metodologica a 5 Impronte**: Ombra, Acqua potabile, Legna, Fuochi a terra, Qualità del suolo, Servizi igienici, Isolamento.
+  * **Modifiche Istantanee con Storico**: Ogni modifica è subito visibile a tutti, con tracciamento di autore e data per la massima trasparenza.
+* **Note del Relatore**:
+  > *"La scheda del luogo è una vera e propria carta d'identità del terreno o della casa. Oltre a numeri e servizi, contiene recensioni scritte dai capi che vi hanno già vissuto un campo. Non ci sono colli di bottiglia: chiunque può aggiornare un numero di telefono in un secondo, e l'app terrà traccia della cronologia."*
 
 ---
 
-## Slide 5: Coinvolgere con la Gamification
-* **Titolo**: La cooperazione che premia
-* **Layout**: Classifica visuale (Leaderboard) con badge grafici.
+## Slide 5: Verbali di Comunità Capi & Generazione Formale
+* **Layout**: Anteprima affiancata dell'Editor Rich-Text e del PDF A4 impaginato.
 * **Punti Chiave**:
-  * **Guadagno Punti**: Punti per ogni inserimento (luogo, coordinate GPS, prezzi, eventi calendario, recensioni, audit di magazzino).
-  * **Livelli Capi**: Da *Piede Tenero* a *Guida delle Orme*.
-  * **Badge Speciali**: Distintivi virtuali sbloccabili sul profilo per traguardi significativi.
-* **Note del Presentatore**:
-  > *"Per fare in modo che l'app non diventi un contenitore vuoto, abbiamo integrato la gamification. I capi guadagnano punti per ogni contributo. È un modo divertente per spronare tutti a mantenere le informazioni aggiornate, trasformando la mappatura in una sfida positiva."*
+  * **Calcolo Automatico Anno Scout & Presenze**: Registro presenze con snapshot immutabile dei nominativi storici per integrità legale nel tempo.
+  * **Editor con Tabelle stile Word**: Per redigere OdG, orari e programmi dettagliati.
+  * **Posti d'Azione**: Assegnazione chiara dei compiti (*Chi fa cosa entro quando*).
+  * **Esportazione Istantanea PDF A4 & DOCX**: Documento pronto per la stampa o l'archivio con firme di Presidente e Segretario.
+  * **Notifiche Immediate**: Invio automatico mail e in-app a tutti i capi della CoCa (incluso l'autore per conferma).
+* **Note del Relatore**:
+  > *"I consigli di Comunità Capi hanno finalmente un supporto digitale all'altezza. Il segretario compila il verbale, assegna gli incarichi con le relative scadenze e, con un solo click, genera il PDF formale pronto per la firma e invia una notifica a tutta la CoCa."*
 
 ---
 
-## Slide 6: Cassa e Bilancio di Branca
-* **Titolo**: Trasparenza Finanziaria Semplificata
-* **Layout**: Grafico a torta delle spese di branca e saldo.
-* **Punti Chiave**:
-  * **Multi-Cassa**: Casse separate per L/C, E/G, R/S, CoCa e Cassa di Gruppo.
-  * **Registrazione Rapida**: Entrate e uscite inseribili in pochi secondi con categorizzazione (Cambusa, Trasporti, Sede).
-  * **Esportazione immediata**: Generazione automatica del foglio di cassa Excel per i bilanci di fine anno.
-* **Note del Presentatore**:
-  > *"Ogni branca gestisce la propria cassa in autonomia. Il tesoriere registra le spese durante le uscite. I capigruppo hanno una visione d'insieme dei bilanci e possono scaricare il file Excel pronto per l'assemblea o per la revisione dei conti."*
-
----
-
-## Slide 7: Gestione dell'Inventario di Gruppo
-* **Titolo**: Meno sprechi, più tracciabilità per i materiali
-* **Layout**: Lista materiali con indicatori di stato colorati (Verde/Giallo/Rosso).
-* **Punti Chiave**:
-  * **Stato e Collocazione**: Tracciamento delle condizioni (Ottimo, Da riparare) e dello scaffale o ripostiglio in cui si trovano.
-  * **Registro Prestiti**: Chi ha preso cosa (es. *"Reparto ha prelevato 5 tende jumbo"*).
-  * **Scadenzario Rientri**: Evita che il materiale rimanga dimenticato a casa dei capi o nelle sedi di branca.
-* **Note del Presentatore**:
-  > *"L'inventario di gruppo traccia le tende, le pentole, i pali e le corde. Quando una branca prende del materiale per un'uscita, viene registrato il prestito con la data di rientro prevista. In questo modo sappiamo sempre dove si trovano le nostre attrezzature e in che stato sono."*
-
----
-
-## Slide 8: Lista d'Attesa e Iscrizioni Pubbliche
-* **Titolo**: Accoglienza trasparente e sicura
+## Slide 6: Lista d'Attesa & Iscrizioni Pubbliche GDPR
 * **Layout**: Schema del flusso: QR Code -> Form Genitore -> Database Capi (senza duplicati).
 * **Punti Chiave**:
-  * **Form Pubblico Personalizzabile**: Pagina web con banner di gruppo, descrizione e informativa privacy GDPR.
-  * **Iscrizione via QR Code / Link**: I genitori inseriscono la richiesta in autonomia.
-  * **Anagrafica sicura e ordinata**: I dati dei ragazzi sono centralizzati, ordinati per data e calcolati con età e classe, eliminando liste cartacee o workflow decisionali complessi.
-  * **Deduplicazione e Importazione massiva**: Rilevamento automatico dei doppioni e importazione da storici Excel.
-* **Note del Presentatore**:
-  > *"La lista d'attesa è automatizzata e conforme al GDPR. Condividiamo un link o un QR Code con i genitori. Loro compilano il form e il bambino appare subito nella lista d'attesa dei capi, ordinato per data di richiesta. Il sistema calcola l'età e la classe, e impedisce inserimenti duplicati."*
+  * **Form Builder Personalizzabile**: Banner con compressione immagini client-side, messaggi di benvenuto e disclaimer privacy GDPR obbligatorio.
+  * **Accesso Pubblico Semplificato**: I genitori compilano via web tramite link o QR Code, senza bisogno di registrazione o app.
+  * **Deduplicazione Intelligente**: Riconoscimento automatico e blocco dei doppi inserimenti.
+  * **Anagrafica Dinamica**: Calcolo automatico di età in anni e mesi e branca consigliata (L/C, E/G, R/S), con import/export Excel.
+* **Note del Relatore**:
+  > *"Risolviamo una volta per tutte la gestione delle iscrizioni. I capigruppo configurano il modulo con il logo e le spiegazioni educative, diffondono il QR Code, e le richieste arrivano ordinate in un registro trasparente, calcolando automaticamente le fasce d'età nel pieno rispetto della privacy."*
 
 ---
 
-## Slide 9: Verbali e Gestione della Comunità Capi
-* **Titolo**: Memoria storica delle decisioni di Comunità
-* **Layout**: Anteprima del documento PDF A4 impaginato per la stampa.
+## Slide 7: Magazzino, Inventario & Calendario di Gruppo
+* **Layout**: Schermata bivalente: registro attrezzature e calendario multi-branca.
 * **Punti Chiave**:
-  * **Editor Integrato**: Redazione di OdG, discussioni, deliberazioni e incarichi (con scadenze).
-  * **Notifiche Automatiche**: Mail e in-app automatiche a tutti i membri, incluso l'autore del verbale.
-  * **Esportazione in PDF**: Generazione istantanea del verbale formale per l'archivio.
-* **Note del Presentatore**:
-  > *"Anche le riunioni di Comunità Capi hanno ora un loro spazio. Il segretario scrive il verbale, fa l'appello e segna le decisioni. Il sistema genera un PDF formale pronto da stampare o salvare, e invia immediatamente una notifica a tutti i capi della Comunità."*
+  * **Tracciamento Materiali**: Tende, cambusa e attrezzi con stato di conservazione e collocazione fisica.
+  * **Registro Prestiti alle Branche**: Chi ha prelevato il materiale e data prevista di rientro, per evitare smarrimenti.
+  * **Audit di Magazzino**: Verifica periodica delle attrezzature con punteggi gamification.
+  * **Calendario RFC 5545 (.ics)**: Pianificazione delle attività di branca e gruppo con sincronizzazione immediata su Google Calendar e Apple Calendar.
+* **Note del Relatore**:
+  > *"Mai più tende di squadriglia dimenticate o fornelloni spariti. L'inventario tiene traccia di ogni movimento, mentre il calendario integrato evita sovrapposizioni tra le uscite delle diverse branche e si sincronizza con il nostro smartphone personale."*
 
 ---
 
-## Slide 10: Rubrica Trasporti, Storico Formazione e Conclusioni
-* **Titolo**: Pronti per partire!
-* **Layout**: Elenco puntato con icone di spunta (checklist).
+## Slide 8: Bilancio Multi-Cassa & Rubrica Trasporti
+* **Layout**: Grafico cassa di branca e card calcolo quota pullman.
 * **Punti Chiave**:
-  * **Rubrica Trasporti Ibrida**: Elenco ditte bus condiviso pubblicamente (per visualizzare sedi/depositi e contatti), con preventivi e calcolo delle quote per ragazzo gestiti in modo strettamente privato per ciascun gruppo.
-  * **Storico Formazione Capi**: Monitoraggio interno e protetto del percorso formativo di Comunità Capi.
-  * **Prossimi Passi**: Registrazione dei capi con il loro iter formativo, caricamento dei materiali in magazzino e pubblicazione del QR Code per le iscrizioni.
-* **Note del Presentatore**:
-  > *"Orme è pronto e operativo. I dati del nostro gruppo sono protetti. Invitiamo tutti i capi a registrarsi stasera stessa per completare i profili con i dati di formazione, iniziare a popolare l'inventario e ad utilizzare la rubrica trasporti condivisa per raccogliere preventivi e calcolare quote per le prossime uscite in modo del tutto autonomo e privato per gruppo. Grazie a tutti!"*
+  * **Multi-Cassa Indipendente**: Casse separate per Branco, Reparto, Clan, CoCa e Cassa di Gruppo con saldi in tempo reale ed export Excel.
+  * **Rubrica Pullman Ibrida**: Ditte di noleggio pullman pubbliche condivise tra gruppi della zona; preventivi e prezzi privati per gruppo.
+  * **Calcolo Quota a Ragazzo**: Inserendo preventivo, km e partecipanti, il sistema calcola all'istante il costo a persona.
+* **Note del Relatore**:
+  > *"I tesorieri di branca registrano le spese al volo dal cellulare e scaricano il bilancio a fine anno. Per i viaggi in pullman, la rubrica condivisa ci fa scoprire ditte consigliate da altri scout, calcolando automaticamente la quota esatta per ogni ragazzo."*
+
+---
+
+## Slide 9: Innovazione: Akela AI, Smartwatch & Nuovo Centro Notifiche
+* **Layout**: Tre mockup moderni: Chat Akela, Schermata circolare smartwatch e Impostazioni Windows/iOS.
+* **Punti Chiave**:
+  * 🐺 **Akela AI**: Assistente vocale esperto di metodo scout, canti, pronto soccorso di campo e pionieristica.
+  * ⌚ **Orme Watch**: Esperienza dedicata per smartwatch Wear OS e Apple Watch con numeri di emergenza e presenze al polso.
+  * 🔔 **Centro Notifiche Granulare**: Scelta canale per canale (in-app ed email) per verbali, lista d'attesa, richieste CoCa e luoghi, con interfaccia moderna stile Windows 11 su desktop e iOS su mobile.
+* **Note del Relatore**:
+  > *"Orme guarda avanti: abbiamo introdotto Akela AI per supportare i capi con risposte rapide sul campo anche a voce, una vista smartwatch per avere i contatti di soccorso al polso, e un centro notifiche granulare che permette a ciascun capo di decidere esattamente cosa ricevere via mail o in-app."*
+
+---
+
+## Slide 10: Pronti a Partire!
+* **Layout**: Checklist di lancio per la Comunità Capi.
+* **Checklist Operativa**:
+  1. Iscrizione dei capi con inserimento dello storico di formazione e inserimento PIN o approvazione.
+  2. Caricamento o verifica dei primi luoghi e delle recensioni di campo.
+  3. Configurazione del modulo pubblico iscrizioni e pubblicazione del QR Code.
+  4. Censimento iniziale dei materiali del magazzino.
+* **Contatti & Supporto**:
+  * 📧 **Email Ufficiale**: [appormescout@gmail.com](mailto:appormescout@gmail.com)
+  * 📱 **PWA Link**: Disponibile online per tutta la Comunità Capi
+* **Note del Relatore**:
+  > *"Tutto è pronto, sicuro e conforme alle normative scout. Da stasera la nostra Comunità Capi ha a disposizione uno strumento moderno per lavorare meglio e con più serenità. Buona Caccia, Buona Strada e Buon Volo a tutti!"*
