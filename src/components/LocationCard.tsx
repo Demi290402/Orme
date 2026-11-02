@@ -1,7 +1,7 @@
-import { MapPin, Tent, BedDouble, AlertCircle, Wrench, Ban, Star, Eye, Home } from 'lucide-react';
+import { MapPin, Star, Wrench, Ban } from 'lucide-react';
 import { Location } from '@/types';
 import { Link } from 'react-router-dom';
-import { cn, getStalenessInfo } from '@/lib/utils';
+import { cn, getStalenessInfo, formatPriceSummary, formatDateItalian } from '@/lib/utils';
 
 interface LocationCardProps {
     location: Location;
@@ -27,152 +27,144 @@ export default function LocationCard({ location, unreadModificationsCount }: Loc
     const staleness = getStalenessInfo(location.lastUpdatedAt);
     const status = location.availabilityStatus || 'available';
     const avail = status !== 'available' ? availabilityConfig[status as 'maintenance' | 'closed'] : null;
+    const priceText = formatPriceSummary(location.pricing);
+    const formattedDate = formatDateItalian(location.lastUpdatedAt);
 
-    const getStalenessHumanLabel = (level: number) => {
-        switch (level) {
-            case 0: return 'Dati recenti';
-            case 1: return 'Da verificare';
-            case 2: return 'Dati non recenti';
-            default: return 'Dati da aggiornare';
-        }
-    };
+    // Costruisci stringa località "Comune (Provincia) · Regione"
+    const locationSubtitle = [
+        location.commune ? `${location.commune}${location.province ? ` (${location.province})` : ''}` : (location.province ? `(${location.province})` : ''),
+        location.region
+    ].filter(Boolean).join(' · ');
+
+    const hasReviews = location.reviewsCount > 0;
+    const ratingNumber = Number(location.avgRating) || 0;
+    const ratingFormatted = ratingNumber > 0 ? ratingNumber.toFixed(1) : null;
+    const reviewsLabel = location.reviewsCount === 1 ? 'recensione' : 'recensioni';
 
     return (
-        <Link to={`/location/${location.id}`} className="block relative group focus:outline-none">
-            <div className={cn(
-                "bg-white dark:bg-gray-800 rounded-2xl shadow-xs border transition-all duration-200 active:scale-[0.99] relative overflow-hidden",
+        <Link 
+            to={`/location/${location.id}`} 
+            className="block group focus:outline-none focus-visible:ring-2 focus-visible:ring-scout-green dark:focus-visible:ring-emerald-400 rounded-2xl transition-transform active:scale-[0.99]"
+            aria-label={`Apri scheda del luogo ${location.name}`}
+        >
+            <article className={cn(
+                "bg-white dark:bg-[#182932] rounded-2xl p-5 border transition-all duration-200 shadow-xs flex flex-col justify-between h-full relative overflow-hidden",
                 avail 
                     ? "border-amber-300 dark:border-amber-700" 
-                    : "border-gray-200 dark:border-gray-700 hover:border-scout-green hover:shadow-md dark:hover:border-emerald-500/70"
+                    : "border-gray-200 dark:border-gray-700/80 hover:border-scout-green dark:hover:border-emerald-500/70 hover:shadow-md"
             )}>
-                {/* Badge modifiche non lette per il gruppo */}
-                {unreadModificationsCount !== undefined && unreadModificationsCount > 0 && (
-                    <div 
-                        className="absolute top-3 right-3 bg-red-600 text-white text-[11px] font-black min-w-5 h-5 px-1.5 flex items-center justify-center rounded-full border-2 border-white dark:border-gray-800 shadow-md z-20 animate-pulse" 
-                        title={`${unreadModificationsCount} modifiche recenti non lette`}
-                    >
-                        {unreadModificationsCount}
-                    </div>
-                )}
-
                 {/* Banner disponibilità speciale */}
                 {avail && (
-                    <div className={`flex items-center justify-center gap-1.5 py-1.5 px-3 font-bold text-xs ${avail.banner}`}>
+                    <div className={`-mt-5 -mx-5 mb-4 flex items-center justify-center gap-1.5 py-1.5 px-3 font-bold text-xs ${avail.banner}`}>
                         <avail.icon size={14} className={avail.text} />
                         <span className={avail.text}>{avail.label}</span>
                     </div>
                 )}
 
-                <div className="p-4 sm:p-5">
-                    {/* Top Row: Staleness Badge + Regione */}
-                    <div className="flex justify-between items-center gap-2 mb-2.5">
-                        <div className={cn(
-                            "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border",
-                            staleness.bgLight,
-                            staleness.text,
-                            staleness.border,
-                            "dark:bg-opacity-20"
-                        )} title="Data ultimo aggiornamento informazioni">
-                            <span className={cn("w-2 h-2 rounded-full shrink-0", staleness.color)} />
-                            <span>{getStalenessHumanLabel(staleness.level)}</span>
-                        </div>
+                <div className="space-y-2.5">
+                    {/* 1. Nome del luogo per primo (senza badge concorrenti sulla stessa riga) */}
+                    <div className="flex items-start justify-between gap-3">
+                        <h3 className="text-lg sm:text-xl font-semibold leading-snug text-gray-900 dark:text-[#F1F6F2] group-hover:text-scout-green dark:group-hover:text-emerald-400 transition-colors break-words">
+                            {location.name}
+                        </h3>
 
-                        <span className="bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 text-xs px-2.5 py-1 rounded-full font-bold whitespace-nowrap border border-amber-200/70 dark:border-amber-800/50">
-                            {location.region}
-                        </span>
+                        {/* Eventuali novità non lette etichettate separatamente */}
+                        {unreadModificationsCount !== undefined && unreadModificationsCount > 0 && (
+                            <span 
+                                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-red-100 text-red-800 dark:bg-red-950/70 dark:text-red-300 border border-red-300 dark:border-red-800 shrink-0"
+                                title={`${unreadModificationsCount} novità da leggere per questo luogo`}
+                            >
+                                <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-ping shrink-0" />
+                                <span>Novità da leggere</span>
+                            </span>
+                        )}
                     </div>
 
-                    {/* Titolo Principale */}
-                    <h3 className="font-black text-lg sm:text-xl text-gray-900 dark:text-emerald-300 group-hover:text-scout-green dark:group-hover:text-emerald-400 transition-colors line-clamp-1 mb-1">
-                        {location.name}
-                    </h3>
-
-                    {/* Comune & Provincia */}
-                    <div className="text-gray-600 dark:text-gray-400 text-sm mb-3 flex items-center gap-1.5 font-medium">
-                        <MapPin size={15} className="text-scout-green dark:text-emerald-500 shrink-0" />
-                        <span className="truncate">{location.commune}{location.province ? ` (${location.province})` : ''}</span>
+                    {/* 2. Comune, provincia e regione */}
+                    <div className="text-sm font-medium text-gray-500 dark:text-[#ACBCB2] flex items-center gap-1.5 flex-wrap">
+                        <MapPin size={15} className="text-scout-green dark:text-emerald-400 shrink-0" aria-hidden="true" />
+                        <span>{locationSubtitle}</span>
                     </div>
 
-                    {/* Nota Rapida */}
-                    {location.quickNote && (
-                        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-3.5 line-clamp-2 italic bg-gray-50/80 dark:bg-gray-750/50 p-2.5 rounded-xl border border-gray-150 dark:border-gray-700/60 leading-relaxed">
-                            "{location.quickNote}"
+                    {/* 3. Breve descrizione (testo normale, non corsivo, nessuna scatola pesante) */}
+                    {location.quickNote && location.quickNote.trim().length > 0 && (
+                        <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2 leading-relaxed">
+                            {location.quickNote.trim()}
                         </p>
                     )}
 
-                    {/* Recensioni, Visualizzazioni e Prezzo */}
-                    <div className="flex items-center justify-between py-2 border-y border-gray-100 dark:border-gray-700/60 mb-3.5 text-xs">
-                        <div className="flex items-center gap-2">
-                            {location.reviewsCount > 0 ? (
-                                <div className="flex items-center gap-1.5">
-                                    <span className="bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-md flex items-center gap-1 font-black border border-amber-200 dark:border-amber-800/40">
-                                        <Star size={12} className="fill-amber-400 text-amber-500" />
-                                        {Number(location.avgRating).toFixed(1)}
-                                    </span>
-                                    <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">
-                                        ({location.reviewsCount} {location.reviewsCount === 1 ? 'recensione' : 'recensioni'})
-                                    </span>
-                                </div>
-                            ) : (
-                                <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 flex items-center gap-1">
-                                    <Star size={13} className="text-gray-300 dark:text-gray-600" />
-                                    Nessuna recensione ancora
-                                </span>
-                            )}
+                    {/* 4. Tariffa indicata (mostrata SOLO quando documentata, zero footprint se assente) */}
+                    {priceText && (
+                        <div className="pt-0.5">
+                            <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-scout-green-dark dark:text-emerald-300 bg-emerald-50/70 dark:bg-emerald-950/40 px-2.5 py-1 rounded-lg border border-emerald-200/60 dark:border-emerald-800/50">
+                                <span aria-hidden="true">💰</span>
+                                <span>{priceText}</span>
+                            </span>
                         </div>
+                    )}
 
-                        <div className="flex items-center gap-3">
-                            {location.viewsCount !== undefined && location.viewsCount > 0 && (
-                                <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-400 dark:text-gray-500" title={`${location.viewsCount} visualizzazioni su Orme`}>
-                                    <Eye size={13} className="text-gray-400" />
-                                    {location.viewsCount}
-                                </span>
-                            )}
-
-                            {location.priceCategory > 0 && (
-                                <div className="flex gap-0.5 font-black text-xs" title={`Fascia economica: ${location.priceCategory}/3`}>
-                                    {[1, 2, 3].map(i => (
-                                        <span 
-                                            key={i} 
-                                            className={i <= location.priceCategory ? "text-scout-green dark:text-emerald-400" : "text-gray-200 dark:text-gray-700"}
-                                        >
-                                            €
-                                        </span>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Caratteristiche del Luogo: Badges Umani e Comprensibili */}
-                    <div className="flex flex-wrap gap-2 text-xs font-semibold">
+                    {/* 5. Dotazioni strutturate essenziali */}
+                    <div className="flex flex-wrap gap-1.5 pt-1 text-xs font-semibold">
                         {location.hasTents && (
-                            <span className="bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/60 px-2.5 py-1 rounded-lg flex items-center gap-1.5 border border-emerald-200">
-                                <Tent size={14} className="text-emerald-600 dark:text-emerald-400" />
-                                Spazio Tende
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700/70 text-gray-700 dark:text-gray-300 border border-gray-200/70 dark:border-gray-600">
+                                🏕️ Tende
                             </span>
                         )}
                         {location.beds !== undefined && location.beds > 0 && (
-                            <span className="bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800/60 px-2.5 py-1 rounded-lg flex items-center gap-1.5 border border-blue-200">
-                                <BedDouble size={14} className="text-blue-600 dark:text-blue-400" />
-                                {location.beds} Posti Letto
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700/70 text-gray-700 dark:text-gray-300 border border-gray-200/70 dark:border-gray-600">
+                                🛏️ {location.beds} letti
                             </span>
                         )}
                         {location.accantonamentoCapacity !== undefined && location.accantonamentoCapacity > 0 && (
-                            <span className="bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60 px-2.5 py-1 rounded-lg flex items-center gap-1.5 border border-amber-200">
-                                <Home size={14} className="text-amber-600 dark:text-amber-400" />
-                                {location.accantonamentoCapacity} a terra (Stuoino)
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700/70 text-gray-700 dark:text-gray-300 border border-gray-200/70 dark:border-gray-600">
+                                🏠 {location.accantonamentoCapacity} accantonamento
                             </span>
                         )}
-                        {location.restrictions && location.restrictions.length > 0 && (
-                            <span className="bg-red-50 text-red-800 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800/60 px-2.5 py-1 rounded-lg flex items-center gap-1.5 border border-red-200">
-                                <AlertCircle size={14} className="text-red-600 dark:text-red-400" />
-                                {location.restrictions.length} {location.restrictions.length === 1 ? 'attenzione' : 'attenzioni / regole'}
+                        {location.hasEquippedKitchen && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700/70 text-gray-700 dark:text-gray-300 border border-gray-200/70 dark:border-gray-600">
+                                🍳 Cucina
+                            </span>
+                        )}
+                        {location.hasHeating && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700/70 text-gray-700 dark:text-gray-300 border border-gray-200/70 dark:border-gray-600">
+                                🔥 Riscaldato
+                            </span>
+                        )}
+                        {location.hasWaterPoints && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700/70 text-gray-700 dark:text-gray-300 border border-gray-200/70 dark:border-gray-600">
+                                🚰 Punti d'acqua
+                            </span>
+                        )}
+                        {location.hasDisabledAccess && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700/70 text-gray-700 dark:text-gray-300 border border-gray-200/70 dark:border-gray-600">
+                                ♿ Disabili
                             </span>
                         )}
                     </div>
                 </div>
-            </div>
+
+                {/* 6. Piede dell'anteprima: Recensioni + Data esatta di modifica */}
+                <div className="pt-3 mt-3 border-t border-gray-150 dark:border-gray-700/60 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 gap-2 flex-wrap">
+                    {/* Recensioni */}
+                    <div>
+                        {hasReviews && ratingFormatted ? (
+                            <span className="inline-flex items-center gap-1 font-semibold text-gray-700 dark:text-gray-300">
+                                <Star size={13} className="fill-amber-400 text-amber-500 shrink-0" aria-hidden="true" />
+                                <span className="font-bold text-gray-900 dark:text-white">{ratingFormatted}</span>
+                                <span>({location.reviewsCount} {reviewsLabel})</span>
+                            </span>
+                        ) : (
+                            <span className="text-gray-400 dark:text-gray-500">Nessuna recensione</span>
+                        )}
+                    </div>
+
+                    {/* Data modifica precisa con indicatore freschezza */}
+                    <div className="inline-flex items-center gap-1.5 text-[11px] font-medium" title={staleness.label}>
+                        <span className={cn("w-2 h-2 rounded-full shrink-0", staleness.color)} aria-hidden="true" />
+                        <span>Modificato: {formattedDate}</span>
+                    </div>
+                </div>
+            </article>
         </Link>
     );
 }

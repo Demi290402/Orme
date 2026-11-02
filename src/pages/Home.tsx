@@ -1,5 +1,10 @@
-import { useEffect, useState, useMemo } from 'react';
-import { Search, Filter, Plus, X, Check, Clock, Tent, BedDouble, Bus, Flame, Droplets, Home as HomeIcon, MapPin } from 'lucide-react';
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
+import { 
+    Search, SlidersHorizontal, MapPin, Plus, X, Check, Clock, 
+    Tent, BedDouble, Bus, Flame, Droplets, Home as HomeIcon, List, 
+    Map as MapIcon, RotateCcw, Utensils, Trees, Accessibility, Layers, 
+    Sparkles 
+} from 'lucide-react';
 import { getLocations, getUser, getUserLocationViews, getAllUsers } from '@/lib/data';
 import { Location, User as UserType } from '@/types';
 import LocationCard from '@/components/LocationCard';
@@ -19,10 +24,10 @@ const BRANCH_ACTIVITIES: Record<string, string[]> = {
 };
 
 const STALENESS_LEVELS = [
-    { level: 0, color: 'bg-green-500', label: 'Recente (<1a)' },
-    { level: 1, color: 'bg-yellow-500', label: 'Da verif. (1-2a)' },
-    { level: 2, color: 'bg-orange-500', label: 'Incerto (2-3a)' },
-    { level: 3, color: 'bg-red-500', label: 'Datato (>3a)' }
+    { level: 0, color: 'bg-green-500', label: 'Dati recenti (< 1 anno)' },
+    { level: 1, color: 'bg-yellow-500', label: 'Da verificare (1-2 anni)' },
+    { level: 2, color: 'bg-orange-500', label: 'Non recenti (2-3 anni)' },
+    { level: 3, color: 'bg-red-500', label: 'Datati (> 3 anni)' }
 ];
 
 interface HomeProps {
@@ -42,6 +47,10 @@ interface StoredLocationFilters {
     minAccantonamento?: number | null;
     hasHeating?: boolean;
     hasWaterPoints?: boolean;
+    hasEquippedKitchen?: boolean;
+    hasGreenSpace?: boolean;
+    hasDisabledAccess?: boolean;
+    hasPoles?: boolean;
     selectedActivities?: string[];
     selectedStaleness?: number[];
 }
@@ -58,17 +67,24 @@ const getInitialFilters = (): StoredLocationFilters => {
 
 export default function Home({ defaultView = 'list' }: HomeProps) {
     const [locations, setLocations] = useState<Location[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
     const [initialFilters] = useState<StoredLocationFilters>(getInitialFilters);
 
+    // Search and View
+    const [searchInput, setSearchInput] = useState(() => initialFilters.searchTerm || '');
     const [searchTerm, setSearchTerm] = useState(() => initialFilters.searchTerm || '');
     const [viewMode, setViewMode] = useState<'list' | 'map'>(() => defaultView || initialFilters.viewMode || 'list');
-    const [showFilters, setShowFilters] = useState(false);
+    
+    // Modal State
+    const [showFiltersModal, setShowFiltersModal] = useState(false);
+    const [filterModalSection, setFilterModalSection] = useState<'zona' | 'esigenze' | 'servizi' | 'branche' | 'stato'>('esigenze');
+    const [showTransportModal, setShowTransportModal] = useState(false);
 
-    // Advanced Filters State
+    // Active Filters
     const [selectedBranches, setSelectedBranches] = useState<string[]>(() => initialFilters.selectedBranches || []);
     const [selectedRegions, setSelectedRegions] = useState<string[]>(() => initialFilters.selectedRegions || []);
     const [selectedProvinces, setSelectedProvinces] = useState<string[]>(() => initialFilters.selectedProvinces || []);
-    const [provinceSearch, setProvinceSearch] = useState('');
     const [hasTents, setHasTents] = useState(() => initialFilters.hasTents || false);
     const [hasBeds, setHasBeds] = useState(() => initialFilters.hasBeds || false);
     const [minBeds, setMinBeds] = useState<number | null>(() => initialFilters.minBeds ?? null);
@@ -76,19 +92,65 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
     const [minAccantonamento, setMinAccantonamento] = useState<number | null>(() => initialFilters.minAccantonamento ?? null);
     const [hasHeating, setHasHeating] = useState(() => initialFilters.hasHeating || false);
     const [hasWaterPoints, setHasWaterPoints] = useState(() => initialFilters.hasWaterPoints || false);
+    const [hasEquippedKitchen, setHasEquippedKitchen] = useState(() => initialFilters.hasEquippedKitchen || false);
+    const [hasGreenSpace, setHasGreenSpace] = useState(() => initialFilters.hasGreenSpace || false);
+    const [hasDisabledAccess, setHasDisabledAccess] = useState(() => initialFilters.hasDisabledAccess || false);
+    const [hasPoles, setHasPoles] = useState(() => initialFilters.hasPoles || false);
     const [selectedActivities, setSelectedActivities] = useState<string[]>(() => initialFilters.selectedActivities || []);
     const [selectedStaleness, setSelectedStaleness] = useState<number[]>(() => initialFilters.selectedStaleness || []);
+
+    // Draft state for modal
+    const [draftRegions, setDraftRegions] = useState<string[]>([]);
+    const [draftProvinces, setDraftProvinces] = useState<string[]>([]);
+    const [draftProvinceSearch, setDraftProvinceSearch] = useState('');
+    const [draftHasTents, setDraftHasTents] = useState(false);
+    const [draftHasBeds, setDraftHasBeds] = useState(false);
+    const [draftMinBeds, setDraftMinBeds] = useState<number | null>(null);
+    const [draftHasAccantonamento, setDraftHasAccantonamento] = useState(false);
+    const [draftMinAccantonamento, setDraftMinAccantonamento] = useState<number | null>(null);
+    const [draftHasHeating, setDraftHasHeating] = useState(false);
+    const [draftHasWaterPoints, setDraftHasWaterPoints] = useState(false);
+    const [draftHasEquippedKitchen, setDraftHasEquippedKitchen] = useState(false);
+    const [draftHasGreenSpace, setDraftHasGreenSpace] = useState(false);
+    const [draftHasDisabledAccess, setDraftHasDisabledAccess] = useState(false);
+    const [draftHasPoles, setDraftHasPoles] = useState(false);
+    const [draftBranches, setDraftBranches] = useState<string[]>([]);
+    const [draftActivities, setDraftActivities] = useState<string[]>([]);
+    const [draftStaleness, setDraftStaleness] = useState<number[]>([]);
+
+    // User & Session
     const [currentUser, setCurrentUser] = useState<UserType | null>(null);
     const [pendingCoCaUsers, setPendingCoCaUsers] = useState<UserType[]>([]);
     const [locationViews, setLocationViews] = useState<Record<string, string>>({});
-    const [showTransportModal, setShowTransportModal] = useState(false);
+    const [isOffline, setIsOffline] = useState(() => typeof navigator !== 'undefined' ? !navigator.onLine : false);
 
-    const resetAllFilters = () => {
+    // Debounce ricerca testuale 250ms
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setSearchTerm(searchInput.trim());
+        }, 250);
+        return () => clearTimeout(timer);
+    }, [searchInput]);
+
+    // Rilevamento stato offline
+    useEffect(() => {
+        const handleOnline = () => setIsOffline(false);
+        const handleOffline = () => setIsOffline(true);
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+        };
+    }, []);
+
+    // Reset completo filtri
+    const resetAllFilters = useCallback(() => {
+        setSearchInput('');
         setSearchTerm('');
         setSelectedBranches([]);
         setSelectedRegions([]);
         setSelectedProvinces([]);
-        setProvinceSearch('');
         setSelectedActivities([]);
         setSelectedStaleness([]);
         setHasTents(false);
@@ -98,11 +160,15 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
         setMinAccantonamento(null);
         setHasHeating(false);
         setHasWaterPoints(false);
+        setHasEquippedKitchen(false);
+        setHasGreenSpace(false);
+        setHasDisabledAccess(false);
+        setHasPoles(false);
         sessionStorage.removeItem('orme_location_filters');
         sessionStorage.removeItem('orme_location_scroll_y');
-    };
+    }, []);
 
-    // Salva automaticamente lo stato dei filtri in sessionStorage per ripristinarli quando si torna indietro da una scheda
+    // Salva filtri in sessionStorage
     useEffect(() => {
         const hasAnyActiveFilter = 
             Boolean(searchTerm.trim()) ||
@@ -118,6 +184,10 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
             (minAccantonamento !== null && minAccantonamento > 0) ||
             hasHeating ||
             hasWaterPoints ||
+            hasEquippedKitchen ||
+            hasGreenSpace ||
+            hasDisabledAccess ||
+            hasPoles ||
             viewMode !== defaultView;
 
         if (hasAnyActiveFilter) {
@@ -136,30 +206,23 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                 minAccantonamento,
                 hasHeating,
                 hasWaterPoints,
+                hasEquippedKitchen,
+                hasGreenSpace,
+                hasDisabledAccess,
+                hasPoles
             };
             sessionStorage.setItem('orme_location_filters', JSON.stringify(dataToSave));
         } else {
             sessionStorage.removeItem('orme_location_filters');
         }
     }, [
-        searchTerm,
-        viewMode,
-        defaultView,
-        selectedBranches,
-        selectedRegions,
-        selectedProvinces,
-        selectedActivities,
-        selectedStaleness,
-        hasTents,
-        hasBeds,
-        minBeds,
-        hasAccantonamento,
-        minAccantonamento,
-        hasHeating,
-        hasWaterPoints,
+        searchTerm, viewMode, defaultView, selectedBranches, selectedRegions,
+        selectedProvinces, selectedActivities, selectedStaleness, hasTents, hasBeds,
+        minBeds, hasAccantonamento, minAccantonamento, hasHeating, hasWaterPoints,
+        hasEquippedKitchen, hasGreenSpace, hasDisabledAccess, hasPoles
     ]);
 
-    // Salva e ripristina la posizione di scroll quando si torna indietro da un luogo
+    // Gestione posizione scroll
     useEffect(() => {
         const handleScroll = () => {
             sessionStorage.setItem('orme_location_scroll_y', String(window.scrollY));
@@ -176,1019 +239,820 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                 if (!isNaN(y) && y > 0) {
                     setTimeout(() => {
                         window.scrollTo({ top: y, behavior: 'instant' });
-                    }, 60);
+                    }, 50);
                 }
             }
         }
     }, [locations.length]);
 
-    useEffect(() => {
-        getLocations().then(setLocations).catch(console.error);
-        getUser().then(u => {
-            setCurrentUser(u);
-            if (u && u.membershipStatus === 'attivo' && (u.groupId || u.groupName)) {
-                getAllUsers().then(users => {
-                    const pending = users.filter(usr => usr.membershipStatus === 'in_attesa');
-                    setPendingCoCaUsers(pending);
-                }).catch(console.error);
-            }
-        }).catch(console.error);
+    // Caricamento iniziale dati
+    const loadData = useCallback(() => {
+        setIsLoading(true);
+        setLoadError(null);
+        getLocations()
+            .then(data => {
+                setLocations(data);
+                setIsLoading(false);
+            })
+            .catch(err => {
+                console.error("Errore recupero luoghi:", err);
+                setLoadError("Impossibile caricare i luoghi. Verifica la connessione.");
+                setIsLoading(false);
+            });
+
+        getUser()
+            .then(u => {
+                setCurrentUser(u);
+                if (u && u.membershipStatus === 'attivo' && (u.groupId || u.groupName)) {
+                    getAllUsers().then(users => {
+                        const pending = users.filter(usr => usr.membershipStatus === 'in_attesa');
+                        setPendingCoCaUsers(pending);
+                    }).catch(console.error);
+                }
+            })
+            .catch(console.error);
+
         getUserLocationViews().then(setLocationViews).catch(console.error);
 
         const params = new URLSearchParams(window.location.search);
         if (params.get('transport') === 'true') {
             setShowTransportModal(true);
-            const cleanUrl = window.location.pathname;
-            window.history.replaceState({}, document.title, cleanUrl);
+            window.history.replaceState({}, document.title, window.location.pathname);
         }
     }, []);
 
-    const getUnreadCount = (loc: Location) => {
+    useEffect(() => {
+        loadData();
+    }, [loadData]);
+
+    // Inizializza bozza filtri quando si apre il modal
+    const openFiltersModalWithSection = (section: 'zona' | 'esigenze' | 'servizi' | 'branche' | 'stato') => {
+        setFilterModalSection(section);
+        setDraftRegions([...selectedRegions]);
+        setDraftProvinces([...selectedProvinces]);
+        setDraftProvinceSearch('');
+        setDraftHasTents(hasTents);
+        setDraftHasBeds(hasBeds);
+        setDraftMinBeds(minBeds);
+        setDraftHasAccantonamento(hasAccantonamento);
+        setDraftMinAccantonamento(minAccantonamento);
+        setDraftHasHeating(hasHeating);
+        setDraftHasWaterPoints(hasWaterPoints);
+        setDraftHasEquippedKitchen(hasEquippedKitchen);
+        setDraftHasGreenSpace(hasGreenSpace);
+        setDraftHasDisabledAccess(hasDisabledAccess);
+        setDraftHasPoles(hasPoles);
+        setDraftBranches([...selectedBranches]);
+        setDraftActivities([...selectedActivities]);
+        setDraftStaleness([...selectedStaleness]);
+        setShowFiltersModal(true);
+    };
+
+    // Applica bozza al modale
+    const applyDraftFilters = () => {
+        setSelectedRegions(draftRegions);
+        setSelectedProvinces(draftProvinces);
+        setHasTents(draftHasTents);
+        setHasBeds(draftHasBeds);
+        setMinBeds(draftMinBeds);
+        setHasAccantonamento(draftHasAccantonamento);
+        setMinAccantonamento(draftMinAccantonamento);
+        setHasHeating(draftHasHeating);
+        setHasWaterPoints(draftHasWaterPoints);
+        setHasEquippedKitchen(draftHasEquippedKitchen);
+        setHasGreenSpace(draftHasGreenSpace);
+        setHasDisabledAccess(draftHasDisabledAccess);
+        setHasPoles(draftHasPoles);
+        setSelectedBranches(draftBranches);
+        setSelectedActivities(draftActivities);
+        setSelectedStaleness(draftStaleness);
+        setShowFiltersModal(false);
+
+        // Punti gamification se ricerca attiva per branca
+        if (draftBranches.length > 0) {
+            const stats: any = {};
+            draftBranches.forEach(b => {
+                const key = `search_track_${b}`;
+                if (!sessionStorage.getItem(key)) {
+                    sessionStorage.setItem(key, '1');
+                    if (b === 'L/C') stats.searchesLC = 1;
+                    if (b === 'E/G') stats.searchesEG = 1;
+                    if (b === 'R/S') stats.searchesRS = 1;
+                    if (b === 'Co.Ca.') stats.searchesCoCa = 1;
+                    if (b === 'Gruppo') stats.searchesGruppo = 1;
+                }
+            });
+            if (Object.keys(stats).length > 0) {
+                addPointsWithStats(1, stats).catch(console.error);
+            }
+        }
+    };
+
+    // Calcolo novità non lette
+    const getUnreadCount = useCallback((loc: Location) => {
         if (!currentUser || !loc.lastUpdatedAt) return 0;
         if (loc.lastUpdatedBy === currentUser.id || loc.lastUpdatedBy === currentUser.nickname) return 0;
         const lastViewedAt = locationViews[loc.id];
         const editTime = new Date(loc.lastUpdatedAt).getTime();
         const viewTime = lastViewedAt ? new Date(lastViewedAt).getTime() : 0;
         return editTime > viewTime ? 1 : 0;
-    };
+    }, [currentUser, locationViews]);
 
-    const toggleSelection = (list: any[], item: any, setList: (l: any[]) => void) => {
-        if (list.includes(item)) {
-            setList(list.filter(i => i !== item));
-        } else {
-            setList([...list, item]);
-        }
-    };
+    // Gestione Regioni/Province con cancellazione incompatibilità
+    const toggleDraftRegion = (region: string) => {
+        const next = draftRegions.includes(region)
+            ? draftRegions.filter(r => r !== region)
+            : [...draftRegions, region];
+        setDraftRegions(next);
 
-    const toggleRegion = (region: string) => {
-        const next = selectedRegions.includes(region)
-            ? selectedRegions.filter(r => r !== region)
-            : [...selectedRegions, region];
-        setSelectedRegions(next);
-
-        // Se sono selezionate regioni specifiche, rimuovi eventuali province che non vi appartengono
+        // Se sono selezionate regioni specifiche, deseleziona le province che non vi appartengono
         if (next.length > 0) {
             const allowed = new Set([
                 ...next.flatMap(r => (ITALIAN_PROVINCIAL_DATA[r] || []).map(p => p.toLowerCase())),
                 ...locations.filter(l => next.includes(l.region)).map(l => (l.province || '').trim().toLowerCase())
             ]);
-            setSelectedProvinces(prev => prev.filter(p => allowed.has(p.toLowerCase())));
+            setDraftProvinces(prev => prev.filter(p => allowed.has(p.toLowerCase())));
         }
     };
 
-    // Calcolo delle province disponibili in base alle regioni selezionate (o tutte se nessuna regione è filtrata)
-    const availableProvinces = useMemo(() => {
+    // Province disponibili per la bozza
+    const draftAvailableProvinces = useMemo(() => {
         let list: string[] = [];
-        if (selectedRegions.length > 0) {
-            list = selectedRegions.flatMap(r => ITALIAN_PROVINCIAL_DATA[r] || []);
+        if (draftRegions.length > 0) {
+            list = draftRegions.flatMap(r => ITALIAN_PROVINCIAL_DATA[r] || []);
         } else {
             list = ALL_ITALIAN_PROVINCES;
         }
 
-        // Aggiungi anche eventuali province custom già censite nei luoghi caricati
         const fromLocs = locations
-            .filter(l => selectedRegions.length === 0 || selectedRegions.includes(l.region))
+            .filter(l => draftRegions.length === 0 || draftRegions.includes(l.region))
             .map(l => (l.province || '').trim())
             .filter(p => p.length > 0);
 
         const unique = Array.from(new Set([...list, ...fromLocs]));
         return unique.sort((a, b) => a.localeCompare(b, 'it', { sensitivity: 'base' }));
-    }, [selectedRegions, locations]);
+    }, [draftRegions, locations]);
 
-    const filteredAvailableProvinces = useMemo(() => {
-        if (!provinceSearch.trim()) return availableProvinces;
-        const q = provinceSearch.trim().toLowerCase();
-        return availableProvinces.filter(p => {
+    const filteredDraftProvinces = useMemo(() => {
+        if (!draftProvinceSearch.trim()) return draftAvailableProvinces;
+        const q = draftProvinceSearch.trim().toLowerCase();
+        return draftAvailableProvinces.filter(p => {
             const code = (PROVINCE_TO_CODE[p] || '').toLowerCase();
             return p.toLowerCase().includes(q) || code.includes(q);
         });
-    }, [availableProvinces, provinceSearch]);
+    }, [draftAvailableProvinces, draftProvinceSearch]);
 
-    const filteredLocations = locations.filter(loc => {
-        // 1. Search (nome, comune, regione o provincia)
-        const matchesSearch = loc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            loc.commune.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            loc.region.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (loc.province && loc.province.toLowerCase().includes(searchTerm.toLowerCase()));
-
-        // 2. Tents, Beds, Accantonamento, Heating & Water Points
-        const matchesTents = hasTents ? loc.hasTents : true;
-        let matchesBeds = true;
-        if (minBeds !== null && minBeds > 0) {
-            matchesBeds = (loc.beds || 0) >= minBeds;
-        } else if (hasBeds) {
-            matchesBeds = (loc.beds || 0) > 0;
+    // Funzione generica di filtro
+    const matchFilterCriteria = useCallback((loc: Location, criteria: {
+        term: string;
+        branches: string[];
+        regions: string[];
+        provinces: string[];
+        tents: boolean;
+        beds: boolean;
+        minBedsVal: number | null;
+        accantonamento: boolean;
+        minAccantonamentoVal: number | null;
+        heating: boolean;
+        waterPoints: boolean;
+        kitchen: boolean;
+        greenSpace: boolean;
+        disabledAccess: boolean;
+        poles: boolean;
+        activities: string[];
+        staleness: number[];
+    }) => {
+        // 1. Ricerca testuale
+        if (criteria.term) {
+            const q = criteria.term.toLowerCase();
+            const matchesSearch = 
+                loc.name.toLowerCase().includes(q) ||
+                loc.commune.toLowerCase().includes(q) ||
+                loc.region.toLowerCase().includes(q) ||
+                (loc.province && loc.province.toLowerCase().includes(q));
+            if (!matchesSearch) return false;
         }
 
-        let matchesAccantonamento = true;
-        if (minAccantonamento !== null && minAccantonamento > 0) {
-            matchesAccantonamento = (loc.accantonamentoCapacity || 0) >= minAccantonamento;
-        } else if (hasAccantonamento) {
-            matchesAccantonamento = (loc.accantonamentoCapacity || 0) > 0;
+        // 2. Sistemazione
+        if (criteria.tents && !loc.hasTents) return false;
+        if (criteria.minBedsVal !== null && criteria.minBedsVal > 0) {
+            if ((loc.beds || 0) < criteria.minBedsVal) return false;
+        } else if (criteria.beds && (!loc.beds || loc.beds <= 0)) {
+            return false;
         }
 
-        const matchesHeating = hasHeating ? !!loc.hasHeating : true;
-        const matchesWaterPoints = hasWaterPoints ? !!loc.hasWaterPoints : true;
+        if (criteria.minAccantonamentoVal !== null && criteria.minAccantonamentoVal > 0) {
+            if ((loc.accantonamentoCapacity || 0) < criteria.minAccantonamentoVal) return false;
+        } else if (criteria.accantonamento && (!loc.accantonamentoCapacity || loc.accantonamentoCapacity <= 0)) {
+            return false;
+        }
 
-        // 3. Regioni & Province
-        const matchesRegion = selectedRegions.length > 0 ? selectedRegions.includes(loc.region) : true;
-        const matchesProvince = selectedProvinces.length > 0 ? (
-            loc.province ? selectedProvinces.some(p => {
+        // 3. Servizi
+        if (criteria.heating && !loc.hasHeating) return false;
+        if (criteria.waterPoints && !loc.hasWaterPoints) return false;
+        if (criteria.kitchen && !loc.hasEquippedKitchen) return false;
+        if (criteria.greenSpace && !loc.hasGreenSpace) return false;
+        if (criteria.disabledAccess && !loc.hasDisabledAccess) return false;
+        if (criteria.poles && !loc.hasPoles) return false;
+
+        // 4. Regioni & Province
+        if (criteria.regions.length > 0 && !criteria.regions.includes(loc.region)) return false;
+        if (criteria.provinces.length > 0) {
+            if (!loc.province) return false;
+            const matchesProv = criteria.provinces.some(p => {
                 const pNorm = p.trim().toLowerCase();
                 const locNorm = loc.province.trim().toLowerCase();
                 const pCode = (PROVINCE_TO_CODE[p] || '').toLowerCase();
                 const locCode = (PROVINCE_TO_CODE[loc.province] || '').toLowerCase();
                 return locNorm === pNorm || (pCode && locNorm === pCode) || (locCode && pNorm === locCode);
-            }) : false
-        ) : true;
-
-        // 4. Branche & Attività
-        let matchesBranch = true;
-        if (selectedBranches.length > 0) {
-            const validActivitiesForBranches = selectedBranches.flatMap(branch => BRANCH_ACTIVITIES[branch]);
-            matchesBranch = loc.activities.some(act => validActivitiesForBranches.includes(act));
+            });
+            if (!matchesProv) return false;
         }
 
-        let matchesActivity = true;
-        if (selectedActivities.length > 0) {
-            matchesActivity = loc.activities.some(act => selectedActivities.includes(act));
+        // 5. Branche & Attività
+        if (criteria.branches.length > 0) {
+            const validActivitiesForBranches = criteria.branches.flatMap(branch => BRANCH_ACTIVITIES[branch] || []);
+            const hasBranchActivity = loc.activities.some(act => validActivitiesForBranches.includes(act));
+            if (!hasBranchActivity) return false;
         }
 
-        // 5. Staleness
-        let matchesStaleness = true;
-        if (selectedStaleness.length > 0) {
+        if (criteria.activities.length > 0) {
+            const hasActivity = loc.activities.some(act => criteria.activities.includes(act));
+            if (!hasActivity) return false;
+        }
+
+        // 6. Staleness
+        if (criteria.staleness.length > 0) {
             const info = getStalenessInfo(loc.lastUpdatedAt);
-            matchesStaleness = selectedStaleness.includes(info.level);
+            if (!criteria.staleness.includes(info.level)) return false;
         }
 
-        return matchesSearch && matchesTents && matchesBeds && matchesAccantonamento && matchesHeating && matchesWaterPoints && 
-               matchesRegion && matchesProvince && matchesBranch && matchesActivity && matchesStaleness;
-    });
+        return true;
+    }, []);
 
-    const activeFiltersCount =
-        selectedBranches.length +
-        selectedRegions.length +
-        selectedProvinces.length +
-        selectedActivities.length +
-        selectedStaleness.length +
-        (hasTents ? 1 : 0) +
-        ((minBeds !== null && minBeds > 0) || hasBeds ? 1 : 0) +
-        ((minAccantonamento !== null && minAccantonamento > 0) || hasAccantonamento ? 1 : 0) +
-        (hasHeating ? 1 : 0) +
-        (hasWaterPoints ? 1 : 0);
+    // Risultati effettivi filtrati
+    const filteredLocations = useMemo(() => {
+        return locations.filter(loc => matchFilterCriteria(loc, {
+            term: searchTerm,
+            branches: selectedBranches,
+            regions: selectedRegions,
+            provinces: selectedProvinces,
+            tents: hasTents,
+            beds: hasBeds,
+            minBedsVal: minBeds,
+            accantonamento: hasAccantonamento,
+            minAccantonamentoVal: minAccantonamento,
+            heating: hasHeating,
+            waterPoints: hasWaterPoints,
+            kitchen: hasEquippedKitchen,
+            greenSpace: hasGreenSpace,
+            disabledAccess: hasDisabledAccess,
+            poles: hasPoles,
+            activities: selectedActivities,
+            staleness: selectedStaleness
+        }));
+    }, [
+        locations, matchFilterCriteria, searchTerm, selectedBranches, selectedRegions,
+        selectedProvinces, hasTents, hasBeds, minBeds, hasAccantonamento,
+        minAccantonamento, hasHeating, hasWaterPoints, hasEquippedKitchen,
+        hasGreenSpace, hasDisabledAccess, hasPoles, selectedActivities, selectedStaleness
+    ]);
+
+    // Conteggio bozza in tempo reale nel modale
+    const draftMatchCount = useMemo(() => {
+        return locations.filter(loc => matchFilterCriteria(loc, {
+            term: searchTerm,
+            branches: draftBranches,
+            regions: draftRegions,
+            provinces: draftProvinces,
+            tents: draftHasTents,
+            beds: draftHasBeds,
+            minBedsVal: draftMinBeds,
+            accantonamento: draftHasAccantonamento,
+            minAccantonamentoVal: draftMinAccantonamento,
+            heating: draftHasHeating,
+            waterPoints: draftHasWaterPoints,
+            kitchen: draftHasEquippedKitchen,
+            greenSpace: draftHasGreenSpace,
+            disabledAccess: draftHasDisabledAccess,
+            poles: draftHasPoles,
+            activities: draftActivities,
+            staleness: draftStaleness
+        })).length;
+    }, [
+        locations, matchFilterCriteria, searchTerm, draftBranches, draftRegions,
+        draftProvinces, draftHasTents, draftHasBeds, draftMinBeds, draftHasAccantonamento,
+        draftMinAccantonamento, draftHasHeating, draftHasWaterPoints, draftHasEquippedKitchen,
+        draftHasGreenSpace, draftHasDisabledAccess, draftHasPoles, draftActivities, draftStaleness
+    ]);
+
+    // Coordinate per la mappa
+    const locationsWithCoordsCount = useMemo(() => {
+        return filteredLocations.filter(loc => Boolean(loc.coordinates?.lat && loc.coordinates?.lng) || Boolean(loc.googleMapsLink)).length;
+    }, [filteredLocations]);
+
+    const locationsWithoutCoordsCount = filteredLocations.length - locationsWithCoordsCount;
+
+    // Conteggio filtri attivi (esclusa ricerca testuale)
+    const activeFiltersCount = useMemo(() => {
+        return (
+            selectedBranches.length +
+            selectedRegions.length +
+            selectedProvinces.length +
+            selectedActivities.length +
+            selectedStaleness.length +
+            (hasTents ? 1 : 0) +
+            ((minBeds !== null && minBeds > 0) || hasBeds ? 1 : 0) +
+            ((minAccantonamento !== null && minAccantonamento > 0) || hasAccantonamento ? 1 : 0) +
+            (hasHeating ? 1 : 0) +
+            (hasWaterPoints ? 1 : 0) +
+            (hasEquippedKitchen ? 1 : 0) +
+            (hasGreenSpace ? 1 : 0) +
+            (hasDisabledAccess ? 1 : 0) +
+            (hasPoles ? 1 : 0)
+        );
+    }, [
+        selectedBranches.length, selectedRegions.length, selectedProvinces.length,
+        selectedActivities.length, selectedStaleness.length, hasTents, minBeds, hasBeds,
+        minAccantonamento, hasAccantonamento, hasHeating, hasWaterPoints,
+        hasEquippedKitchen, hasGreenSpace, hasDisabledAccess, hasPoles
+    ]);
+
+    // Etichetta pulsante "Zona"
+    const zoneButtonLabel = useMemo(() => {
+        if (selectedProvinces.length === 1) {
+            const p = selectedProvinces[0];
+            const code = PROVINCE_TO_CODE[p];
+            return `Zona · ${p}${code ? ` (${code})` : ''}`;
+        }
+        if (selectedProvinces.length > 1) {
+            return `Zona · ${selectedProvinces.length} province`;
+        }
+        if (selectedRegions.length === 1) {
+            return `Zona · ${selectedRegions[0]}`;
+        }
+        if (selectedRegions.length > 1) {
+            return `Zona · ${selectedRegions.length} regioni`;
+        }
+        return 'Zona · Tutta Italia';
+    }, [selectedProvinces, selectedRegions]);
+
+    // Focus / Keyboard trap per il modale dei filtri
+    const modalRef = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape' && showFiltersModal) {
+                setShowFiltersModal(false);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [showFiltersModal]);
+
+    // Posiziona lo scroll sulla sezione richiesta quando si apre il modale
+    useEffect(() => {
+        if (showFiltersModal && filterModalSection) {
+            const timer = setTimeout(() => {
+                const el = document.getElementById(`heading-${filterModalSection}`);
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }, 80);
+            return () => clearTimeout(timer);
+        }
+    }, [showFiltersModal, filterModalSection]);
+
+    // Gestione click supporto Akela
+    const handleOpenAkela = () => {
+        window.dispatchEvent(new CustomEvent('open-akela'));
+    };
 
     return (
-        <div className="space-y-6 relative min-h-[calc(100vh-150px)] pb-20">
-            {/* Header Section */}
-            <div className="bg-scout-green dark:bg-green-900/60 dark:border dark:border-green-800/50 text-white p-5 sm:p-6 rounded-2xl shadow-lg -mx-4 md:mx-0 rounded-t-none md:rounded-2xl backdrop-blur-sm">
-                <h1 className="text-2xl sm:text-3xl font-black mb-1.5 tracking-tight">Trova Luoghi per Uscite e Campi</h1>
-                <p className="text-xs sm:text-sm text-emerald-100 font-medium">Basi scout, case, accantonamenti e terreni per tende in tutta Italia.</p>
-
-                <div className="mt-5 space-y-3">
-                    {/* Barra di Ricerca a larghezza intera */}
-                    <div className="relative">
-                        <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400">
-                            <Search size={20} className="text-scout-green" />
-                        </div>
-                        <input
-                            type="text"
-                            placeholder="Cerca per nome base, comune, provincia o regione..."
-                            value={searchTerm}
-                            onChange={(e) => {
-                                setSearchTerm(e.target.value);
-                                if (!sessionStorage.getItem('search_done') && e.target.value.length > 2) {
-                                    sessionStorage.setItem('search_done', '1');
-                                    
-                                    const stats: any = { locationsSearched: 1 };
-                                    // If branch filters are active, count them too
-                                    selectedBranches.forEach(branch => {
-                                        if (branch === 'L/C') stats.searchesLC = (stats.searchesLC || 0) + 1;
-                                        if (branch === 'E/G') stats.searchesEG = (stats.searchesEG || 0) + 1;
-                                        if (branch === 'R/S') stats.searchesRS = (stats.searchesRS || 0) + 1;
-                                        if (branch === 'Co.Ca.') stats.searchesCoCa = (stats.searchesCoCa || 0) + 1;
-                                        if (branch === 'Gruppo') stats.searchesGruppo = (stats.searchesGruppo || 0) + 1;
-                                    });
-
-                                    addPointsWithStats(1, stats).catch(console.error);
-                                }
-                            }}
-                            className="w-full pl-11 pr-10 py-3.5 rounded-xl bg-white dark:bg-gray-800 dark:text-gray-100 dark:border dark:border-green-700/50 text-gray-900 font-semibold focus:outline-none focus:ring-4 focus:ring-white/30 shadow-md placeholder:text-gray-400 dark:placeholder:text-gray-500 text-sm md:text-base"
-                        />
-                        {searchTerm && (
-                            <button
-                                type="button"
-                                onClick={() => setSearchTerm('')}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 rounded-full cursor-pointer"
-                                title="Cancella testo di ricerca"
-                            >
-                                <X size={18} />
-                            </button>
-                        )}
-                    </div>
-
-                    {/* Azioni Rapide con etichette esplicite (Human-Crafted) */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-1">
-                        <Link 
-                            to="/add" 
-                            className="min-h-[46px] bg-white text-scout-green-dark hover:bg-emerald-50 dark:bg-gray-800 dark:text-emerald-300 dark:hover:bg-gray-700 px-3 py-2.5 rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm border border-emerald-100 dark:border-gray-700 active:scale-95 transition-all text-center"
-                        >
-                            <Plus size={18} className="text-scout-green dark:text-emerald-400 shrink-0" />
-                            <span className="truncate">Aggiungi Luogo</span>
-                        </Link>
-
-                        <button
-                            type="button"
-                            onClick={() => setShowFilters(true)}
-                            className={cn(
-                                "min-h-[46px] px-3 py-2.5 rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm border active:scale-95 transition-all cursor-pointer text-center",
-                                activeFiltersCount > 0 
-                                    ? "bg-amber-600 text-white border-amber-700 shadow-md ring-2 ring-amber-300/40" 
-                                    : "bg-white text-gray-800 dark:bg-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-gray-50"
-                            )}
-                        >
-                            <Filter size={18} className="shrink-0" />
-                            <span>Filtri</span>
-                            {activeFiltersCount > 0 && (
-                                <span className="bg-white text-amber-700 dark:bg-amber-950 dark:text-amber-200 text-[11px] font-black px-1.5 py-0.5 rounded-full">
-                                    {activeFiltersCount}
-                                </span>
-                            )}
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={() => setShowTransportModal(true)}
-                            className="col-span-2 sm:col-span-1 min-h-[46px] bg-emerald-800/60 hover:bg-emerald-800/80 text-white px-3 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm border border-white/20 active:scale-95 transition-all cursor-pointer text-center"
-                        >
-                            <Bus size={18} className="shrink-0" />
-                            <span className="truncate">Pullman & Trasporti</span>
-                        </button>
-                    </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-5 relative min-h-[calc(100vh-140px)] pb-24 text-gray-900 dark:text-[#F1F6F2]">
+            {/* 1. Header Locale Compatto & Azioni Principali */}
+            <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-gray-200/80 dark:border-gray-800">
+                <div>
+                    <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
+                        Luoghi per uscite e campi
+                    </h1>
+                    <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-medium mt-0.5">
+                        Basi scout, case vacanze, accantonamenti e terreni per tende in tutta Italia.
+                    </p>
                 </div>
-            </div>
 
-            {/* Banner Richieste Accesso CoCa in Sospeso */}
+                {/* Gruppo Azioni in testata */}
+                <div className="flex items-center gap-2.5 flex-wrap shrink-0">
+                    <button
+                        type="button"
+                        onClick={() => setShowTransportModal(true)}
+                        className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white dark:bg-[#182932] text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors shadow-2xs min-h-[44px] cursor-pointer"
+                        title="Apri la rubrica ditte pullman e preventivi"
+                    >
+                        <Bus size={17} className="text-scout-blue shrink-0" aria-hidden="true" />
+                        <span>Pullman & Trasporti</span>
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={handleOpenAkela}
+                        className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white dark:bg-[#182932] text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors shadow-2xs min-h-[44px] cursor-pointer"
+                        title="Chiedi supporto metodologico ad Akela AI"
+                    >
+                        <span className="text-base leading-none" aria-hidden="true">🐺</span>
+                        <span>Akela AI</span>
+                        <Sparkles size={14} className="text-amber-500 shrink-0" aria-hidden="true" />
+                    </button>
+
+                    <Link
+                        to="/add"
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-[#1B4931] hover:bg-[#133724] text-white transition-all shadow-sm active:scale-95 min-h-[44px]"
+                    >
+                        <Plus size={18} className="shrink-0" aria-hidden="true" />
+                        <span>Aggiungi luogo</span>
+                    </Link>
+                </div>
+            </header>
+
+            {/* Banner Offline se connettività assente */}
+            {isOffline && (
+                <div 
+                    role="status" 
+                    className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-xs font-semibold text-amber-900 dark:text-amber-200 flex items-center gap-2"
+                >
+                    <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" aria-hidden="true" />
+                    <span>Offline · Stai consultando i luoghi salvati in locale su questo dispositivo.</span>
+                </div>
+            )}
+
+            {/* Banner Richieste Accesso CoCa in Sospeso (se presenti) */}
             {pendingCoCaUsers.length > 0 && (
                 <Link
                     to="/verbali/membri?tab=sicurezza"
-                    className="block bg-amber-500/10 border-2 border-amber-500/40 hover:border-amber-500 rounded-3xl p-4 sm:p-5 transition-all shadow-xs group animate-in fade-in"
+                    className="block bg-amber-500/10 border-2 border-amber-500/40 hover:border-amber-500 rounded-2xl p-4 transition-all shadow-xs group"
                 >
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div className="flex items-center gap-3.5">
-                            <div className="w-11 h-11 rounded-2xl bg-amber-500 text-white flex items-center justify-center font-black shrink-0 animate-pulse shadow-xs">
-                                <Clock size={22} />
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold shrink-0 shadow-xs">
+                                <Clock size={20} aria-hidden="true" />
                             </div>
                             <div>
-                                <h3 className="font-black text-sm md:text-base text-amber-950 dark:text-amber-200">
-                                    {pendingCoCaUsers.length === 1 ? '1 nuova richiesta di accesso alla Comunità Capi' : `${pendingCoCaUsers.length} nuove richieste di accesso alla Comunità Capi`}
-                                </h3>
+                                <h2 className="font-bold text-sm sm:text-base text-amber-950 dark:text-amber-200">
+                                    {pendingCoCaUsers.length === 1 ? '1 richiesta di accesso alla Comunità Capi' : `${pendingCoCaUsers.length} richieste di accesso alla Comunità Capi`}
+                                </h2>
                                 <p className="text-xs text-amber-800/80 dark:text-amber-300/80 mt-0.5">
-                                    {pendingCoCaUsers.map(u => `${u.firstName} ${u.lastName}${u.nickname ? ` (${u.nickname})` : ''}`).join(', ')} in attesa di approvazione (2 voti).
+                                    {pendingCoCaUsers.map(u => `${u.firstName} ${u.lastName}`).join(', ')} in attesa di approvazione (2 voti).
                                 </p>
                             </div>
                         </div>
-                        <div className="flex items-center gap-1.5 text-xs font-black text-amber-700 dark:text-amber-400 group-hover:translate-x-1 transition-transform self-end sm:self-auto shrink-0 bg-amber-500/20 px-3 py-1.5 rounded-xl">
-                            <span>Esamina e Vota</span>
-                            <span>→</span>
-                        </div>
+                        <span className="text-xs font-bold text-amber-700 dark:text-amber-400 group-hover:translate-x-1 transition-transform self-end sm:self-auto shrink-0 bg-amber-500/20 px-3 py-1.5 rounded-lg">
+                            Esamina e Vota →
+                        </span>
                     </div>
                 </Link>
             )}
 
-            {/* Filter Modal */}
-            {showFilters && (
-                <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setShowFilters(false)}>
-                    <div className="bg-white dark:bg-gray-800 rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 space-y-6 shadow-2xl border border-gray-100 dark:border-gray-700 text-gray-900 dark:text-gray-100" onClick={e => e.stopPropagation()}>
-                        <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-700 pb-4">
-                            <h2 className="text-2xl font-bold text-scout-green dark:text-green-500">Filtri</h2>
-                            <button onClick={() => setShowFilters(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-500 dark:text-gray-400"><X size={24} /></button>
-                        </div>
-
-                        {/* 0. Stato Dati */}
-                        <div>
-                            <h3 className="font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                                <Clock size={16} className="text-scout-brown dark:text-amber-500" /> Stato Aggiornamento Dati
-                            </h3>
-                            <div className="grid grid-cols-2 gap-2">
-                                {STALENESS_LEVELS.map(s => (
-                                    <button
-                                        key={s.level}
-                                        onClick={() => toggleSelection(selectedStaleness, s.level, setSelectedStaleness)}
-                                        className={cn(
-                                            "flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-bold border transition-all",
-                                            selectedStaleness.includes(s.level)
-                                                ? "bg-gray-900 dark:bg-gray-105 text-white dark:text-gray-900 border-gray-900 dark:border-gray-105 shadow-md"
-                                                : "bg-white dark:bg-gray-700 text-gray-650 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:bg-gray-650"
-                                        )}
-                                    >
-                                        <div className={cn("w-3 h-3 rounded-full shrink-0", s.color)} />
-                                        {s.label}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* 1. Branche */}
-                        <div>
-                            <h3 className="font-bold text-gray-900 dark:text-white mb-3 text-sm">Filtra per Branca</h3>
-                            <div className="flex flex-wrap gap-2">
-                                {Object.keys(BRANCH_ACTIVITIES).map(branch => (
-                                    <button
-                                        key={branch}
-                                        onClick={() => toggleSelection(selectedBranches, branch, setSelectedBranches)}
-                                        className={cn(
-                                            "px-4 py-2 rounded-full text-xs font-bold border transition-all",
-                                            selectedBranches.includes(branch)
-                                                ? "bg-scout-green text-white border-scout-green shadow-sm"
-                                                : "bg-white dark:bg-gray-700 text-gray-605 dark:text-gray-350 border-gray-200 dark:border-gray-650 hover:bg-gray-55 dark:hover:bg-gray-600"
-                                        )}
-                                    >
-                                        {branch}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* 1b. Attività specifiche */}
-                        <div>
-                            <h3 className="font-bold text-gray-900 dark:text-white mb-3 text-sm">Attività Specifica</h3>
-                            <div className="flex flex-wrap gap-2">
-                                {Array.from(new Set(Object.values(BRANCH_ACTIVITIES).flat())).sort().map(activity => (
-                                    <button
-                                        key={activity}
-                                        onClick={() => toggleSelection(selectedActivities, activity, setSelectedActivities)}
-                                        className={cn(
-                                            "px-3 py-1.5 rounded-lg text-[10px] font-bold border transition-all",
-                                            selectedActivities.includes(activity)
-                                                ? "bg-scout-blue text-white border-scout-blue"
-                                                : "bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-100 dark:border-gray-600 hover:border-scout-blue/30"
-                                        )}
-                                    >
-                                        {activity}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* 2. Logistica, Posti Letto & Accantonamento */}
-                        <div className="space-y-3">
-                            <div className="flex justify-between items-center">
-                                <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 text-sm">
-                                    <BedDouble size={18} className="text-scout-blue" /> Logistica e Posti al Chiuso
-                                </h3>
-                                {(minBeds !== null || hasBeds || minAccantonamento !== null || hasAccantonamento || hasTents || hasHeating || hasWaterPoints) && (
-                                    <button
-                                        type="button"
-                                        onClick={() => { 
-                                            setMinBeds(null); 
-                                            setHasBeds(false); 
-                                            setMinAccantonamento(null); 
-                                            setHasAccantonamento(false); 
-                                            setHasTents(false); 
-                                            setHasHeating(false); 
-                                            setHasWaterPoints(false); 
-                                        }}
-                                        className="text-xs text-red-500 font-bold hover:underline cursor-pointer"
-                                    >
-                                        Azzera
-                                    </button>
-                                )}
-                            </div>
-
-                            {/* Checkbox Tende / Letti / Accantonamento / Riscaldamento / Punti d'acqua */}
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
-                                <label className={cn(
-                                    "flex items-center justify-center gap-1.5 p-2.5 border rounded-xl cursor-pointer transition-all text-xs font-bold",
-                                    hasTents 
-                                        ? "bg-green-50 dark:bg-emerald-950/20 border-green-500 text-green-700 dark:text-emerald-400" 
-                                        : "bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-650 text-gray-700 dark:text-gray-300"
-                                )}>
-                                    <input type="checkbox" checked={hasTents} onChange={e => setHasTents(e.target.checked)} className="hidden" />
-                                    <span>🏕️ Tende</span>
-                                </label>
-                                <label className={cn(
-                                    "flex items-center justify-center gap-1.5 p-2.5 border rounded-xl cursor-pointer transition-all text-xs font-bold",
-                                    hasBeds || (minBeds !== null && minBeds > 0)
-                                        ? "bg-blue-50 dark:bg-blue-950/30 border-scout-blue text-scout-blue" 
-                                        : "bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-650 text-gray-700 dark:text-gray-300"
-                                )}>
-                                    <input
-                                        type="checkbox"
-                                        checked={hasBeds || (minBeds !== null && minBeds > 0)}
-                                        onChange={e => {
-                                            setHasBeds(e.target.checked);
-                                            if (!e.target.checked) setMinBeds(null);
-                                        }}
-                                        className="hidden"
-                                    />
-                                    <span>🛏️ Letti</span>
-                                </label>
-                                <label className={cn(
-                                    "flex items-center justify-center gap-1.5 p-2.5 border rounded-xl cursor-pointer transition-all text-xs font-bold",
-                                    hasAccantonamento || (minAccantonamento !== null && minAccantonamento > 0)
-                                        ? "bg-amber-50 dark:bg-amber-950/30 border-amber-500 text-amber-800 dark:text-amber-300" 
-                                        : "bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-650 text-gray-700 dark:text-gray-300"
-                                )}>
-                                    <input
-                                        type="checkbox"
-                                        checked={hasAccantonamento || (minAccantonamento !== null && minAccantonamento > 0)}
-                                        onChange={e => {
-                                            setHasAccantonamento(e.target.checked);
-                                            if (!e.target.checked) setMinAccantonamento(null);
-                                        }}
-                                        className="hidden"
-                                    />
-                                    <span>🏠 Accantonamento</span>
-                                </label>
-                                <label className={cn(
-                                    "flex items-center justify-center gap-1.5 p-2.5 border rounded-xl cursor-pointer transition-all text-xs font-bold",
-                                    hasHeating
-                                        ? "bg-orange-50 dark:bg-orange-950/30 border-orange-500 text-orange-700 dark:text-orange-300" 
-                                        : "bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-650 text-gray-700 dark:text-gray-300"
-                                )}>
-                                    <input
-                                        type="checkbox"
-                                        checked={hasHeating}
-                                        onChange={e => setHasHeating(e.target.checked)}
-                                        className="hidden"
-                                    />
-                                    <span>🔥 Riscaldato</span>
-                                </label>
-                                <label className={cn(
-                                    "flex items-center justify-center gap-1.5 p-2.5 border rounded-xl cursor-pointer transition-all text-xs font-bold",
-                                    hasWaterPoints
-                                        ? "bg-cyan-50 dark:bg-cyan-950/30 border-cyan-500 text-cyan-700 dark:text-cyan-300" 
-                                        : "bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-650 text-gray-700 dark:text-gray-300"
-                                )}>
-                                    <input
-                                        type="checkbox"
-                                        checked={hasWaterPoints}
-                                        onChange={e => setHasWaterPoints(e.target.checked)}
-                                        className="hidden"
-                                    />
-                                    <span>🚰 Punti d'acqua</span>
-                                </label>
-                            </div>
-
-                            {/* Filtro specifico per Numero Posti Letto Minimi */}
-                            <div className="p-3.5 bg-gray-50 dark:bg-gray-700/40 rounded-2xl border border-gray-150 dark:border-gray-650 space-y-2.5">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-                                        <BedDouble size={15} className="text-scout-blue" />
-                                        Posti letto minimi (brandina/materasso):
-                                    </span>
-                                    {minBeds !== null && minBeds > 0 && (
-                                        <span className="text-[11px] font-black text-scout-blue bg-blue-50 dark:bg-blue-950/40 px-2.5 py-0.5 rounded-full border border-blue-200 dark:border-blue-800/40">
-                                            Almeno {minBeds} letti
-                                        </span>
-                                    )}
-                                </div>
-
-                                {/* Preset rapidi */}
-                                <div className="grid grid-cols-5 gap-1.5">
-                                    {[
-                                        { label: 'Tutti', val: null },
-                                        { label: '10+', val: 10 },
-                                        { label: '20+', val: 20 },
-                                        { label: '30+', val: 30 },
-                                        { label: '50+', val: 50 },
-                                    ].map(preset => {
-                                        const isSelected = preset.val === null ? (minBeds === null) : minBeds === preset.val;
-                                        return (
-                                            <button
-                                                key={preset.label}
-                                                type="button"
-                                                onClick={() => {
-                                                    if (preset.val === null) {
-                                                        setMinBeds(null);
-                                                    } else {
-                                                        setMinBeds(preset.val);
-                                                        setHasBeds(true);
-                                                    }
-                                                }}
-                                                className={cn(
-                                                    "py-2 px-1 rounded-xl text-xs font-bold border transition-all text-center cursor-pointer",
-                                                    isSelected
-                                                        ? "bg-scout-blue text-white border-scout-blue shadow-sm"
-                                                        : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-scout-blue/40"
-                                                )}
-                                            >
-                                                {preset.label}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-
-                                {/* Stepper numerico personalizzato */}
-                                <div className="flex items-center justify-between gap-3 pt-1">
-                                    <span className="text-[11px] text-gray-500 dark:text-gray-400">
-                                        Oppure imposta numero esatto letti:
-                                    </span>
-                                    <div className="flex items-center gap-1.5 shrink-0">
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                const current = minBeds || 0;
-                                                const next = Math.max(0, current - 5);
-                                                setMinBeds(next === 0 ? null : next);
-                                                if (next === 0) setHasBeds(false);
-                                            }}
-                                            disabled={!minBeds || minBeds <= 0}
-                                            className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 flex items-center justify-center font-bold text-sm disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
-                                        >
-                                            -
-                                        </button>
-                                        <input
-                                            type="number"
-                                            min={0}
-                                            max={500}
-                                            placeholder="0"
-                                            value={minBeds ?? ''}
-                                            onChange={e => {
-                                                const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
-                                                if (val === null || isNaN(val) || val <= 0) {
-                                                    setMinBeds(null);
-                                                } else {
-                                                    setMinBeds(val);
-                                                    setHasBeds(true);
-                                                }
-                                            }}
-                                            className="w-16 py-1 px-1.5 text-center font-mono font-bold text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-scout-blue"
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                const current = minBeds || 0;
-                                                const next = current + 5;
-                                                setMinBeds(next);
-                                                setHasBeds(true);
-                                            }}
-                                            className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 flex items-center justify-center font-bold text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
-                                        >
-                                            +
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Filtro specifico per Numero Posti Accantonamento Minimi */}
-                            <div className="p-3.5 bg-amber-50/50 dark:bg-amber-950/20 rounded-2xl border border-amber-200/70 dark:border-amber-800/40 space-y-2.5">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-xs font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
-                                        <HomeIcon size={15} className="text-amber-600 dark:text-amber-400" />
-                                        Posti accantonamento minimi (a terra):
-                                    </span>
-                                    {minAccantonamento !== null && minAccantonamento > 0 && (
-                                        <span className="text-[11px] font-black text-amber-800 dark:text-amber-200 bg-amber-100 dark:bg-amber-900/50 px-2.5 py-0.5 rounded-full border border-amber-300 dark:border-amber-700">
-                                            Almeno {minAccantonamento} a terra
-                                        </span>
-                                    )}
-                                </div>
-
-                                {/* Preset rapidi accantonamento */}
-                                <div className="grid grid-cols-5 gap-1.5">
-                                    {[
-                                        { label: 'Tutti', val: null },
-                                        { label: '15+', val: 15 },
-                                        { label: '25+', val: 25 },
-                                        { label: '40+', val: 40 },
-                                        { label: '60+', val: 60 },
-                                    ].map(preset => {
-                                        const isSelected = preset.val === null ? (minAccantonamento === null) : minAccantonamento === preset.val;
-                                        return (
-                                            <button
-                                                key={preset.label}
-                                                type="button"
-                                                onClick={() => {
-                                                    if (preset.val === null) {
-                                                        setMinAccantonamento(null);
-                                                    } else {
-                                                        setMinAccantonamento(preset.val);
-                                                        setHasAccantonamento(true);
-                                                    }
-                                                }}
-                                                className={cn(
-                                                    "py-2 px-1 rounded-xl text-xs font-bold border transition-all text-center cursor-pointer",
-                                                    isSelected
-                                                        ? "bg-amber-600 text-white border-amber-600 shadow-sm"
-                                                        : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-amber-500/40"
-                                                )}
-                                            >
-                                                {preset.label}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-
-                                {/* Stepper numerico personalizzato per accantonamento */}
-                                <div className="flex items-center justify-between gap-3 pt-1">
-                                    <span className="text-[11px] text-gray-500 dark:text-gray-400">
-                                        Oppure imposta numero esatto accantonamento:
-                                    </span>
-                                    <div className="flex items-center gap-1.5 shrink-0">
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                const current = minAccantonamento || 0;
-                                                const next = Math.max(0, current - 5);
-                                                setMinAccantonamento(next === 0 ? null : next);
-                                                if (next === 0) setHasAccantonamento(false);
-                                            }}
-                                            disabled={!minAccantonamento || minAccantonamento <= 0}
-                                            className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 flex items-center justify-center font-bold text-sm disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
-                                        >
-                                            -
-                                        </button>
-                                        <input
-                                            type="number"
-                                            min={0}
-                                            max={500}
-                                            placeholder="0"
-                                            value={minAccantonamento ?? ''}
-                                            onChange={e => {
-                                                const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
-                                                if (val === null || isNaN(val) || val <= 0) {
-                                                    setMinAccantonamento(null);
-                                                } else {
-                                                    setMinAccantonamento(val);
-                                                    setHasAccantonamento(true);
-                                                }
-                                            }}
-                                            className="w-16 py-1 px-1.5 text-center font-mono font-bold text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                const current = minAccantonamento || 0;
-                                                const next = current + 5;
-                                                setMinAccantonamento(next);
-                                                setHasAccantonamento(true);
-                                            }}
-                                            className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 flex items-center justify-center font-bold text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
-                                        >
-                                            +
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* 3. Regioni */}
-                        <div>
-                            <div className="flex justify-between items-center mb-3">
-                                <h3 className="font-bold text-gray-900 dark:text-white">Regioni</h3>
-                                {selectedRegions.length > 0 && (
-                                    <button onClick={() => setSelectedRegions([])} className="text-xs text-red-500 font-bold hover:underline">
-                                        Resetta ({selectedRegions.length})
-                                    </button>
-                                )}
-                            </div>
-                            <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-1">
-                                {ITALIAN_REGIONS.map(region => (
-                                    <label
-                                        key={region}
-                                        onClick={() => toggleRegion(region)}
-                                        className={cn(
-                                            "flex items-center gap-2 p-3 rounded-xl cursor-pointer text-sm border transition-all duration-200",
-                                            selectedRegions.includes(region)
-                                                ? "bg-scout-green/10 dark:bg-emerald-950/30 border-scout-green text-scout-green-dark dark:text-emerald-400 font-bold"
-                                                : "bg-gray-50 dark:bg-gray-700 border-gray-150 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-650"
-                                        )}>
-                                        <div className={cn(
-                                            "w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-all",
-                                            selectedRegions.includes(region) 
-                                                ? "bg-scout-green border-scout-green" 
-                                                : "border-gray-300 dark:border-gray-500 bg-white dark:bg-gray-800"
-                                        )}>
-                                            {selectedRegions.includes(region) && <Check size={10} className="text-white" />}
-                                        </div>
-                                        <span className="font-semibold">{region}</span>
-                                    </label>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* 4. Province */}
-                        <div>
-                            <div className="flex justify-between items-center mb-2">
-                                <div className="flex items-center gap-2">
-                                    <h3 className="font-bold text-gray-900 dark:text-white">Province</h3>
-                                    {selectedRegions.length > 0 && (
-                                        <span className="text-[10px] bg-scout-green/10 dark:bg-emerald-950/40 text-scout-green-dark dark:text-emerald-400 font-bold px-2 py-0.5 rounded-full">
-                                            {selectedRegions.length === 1 ? selectedRegions[0] : `${selectedRegions.length} regioni`}
-                                        </span>
-                                    )}
-                                </div>
-                                {selectedProvinces.length > 0 && (
-                                    <button
-                                        type="button"
-                                        onClick={() => setSelectedProvinces([])}
-                                        className="text-xs text-red-500 font-bold hover:underline cursor-pointer"
-                                    >
-                                        Resetta ({selectedProvinces.length})
-                                    </button>
-                                )}
-                            </div>
-
-                            {/* Campo ricerca provincia */}
-                            <div className="relative mb-2">
-                                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                <input
-                                    type="text"
-                                    placeholder={selectedRegions.length > 0 ? "Filtra province della regione..." : "Cerca provincia (es. Roma, Bari, Trento)..."}
-                                    value={provinceSearch}
-                                    onChange={(e) => setProvinceSearch(e.target.value)}
-                                    className="w-full pl-8 pr-7 py-2 text-xs rounded-xl bg-gray-50 dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-scout-green placeholder:text-gray-400 dark:placeholder:text-gray-500"
-                                />
-                                {provinceSearch && (
-                                    <button
-                                        type="button"
-                                        onClick={() => setProvinceSearch('')}
-                                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-0.5"
-                                    >
-                                        <X size={12} />
-                                    </button>
-                                )}
-                            </div>
-
-                            {/* Griglia province selezionabili */}
-                            <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-1 border border-gray-100 dark:border-gray-700/60 rounded-xl bg-gray-50/50 dark:bg-gray-900/20">
-                                {filteredAvailableProvinces.length > 0 ? (
-                                    filteredAvailableProvinces.map(prov => {
-                                        const code = PROVINCE_TO_CODE[prov];
-                                        const isSelected = selectedProvinces.includes(prov);
-                                        return (
-                                            <label
-                                                key={prov}
-                                                onClick={() => toggleSelection(selectedProvinces, prov, setSelectedProvinces)}
-                                                className={cn(
-                                                    "flex items-center gap-2 p-2.5 rounded-xl cursor-pointer text-xs border transition-all duration-200 select-none",
-                                                    isSelected
-                                                        ? "bg-scout-green/10 dark:bg-emerald-950/30 border-scout-green text-scout-green-dark dark:text-emerald-400 font-bold"
-                                                        : "bg-white dark:bg-gray-700 border-gray-150 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-650"
-                                                )}
-                                            >
-                                                <div className={cn(
-                                                    "w-3.5 h-3.5 rounded-md border flex items-center justify-center shrink-0 transition-all",
-                                                    isSelected 
-                                                        ? "bg-scout-green border-scout-green" 
-                                                        : "border-gray-300 dark:border-gray-500 bg-white dark:bg-gray-800"
-                                                )}>
-                                                    {isSelected && <Check size={10} className="text-white" />}
-                                                </div>
-                                                <span className="font-semibold truncate">
-                                                    {prov} {code && <span className="text-[10px] opacity-75 font-mono">({code})</span>}
-                                                </span>
-                                            </label>
-                                        );
-                                    })
-                                ) : (
-                                    <div className="col-span-2 py-4 text-center text-xs text-gray-400 dark:text-gray-500">
-                                        Nessuna provincia trovata
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="pt-4 border-t border-gray-100 dark:border-gray-700">
-                            <button
-                                onClick={() => {
-                                    setShowFilters(false);
-                                    // Track branch searches when applying filters
-                                    if (selectedBranches.length > 0) {
-                                        const stats: any = {};
-                                        selectedBranches.forEach(branch => {
-                                            const key = `search_track_${branch}`;
-                                            if (!sessionStorage.getItem(key)) {
-                                                sessionStorage.setItem(key, '1');
-                                                if (branch === 'L/C') stats.searchesLC = 1;
-                                                if (branch === 'E/G') stats.searchesEG = 1;
-                                                if (branch === 'R/S') stats.searchesRS = 1;
-                                                if (branch === 'Co.Ca.') stats.searchesCoCa = 1;
-                                                if (branch === 'Gruppo') stats.searchesGruppo = 1;
-                                            }
-                                        });
-                                        if (Object.keys(stats).length > 0) {
-                                            addPointsWithStats(1, stats).catch(console.error);
-                                        }
-                                    }
-                                }}
-                                className="w-full bg-scout-green text-white font-bold py-4 rounded-xl shadow-lg hover:bg-scout-green-dark active:transform active:scale-[0.98] transition-all"
-                            >
-                                Applica Filtri ({activeFiltersCount})
-                            </button>
-                            {activeFiltersCount > 0 && (
-                                <button
-                                    onClick={resetAllFilters}
-                                    className="w-full mt-3 text-gray-500 dark:text-gray-400 font-medium py-2 hover:text-gray-900 dark:hover:text-white"
-                                >
-                                    Cancella tutto
-                                </button>
-                            )}
-                        </div>
-                    </div>
+            {/* 2. Barra di Ricerca a larghezza intera (Altezza 48px) */}
+            <div className="relative">
+                <label htmlFor="location-search-input" className="sr-only">
+                    Cerca luoghi per nome, comune o provincia
+                </label>
+                <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 pointer-events-none">
+                    <Search size={20} className="text-scout-green dark:text-emerald-400" aria-hidden="true" />
                 </div>
-            )}
+                <input
+                    id="location-search-input"
+                    type="search"
+                    placeholder="Nome, comune o provincia..."
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                    className="w-full h-12 pl-11 pr-10 rounded-xl bg-white dark:bg-[#182932] border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 font-semibold focus:outline-none focus:ring-2 focus:ring-scout-green dark:focus:ring-emerald-400 shadow-2xs text-sm sm:text-base placeholder:text-gray-400 dark:placeholder:text-gray-500 transition-colors"
+                />
+                {searchInput && (
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setSearchInput('');
+                            setSearchTerm('');
+                        }}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-full cursor-pointer"
+                        title="Cancella testo"
+                        aria-label="Cancella testo di ricerca"
+                    >
+                        <X size={18} />
+                    </button>
+                )}
+            </div>
 
-            {/* Active Filters Bar */}
+            {/* 3. Controlli Criteri Principali: "Zona" e "Filtri" */}
+            <div className="flex items-center gap-2.5 flex-wrap">
+                <button
+                    type="button"
+                    onClick={() => openFiltersModalWithSection('zona')}
+                    className={cn(
+                        "inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold border transition-all shadow-2xs min-h-[44px] cursor-pointer",
+                        (selectedRegions.length > 0 || selectedProvinces.length > 0)
+                            ? "bg-emerald-50 dark:bg-emerald-950/40 text-scout-green-dark dark:text-emerald-300 border-emerald-300 dark:border-emerald-700"
+                            : "bg-white dark:bg-[#182932] text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750"
+                    )}
+                    aria-label={`Filtro geografico attuale: ${zoneButtonLabel}. Clicca per modificare`}
+                >
+                    <MapPin size={16} className="text-scout-green dark:text-emerald-400 shrink-0" aria-hidden="true" />
+                    <span className="font-bold">{zoneButtonLabel}</span>
+                </button>
+
+                <button
+                    type="button"
+                    onClick={() => openFiltersModalWithSection('esigenze')}
+                    className={cn(
+                        "inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold border transition-all shadow-2xs min-h-[44px] cursor-pointer",
+                        activeFiltersCount > 0
+                            ? "bg-[#1B4931] text-white border-[#1B4931] shadow-xs"
+                            : "bg-white dark:bg-[#182932] text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750"
+                    )}
+                    aria-label={`Pannello filtri, ${activeFiltersCount} filtri attivi`}
+                >
+                    <SlidersHorizontal size={16} className="shrink-0" aria-hidden="true" />
+                    <span>Filtri</span>
+                    {activeFiltersCount > 0 && (
+                        <span className="bg-white text-[#1B4931] text-[11px] font-black px-1.5 py-0.2 rounded-full">
+                            {activeFiltersCount}
+                        </span>
+                    )}
+                </button>
+            </div>
+
+            {/* 4. Chip dei Filtri Applicati (vanno a capo, eliminabili con un click) */}
             {activeFiltersCount > 0 && (
-                <div className="flex items-center gap-2 overflow-x-auto pb-1 -mt-2 no-scrollbar">
-                    <span className="text-xs font-bold text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                        Filtri:
+                <div className="flex flex-wrap items-center gap-1.5 pt-1" aria-label="Filtri attualmente attivi">
+                    <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 mr-1">
+                        Filtri applicati:
                     </span>
-                    {minBeds !== null && minBeds > 0 && (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-50 dark:bg-blue-950/40 text-scout-blue border border-blue-200 dark:border-blue-800/50 whitespace-nowrap">
-                            <BedDouble size={13} />
-                            ≥ {minBeds} letti
+
+                    {/* Regioni */}
+                    {selectedRegions.map(r => (
+                        <span key={r} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-50 dark:bg-emerald-950/40 text-scout-green-dark dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                            <MapPin size={12} aria-hidden="true" />
+                            <span>{r}</span>
                             <button
                                 type="button"
-                                onClick={() => { setMinBeds(null); setHasBeds(false); }}
-                                className="hover:bg-blue-200/50 rounded-full p-0.5 cursor-pointer"
+                                onClick={() => setSelectedRegions(selectedRegions.filter(x => x !== r))}
+                                className="hover:bg-emerald-200/50 dark:hover:bg-emerald-800/60 rounded-full p-0.5 cursor-pointer ml-0.5"
+                                aria-label={`Rimuovi filtro regione ${r}`}
                             >
                                 <X size={12} />
                             </button>
                         </span>
-                    )}
-                    {hasBeds && (minBeds === null || minBeds === 0) && (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-green-50 dark:bg-green-950/40 text-scout-green-dark dark:text-emerald-400 border border-green-200 dark:border-green-800/50 whitespace-nowrap">
-                            <BedDouble size={13} />
-                            Con letti
+                    ))}
+
+                    {/* Province */}
+                    {selectedProvinces.map(p => (
+                        <span key={p} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-50 dark:bg-emerald-950/40 text-scout-green-dark dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                            <MapPin size={12} aria-hidden="true" />
+                            <span>{p}{PROVINCE_TO_CODE[p] ? ` (${PROVINCE_TO_CODE[p]})` : ''}</span>
                             <button
                                 type="button"
-                                onClick={() => setHasBeds(false)}
-                                className="hover:bg-green-200/50 rounded-full p-0.5 cursor-pointer"
+                                onClick={() => setSelectedProvinces(selectedProvinces.filter(x => x !== p))}
+                                className="hover:bg-emerald-200/50 dark:hover:bg-emerald-800/60 rounded-full p-0.5 cursor-pointer ml-0.5"
+                                aria-label={`Rimuovi filtro provincia ${p}`}
                             >
                                 <X size={12} />
                             </button>
                         </span>
-                    )}
-                    {minAccantonamento !== null && minAccantonamento > 0 && (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/50 whitespace-nowrap">
-                            <HomeIcon size={13} />
-                            ≥ {minAccantonamento} a terra
-                            <button
-                                type="button"
-                                onClick={() => { setMinAccantonamento(null); setHasAccantonamento(false); }}
-                                className="hover:bg-amber-200/50 rounded-full p-0.5 cursor-pointer"
-                            >
-                                <X size={12} />
-                            </button>
-                        </span>
-                    )}
-                    {hasAccantonamento && (minAccantonamento === null || minAccantonamento === 0) && (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/50 whitespace-nowrap">
-                            <HomeIcon size={13} />
-                            Accantonamento
-                            <button
-                                type="button"
-                                onClick={() => setHasAccantonamento(false)}
-                                className="hover:bg-amber-200/50 rounded-full p-0.5 cursor-pointer"
-                            >
-                                <X size={12} />
-                            </button>
-                        </span>
-                    )}
+                    ))}
+
+                    {/* Tende */}
                     {hasTents && (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-green-50 dark:bg-green-950/40 text-scout-green-dark dark:text-emerald-400 border border-green-200 dark:border-green-800/50 whitespace-nowrap">
-                            <Tent size={13} />
-                            Tende
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-700">
+                            <Tent size={12} aria-hidden="true" />
+                            <span>Spazio tende</span>
                             <button
                                 type="button"
                                 onClick={() => setHasTents(false)}
-                                className="hover:bg-green-200/50 rounded-full p-0.5 cursor-pointer"
+                                className="hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full p-0.5 cursor-pointer ml-0.5"
+                                aria-label="Rimuovi filtro tende"
                             >
                                 <X size={12} />
                             </button>
                         </span>
                     )}
-                    {hasHeating && (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300 border border-orange-200 dark:border-orange-800/50 whitespace-nowrap">
-                            <Flame size={13} />
-                            Riscaldato
+
+                    {/* Letti */}
+                    {minBeds !== null && minBeds > 0 ? (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-700">
+                            <BedDouble size={12} aria-hidden="true" />
+                            <span>≥ {minBeds} posti letto</span>
                             <button
                                 type="button"
-                                onClick={() => setHasHeating(false)}
-                                className="hover:bg-orange-200/50 rounded-full p-0.5 cursor-pointer"
+                                onClick={() => { setMinBeds(null); setHasBeds(false); }}
+                                className="hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full p-0.5 cursor-pointer ml-0.5"
+                                aria-label="Rimuovi filtro posti letto minimi"
                             >
                                 <X size={12} />
                             </button>
+                        </span>
+                    ) : (hasBeds && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-700">
+                            <BedDouble size={12} aria-hidden="true" />
+                            <span>Con posti letto</span>
+                            <button
+                                type="button"
+                                onClick={() => setHasBeds(false)}
+                                className="hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full p-0.5 cursor-pointer ml-0.5"
+                                aria-label="Rimuovi filtro posti letto"
+                            >
+                                <X size={12} />
+                            </button>
+                        </span>
+                    ))}
+
+                    {/* Accantonamento */}
+                    {minAccantonamento !== null && minAccantonamento > 0 ? (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-700">
+                            <HomeIcon size={12} aria-hidden="true" />
+                            <span>≥ {minAccantonamento} a terra</span>
+                            <button
+                                type="button"
+                                onClick={() => { setMinAccantonamento(null); setHasAccantonamento(false); }}
+                                className="hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full p-0.5 cursor-pointer ml-0.5"
+                                aria-label="Rimuovi filtro posti accantonamento"
+                            >
+                                <X size={12} />
+                            </button>
+                        </span>
+                    ) : (hasAccantonamento && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-700">
+                            <HomeIcon size={12} aria-hidden="true" />
+                            <span>Accantonamento</span>
+                            <button
+                                type="button"
+                                onClick={() => setHasAccantonamento(false)}
+                                className="hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full p-0.5 cursor-pointer ml-0.5"
+                                aria-label="Rimuovi filtro accantonamento"
+                            >
+                                <X size={12} />
+                            </button>
+                        </span>
+                    ))}
+
+                    {/* Servizi */}
+                    {hasEquippedKitchen && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-700">
+                            <Utensils size={12} aria-hidden="true" />
+                            <span>Cucina attrezzata</span>
+                            <button type="button" onClick={() => setHasEquippedKitchen(false)} className="hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full p-0.5 cursor-pointer ml-0.5" aria-label="Rimuovi filtro cucina"><X size={12} /></button>
+                        </span>
+                    )}
+                    {hasGreenSpace && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-700">
+                            <Trees size={12} aria-hidden="true" />
+                            <span>Spazio verde</span>
+                            <button type="button" onClick={() => setHasGreenSpace(false)} className="hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full p-0.5 cursor-pointer ml-0.5" aria-label="Rimuovi filtro spazio verde"><X size={12} /></button>
                         </span>
                     )}
                     {hasWaterPoints && (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-cyan-50 dark:bg-cyan-950/40 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800/50 whitespace-nowrap">
-                            <Droplets size={13} />
-                            Punti d'acqua
-                            <button
-                                type="button"
-                                onClick={() => setHasWaterPoints(false)}
-                                className="hover:bg-cyan-200/50 rounded-full p-0.5 cursor-pointer"
-                            >
-                                <X size={12} />
-                            </button>
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-700">
+                            <Droplets size={12} aria-hidden="true" />
+                            <span>Punti d'acqua</span>
+                            <button type="button" onClick={() => setHasWaterPoints(false)} className="hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full p-0.5 cursor-pointer ml-0.5" aria-label="Rimuovi filtro punti acqua"><X size={12} /></button>
                         </span>
                     )}
+                    {hasHeating && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-700">
+                            <Flame size={12} aria-hidden="true" />
+                            <span>Riscaldato</span>
+                            <button type="button" onClick={() => setHasHeating(false)} className="hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full p-0.5 cursor-pointer ml-0.5" aria-label="Rimuovi filtro riscaldamento"><X size={12} /></button>
+                        </span>
+                    )}
+                    {hasDisabledAccess && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-700">
+                            <Accessibility size={12} aria-hidden="true" />
+                            <span>Disabili</span>
+                            <button type="button" onClick={() => setHasDisabledAccess(false)} className="hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full p-0.5 cursor-pointer ml-0.5" aria-label="Rimuovi filtro disabili"><X size={12} /></button>
+                        </span>
+                    )}
+                    {hasPoles && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-700">
+                            <Layers size={12} aria-hidden="true" />
+                            <span>Pali</span>
+                            <button type="button" onClick={() => setHasPoles(false)} className="hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full p-0.5 cursor-pointer ml-0.5" aria-label="Rimuovi filtro pali"><X size={12} /></button>
+                        </span>
+                    )}
+
+                    {/* Branche */}
                     {selectedBranches.map(b => (
-                        <span key={b} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600 whitespace-nowrap">
-                            {b}
-                            <button
-                                type="button"
-                                onClick={() => toggleSelection(selectedBranches, b, setSelectedBranches)}
-                                className="hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full p-0.5 cursor-pointer"
-                            >
-                                <X size={12} />
-                            </button>
+                        <span key={b} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-700">
+                            <span>{b}</span>
+                            <button type="button" onClick={() => setSelectedBranches(selectedBranches.filter(x => x !== b))} className="hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full p-0.5 cursor-pointer ml-0.5" aria-label={`Rimuovi filtro branca ${b}`}><X size={12} /></button>
                         </span>
                     ))}
-                    {selectedRegions.map(r => (
-                        <span key={r} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600 whitespace-nowrap">
-                            {r}
-                            <button
-                                type="button"
-                                onClick={() => toggleRegion(r)}
-                                className="hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full p-0.5 cursor-pointer"
-                            >
-                                <X size={12} />
-                            </button>
-                        </span>
-                    ))}
-                    {selectedProvinces.map(p => (
-                        <span key={p} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/40 text-scout-green-dark dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50 whitespace-nowrap">
-                            <MapPin size={13} />
-                            {p}{PROVINCE_TO_CODE[p] ? ` (${PROVINCE_TO_CODE[p]})` : ''}
-                            <button
-                                type="button"
-                                onClick={() => toggleSelection(selectedProvinces, p, setSelectedProvinces)}
-                                className="hover:bg-emerald-200/50 dark:hover:bg-emerald-800/60 rounded-full p-0.5 cursor-pointer"
-                            >
-                                <X size={12} />
-                            </button>
-                        </span>
-                    ))}
+
+                    {/* Attività */}
                     {selectedActivities.map(a => (
-                        <span key={a} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600 whitespace-nowrap">
-                            {a}
-                            <button
-                                type="button"
-                                onClick={() => toggleSelection(selectedActivities, a, setSelectedActivities)}
-                                className="hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full p-0.5 cursor-pointer"
-                            >
-                                <X size={12} />
-                            </button>
+                        <span key={a} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-700">
+                            <span>{a}</span>
+                            <button type="button" onClick={() => setSelectedActivities(selectedActivities.filter(x => x !== a))} className="hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full p-0.5 cursor-pointer ml-0.5" aria-label={`Rimuovi filtro attività ${a}`}><X size={12} /></button>
                         </span>
                     ))}
+
+                    {/* Stato Dati */}
+                    {selectedStaleness.map(lvl => {
+                        const sObj = STALENESS_LEVELS.find(s => s.level === lvl);
+                        return (
+                            <span key={lvl} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-700">
+                                <span className={cn("w-2 h-2 rounded-full", sObj?.color)} aria-hidden="true" />
+                                <span>{sObj?.label}</span>
+                                <button type="button" onClick={() => setSelectedStaleness(selectedStaleness.filter(x => x !== lvl))} className="hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full p-0.5 cursor-pointer ml-0.5" aria-label="Rimuovi filtro stato dati"><X size={12} /></button>
+                            </span>
+                        );
+                    })}
+
                     <button
                         type="button"
                         onClick={resetAllFilters}
-                        className="text-xs text-red-500 dark:text-red-400 font-bold hover:underline whitespace-nowrap ml-1 cursor-pointer"
+                        className="inline-flex items-center gap-1 text-xs text-red-600 dark:text-red-400 font-bold hover:underline px-2 py-1 cursor-pointer"
                     >
-                        Azzera tutti
+                        <RotateCcw size={12} aria-hidden="true" />
+                        <span>Azzera filtri</span>
                     </button>
                 </div>
             )}
 
-             {/* View Toggle and Count Header */}
-            <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xs">
+            {/* 5. Barra Risultati & Controllo Segmentato Vista (Elenco / Mappa) */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
                 <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-scout-green animate-pulse shrink-0" />
-                    <span className="text-sm font-black text-gray-800 dark:text-gray-200">
-                        {filteredLocations.length} {filteredLocations.length === 1 ? 'luogo trovato' : 'luoghi trovati'}
+                    <span className="w-2 h-2 rounded-full bg-scout-green dark:bg-emerald-400 shrink-0" aria-hidden="true" />
+                    <span className="text-sm sm:text-base font-bold text-gray-900 dark:text-white" aria-live="polite">
+                        {viewMode === 'list' ? (
+                            isLoading 
+                                ? 'Caricamento luoghi in corso...' 
+                                : `${filteredLocations.length} ${filteredLocations.length === 1 ? 'luogo trovato' : 'luoghi trovati'}`
+                        ) : (
+                            `${filteredLocations.length} ${filteredLocations.length === 1 ? 'luogo' : 'luoghi'} · ${locationsWithCoordsCount} sulla mappa${locationsWithoutCoordsCount > 0 ? ` (${locationsWithoutCoordsCount} senza coordinate GPS)` : ''}`
+                        )}
                     </span>
-                    {activeFiltersCount > 0 && (
-                        <span className="text-xs text-amber-700 dark:text-amber-400 font-bold bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-md border border-amber-200 dark:border-amber-800">
-                            (con filtri attivi)
-                        </span>
-                    )}
                 </div>
-                <div className="flex bg-gray-100 dark:bg-gray-750 p-1 rounded-xl shrink-0 gap-1 border border-gray-200/50 dark:border-gray-700/50">
+
+                {/* Controllo Segmentato Elenco / Mappa */}
+                <div className="inline-flex p-1 bg-gray-100 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shrink-0 self-start sm:self-auto" role="group" aria-label="Modalità di visualizzazione">
                     <button
+                        type="button"
                         onClick={() => setViewMode('list')}
                         className={cn(
-                            "flex-1 sm:flex-initial px-4 py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer min-h-[40px]",
+                            "inline-flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all min-h-[36px] cursor-pointer",
                             viewMode === 'list'
-                                ? "bg-white dark:bg-gray-800 text-scout-green-dark dark:text-emerald-400 shadow-sm font-black"
-                                : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+                                ? "bg-white dark:bg-[#182932] text-scout-green-dark dark:text-emerald-300 shadow-2xs"
+                                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
                         )}
+                        aria-pressed={viewMode === 'list'}
                     >
-                        <span>📋</span>
-                        <span>Elenco Schede</span>
+                        <List size={15} aria-hidden="true" />
+                        <span>Elenco</span>
                     </button>
                     <button
+                        type="button"
                         onClick={() => setViewMode('map')}
                         className={cn(
-                            "flex-1 sm:flex-initial px-4 py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer min-h-[40px]",
+                            "inline-flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all min-h-[36px] cursor-pointer",
                             viewMode === 'map'
-                                ? "bg-white dark:bg-gray-800 text-scout-green-dark dark:text-emerald-400 shadow-sm font-black"
-                                : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+                                ? "bg-white dark:bg-[#182932] text-scout-green-dark dark:text-emerald-300 shadow-2xs"
+                                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
                         )}
+                        aria-pressed={viewMode === 'map'}
                     >
-                        <span>🗺️</span>
-                        <span>Mappa d'Italia</span>
+                        <MapIcon size={15} aria-hidden="true" />
+                        <span>Mappa</span>
                     </button>
                 </div>
             </div>
 
-            {viewMode === 'list' ? (
-                <div className="grid gap-4 md:grid-cols-2">
+            {/* 6. Layout Principale Risultati */}
+            {isLoading ? (
+                /* Skeleton Loader */
+                <div className="grid gap-4 sm:gap-5 md:grid-cols-2">
+                    {[1, 2, 3, 4].map(n => (
+                        <div key={n} className="bg-white dark:bg-[#182932] rounded-2xl p-5 border border-gray-200 dark:border-gray-700/80 animate-pulse space-y-4">
+                            <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded-md w-3/4" />
+                            <div className="h-4 bg-gray-150 dark:bg-gray-750 rounded-md w-1/2" />
+                            <div className="h-10 bg-gray-100 dark:bg-gray-800 rounded-md w-full" />
+                            <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded-md w-1/3" />
+                        </div>
+                    ))}
+                </div>
+            ) : loadError ? (
+                /* Errore di caricamento */
+                <div className="p-8 text-center bg-white dark:bg-[#182932] rounded-2xl border border-red-200 dark:border-red-800 space-y-3">
+                    <p className="text-sm font-semibold text-red-600 dark:text-red-400">{loadError}</p>
+                    <button
+                        type="button"
+                        onClick={loadData}
+                        className="px-4 py-2 bg-[#1B4931] text-white text-xs font-bold rounded-xl shadow-xs"
+                    >
+                        Riprova
+                    </button>
+                </div>
+            ) : viewMode === 'list' ? (
+                /* Vista Elenco */
+                <div className="grid gap-4 sm:gap-5 md:grid-cols-2">
                     {(currentUser ? filteredLocations : filteredLocations.slice(0, 5)).map((location) => (
                         <LocationCard 
                             key={location.id} 
@@ -1197,50 +1061,509 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                         />
                     ))}
 
-                    {/* Guest Invitation Message */}
+                    {/* Messaggio Invito per Utenti Ospiti */}
                     {!currentUser && filteredLocations.length > 5 && (
-                        <div className="col-span-full mt-8 p-8 bg-white dark:bg-gray-800 rounded-3xl border-2 border-dashed border-scout-blue/30 text-center space-y-4 shadow-sm">
-                            <div className="bg-scout-blue/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto">
-                                <Plus className="text-scout-blue" size={32} />
+                        <div className="col-span-full mt-4 p-6 sm:p-8 bg-white dark:bg-[#182932] rounded-2xl border-2 border-dashed border-scout-blue/40 text-center space-y-3 shadow-xs">
+                            <div className="bg-scout-blue/10 w-12 h-12 rounded-full flex items-center justify-center mx-auto text-scout-blue">
+                                <Plus size={24} aria-hidden="true" />
                             </div>
-                            <h3 className="text-xl font-bold text-gray-900 dark:text-white">Vuoi vedere altri luoghi?</h3>
-                            <p className="text-gray-500 dark:text-gray-400 max-w-sm mx-auto text-sm">
-                                Iscriviti gratuitamente per accedere all'intero database di {locations.length} luoghi scout e iniziare a pianificare le tue attività!
+                            <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
+                                Vuoi vedere tutti i luoghi censiti?
+                            </h2>
+                            <p className="text-gray-500 dark:text-gray-400 max-w-sm mx-auto text-xs sm:text-sm">
+                                Accedi o registrati gratuitamente per consultare l'intero catalogo di {locations.length} strutture scout!
                             </p>
                             <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
-                                <Link to="/register" className="bg-scout-blue text-white px-8 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all">
+                                <Link to="/register" className="bg-scout-blue text-white px-6 py-2.5 rounded-xl font-bold text-xs sm:text-sm shadow-md hover:bg-blue-700 transition-all">
                                     Registrati ora
                                 </Link>
-                                <Link to="/login" className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-8 py-3 rounded-xl font-bold hover:bg-gray-200 dark:hover:bg-gray-600 transition-all">
+                                <Link to="/login" className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-6 py-2.5 rounded-xl font-bold text-xs sm:text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-all">
                                     Accedi
                                 </Link>
                             </div>
                         </div>
                     )}
 
+                    {/* Stato Nessun Risultato Trovato */}
                     {filteredLocations.length === 0 && (
-                        <div className="col-span-full flex flex-col items-center justify-center py-20 text-center">
-                            <div className="bg-gray-100 dark:bg-gray-700 p-6 rounded-full mb-4">
-                                <Search size={48} className="text-gray-400 dark:text-gray-300" />
+                        <div className="col-span-full flex flex-col items-center justify-center py-16 text-center bg-white dark:bg-[#182932] rounded-2xl border border-gray-200 dark:border-gray-700/80 p-6 space-y-4">
+                            <div className="w-14 h-14 rounded-full bg-gray-100 dark:bg-gray-750 flex items-center justify-center text-gray-400">
+                                <Search size={28} aria-hidden="true" />
                             </div>
-                            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Nessun luogo trovato</h3>
-                            <p className="text-gray-500 dark:text-gray-400 max-w-xs mx-auto">Prova a modificare i filtri o cerca qualcosa di diverso.</p>
-                            {activeFiltersCount > 0 && (
+                            <div className="space-y-1">
+                                <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
+                                    Nessun luogo corrisponde a tutti i criteri
+                                </h2>
+                                <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm max-w-md mx-auto">
+                                    Prova a modificare i filtri o a rimuovere una condizione per ampliare la ricerca.
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-3 pt-2">
                                 <button
-                                    onClick={resetAllFilters}
-                                    className="mt-6 text-scout-blue font-bold hover:underline cursor-pointer"
+                                    type="button"
+                                    onClick={() => openFiltersModalWithSection('esigenze')}
+                                    className="px-4 py-2.5 bg-[#1B4931] text-white text-xs font-bold rounded-xl shadow-xs hover:bg-[#133724] transition-all cursor-pointer"
                                 >
-                                    Resetta ricerca
+                                    Modifica filtri
                                 </button>
-                            )}
+                                {activeFiltersCount > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={resetAllFilters}
+                                        className="px-4 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs font-bold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-650 transition-all cursor-pointer"
+                                    >
+                                        Azzera tutti i filtri
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     )}
                 </div>
             ) : (
-                <InteractiveMap locations={currentUser ? filteredLocations : filteredLocations.slice(0, 5)} />
+                /* Vista Mappa */
+                <div className="rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700/80 shadow-xs">
+                    <InteractiveMap locations={currentUser ? filteredLocations : filteredLocations.slice(0, 5)} />
+                </div>
             )}
 
-            {/* Transport Directory Modal */}
+            {/* 7. Dialogo Modale Filtri Completo & Accessibile */}
+            {showFiltersModal && (
+                <div 
+                    className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center p-3 sm:p-4 backdrop-blur-xs animate-in fade-in duration-150"
+                    onClick={() => setShowFiltersModal(false)}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="filters-dialog-title"
+                >
+                    <div 
+                        ref={modalRef}
+                        className="bg-white dark:bg-[#182932] rounded-3xl w-full max-w-xl max-h-[90vh] flex flex-col shadow-2xl border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 overflow-hidden"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {/* Header Modale */}
+                        <div className="flex justify-between items-center px-6 py-4 border-b border-gray-150 dark:border-gray-700 shrink-0">
+                            <div className="flex items-center gap-2.5">
+                                <SlidersHorizontal size={20} className="text-scout-green dark:text-emerald-400" aria-hidden="true" />
+                                <h2 id="filters-dialog-title" className="text-xl font-bold text-gray-900 dark:text-white">
+                                    Filtra luoghi
+                                </h2>
+                            </div>
+                            <button 
+                                type="button"
+                                onClick={() => setShowFiltersModal(false)} 
+                                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-500 dark:text-gray-400 cursor-pointer"
+                                aria-label="Chiudi pannello filtri"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* Contenuto Scrollabile Filtri */}
+                        <div className="p-6 overflow-y-auto space-y-6 flex-1">
+                            {/* Sezione 1: Zona Geografica */}
+                            <section className="space-y-3" aria-labelledby="heading-zona">
+                                <div className="flex justify-between items-center">
+                                    <h3 id="heading-zona" className="font-bold text-sm text-gray-900 dark:text-white flex items-center gap-2">
+                                        <MapPin size={16} className="text-scout-green dark:text-emerald-400" aria-hidden="true" />
+                                        Zona geografica
+                                    </h3>
+                                    {(draftRegions.length > 0 || draftProvinces.length > 0) && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setDraftRegions([]);
+                                                setDraftProvinces([]);
+                                            }}
+                                            className="text-xs text-red-600 dark:text-red-400 font-bold hover:underline cursor-pointer"
+                                        >
+                                            Azzera zona
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Regioni */}
+                                <div>
+                                    <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 block mb-2">
+                                        Regione:
+                                    </span>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-36 overflow-y-auto p-1 border border-gray-150 dark:border-gray-700/60 rounded-xl bg-gray-50/50 dark:bg-gray-800/40">
+                                        {ITALIAN_REGIONS.map(reg => {
+                                            const isChecked = draftRegions.includes(reg);
+                                            return (
+                                                <button
+                                                    key={reg}
+                                                    type="button"
+                                                    onClick={() => toggleDraftRegion(reg)}
+                                                    className={cn(
+                                                        "flex items-center gap-2 p-2 rounded-lg text-xs font-medium text-left transition-colors cursor-pointer border select-none",
+                                                        isChecked
+                                                            ? "bg-[#1B4931]/10 dark:bg-emerald-950/40 text-scout-green-dark dark:text-emerald-300 border-scout-green font-bold"
+                                                            : "bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100"
+                                                    )}
+                                                    aria-pressed={isChecked}
+                                                >
+                                                    <span className={cn(
+                                                        "w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0",
+                                                        isChecked ? "bg-scout-green border-scout-green text-white" : "border-gray-300 dark:border-gray-500 bg-white dark:bg-gray-800"
+                                                    )}>
+                                                        {isChecked && <Check size={10} />}
+                                                    </span>
+                                                    <span className="truncate">{reg}</span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                {/* Province */}
+                                <div>
+                                    <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 block mb-1.5">
+                                        Provincia:
+                                    </span>
+                                    <div className="relative mb-2">
+                                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                        <input
+                                            type="text"
+                                            placeholder={draftRegions.length > 0 ? "Filtra province della regione..." : "Cerca provincia (es. Roma, Bari, Trento)..."}
+                                            value={draftProvinceSearch}
+                                            onChange={(e) => setDraftProvinceSearch(e.target.value)}
+                                            className="w-full pl-8 pr-7 py-2 text-xs rounded-xl bg-gray-50 dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-scout-green"
+                                        />
+                                        {draftProvinceSearch && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setDraftProvinceSearch('')}
+                                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5"
+                                            >
+                                                <X size={12} />
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-36 overflow-y-auto p-1 border border-gray-150 dark:border-gray-700/60 rounded-xl bg-gray-50/50 dark:bg-gray-800/40">
+                                        {filteredDraftProvinces.map(prov => {
+                                            const code = PROVINCE_TO_CODE[prov];
+                                            const isChecked = draftProvinces.includes(prov);
+                                            return (
+                                                <button
+                                                    key={prov}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        if (isChecked) {
+                                                            setDraftProvinces(draftProvinces.filter(p => p !== prov));
+                                                        } else {
+                                                            setDraftProvinces([...draftProvinces, prov]);
+                                                        }
+                                                    }}
+                                                    className={cn(
+                                                        "flex items-center gap-2 p-2 rounded-lg text-xs font-medium text-left transition-colors cursor-pointer border select-none",
+                                                        isChecked
+                                                            ? "bg-[#1B4931]/10 dark:bg-emerald-950/40 text-scout-green-dark dark:text-emerald-300 border-scout-green font-bold"
+                                                            : "bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100"
+                                                    )}
+                                                    aria-pressed={isChecked}
+                                                >
+                                                    <span className={cn(
+                                                        "w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0",
+                                                        isChecked ? "bg-scout-green border-scout-green text-white" : "border-gray-300 dark:border-gray-500 bg-white dark:bg-gray-800"
+                                                    )}>
+                                                        {isChecked && <Check size={10} />}
+                                                    </span>
+                                                    <span className="truncate">{prov} {code && `(${code})`}</span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </section>
+
+                            {/* Sezione 2: Partecipanti & Sistemazione */}
+                            <section className="space-y-3 pt-4 border-t border-gray-150 dark:border-gray-700/80" aria-labelledby="heading-sistemazione">
+                                <h3 id="heading-sistemazione" className="font-bold text-sm text-gray-900 dark:text-white flex items-center gap-2">
+                                    <BedDouble size={16} className="text-scout-blue" aria-hidden="true" />
+                                    Partecipanti e sistemazione
+                                </h3>
+
+                                <div className="space-y-3 text-xs">
+                                    {/* Spazio Tende */}
+                                    <label className={cn(
+                                        "flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-colors",
+                                        draftHasTents 
+                                            ? "bg-emerald-50 dark:bg-emerald-950/30 border-scout-green text-scout-green-dark dark:text-emerald-300 font-bold" 
+                                            : "bg-white dark:bg-gray-750 border-gray-200 dark:border-gray-650 text-gray-700 dark:text-gray-300"
+                                    )}>
+                                        <div className="flex items-center gap-2.5">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={draftHasTents} 
+                                                onChange={e => setDraftHasTents(e.target.checked)} 
+                                                className="w-4 h-4 rounded text-scout-green focus:ring-scout-green" 
+                                            />
+                                            <div>
+                                                <span className="block font-bold">🏕️ Spazio per montare tende</span>
+                                                <span className="text-[11px] font-normal text-gray-500 dark:text-gray-400">Spazio tende indicato; capienza da confermare</span>
+                                            </div>
+                                        </div>
+                                    </label>
+
+                                    {/* Posti Letto */}
+                                    <div className="p-3 rounded-xl border border-gray-200 dark:border-gray-650 bg-white dark:bg-gray-750 space-y-2.5">
+                                        <label className="flex items-center justify-between cursor-pointer">
+                                            <div className="flex items-center gap-2.5">
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={draftHasBeds || (draftMinBeds !== null && draftMinBeds > 0)} 
+                                                    onChange={e => {
+                                                        setDraftHasBeds(e.target.checked);
+                                                        if (!e.target.checked) setDraftMinBeds(null);
+                                                    }} 
+                                                    className="w-4 h-4 rounded text-scout-blue focus:ring-scout-blue" 
+                                                />
+                                                <div>
+                                                    <span className="block font-bold">🛏️ Posti letto al coperto</span>
+                                                    <span className="text-[11px] text-gray-500 dark:text-gray-400">Posti letto dichiarati sufficienti</span>
+                                                </div>
+                                            </div>
+                                        </label>
+
+                                        {/* Stepper posti letto minimi */}
+                                        <div className="flex items-center justify-between pt-1 border-t border-gray-100 dark:border-gray-700/60">
+                                            <span className="text-[11px] text-gray-600 dark:text-gray-300 font-medium">Numero minimo posti letto:</span>
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const current = draftMinBeds || 0;
+                                                        const next = Math.max(0, current - 5);
+                                                        setDraftMinBeds(next === 0 ? null : next);
+                                                        if (next === 0) setDraftHasBeds(false);
+                                                    }}
+                                                    disabled={!draftMinBeds || draftMinBeds <= 0}
+                                                    className="w-7 h-7 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold disabled:opacity-30 cursor-pointer"
+                                                >
+                                                    -
+                                                </button>
+                                                <span className="w-10 text-center font-bold font-mono">
+                                                    {draftMinBeds || 0}
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const current = draftMinBeds || 0;
+                                                        setDraftMinBeds(current + 5);
+                                                        setDraftHasBeds(true);
+                                                    }}
+                                                    className="w-7 h-7 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold cursor-pointer"
+                                                >
+                                                    +
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Accantonamento */}
+                                    <div className="p-3 rounded-xl border border-gray-200 dark:border-gray-650 bg-white dark:bg-gray-750 space-y-2.5">
+                                        <label className="flex items-center justify-between cursor-pointer">
+                                            <div className="flex items-center gap-2.5">
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={draftHasAccantonamento || (draftMinAccantonamento !== null && draftMinAccantonamento > 0)} 
+                                                    onChange={e => {
+                                                        setDraftHasAccantonamento(e.target.checked);
+                                                        if (!e.target.checked) setDraftMinAccantonamento(null);
+                                                    }} 
+                                                    className="w-4 h-4 rounded text-amber-600 focus:ring-amber-600" 
+                                                />
+                                                <div>
+                                                    <span className="block font-bold">🏠 Accantonamento a terra (stuoino)</span>
+                                                    <span className="text-[11px] text-gray-500 dark:text-gray-400">Posti accantonamento dichiarati</span>
+                                                </div>
+                                            </div>
+                                        </label>
+
+                                        {/* Stepper posti accantonamento minimi */}
+                                        <div className="flex items-center justify-between pt-1 border-t border-gray-100 dark:border-gray-700/60">
+                                            <span className="text-[11px] text-gray-600 dark:text-gray-300 font-medium">Numero minimo a terra:</span>
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const current = draftMinAccantonamento || 0;
+                                                        const next = Math.max(0, current - 5);
+                                                        setDraftMinAccantonamento(next === 0 ? null : next);
+                                                        if (next === 0) setDraftHasAccantonamento(false);
+                                                    }}
+                                                    disabled={!draftMinAccantonamento || draftMinAccantonamento <= 0}
+                                                    className="w-7 h-7 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold disabled:opacity-30 cursor-pointer"
+                                                >
+                                                    -
+                                                </button>
+                                                <span className="w-10 text-center font-bold font-mono">
+                                                    {draftMinAccantonamento || 0}
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const current = draftMinAccantonamento || 0;
+                                                        setDraftMinAccantonamento(current + 5);
+                                                        setDraftHasAccantonamento(true);
+                                                    }}
+                                                    className="w-7 h-7 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold cursor-pointer"
+                                                >
+                                                    +
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+
+                            {/* Sezione 3: Servizi Necessari */}
+                            <section className="space-y-3 pt-4 border-t border-gray-150 dark:border-gray-700/80" aria-labelledby="heading-servizi">
+                                <h3 id="heading-servizi" className="font-bold text-sm text-gray-900 dark:text-white flex items-center gap-2">
+                                    <Utensils size={16} className="text-scout-green dark:text-emerald-400" aria-hidden="true" />
+                                    Servizi necessari
+                                </h3>
+
+                                <div className="grid grid-cols-2 gap-2 text-xs">
+                                    {[
+                                        { label: 'Cucina attrezzata', val: draftHasEquippedKitchen, set: setDraftHasEquippedKitchen, icon: Utensils },
+                                        { label: 'Spazio verde', val: draftHasGreenSpace, set: setDraftHasGreenSpace, icon: Trees },
+                                        { label: 'Punti d\'acqua', val: draftHasWaterPoints, set: setDraftHasWaterPoints, icon: Droplets },
+                                        { label: 'Riscaldamento', val: draftHasHeating, set: setDraftHasHeating, icon: Flame },
+                                        { label: 'Accessibile disabili', val: draftHasDisabledAccess, set: setDraftHasDisabledAccess, icon: Accessibility },
+                                        { label: 'Pali da costruzione', val: draftHasPoles, set: setDraftHasPoles, icon: Layers },
+                                    ].map(item => (
+                                        <button
+                                            key={item.label}
+                                            type="button"
+                                            onClick={() => item.set(!item.val)}
+                                            className={cn(
+                                                "flex items-center gap-2 p-2.5 rounded-xl border text-left transition-colors cursor-pointer",
+                                                item.val 
+                                                    ? "bg-[#1B4931]/10 dark:bg-emerald-950/40 border-scout-green text-scout-green-dark dark:text-emerald-300 font-bold" 
+                                                    : "bg-white dark:bg-gray-750 border-gray-200 dark:border-gray-650 text-gray-700 dark:text-gray-300"
+                                            )}
+                                            aria-pressed={item.val}
+                                        >
+                                            <item.icon size={15} className="shrink-0" />
+                                            <span className="truncate">{item.label}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </section>
+
+                            {/* Sezione 4: Branche e Attività */}
+                            <section className="space-y-3 pt-4 border-t border-gray-150 dark:border-gray-700/80" aria-labelledby="heading-branche">
+                                <h3 id="heading-branche" className="font-bold text-sm text-gray-900 dark:text-white">
+                                    Branche e attività
+                                </h3>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {Object.keys(BRANCH_ACTIVITIES).map(b => {
+                                        const isChecked = draftBranches.includes(b);
+                                        return (
+                                            <button
+                                                key={b}
+                                                type="button"
+                                                onClick={() => {
+                                                    if (isChecked) {
+                                                        setDraftBranches(draftBranches.filter(x => x !== b));
+                                                    } else {
+                                                        setDraftBranches([...draftBranches, b]);
+                                                    }
+                                                }}
+                                                className={cn(
+                                                    "px-3.5 py-1.5 rounded-full text-xs font-bold border transition-colors cursor-pointer",
+                                                    isChecked 
+                                                        ? "bg-[#1B4931] text-white border-[#1B4931]" 
+                                                        : "bg-white dark:bg-gray-750 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-650 hover:bg-gray-50"
+                                                )}
+                                                aria-pressed={isChecked}
+                                            >
+                                                {b}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </section>
+
+                            {/* Sezione 5: Stato Aggiornamento Dati */}
+                            <section className="space-y-3 pt-4 border-t border-gray-150 dark:border-gray-700/80" aria-labelledby="heading-stato">
+                                <h3 id="heading-stato" className="font-bold text-sm text-gray-900 dark:text-white flex items-center gap-2">
+                                    <Clock size={16} className="text-gray-500" aria-hidden="true" />
+                                    Stato aggiornamento informazioni
+                                </h3>
+                                <div className="grid grid-cols-2 gap-2 text-xs">
+                                    {STALENESS_LEVELS.map(s => {
+                                        const isChecked = draftStaleness.includes(s.level);
+                                        return (
+                                            <button
+                                                key={s.level}
+                                                type="button"
+                                                onClick={() => {
+                                                    if (isChecked) {
+                                                        setDraftStaleness(draftStaleness.filter(x => x !== s.level));
+                                                    } else {
+                                                        setDraftStaleness([...draftStaleness, s.level]);
+                                                    }
+                                                }}
+                                                className={cn(
+                                                    "flex items-center gap-2 p-2.5 rounded-xl border text-left transition-colors cursor-pointer",
+                                                    isChecked 
+                                                        ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 border-gray-900 dark:border-white font-bold" 
+                                                        : "bg-white dark:bg-gray-750 border-gray-200 dark:border-gray-650 text-gray-700 dark:text-gray-300"
+                                                )}
+                                                aria-pressed={isChecked}
+                                            >
+                                                <span className={cn("w-2.5 h-2.5 rounded-full shrink-0", s.color)} aria-hidden="true" />
+                                                <span className="truncate">{s.label}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </section>
+                        </div>
+
+                        {/* Footer Modale Persistente con Conteggio in Tempo Reale */}
+                        <div className="px-6 py-4 border-t border-gray-150 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-800/80 flex items-center justify-between gap-3 shrink-0">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setDraftRegions([]);
+                                    setDraftProvinces([]);
+                                    setDraftHasTents(false);
+                                    setDraftHasBeds(false);
+                                    setDraftMinBeds(null);
+                                    setDraftHasAccantonamento(false);
+                                    setDraftMinAccantonamento(null);
+                                    setDraftHasHeating(false);
+                                    setDraftHasWaterPoints(false);
+                                    setDraftHasEquippedKitchen(false);
+                                    setDraftHasGreenSpace(false);
+                                    setDraftHasDisabledAccess(false);
+                                    setDraftHasPoles(false);
+                                    setDraftBranches([]);
+                                    setDraftActivities([]);
+                                    setDraftStaleness([]);
+                                }}
+                                className="text-xs font-bold text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 cursor-pointer"
+                            >
+                                Azzera bozza
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={applyDraftFilters}
+                                className="px-6 py-2.5 rounded-xl bg-[#1B4931] hover:bg-[#133724] text-white text-xs sm:text-sm font-bold shadow-sm active:scale-95 transition-all cursor-pointer"
+                            >
+                                Mostra {draftMatchCount} {draftMatchCount === 1 ? 'luogo' : 'luoghi'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal Rubrica Pullman & Trasporti */}
             {showTransportModal && (
                 <TransportModal onClose={() => setShowTransportModal(false)} />
             )}

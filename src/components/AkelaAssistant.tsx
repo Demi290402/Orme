@@ -24,6 +24,13 @@ export default function AkelaAssistant() {
     const location = useLocation();
     const [isOpen, setIsOpen] = useState(false);
 
+    // Ascolta evento custom per aprire Akela da azioni inline (es. dalla Home)
+    useEffect(() => {
+        const handleOpen = () => setIsOpen(true);
+        window.addEventListener('open-akela', handleOpen);
+        return () => window.removeEventListener('open-akela', handleOpen);
+    }, []);
+
     // Don't show floating Akela button on editor or form builder pages where it collides with form FABs
     const isEditorPage = 
         location.pathname.startsWith('/verbali/nuovo') ||
@@ -1063,40 +1070,44 @@ export default function AkelaAssistant() {
         }, 500);
     };
 
+    const isHomePage = location.pathname === '/' || location.pathname === '';
+
     if (isSmartwatch || isEditorPage) return null;
 
     return (
         <>
-            {/* Floating Action Button (FAB) - Pill Human-Crafted con etichetta chiara */}
-            <button
-                onClick={() => setIsOpen(!isOpen)}
-                className={cn(
-                    "fixed z-[60] flex items-center justify-center cursor-pointer transition-all duration-200 select-none outline-none shadow-xl border-2 active:scale-95",
-                    "bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] md:bottom-6 right-3 md:right-6",
-                    isOpen 
-                        ? "bg-red-600 hover:bg-red-700 text-white w-12 h-12 md:w-auto md:px-4 md:py-2.5 rounded-full border-white dark:border-gray-800 rotate-90" 
-                        : "bg-white dark:bg-gray-800 border-scout-green/40 dark:border-emerald-500/40 text-scout-green-dark dark:text-emerald-300 w-12 h-12 md:w-auto md:px-3.5 md:py-2.5 rounded-full hover:shadow-2xl hover:border-scout-green"
-                )}
-                title={isOpen ? "Chiudi Akela" : "Chiedi ad Akela - Assistente AI"}
-            >
-                {isOpen ? (
-                    <X size={20} />
-                ) : (
-                    <>
-                        <div className="relative flex items-center justify-center shrink-0">
-                            <span className="text-2xl leading-none">🐺</span>
-                            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-yellow-400 rounded-full border-2 border-white dark:border-gray-800 animate-ping" />
-                            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-yellow-400 rounded-full border-2 border-white dark:border-gray-800" />
-                        </div>
-                        <span className="text-xs font-black tracking-tight pr-1 hidden md:inline">
-                            Chiedi ad Akela
-                        </span>
-                        <span className="text-[9px] bg-yellow-400 text-gray-900 font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider hidden sm:inline">
-                            AI
-                        </span>
-                    </>
-                )}
-            </button>
+            {/* Floating Action Button (FAB) - Visibile ovunque tranne che sulla home dove c'è l'accesso inline dedicato */}
+            {!isHomePage && (
+                <button
+                    onClick={() => setIsOpen(!isOpen)}
+                    className={cn(
+                        "fixed z-[60] flex items-center justify-center cursor-pointer transition-all duration-200 select-none outline-none shadow-xl border-2 active:scale-95",
+                        "bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] md:bottom-6 right-3 md:right-6",
+                        isOpen 
+                            ? "bg-red-600 hover:bg-red-700 text-white w-12 h-12 md:w-auto md:px-4 md:py-2.5 rounded-full border-white dark:border-gray-800 rotate-90" 
+                            : "bg-white dark:bg-gray-800 border-scout-green/40 dark:border-emerald-500/40 text-scout-green-dark dark:text-emerald-300 w-12 h-12 md:w-auto md:px-3.5 md:py-2.5 rounded-full hover:shadow-2xl hover:border-scout-green"
+                    )}
+                    title={isOpen ? "Chiudi Akela" : "Chiedi ad Akela - Assistente AI"}
+                >
+                    {isOpen ? (
+                        <X size={20} />
+                    ) : (
+                        <>
+                            <div className="relative flex items-center justify-center shrink-0">
+                                <span className="text-2xl leading-none">🐺</span>
+                                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-yellow-400 rounded-full border-2 border-white dark:border-gray-800 animate-ping" />
+                                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-yellow-400 rounded-full border-2 border-white dark:border-gray-800" />
+                            </div>
+                            <span className="text-xs font-black tracking-tight pr-1 hidden md:inline">
+                                Chiedi ad Akela
+                            </span>
+                            <span className="text-[9px] bg-yellow-400 text-gray-900 font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider hidden sm:inline">
+                                AI
+                            </span>
+                        </>
+                    )}
+                </button>
+            )}
 
             {/* Chat Drawer */}
             {isOpen && (

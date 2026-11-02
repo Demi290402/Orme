@@ -10,11 +10,52 @@ export const getStalenessInfo = (updatedAt: string) => {
     const now = new Date();
     const diffYears = (now.getTime() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24 * 365);
 
-    if (diffYears < 1) return { level: 0, color: 'bg-green-500', label: 'Recente', bgLight: 'bg-green-50', border: 'border-green-200', text: 'text-green-700' };
+    if (diffYears < 1) return { level: 0, color: 'bg-green-500', label: 'Dati recenti', bgLight: 'bg-green-50', border: 'border-green-200', text: 'text-green-700' };
     if (diffYears < 2) return { level: 1, color: 'bg-yellow-500', label: 'Da verificare', bgLight: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-700' };
-    if (diffYears < 3) return { level: 2, color: 'bg-orange-500', label: 'Potrebbe essere cambiato', bgLight: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-700' };
-    return { level: 3, color: 'bg-red-500', label: 'Datato', bgLight: 'bg-red-50', border: 'border-red-200', text: 'text-red-700' };
+    if (diffYears < 3) return { level: 2, color: 'bg-orange-500', label: 'Non recenti', bgLight: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-700' };
+    return { level: 3, color: 'bg-red-500', label: 'Datati', bgLight: 'bg-red-50', border: 'border-red-200', text: 'text-red-700' };
 };
+
+export function formatPriceSummary(pricing?: any): string | null {
+    if (!pricing) return null;
+    const base = pricing.basePrice;
+    const desc = typeof pricing.description === 'string' ? pricing.description.trim() : '';
+
+    if (typeof base === 'number' && !isNaN(base) && base > 0) {
+        const parts: string[] = [`${base} €`];
+
+        if (pricing.target === 'per_person') {
+            parts.push('persona');
+        } else if (pricing.target === 'per_group') {
+            parts.push('gruppo');
+        }
+
+        if (pricing.unit === 'per_night') {
+            parts.push('notte');
+        } else if (pricing.unit === 'per_day') {
+            parts.push('giorno');
+        }
+
+        return parts.join(' / ');
+    }
+
+    if (desc && desc.length > 0) {
+        return 'Tariffa indicata nelle note';
+    }
+
+    return null;
+}
+
+export function formatDateItalian(dateStr?: string): string {
+    if (!dateStr) return '';
+    try {
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return '';
+        return d.toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' });
+    } catch {
+        return '';
+    }
+}
 
 const DEFAULT_COVERS = [
     'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?q=80&w=2560', // Forest
