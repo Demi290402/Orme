@@ -165,6 +165,7 @@ CREATE TABLE locations (
     quick_note TEXT,
     coordinates JSONB, -- { lat: 40.85, lng: 17.02 }
     beds INTEGER DEFAULT 0,
+    accantonamento_capacity INTEGER DEFAULT 0,
     bathrooms INTEGER DEFAULT 0,
     has_tents BOOLEAN DEFAULT FALSE,
     has_refectory BOOLEAN DEFAULT FALSE,
@@ -173,6 +174,10 @@ CREATE TABLE locations (
     has_green_space BOOLEAN DEFAULT FALSE,
     has_equipped_kitchen BOOLEAN DEFAULT FALSE,
     has_poles BOOLEAN DEFAULT FALSE,
+    has_disabled_access BOOLEAN DEFAULT FALSE,
+    has_heating BOOLEAN DEFAULT FALSE,
+    has_water_points BOOLEAN DEFAULT FALSE,
+    truck_distance TEXT,
     has_pastures BOOLEAN DEFAULT FALSE,
     has_insects BOOLEAN DEFAULT FALSE,
     has_diseases BOOLEAN DEFAULT FALSE,
