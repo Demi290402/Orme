@@ -69,10 +69,10 @@ export default function LocationCard({ location, unreadModificationsCount }: Loc
     return (
         <Link 
             to={`/location/${location.id}`} 
-            className="block relative group focus:outline-none select-none"
+            className="block relative group focus:outline-none select-none w-full min-w-0 max-w-full"
         >
             <div className={cn(
-                "bg-white dark:bg-gray-800 rounded-2xl shadow-xs border transition-all duration-200 active:scale-[0.99] relative overflow-hidden flex flex-col justify-between h-full",
+                "bg-white dark:bg-gray-800 rounded-2xl shadow-xs border transition-all duration-200 active:scale-[0.99] relative overflow-hidden flex flex-col justify-between h-full w-full min-w-0 max-w-full",
                 avail 
                     ? "border-amber-300 dark:border-amber-700" 
                     : "border-gray-200 dark:border-gray-700 hover:border-scout-green hover:shadow-md dark:hover:border-emerald-500/70"
@@ -85,17 +85,17 @@ export default function LocationCard({ location, unreadModificationsCount }: Loc
                     </div>
                 )}
 
-                <div className="p-4 sm:p-5 flex-1 flex flex-col">
+                <div className="p-4 sm:p-5 flex-1 flex flex-col min-w-0 w-full overflow-hidden">
                     {/* 1. Nome del Luogo: Primo elemento per scansione immediata */}
-                    <div className="flex items-start justify-between gap-2">
-                        <h3 className="font-bold text-lg sm:text-xl text-gray-900 dark:text-gray-100 group-hover:text-scout-green dark:group-hover:text-emerald-400 transition-colors leading-snug">
+                    <div className="flex items-start justify-between gap-2 min-w-0 w-full">
+                        <h3 className="font-bold text-base sm:text-xl text-gray-900 dark:text-gray-100 group-hover:text-scout-green dark:group-hover:text-emerald-400 transition-colors leading-snug min-w-0 flex-1 break-words">
                             {location.name}
                         </h3>
 
                         {/* Eventuale etichetta Novità non lette */}
                         {unreadModificationsCount !== undefined && unreadModificationsCount > 0 && (
                             <span 
-                                className="shrink-0 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-black bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800/50 shadow-2xs animate-pulse"
+                                className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-black bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800/50 shadow-2xs animate-pulse whitespace-nowrap"
                                 title={`${unreadModificationsCount} novità non lette`}
                             >
                                 <span className="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0" />
@@ -105,23 +105,23 @@ export default function LocationCard({ location, unreadModificationsCount }: Loc
                     </div>
 
                     {/* 2. Località: Comune (Provincia) · Regione */}
-                    <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-medium flex items-center gap-1.5 mt-1">
+                    <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-medium flex items-center gap-1.5 mt-1 min-w-0 w-full">
                         <MapPin size={14} className="text-scout-green dark:text-emerald-400 shrink-0" />
-                        <span className="truncate">
+                        <span className="truncate min-w-0 flex-1">
                             {location.commune}{location.province ? ` (${location.province})` : ''} · {location.region}
                         </span>
                     </div>
 
                     {/* 3. Breve descrizione (senza corsivo forzato, testo pulito) */}
                     {location.quickNote && (
-                        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 line-clamp-2 leading-relaxed mt-2.5">
+                        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 line-clamp-2 leading-relaxed mt-2.5 break-words min-w-0 w-full">
                             {location.quickNote}
                         </p>
                     )}
 
                     {/* 4. Tariffa indicata (mostrata solo se documentata) */}
                     {priceText && (
-                        <div className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-scout-green dark:text-emerald-400 mt-2.5">
+                        <div className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-scout-green dark:text-emerald-400 mt-2.5 min-w-0 w-full">
                             <Euro size={14} className="shrink-0 text-scout-green/80 dark:text-emerald-400" />
                             <span>{priceText}</span>
                         </div>
@@ -131,7 +131,7 @@ export default function LocationCard({ location, unreadModificationsCount }: Loc
                     <div className="flex-1 min-h-3" />
 
                     {/* 5. Caratteristiche e dotazioni del luogo */}
-                    <div className="flex flex-wrap gap-1.5 pt-3 mt-1 border-t border-gray-100 dark:border-gray-700/60 text-xs font-semibold">
+                    <div className="flex flex-wrap gap-1.5 pt-3 mt-1 border-t border-gray-100 dark:border-gray-700/60 text-xs font-semibold min-w-0 w-full">
                         {location.hasTents && (
                             <span className="bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/60 px-2 py-0.5 rounded-lg flex items-center gap-1 border border-emerald-200/80">
                                 <Tent size={13} className="text-emerald-600 dark:text-emerald-400" />
@@ -159,7 +159,7 @@ export default function LocationCard({ location, unreadModificationsCount }: Loc
                     </div>
 
                     {/* 6. Piede Card: Recensioni e Data di Modifica Factual */}
-                    <div className="flex items-center justify-between pt-2.5 mt-2 border-t border-gray-100 dark:border-gray-700/60 text-xs">
+                    <div className="flex items-center justify-between gap-2 pt-2.5 mt-2 border-t border-gray-100 dark:border-gray-700/60 text-xs min-w-0 w-full flex-wrap sm:flex-nowrap">
                         {/* Recensioni */}
                         <div className="flex items-center gap-1.5">
                             {hasReviews ? (
@@ -173,7 +173,7 @@ export default function LocationCard({ location, unreadModificationsCount }: Loc
                                     </span>
                                 </>
                             ) : (
-                                <span className="text-gray-400 dark:text-gray-500 text-[11px] font-medium">
+                                <span className="text-gray-400 dark:text-gray-500 text-[11px] font-medium whitespace-nowrap">
                                     Nessuna recensione
                                 </span>
                             )}
@@ -182,11 +182,11 @@ export default function LocationCard({ location, unreadModificationsCount }: Loc
                         {/* Data ultima modifica fattuale */}
                         {lastUpdatedFormatted && (
                             <div 
-                                className="inline-flex items-center gap-1.5 text-[11px] font-medium text-gray-500 dark:text-gray-400"
+                                className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-medium text-gray-500 dark:text-gray-400 shrink-0 ml-auto"
                                 title={`Ultima modifica registrata: ${lastUpdatedFormatted}`}
                             >
                                 <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", staleness.color)} />
-                                <span>Modificato: {lastUpdatedFormatted}</span>
+                                <span className="whitespace-nowrap">Modificato: {lastUpdatedFormatted}</span>
                             </div>
                         )}
                     </div>

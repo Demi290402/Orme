@@ -105,7 +105,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     ];
 
     return (
-        <div className="min-h-screen bg-scout-beige-light dark:bg-gray-900 font-sans text-gray-900 dark:text-gray-100 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] md:pb-8">
+        <div className="min-h-screen bg-scout-beige-light dark:bg-gray-900 font-sans text-gray-900 dark:text-gray-100 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] md:pb-8 w-full overflow-x-hidden">
             <PWAInstallPrompt />
 
             {/* Smartwatch Quick Bar */}
@@ -293,7 +293,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             )}
 
             {/* Main Content */}
-            <main className="max-w-4xl mx-auto p-4 md:p-6">
+            <main className="max-w-4xl mx-auto p-4 md:p-6 w-full min-w-0 overflow-x-hidden">
                 {children}
             </main>
 
