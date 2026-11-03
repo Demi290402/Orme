@@ -1,3 +1,4 @@
+import { formatTimeHHMM } from '@/lib/utils';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -186,7 +187,7 @@ export default function WatchView() {
                           {nextEvent.branca || 'CoCa'}
                         </span>
                         <span className="text-[9px] text-zinc-400 font-mono">
-                          {nextEvent.oraInizio || 'Oggi'}
+                          {formatTimeHHMM(nextEvent.oraInizio) || 'Oggi'}
                         </span>
                       </div>
 
@@ -655,7 +656,7 @@ export default function WatchView() {
                   {selectedEvento.branca}
                 </span>
                 <span className="text-[9px] text-zinc-400 font-mono">
-                  {selectedEvento.oraInizio || 'Tutto il giorno'}
+                  {formatTimeHHMM(selectedEvento.oraInizio) || 'Tutto il giorno'}
                 </span>
               </div>
 

@@ -74,3 +74,32 @@ export const getDefaultCover = (userId: string) => {
     const index = Math.abs(hash) % DEFAULT_COVERS.length;
     return DEFAULT_COVERS[index];
 };
+
+/**
+ * Formatta un orario nel formato standard "hh:mm" (24h).
+ * Rimuove eventuali secondi (:ss) provenienti da colonne TIME di database (es. "20:30:00" -> "20:30").
+ */
+export function formatTimeHHMM(timeStr?: string | null): string {
+    if (!timeStr) return '';
+    const trimmed = String(timeStr).trim();
+    if (!trimmed) return '';
+    
+    // Corrispondenza formato hh:mm:ss o h:mm:ss o hh:mm o h:mm
+    const match = trimmed.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+    if (match) {
+        const hh = match[1].padStart(2, '0');
+        const mm = match[2];
+        return `${hh}:${mm}`;
+    }
+    
+    // Fallback: se contiene ':'
+    if (trimmed.includes(':')) {
+        const parts = trimmed.split(':');
+        if (parts.length >= 2 && parts[0].length <= 2 && parts[1].length <= 2) {
+            return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
+        }
+        return trimmed.slice(0, 5);
+    }
+    
+    return trimmed;
+}

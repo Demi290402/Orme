@@ -3,6 +3,7 @@ import pdfFonts from 'pdfmake/build/vfs_fonts';
 import htmlToPdfmake from 'html-to-pdfmake';
 import { Verbale, MembroCoCa } from '@/types';
 import { calculateScoutYear, formatScoutYear } from '@/lib/verbali';
+import { formatTimeHHMM } from '@/lib/utils';
 
 // Inizializza i font virtuali per pdfMake (Roboto by default)
 const pdfMakeAny = pdfMake as any;
@@ -207,9 +208,9 @@ export async function exportVerbaleToPdf(
         const isLate = verbale.ritardi?.includes(id);
         const exit = verbale.usciteAnticipate?.find(u => u.membroId === id);
         let suffix = "";
-        if (isLate && exit) suffix = ` (R e esc. ore ${exit.ora})`;
+        if (isLate && exit) suffix = ` (R e esc. ore ${formatTimeHHMM(exit.ora)})`;
         else if (isLate) suffix = " (R)";
-        else if (exit) suffix = ` (esc. ore ${exit.ora})`;
+        else if (exit) suffix = ` (esc. ore ${formatTimeHHMM(exit.ora)})`;
         return nome + suffix;
     }).join(', ') || '-';
 
@@ -428,7 +429,7 @@ export async function exportVerbaleToPdf(
                 <div style="color:#666; font-size:9pt; margin-bottom:2.5pt;">
                     Verbale N° ${verbale.numero || '-'}
                     ${verbale.luogo ? ` • ${verbale.luogo}` : ''}
-                    ${(verbale.oraInizio || verbale.oraFine) ? ` • ore ${verbale.oraInizio || '?'} – ${verbale.oraFine || '?'}` : ''}
+                    ${(verbale.oraInizio || verbale.oraFine) ? ` • ore ${formatTimeHHMM(verbale.oraInizio) || '?'} – ${formatTimeHHMM(verbale.oraFine) || '?'}` : ''}
                 </div>
                 <div style="font-size:9.5pt; line-height:1.25;">
                     <div><strong>Presenti:</strong> <em>${presentiConOspiti}</em></div>

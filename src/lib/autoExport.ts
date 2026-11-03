@@ -1,3 +1,4 @@
+import { formatTimeHHMM } from './utils';
 import { getLocations, getAllLocationHistory, getAllUsers } from './data';
 import { calculateAge, getClasseAttuale } from './listaAttesa';
 import * as XLSX from 'xlsx';
@@ -86,8 +87,8 @@ export function flattenResource(key: string, rawData: any[]): any[] {
             return rawData.map((v: any) => ({
                 Numero: v.numero,
                 Data: v.data ? new Date(v.data).toLocaleDateString('it-IT') : '',
-                OraInizio: v.oraInizio || '',
-                OraFine: v.oraFine || '',
+                OraInizio: formatTimeHHMM(v.oraInizio) || '',
+                OraFine: formatTimeHHMM(v.oraFine) || '',
                 Titolo: v.titolo || '',
                 ODG: (v.odg || []).map((o: any) => o.titolo).join('\n'),
                 Varie: v.varie || ''

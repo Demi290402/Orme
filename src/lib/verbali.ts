@@ -1,3 +1,4 @@
+import { formatTimeHHMM } from './utils';
 import { supabase } from './supabase';
 import { Verbale, MembroCoCa } from '@/types';
 import { getUser } from './data';
@@ -228,8 +229,8 @@ export async function saveVerbale(verbale: Partial<Verbale>): Promise<Verbale> {
         titolo: verbale.titolo || 'Senza Titolo',
         data: verbale.data || new Date().toISOString().split('T')[0],
         luogo: verbale.luogo || '',
-        ora_inizio: verbale.oraInizio || '',
-        ora_fine: verbale.oraFine || '',
+        ora_inizio: formatTimeHHMM(verbale.oraInizio) || '',
+        ora_fine: formatTimeHHMM(verbale.oraFine) || '',
         presenti: verbale.presenti || [],
         assenti: verbale.assenti || [],
         ritardi: verbale.ritardi || [],
@@ -241,7 +242,7 @@ export async function saveVerbale(verbale: Partial<Verbale>): Promise<Verbale> {
         date_importanti: verbale.dateImportanti || [],
         posti_azione: verbale.postiAzione || [],
         prossimi_impegni: verbale.prossimiImpegni || [],
-        uscite_anticipate: verbale.usciteAnticipate || [],
+        uscite_anticipate: (verbale.usciteAnticipate || []).map(u => ({ ...u, ora: formatTimeHHMM(u.ora) })),
         varie: verbale.varie || '',
         sezioni_attive: verbale.sezioniAttive || [],
         anno_scout: targetAnnoScout,
@@ -332,8 +333,8 @@ function mapSupabaseVerbaleToVerbale(data: any): Verbale {
         titolo: data.titolo,
         data: data.data,
         luogo: data.luogo,
-        oraInizio: data.ora_inizio,
-        oraFine: data.ora_fine,
+        oraInizio: formatTimeHHMM(data.ora_inizio),
+        oraFine: formatTimeHHMM(data.ora_fine),
         presenti: data.presenti || [],
         assenti: data.assenti || [],
         ritardi: data.ritardi || [],
@@ -345,7 +346,7 @@ function mapSupabaseVerbaleToVerbale(data: any): Verbale {
         dateImportanti: data.date_importanti || [],
         postiAzione: data.posti_azione || [],
         prossimiImpegni: data.prossimi_impegni || [],
-        usciteAnticipate: data.uscite_anticipate || [],
+        usciteAnticipate: (data.uscite_anticipate || []).map((u: any) => ({ ...u, ora: formatTimeHHMM(u.ora) })),
         varie: data.varie || '',
         sezioniAttive: data.sezioni_attive || [],
         createdAt: data.created_at,

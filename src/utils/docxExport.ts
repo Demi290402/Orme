@@ -6,6 +6,7 @@ import {
 import { saveAs } from 'file-saver';
 import { Verbale, MembroCoCa, User } from '@/types';
 import { calculateScoutYear, formatScoutYear } from '@/lib/verbali';
+import { formatTimeHHMM } from '@/lib/utils';
 
 function formatSafeDate(dStr?: string): string {
     if (!dStr) return '';
@@ -519,7 +520,7 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                     children: [
                         new TextRun({ text: `Verbale N° ${verbale.numero || '-'}`, bold: true, font: "Roboto", size: 20 }),
                         ...(verbale.luogo ? [new TextRun({ text: ` • ${cleanText(verbale.luogo)}`, font: "Roboto", size: 20 })] : []),
-                        ...((verbale.oraInizio || verbale.oraFine) ? [new TextRun({ text: ` • ore ${cleanText(verbale.oraInizio || '?')} – ${cleanText(verbale.oraFine || '?')}`, font: "Roboto", size: 20 })] : []),
+                        ...((verbale.oraInizio || verbale.oraFine) ? [new TextRun({ text: ` • ore ${cleanText(formatTimeHHMM(verbale.oraInizio) || '?')} – ${cleanText(formatTimeHHMM(verbale.oraFine) || '?')}`, font: "Roboto", size: 20 })] : []),
                     ],
                     spacing: { after: 80 },
                 }),
@@ -538,9 +539,9 @@ export const exportVerbaleToDocx = async (verbale: Verbale, membri: MembroCoCa[]
                                 const isLate = verbale.ritardi?.includes(m.id);
                                 const exit = verbale.usciteAnticipate?.find(u => u.membroId === m.id);
                                 let suffix = "";
-                                if (isLate && exit) suffix = ` (R e esc. ore ${exit.ora})`;
+                                if (isLate && exit) suffix = ` (R e esc. ore ${formatTimeHHMM(exit.ora)})`;
                                 else if (isLate) suffix = " (R)";
-                                else if (exit) suffix = ` (esc. ore ${exit.ora})`;
+                                else if (exit) suffix = ` (esc. ore ${formatTimeHHMM(exit.ora)})`;
                                 return cleanText(m.nome) + suffix;
                             }).join(', '), 
                             font: "Roboto", 

@@ -12,7 +12,7 @@ import { getMembriCoCa, saveVerbale, getVerbali, getVerbaleById, getImpostazioni
 import { exportVerbaleToPdf } from '@/utils/pdfExport';
 import { exportVerbaleToDocx } from '@/utils/docxExport';
 import { Verbale, MembroCoCa } from '@/types';
-import { cn } from '@/lib/utils';
+import { cn, formatTimeHHMM } from '@/lib/utils';
 import { getUser, getCachedCurrentUser } from '@/lib/data';
 import VerbaleHeader from '@/components/VerbaleHeader';
 import RichTextEditor from '@/components/RichTextEditor';
@@ -640,7 +640,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                             <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Inizio</label>
                             <input 
                                 type="time" 
-                                value={verbale.oraInizio}
+                                value={formatTimeHHMM(verbale.oraInizio)}
                                 onChange={e => setVerbale(v => ({ ...v, oraInizio: e.target.value }))}
                                 className="p-2 border border-gray-100 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-scout-green transition-all"
                             />
@@ -649,7 +649,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                             <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Fine</label>
                             <input 
                                 type="time" 
-                                value={verbale.oraFine}
+                                value={formatTimeHHMM(verbale.oraFine)}
                                 onChange={e => setVerbale(v => ({ ...v, oraFine: e.target.value }))}
                                 className="p-2 border border-gray-100 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-scout-green transition-all"
                             />
@@ -808,7 +808,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                         <div className="flex-1 relative group">
                                                             <input 
                                                                 type="time" 
-                                                                value={exitTime || ''}
+                                                                value={formatTimeHHMM(exitTime) || ''}
                                                                 onChange={e => {
                                                                     const time = e.target.value;
                                                                     setVerbale(v => {
@@ -1561,7 +1561,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                         <span>Verbale N° {verbale.numero || '-'}</span>
                                                         {verbale.luogo && <span> • {verbale.luogo}</span>}
                                                         {(verbale.oraInizio || verbale.oraFine) && (
-                                                            <span> • ore {verbale.oraInizio || '?'} – {verbale.oraFine || '?'}</span>
+                                                            <span> • ore {formatTimeHHMM(verbale.oraInizio) || '?'} – {formatTimeHHMM(verbale.oraFine) || '?'}</span>
                                                         )}
                                                     </div>
                                                     <div>
@@ -1578,9 +1578,9 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                                                     const isLate = verbale.ritardi?.includes(id);
                                                                     const exit = verbale.usciteAnticipate?.find(u => u.membroId === id);
                                                                     let suffix = "";
-                                                                    if (isLate && exit) suffix = ` (R e esc. ore ${exit.ora})`;
+                                                                    if (isLate && exit) suffix = ` (R e esc. ore ${formatTimeHHMM(exit.ora)})`;
                                                                     else if (isLate) suffix = " (R)";
-                                                                    else if (exit) suffix = ` (esc. ore ${exit.ora})`;
+                                                                    else if (exit) suffix = ` (esc. ore ${formatTimeHHMM(exit.ora)})`;
                                                                     return nome + suffix;
                                                                 }).join(', ') || 'Nessuno'}
                                                             {verbale.ospiti && verbale.ospiti.length > 0 && 
