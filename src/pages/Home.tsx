@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { 
     Search, Plus, X, Check, Clock, Tent, BedDouble, 
-    Bus, Sparkles, MapPin, List, Map as MapIcon, SlidersHorizontal, 
+    Bus, MapPin, List, Map as MapIcon, SlidersHorizontal, 
     Home as HomeIcon, ChevronRight, Droplets, Flame, Utensils, 
     Trees, Accessibility, ShieldCheck, WifiOff
 } from 'lucide-react';
@@ -646,12 +646,12 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
             )}
 
             {/* Testata Locale con Titolo e Azioni Secondarie */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+            <div className="flex items-start sm:items-center justify-between gap-3 pt-1">
                 <div>
-                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">
+                    <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-gray-100 tracking-tight">
                         Luoghi per uscite e campi
                     </h1>
-                    <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5 font-medium">
+                    <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5 font-medium line-clamp-1 sm:line-clamp-none">
                         Basi scout, accantonamenti e terreni per tende in tutta Italia
                     </p>
                 </div>
@@ -659,7 +659,7 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                 <div className="flex items-center gap-2 shrink-0">
                     <Link
                         to="/add"
-                        className="h-10 px-4 rounded-xl bg-scout-green hover:bg-scout-green-dark text-white font-bold text-xs sm:text-sm inline-flex items-center gap-2 shadow-xs transition-all active:scale-95 select-none"
+                        className="h-9 sm:h-10 px-3 sm:px-4 rounded-xl bg-scout-green hover:bg-scout-green-dark text-white font-bold text-xs sm:text-sm inline-flex items-center gap-1.5 shadow-xs transition-all active:scale-95 select-none"
                     >
                         <Plus size={16} className="shrink-0" />
                         <span>Aggiungi luogo</span>
@@ -724,7 +724,8 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
             </div>
 
             {/* Controlli Filtri & Accessi Rapidi (Grid Compatta e Ordinata) */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            <div className="space-y-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-2.5">
                 {/* Controllo Zona Geografica */}
                 <button
                     type="button"
@@ -770,22 +771,27 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                 <button
                     type="button"
                     onClick={() => setShowTransportModal(true)}
-                    className="h-11 px-3.5 rounded-xl bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-250 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750 text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-2xs transition-all active:scale-[0.98] cursor-pointer truncate"
+                    className="hidden sm:flex h-11 px-3.5 rounded-xl bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-250 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750 text-xs sm:text-sm font-bold items-center justify-center gap-2 shadow-2xs transition-all active:scale-[0.98] cursor-pointer truncate"
                     title="Apri la rubrica ditte pullman e preventivi di viaggio"
                 >
                     <Bus size={16} className="text-scout-blue shrink-0" />
                     <span className="truncate">Pullman e trasporti</span>
                 </button>
 
-                {/* Akela AI Assistant */}
+                </div>
+
+                {/* Pullman & Trasporti su Smartphone: barra servizio distinta dai filtri (Legge della Somiglianza) */}
                 <button
                     type="button"
-                    onClick={() => window.dispatchEvent(new CustomEvent('open-akela'))}
-                    className="h-11 px-3.5 rounded-xl bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-250 dark:border-gray-700 hover:border-scout-green hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20 text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-2xs transition-all active:scale-[0.98] cursor-pointer truncate"
-                    title="Chiedi supporto metodologico ad Akela AI"
+                    onClick={() => setShowTransportModal(true)}
+                    className="sm:hidden w-full h-9 px-3.5 rounded-xl bg-blue-50/60 dark:bg-blue-950/25 text-scout-blue dark:text-blue-300 border border-blue-200/70 dark:border-blue-800/50 hover:bg-blue-100/60 text-xs font-semibold flex items-center justify-between transition-all cursor-pointer shadow-2xs active:scale-[0.99]"
+                    title="Apri la rubrica ditte pullman e preventivi di viaggio"
                 >
-                    <Sparkles size={16} className="text-amber-500 shrink-0" />
-                    <span className="truncate">Akela AI</span>
+                    <div className="flex items-center gap-2">
+                        <Bus size={15} className="shrink-0 text-scout-blue dark:text-blue-400" />
+                        <span>Pullman e noleggi per uscite di gruppo</span>
+                    </div>
+                    <ChevronRight size={14} className="opacity-70 shrink-0" />
                 </button>
             </div>
 
@@ -1006,35 +1012,36 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                 </div>
             )}
 
-            {/* Barra Risultati & Switcher Elenco/Mappa */}
-            <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 pt-1">
+            {/* Barra Risultati & Switcher Elenco/Mappa (Unificata su riga unica orizzontale) */}
+            <div className="flex flex-row justify-between items-center gap-2 pt-1">
                 {/* Conteggio Risultati */}
-                <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-gray-700 dark:text-gray-300">
-                    <span className="w-2 h-2 rounded-full bg-scout-green shrink-0" />
-                    <span>
-                        {filteredLocations.length} {filteredLocations.length === 1 ? 'luogo' : 'luoghi'} · {locationsWithCoordsCount} sulla mappa
+                <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-gray-700 dark:text-gray-300 min-w-0">
+                    <span className="w-2 h-2 rounded-full bg-scout-green shrink-0 animate-pulse" />
+                    <span className="truncate">
+                        {filteredLocations.length} {filteredLocations.length === 1 ? 'luogo' : 'luoghi'}
+                        <span className="hidden sm:inline"> · {locationsWithCoordsCount} sulla mappa</span>
                     </span>
                     {locationsWithoutCoordsCount > 0 && (
-                        <span className="text-gray-400 dark:text-gray-500 font-normal">
+                        <span className="text-gray-400 dark:text-gray-500 font-normal hidden md:inline">
                             ({locationsWithoutCoordsCount} senza coordinate)
                         </span>
                     )}
                 </div>
 
                 {/* Controllo Segmentato Elenco / Mappa */}
-                <div className="inline-flex bg-gray-150 dark:bg-gray-750 p-1 rounded-xl shrink-0 border border-gray-200/80 dark:border-gray-700/80 self-start sm:self-auto">
+                <div className="inline-flex bg-gray-150 dark:bg-gray-750 p-1 rounded-xl shrink-0 border border-gray-200/80 dark:border-gray-700/80">
                     <button
                         type="button"
                         onClick={() => setViewMode('list')}
                         className={cn(
-                            "px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer min-h-[38px]",
+                            "px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer min-h-[34px] sm:min-h-[38px]",
                             viewMode === 'list'
                                 ? "bg-white dark:bg-gray-850 text-scout-green-dark dark:text-emerald-300 shadow-xs font-black"
                                 : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
                         )}
                         aria-pressed={viewMode === 'list'}
                     >
-                        <List size={15} />
+                        <List size={14} />
                         <span>Elenco</span>
                     </button>
 
@@ -1042,14 +1049,14 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
                         type="button"
                         onClick={() => setViewMode('map')}
                         className={cn(
-                            "px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer min-h-[38px]",
+                            "px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer min-h-[34px] sm:min-h-[38px]",
                             viewMode === 'map'
                                 ? "bg-white dark:bg-gray-850 text-scout-green-dark dark:text-emerald-300 shadow-xs font-black"
                                 : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
                         )}
                         aria-pressed={viewMode === 'map'}
                     >
-                        <MapIcon size={15} />
+                        <MapIcon size={14} />
                         <span>Mappa</span>
                     </button>
                 </div>

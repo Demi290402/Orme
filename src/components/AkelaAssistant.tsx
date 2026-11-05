@@ -33,7 +33,7 @@ export default function AkelaAssistant() {
         return () => window.removeEventListener('open-akela', handleOpenAkela);
     }, []);
 
-    const isHomePage = location.pathname === '/';
+
 
     // Don't show floating Akela button on editor or form builder pages where it collides with form FABs
     const isEditorPage = 
@@ -1074,7 +1074,7 @@ export default function AkelaAssistant() {
         }, 500);
     };
 
-    if (isSmartwatch || isEditorPage || (isHomePage && !isOpen)) return null;
+    if (isSmartwatch || isEditorPage) return null;
 
     return (
         <>
