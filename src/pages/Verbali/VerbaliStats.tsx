@@ -178,7 +178,7 @@ export default function VerbaliStats() {
         : 0;
 
     return (
-        <div className="space-y-6 pb-20 animate-in fade-in duration-500 max-w-5xl mx-auto px-2 sm:px-4">
+        <div className="space-y-6 pb-20 animate-in fade-in duration-500 w-full mx-auto">
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">

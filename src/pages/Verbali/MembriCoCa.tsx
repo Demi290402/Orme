@@ -284,7 +284,7 @@ export default function MembriCoCaPage() {
     const displayedMembri = censimentoSubTab === 'attivi' ? activeMembri : inactiveMembri;
 
     return (
-        <div className="space-y-6 pb-20 max-w-5xl mx-auto px-2 sm:px-4">
+        <div className="space-y-6 pb-20 w-full mx-auto">
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">

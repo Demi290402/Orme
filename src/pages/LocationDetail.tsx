@@ -507,7 +507,7 @@ export default function LocationDetail() {
     const updatedByText = updaterInfo ? `da ${updaterInfo.nickname}${updaterInfo.groupName ? ` (${updaterInfo.groupName})` : ''}` : '';
 
     return (
-        <div className="space-y-6 pb-36 lg:pb-12 max-w-6xl mx-auto">
+        <div className="space-y-6 pb-36 lg:pb-12 w-full mx-auto">
             {/* ================================================================= */}
             {/* 1. INTESTAZIONE LOCALE (HEADER)                                   */}
             {/* ================================================================= */}

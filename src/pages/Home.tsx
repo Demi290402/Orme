@@ -631,7 +631,7 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
     }, [showFiltersModal]);
 
     return (
-        <div className="max-w-7xl mx-auto space-y-5 relative min-h-[calc(100vh-140px)] pb-16 w-full min-w-0 max-w-full overflow-x-hidden">
+        <div className="w-full space-y-5 relative min-h-[calc(100vh-140px)] pb-16 min-w-0 max-w-full overflow-x-hidden">
             {/* Banner Stato Offline */}
             {!isOnline && (
                 <div className="bg-amber-500/10 border border-amber-500/40 text-amber-900 dark:text-amber-200 px-4 py-2.5 rounded-2xl flex items-center justify-between gap-3 text-xs font-bold">
@@ -1057,7 +1057,7 @@ export default function Home({ defaultView = 'list' }: HomeProps) {
 
             {/* Contenuto: Elenco Schede oppure Mappa */}
             {viewMode === 'list' ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full min-w-0 max-w-full">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-5 w-full min-w-0 max-w-full">
                     {(currentUser ? filteredLocations : filteredLocations.slice(0, 5)).map((location) => (
                         <LocationCard 
                             key={location.id} 

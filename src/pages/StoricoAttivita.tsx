@@ -156,7 +156,7 @@ export default function StoricoAttivita() {
     };
 
     return (
-        <div className="pb-24 max-w-4xl mx-auto space-y-8">
+        <div className="pb-24 w-full mx-auto space-y-8">
             <header className="mb-8 flex items-center justify-between">
                 <div>
                     <h1 className="text-3xl font-black flex items-center gap-3 text-scout-blue dark:text-blue-400">
