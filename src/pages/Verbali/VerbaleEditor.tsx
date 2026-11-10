@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
     Save, ChevronLeft, Users, FileText,
     Eye, Download, ArrowUp, ArrowDown,
-    Plus, Trash2, Clock, Pencil, Bell, Mail, BellOff,
+    Plus, Trash2, Clock, Pencil, Bell, BellRing, Mail, BellOff,
     CheckCircle2, AlertCircle, Puzzle, MoreVertical, X, Calendar, FileDown,
     RotateCw
 } from 'lucide-react';
@@ -295,7 +295,15 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
         }
     };
 
-    const handleNotifyInApp = async () => {
+        const handleNotifyAll = async () => {
+        if (!currentUser) return;
+        await Promise.all([
+            handleNotifyInApp(),
+            handleNotifyEmail()
+        ]);
+    };
+
+const handleNotifyInApp = async () => {
         if (!currentUser || notifyStatus.inApp !== 'idle') return;
         setNotifyStatus(s => ({ ...s, inApp: 'sending' }));
         try {
@@ -312,6 +320,7 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                 data: { verbaleId: v.id, numero: v.numero },
                 actionUrl: `https://orme.pages.dev/verbali/visualizza/${v.id || id || ''}`,
                 actionLabel: 'Leggi il Verbale su Orme',
+                channels: ['in_app'],
             });
             setNotifyStatus(s => ({ ...s, inApp: 'done' }));
         } catch (e) {
@@ -344,11 +353,35 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
             try {
                 const { data: usersData } = await supabase
                     .from('users')
-                    .select('id, email, notification_preferences')
+                    .select('id, email, membership_status, notification_preferences')
                     .or(`group_id.eq.${targetGroupId},group_name.eq.${targetGroupId}`);
+
+                const inactiveUserIds = new Set<string>();
+                try {
+                    const { data: inactiveMembri } = await supabase
+                        .from('membri')
+                        .select('user_id')
+                        .eq('attivo', false)
+                        .or(`group_id.eq.${targetGroupId},group_id.eq.${targetGroupId}`);
+                    if (inactiveMembri) {
+                        inactiveMembri.forEach((m: any) => {
+                            if (m.user_id) inactiveUserIds.add(m.user_id);
+                        });
+                    }
+                } catch (_e) {}
+
                 if (usersData && usersData.length > 0) {
                     const localPrefs = getLocalNotificationPreferences();
                     for (const u of usersData) {
+                        // Filtro esclusione capi non attivi (usciti, in attesa o archiviati come storici)
+                        const status = (u.membership_status || 'attivo').trim().toLowerCase();
+                        if (status === 'uscito' || status === 'in_attesa' || status === 'sospeso' || status === 'rifiutato') {
+                            continue;
+                        }
+                        if (inactiveUserIds.has(u.id)) {
+                            continue;
+                        }
+
                         let pref = 'entrambe';
                         if (u.id === currentUser.id) {
                             pref = localPrefs.verbali ?? 'entrambe';
@@ -1792,49 +1825,66 @@ export default function VerbaleEditor({ viewMode = false }: { viewMode?: boolean
                                 </p>
                             </div>
 
-                            <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100 text-left">
-                                <p className="text-sm font-bold text-amber-800 dark:text-amber-500 mb-3">📣 Vuoi notificare gli altri capi?</p>
+                            <div className="bg-amber-50/80 dark:bg-amber-950/30 p-4 rounded-2xl border border-amber-200/70 dark:border-amber-800/50 text-left space-y-3">
+                                <div>
+                                    <p className="text-sm font-bold text-amber-900 dark:text-amber-300">📣 Vuoi notificare la Comunità Capi?</p>
+                                    <p className="text-xs text-amber-700/80 dark:text-amber-400/80 mt-0.5">
+                                        Invia una notifica ai soli capi attualmente in servizio attivo.
+                                    </p>
+                                </div>
+
                                 <div className="grid grid-cols-1 gap-2">
+                                    {/* Azione Principale Completa (1 click, niente doppie email) */}
                                     <button
-                                        onClick={handleNotifyInApp}
-                                        disabled={notifyStatus.inApp !== 'idle'}
+                                        onClick={handleNotifyAll}
+                                        disabled={notifyStatus.inApp === 'sending' || notifyStatus.email === 'sending' || (notifyStatus.inApp === 'done' && notifyStatus.email === 'done')}
                                         className={cn(
-                                            "w-full py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-100 disabled:cursor-not-allowed",
-                                            notifyStatus.inApp === 'idle' ? "bg-amber-500 text-white hover:bg-amber-600" :
-                                            notifyStatus.inApp === 'sending' ? "bg-amber-300 text-white" :
-                                            notifyStatus.inApp === 'done' ? "bg-scout-green text-white" :
-                                            "bg-red-500 text-white"
+                                            "w-full py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-100 disabled:cursor-not-allowed shadow-sm cursor-pointer",
+                                            (notifyStatus.inApp === 'done' && notifyStatus.email === 'done') ? "bg-scout-green text-white" :
+                                            (notifyStatus.inApp === 'sending' || notifyStatus.email === 'sending') ? "bg-amber-400 text-white" :
+                                            "bg-scout-green hover:bg-scout-green-dark text-white"
                                         )}
                                     >
-                                        {notifyStatus.inApp === 'done' ? <CheckCircle2 size={18} /> : <Bell size={18} />}
-                                        {notifyStatus.inApp === 'idle' ? 'Invia notifica in app' :
-                                         notifyStatus.inApp === 'sending' ? 'Invio in corso...' :
-                                         notifyStatus.inApp === 'error' ? 'Errore' :
-                                         'Notifica inviata!'}
+                                        {(notifyStatus.inApp === 'done' && notifyStatus.email === 'done') ? <CheckCircle2 size={18} /> :
+                                         (notifyStatus.inApp === 'sending' || notifyStatus.email === 'sending') ? <RotateCw size={18} className="animate-spin" /> :
+                                         <BellRing size={18} />}
+                                        {(notifyStatus.inApp === 'done' && notifyStatus.email === 'done') ? 'Notifica ed Email inviate!' :
+                                         (notifyStatus.inApp === 'sending' || notifyStatus.email === 'sending') ? 'Invio notifiche in corso...' :
+                                         'Notifica tutta la CoCa (In-App + Email)'}
                                     </button>
-                                    <button
-                                        onClick={handleNotifyEmail}
-                                        disabled={notifyStatus.email === 'sending' || notifyStatus.email === 'done'}
-                                        className={cn(
-                                            "w-full py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-100 disabled:cursor-not-allowed shadow-sm",
-                                            notifyStatus.email === 'idle' ? "bg-blue-500 text-white hover:bg-blue-600" :
-                                            notifyStatus.email === 'sending' ? "bg-blue-300 text-white" :
-                                            notifyStatus.email === 'done' ? "bg-scout-green text-white" :
-                                            notifyStatus.email === 'not_configured' ? "bg-gray-200 text-gray-500 dark:text-gray-300" :
-                                            "bg-amber-600 text-white hover:bg-amber-700"
-                                        )}
-                                        title={notifyStatus.email === 'not_configured' ? 'Servizio email non configurato' : ''}
-                                    >
-                                        {notifyStatus.email === 'done' ? <CheckCircle2 size={18} /> : 
-                                         notifyStatus.email === 'sending' ? <RotateCw size={18} className="animate-spin" /> :
-                                         notifyStatus.email === 'error' ? <RotateCw size={18} /> :
-                                         notifyStatus.email === 'not_configured' ? <AlertCircle size={18} /> : <Mail size={18} />}
-                                        {notifyStatus.email === 'idle' ? 'Invia email automatica' :
-                                         notifyStatus.email === 'sending' ? 'Invio in corso...' :
-                                         notifyStatus.email === 'error' ? 'Riprova invio email' :
-                                         notifyStatus.email === 'not_configured' ? 'Email disabilitate' :
-                                         'Email inviata!'}
-                                    </button>
+
+                                    {/* Opzioni per Canale Singolo */}
+                                    <div className="grid grid-cols-2 gap-2 pt-1">
+                                        <button
+                                            onClick={handleNotifyInApp}
+                                            disabled={notifyStatus.inApp !== 'idle'}
+                                            className={cn(
+                                                "py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all border cursor-pointer disabled:cursor-not-allowed",
+                                                notifyStatus.inApp === 'done' ? "bg-emerald-50 dark:bg-emerald-950/40 text-scout-green border-emerald-300 dark:border-emerald-700" :
+                                                notifyStatus.inApp === 'sending' ? "bg-gray-100 text-gray-400 border-gray-200" :
+                                                "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50"
+                                            )}
+                                            title="Invia la notifica esclusivamente nella campanella dell'app (nessuna email inviata)"
+                                        >
+                                            {notifyStatus.inApp === 'done' ? <CheckCircle2 size={15} /> : <Bell size={15} />}
+                                            {notifyStatus.inApp === 'done' ? 'In-App inviata' : notifyStatus.inApp === 'sending' ? 'Invio...' : 'Solo In-App'}
+                                        </button>
+
+                                        <button
+                                            onClick={handleNotifyEmail}
+                                            disabled={notifyStatus.email === 'sending' || notifyStatus.email === 'done'}
+                                            className={cn(
+                                                "py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all border cursor-pointer disabled:cursor-not-allowed",
+                                                notifyStatus.email === 'done' ? "bg-emerald-50 dark:bg-emerald-950/40 text-scout-green border-emerald-300 dark:border-emerald-700" :
+                                                notifyStatus.email === 'sending' ? "bg-gray-100 text-gray-400 border-gray-200" :
+                                                "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50"
+                                            )}
+                                            title="Invia una singola email riassuntiva con link al verbale a tutti i capi attivi"
+                                        >
+                                            {notifyStatus.email === 'done' ? <CheckCircle2 size={15} /> : <Mail size={15} />}
+                                            {notifyStatus.email === 'done' ? 'Email inviata' : notifyStatus.email === 'sending' ? 'Invio...' : 'Solo Email'}
+                                        </button>
+                                    </div>
 
                                     {/* Error Details Alert */}
                                     {emailErrorDetails && (

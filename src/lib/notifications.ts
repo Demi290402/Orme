@@ -174,6 +174,7 @@ export interface DispatchNotificationParams {
     actionUrl?: string;
     actionLabel?: string;
     excludeUserId?: string; // If omitted/undefined, modifier is ALSO included
+    channels?: ('in_app' | 'email')[]; // Opzionale: limita i canali (es. ['in_app'] esclude l'invio email)
 }
 
 /**
@@ -184,8 +185,11 @@ export interface DispatchNotificationParams {
  * The author/modifier is NOT excluded unless explicitly passed in excludeUserId.
  */
 export async function dispatchGroupNotification(params: DispatchNotificationParams): Promise<void> {
-    const { groupId, groupName, category, type, title, body, data, actionUrl, actionLabel, excludeUserId } = params;
+    const { groupId, groupName, category, type, title, body, data, actionUrl, actionLabel, excludeUserId, channels } = params;
     if (!groupId) return;
+
+    const allowInApp = !channels || channels.includes('in_app');
+    const allowEmail = !channels || channels.includes('email');
 
     try {
         let usersData: any[] = [];
@@ -213,6 +217,23 @@ export async function dispatchGroupNotification(params: DispatchNotificationPara
 
         if (usersData.length === 0) return;
 
+        // Recupera eventuali membri storici archiviati (attivo: false) per non notificarli
+        const inactiveUserIds = new Set<string>();
+        try {
+            const { data: inactiveMembri } = await supabase
+                .from('membri')
+                .select('user_id')
+                .eq('attivo', false)
+                .or(`group_id.eq.${groupId},group_id.eq.${groupId}`);
+            if (inactiveMembri) {
+                inactiveMembri.forEach((m: any) => {
+                    if (m.user_id) inactiveUserIds.add(m.user_id);
+                });
+            }
+        } catch (_e) {
+            // Se la tabella membri o la colonna non esiste, prosegue normalmente
+        }
+
         let currentUserId = '';
         try {
             const currentUser = await getUser();
@@ -230,6 +251,15 @@ export async function dispatchGroupNotification(params: DispatchNotificationPara
                 continue;
             }
 
+            // Filtro membri attivi: esclude chi è uscito, in attesa o archiviato
+            const status = (u.membership_status || 'attivo').trim().toLowerCase();
+            if (status === 'uscito' || status === 'in_attesa' || status === 'sospeso' || status === 'rifiutato') {
+                continue;
+            }
+            if (inactiveUserIds.has(u.id)) {
+                continue;
+            }
+
             // Determine channel preference for this category (defaults to verbali & richiesta_accesso attive, lista_attesa & luoghi disattivo)
             let pref: NotificationChannelPref = DEFAULT_NOTIFICATION_PREFERENCES[category];
             if (u.id === currentUserId) {
@@ -239,7 +269,7 @@ export async function dispatchGroupNotification(params: DispatchNotificationPara
             }
 
             // In-app channel
-            if (pref === 'entrambe' || pref === 'in_app') {
+            if (allowInApp && (pref === 'entrambe' || pref === 'in_app')) {
                 inAppRows.push({
                     user_id: u.id,
                     group_id: groupId,
@@ -252,7 +282,7 @@ export async function dispatchGroupNotification(params: DispatchNotificationPara
             }
 
             // Email channel
-            if (pref === 'entrambe' || pref === 'email') {
+            if (allowEmail && (pref === 'entrambe' || pref === 'email')) {
                 const em = (u.email || '').trim().toLowerCase();
                 if (em && em.includes('@') && !em.includes('example.com')) {
                     emailRecipients.push(em);
@@ -268,8 +298,8 @@ export async function dispatchGroupNotification(params: DispatchNotificationPara
             }
         }
 
-        // 2. Send Emails via Supabase Function
-        if (emailRecipients.length > 0) {
+        // 2. Send Emails via Supabase Function (solo se allowEmail è true e ci sono destinatari)
+        if (allowEmail && emailRecipients.length > 0) {
             const uniqueEmails = Array.from(new Set(emailRecipients));
             sendGroupEmailNotification({
                 groupId,

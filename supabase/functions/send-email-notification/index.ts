@@ -52,11 +52,40 @@ serve(async (req) => {
       // Destinazione diretta: segnalazioni al supporto Orme o a email specifica
       validEmails = [recipientEmail || 'appormescout@gmail.com']
     } else if (Array.isArray(recipientEmails) && recipientEmails.length > 0) {
-      // Destinatari specificati direttamente dal client (già filtrati in base alle preferenze dell'utente)
-      validEmails = [...new Set(recipientEmails
+      // Destinatari specificati direttamente dal client
+      const rawEmails = [...new Set(recipientEmails
         .map((e: string) => (e || '').trim().toLowerCase())
         .filter((e: string) => e && e.includes('@') && !e.includes('example.com')))]
-      console.log(`[send-email-notification] Destinatari mirati da preferenze: ${validEmails.length}`)
+
+      // Verifica di sicurezza server-side: esclude utenti usciti o in attesa per quel gruppo
+      if (rawEmails.length > 0 && (groupId || groupName)) {
+        try {
+          const supabaseAdmin = createClient(
+            SUPABASE_URL ?? '',
+            SUPABASE_SERVICE_ROLE_KEY ?? ''
+          )
+          const { data: matchedUsers } = await supabaseAdmin
+            .from('users')
+            .select('email, membership_status')
+            .in('email', rawEmails)
+
+          if (matchedUsers && matchedUsers.length > 0) {
+            const inactiveSet = new Set(
+              matchedUsers
+                .filter((u: any) => u.membership_status && u.membership_status !== 'attivo')
+                .map((u: any) => (u.email || '').trim().toLowerCase())
+            )
+            validEmails = rawEmails.filter(e => !inactiveSet.has(e))
+          } else {
+            validEmails = rawEmails
+          }
+        } catch (_err) {
+          validEmails = rawEmails
+        }
+      } else {
+        validEmails = rawEmails
+      }
+      console.log(`[send-email-notification] Destinatari attivi confermati: ${validEmails.length}`)
     } else {
       if (!groupId && !groupName) {
         throw new Error('Campo obbligatorio mancante (groupId o groupName)')
